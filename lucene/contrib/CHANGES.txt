@@ -1,0 +1,534 @@
+Lucene contrib change Log
+
+======================= Trunk (not yet released) =======================
+
+Changes in backwards compatibility policy
+
+ * LUCENE-2100: All Analyzers in Lucene-contrib have been marked as final.
+   Analyzers should be only act as a composition of TokenStreams, users should
+   compose their own analyzers instead of subclassing existing ones.
+   (Simon Willnauer) 
+
+ * LUCENE-2194, LUCENE-2201: Snowball APIs were upgraded to snowball revision
+   502 (with some local modifications for improved performance). 
+   Index backwards compatibility and binary backwards compatibility is 
+   preserved, but some protected/public member variables changed type. This 
+   does NOT affect java code/class files produced by the snowball compiler, 
+   but technically is a backwards compatibility break.  (Robert Muir)
+   
+ * LUCENE-2226: Moved contrib/snowball functionality into contrib/analyzers.
+   Be sure to remove any old obselete lucene-snowball jar files from your
+   classpath!  (Robert Muir)
+    
+Changes in runtime behavior
+
+ * LUCENE-2117: SnowballAnalyzer uses TurkishLowerCaseFilter instead of
+   LowercaseFilter to correctly handle the unique Turkish casing behavior if
+   used with Version > 3.0 and the TurkishStemmer.
+   (Robert Muir via Simon Willnauer)  
+
+ * LUCENE-2055: GermanAnalyzer now uses the Snowball German2 algorithm and 
+   stopwords list by default for Version > 3.0.
+   (Robert Muir, Uwe Schindler, Simon Willnauer)
+
+Bug fixes
+
+ * LUCENE-2068: Fixed ReverseStringFilter which was not aware of supplementary
+   characters. During reverse the filter created unpaired surrogates, which
+   will be replaced by U+FFFD by the indexer, but not at query time. The filter
+   now reverses supplementary characters correctly if used with Version > 3.0.
+   (Simon Willnauer, Robert Muir)
+
+ * LUCENE-2035: TokenSources.getTokenStream() does not assign  positionIncrement. 
+   (Christopher Morris via Mark Miller)
+  
+ * LUCENE-2055: Deprecated RussianTokenizer, RussianStemmer, RussianStemFilter,
+   FrenchStemmer, FrenchStemFilter, DutchStemmer, and DutchStemFilter. For
+   these Analyzers, SnowballFilter is used instead (for Version > 3.0), as
+   the previous code did not always implement the Snowball algorithm correctly.
+   Additionally, for Version > 3.0, the Snowball stopword lists are used by
+   default.  (Robert Muir, Uwe Schindler, Simon Willnauer)
+
+ * LUCENE-2278: FastVectorHighlighter: Highlighted term is out of alignment
+   in multi-valued NOT_ANALYZED field. (Koji Sekiguchi)
+ 
+ * LUCENE-2284: MatchAllDocsQueryNode toString() created an invalid XML tag.
+   (Frank Wesemann via Robert Muir)
+
+ * LUCENE-2277: QueryNodeImpl threw ConcurrentModificationException on 
+   add(List<QueryNode>). (Frank Wesemann via Robert Muir)
+   
+API Changes
+
+ * LUCENE-2147: Spatial GeoHashUtils now always decode GeoHash strings
+   with full precision. GeoHash#decode_exactly(String) was merged into
+   GeoHash#decode(String). (Chris Male, Simon Willnauer)
+   
+ * LUCENE-2204: Change some package private classes/members to publicly accessible to implement
+   custom FragmentsBuilders. (Koji Sekiguchi)
+
+ * LUCENE-2055: Integrate snowball into contrib/analyzers. SnowballAnalyzer is
+   now deprecated in favor of language-specific analyzers which contain things
+   such as stopword lists and any language-specific processing in addition to
+   stemming. Add Turkish and Romanian stopwords lists to support this.
+   (Robert Muir, Uwe Schindler, Simon Willnauer)
+   
+New features
+
+ * LUCENE-2102: Add a Turkish LowerCase Filter. TurkishLowerCaseFilter handles
+   Turkish and Azeri unique casing behavior correctly.
+   (Ahmet Arslan, Robert Muir via Simon Willnauer)
+ 
+ * LUCENE-2039: Add a extensible query parser to contrib/misc.
+   ExtendableQueryParser enables arbitrary parser extensions based on a
+   customizable field naming scheme.
+   (Simon Willnauer)
+
+ * LUCENE-2067: Add a Czech light stemmer. CzechAnalyzer will now stem words
+   when Version is set to 3.1 or higher.  (Robert Muir)
+   
+ * LUCENE-2062: Add a Bulgarian analyzer.  (Robert Muir, Simon Willnauer)
+
+ * LUCENE-2206: Add Snowball's stopword lists for Danish, Dutch, English,
+   Finnish, French, German, Hungarian, Italian, Norwegian, Russian, Spanish, 
+   and Swedish. These can be loaded with WordListLoader.getSnowballWordSet.
+   (Robert Muir, Simon Willnauer)
+
+ * LUCENE-2243: Add DisjunctionMaxQuery support for FastVectorHighlighter.
+   (Koji Sekiguchi)
+
+ * LUCENE-2218: ShingleFilter supports minimum shingle size, and the separator
+   character is now configurable. Its also up to 20% faster. 
+   (Steven Rowe via Robert Muir)
+
+ * LUCENE-2234: Add a Hindi analyzer.  (Robert Muir)
+
+ * LUCENE-2055: Add analyzers/misc/StemmerOverrideFilter. This filter provides
+   the ability to override any stemmer with a custom dictionary map.
+   (Robert Muir, Uwe Schindler, Simon Willnauer)
+
+Build
+
+ * LUCENE-2124: Moved the JDK-based collation support from contrib/collation 
+   into core, and moved the ICU-based collation support into contrib/icu.  
+   (Steven Rowe, Robert Muir)
+   
+Optimizations
+
+ * LUCENE-2157: DelimitedPayloadTokenFilter no longer copies the buffer
+   over itsself. Instead it sets only the length. This patch also optimizes
+   the logic of the filter and uses NIO for IdentityEncoder. (Uwe Schindler)
+ 
+ * LUCENE-2084: Change IndexableBinaryStringTools to work on byte[] and char[]
+   directly, instead of Byte/CharBuffers, and modify ICUCollationKeyFilter to
+   take advantage of this for faster performance.
+   (Steven Rowe, Uwe Schindler, Robert Muir)
+
+ * LUCENE-2194, LUCENE-2201, LUCENE-2288: Snowball stemmers in contrib/analyzers
+   have been optimized to work on char[] and remove unnecessary object creation.
+   (Shai Erera, Robert Muir)
+
+Test Cases
+
+ * LUCENE-2115: Cutover contrib tests to use Java5 generics.  (Kay Kay
+   via Mike McCandless)
+
+Other
+
+ * LUCENE-1845: Updated bdb-je jar from version 3.3.69 to 3.3.93.
+   (Simon Willnauer via Mike McCandless)
+
+================== Release 2.9.2 / 3.0.1 2010-02-26 ====================
+
+New features
+
+ * LUCENE-2108: Spellchecker now safely supports concurrent modifications to
+   the spell-index. Threads can safely obtain term suggestions while the spell-
+   index is rebuild, cleared or reset. Internal IndexSearcher instances remain
+   open until the last thread accessing them releases the reference.
+   (Simon Willnauer)
+
+Bug Fixes
+
+ * LUCENE-2144: Fix InstantiatedIndex to handle termDocs(null)
+   correctly (enumerate all non-deleted docs).  (Karl Wettin via Mike
+   McCandless)
+
+ * LUCENE-2199: ShingleFilter skipped over tri-gram shingles if outputUnigram
+   was set to false. (Simon Willnauer)
+  
+ * LUCENE-2211: Fix missing clearAttributes() calls:
+   ShingleMatrix, PrefixAware, compounds, NGramTokenFilter,
+   EdgeNGramTokenFilter, Highlighter, and MemoryIndex.
+   (Uwe Schindler, Robert Muir)
+
+ * LUCENE-2207, LUCENE-2219: Fix incorrect offset calculations in end() for 
+   CJKTokenizer, ChineseTokenizer, SmartChinese SentenceTokenizer, 
+   and WikipediaTokenizer.  (Koji Sekiguchi, Robert Muir)
+   
+ * LUCENE-2266: Fixed offset calculations in NGramTokenFilter and 
+   EdgeNGramTokenFilter.  (Joe Calderon, Robert Muir via Uwe Schindler)
+   
+API Changes
+
+ * LUCENE-2108: Add SpellChecker.close, to close the underlying
+   reader.  (Eirik Bjørsnøs via Mike McCandless)
+
+ * LUCENE-2165: Add a constructor to SnowballAnalyzer that takes a Set of 
+   stopwords, and deprecate the String[] one.  (Nick Burch via Robert Muir)
+   
+======================= Release 3.0.0 2009-11-25 =======================
+
+Changes in backwards compatibility policy
+
+ * LUCENE-1257: Change some occurences of StringBuffer in public/protected
+   APIs of contrib/surround to StringBuilder.
+   (Paul Elschot via Uwe Schindler)
+
+Changes in runtime behavior
+
+ * LUCENE-1966: Modified and cleaned the default Arabic stopwords list used
+   by ArabicAnalyzer. You'll need to fully re-index any previously created 
+   indexes.  (Basem Narmok via Robert Muir)
+
+API Changes
+
+ * LUCENE-1936: Deprecated RussianLowerCaseFilter, because it transforms
+   text exactly the same as LowerCaseFilter. Please use LowerCaseFilter
+   instead, which has the same functionality.  (Robert Muir)
+   
+ * LUCENE-2051: Contrib Analyzer setters were deprecated and replaced
+   with ctor arguments / Version number.  Also stop word lists
+   were unified.  (Simon Willnauer)
+
+Bug fixes
+
+ * LUCENE-1781: Fixed various issues with the lat/lng bounding box
+   distance filter created for radius search in contrib/spatial.
+   (Bill Bell via Mike McCandless)
+
+ * LUCENE-1939: IndexOutOfBoundsException at ShingleMatrixFilter's
+   Iterator#hasNext method on exhausted streams.
+   (Patrick Jungermann via Karl Wettin)
+
+ * LUCENE-1359: French analyzer did not support null field names.
+   (Andrew Lynch via Robert Muir)
+   
+New features
+
+ * LUCENE-1924: Added BalancedSegmentMergePolicy to contrib/misc,
+   which is a merge policy that tries to avoid doing very large
+   segment merges to give better search performance in a mixed
+   indexing/searching environment.  (John Wang via Mike McCandless)
+
+ * LUCENE-1959: Add index splitting tools. The IndexSplitter tool works
+   on multi-segment (non optimized) indexes and it can copy specific
+   segments out of the index into a new index.  It can also list the
+   segments in the index, and delete specified segments.  (Jason Rutherglen via
+   Mike McCandless). MultiPassIndexSplitter can split any index into
+   any number of output parts, at the cost of doing multiple passes over
+   the input index. (Andrzej Bialecki)
+
+ * LUCENE-1993: Add maxDocFreq setting to MoreLikeThis, to exclude
+   from consideration terms that match more than the specified number
+   of documents.  (Christian Steinert via Mike McCandless)
+
+Optimizations
+
+ * LUCENE-1965, LUCENE-1962: Arabic-, Persian- and SmartChineseAnalyzer
+   loads default stopwords only once if accessed for the first time.
+   Previous versions were loading the stopword files each time a new
+   instance was created. This might improve performance for applications
+   creating lots of instances of these Analyzers. (Simon Willnauer) 
+
+Documentation
+
+ * LUCENE-1916: Translated documentation in the smartcn hhmm package.
+   (Patricia Peng via Robert Muir)
+
+Build
+
+ * LUCENE-1904: Moved wordnet-based synonym support from contrib/memory
+   into contrib/wordnet.  (Robert Muir)
+   
+ * LUCENE-2031: Moved PatternAnalyzer from contrib/memory into
+   contrib/analyzers/common, under miscellaneous.  (Robert Muir)
+   
+======================= Release 2.9.1 2009-11-06 =======================
+
+Changes in backwards compatibility policy
+
+ * LUCENE-2002: Add required Version matchVersion argument when
+   constructing ComplexPhraseQueryParser and default (as of 2.9)
+   enablePositionIncrements to true to match StandardAnalyzer's
+   default.  Also added required matchVersion to most of the analyzers
+   (Uwe Schindler, Mike McCandless)
+
+Changes in runtime behavior
+
+ * LUCENE-1963: ArabicAnalyzer now lowercases before checking the stopword
+   list. This has no effect on Arabic text, but if you are using a custom
+   stopword list that contains some non-Arabic words, you'll need to fully
+   reindex.  (DM Smith via Robert Muir)
+
+Bug fixes
+
+ * LUCENE-1953: FastVectorHighlighter: small fragCharSize can cause
+   StringIndexOutOfBoundsException. (Koji Sekiguchi)
+   
+ * LUCENE-1929: Highlighter throws exception on NumericRangeQuery and does not
+   support deprecated RangeQuery.  (Mark Miller)
+   
+ * LUCENE-2001: Wordnet Syns2Index incorrectly parses synonyms that
+   contain a single quote. (Parag H. Dave via Robert Muir)
+   
+ * LUCENE-2003: Highlighter doesn't respect position increments other than 1 with 
+   PhraseQuerys. (Uwe Schindler, Mark Miller)
+
+ * LUCENE-1954: InstantiatedIndexWriter: Fixed ClassCastException with
+   NumericField because of incorrect unchecked cast: Document.getFields()
+   returns List<Fieldable>.  (Bernd Fondermann via Uwe Schindler)
+   
+ * LUCENE-2014: SmartChineseAnalyzer did not properly clear attributes
+   in WordTokenFilter. If enablePositionIncrements is set for StopFilter,
+   then this could create invalid position increments, causing IndexWriter
+   to crash.  (Robert Muir, Uwe Schindler)
+   
+ * LUCENE-2013: SpanRegexQuery does not work with QueryScorer.
+   (Benjamin Keil via Mark Miller)
+
+======================= Release 2.9.0 2009-09-23 =======================
+
+Changes in runtime behavior
+
+ * LUCENE-1505: Local lucene now uses org.apache.lucene.util.NumericUtils for all
+    number conversion.  You'll need to fully re-index any previously created indexes.
+    This isn't a break in back-compatibility because local Lucene has not yet
+    been released.  (Mike McCandless)
+ 
+ * LUCENE-1758: ArabicAnalyzer now uses the light10 algorithm, has a refined
+    default stopword list, and lowercases non-Arabic text.  
+    You'll need to fully re-index any previously created indexes. This isn't a 
+    break in back-compatibility because ArabicAnalyzer has not yet been 
+    released.  (Robert Muir)
+
+
+API Changes
+
+ * LUCENE-1695: Update the Highlighter to use the new TokenStream API. This issue breaks backwards
+    compatibility with some public classes. If you have implemented custom Fragmenters or Scorers, 
+    you will need to adjust them to work with the new TokenStream API. Rather than getting passed a 
+    Token at a time, you will be given a TokenStream to init your impl with - store the Attributes 
+    you are interested in locally and access them on each call to the method that used to pass a new 
+    Token. Look at the included updated impls for examples.  (Mark Miller)
+
+ * LUCENE-1460: Change contrib TokenStreams/Filters to use the new
+    TokenStream API. (Robert Muir, Michael Busch)
+
+ * LUCENE-1775, LUCENE-1903: Change remaining TokenFilters (shingle, prefix-suffix)
+    to use the new TokenStream API. ShingleFilter is much more efficient now,
+    it clones much less often and computes the tokens mostly on the fly now.
+    Also added more tests. (Robert Muir, Michael Busch, Uwe Schindler, Chris Harris)
+    
+ * LUCENE-1685: The position aware SpanScorer has become the default scorer
+    for Highlighting. The SpanScorer implementation has replaced QueryScorer
+    and the old term highlighting QueryScorer has been renamed to 
+    QueryTermScorer. Multi-term queries are also now expanded by default. If
+    you were previously rewriting the query for multi-term query highlighting,
+    you should no longer do that (unless you switch to using QueryTermScorer).
+    The SpanScorer API (now QueryScorer) has also been improved to more closely
+    match the API of the previous QueryScorer implementation.  (Mark Miller)  
+
+ * LUCENE-1793: Deprecate the custom encoding support in the Greek and Russian
+    Analyzers. If you need to index text in these encodings, please use Java's
+    character set conversion facilities (InputStreamReader, etc) during I/O, 
+    so that Lucene can analyze this text as Unicode instead.  (Robert Muir)  
+
+Bug fixes
+
+ * LUCENE-1423: InstantiatedTermEnum#skipTo(Term) throws ArrayIndexOutOfBounds on empty index.
+    (Karl Wettin) 
+
+ * LUCENE-1462: InstantiatedIndexWriter did not reset pre analyzed TokenStreams the
+    same way IndexWriter does. Parts of InstantiatedIndex was not Serializable.
+    (Karl Wettin)
+
+ * LUCENE-1510: InstantiatedIndexReader#norms methods throws NullPointerException on empty index.
+    (Karl Wettin, Robert Newson)
+
+ * LUCENE-1514: ShingleMatrixFilter#next(Token) easily throws a StackOverflowException
+    due to recursive invocation. (Karl Wettin)
+
+ * LUCENE-1548: Fix distance normalization in LevenshteinDistance to
+    not produce negative distances (Thomas Morton via Mike McCandless)
+
+ * LUCENE-1490: Fix latin1 conversion of HALFWIDTH_AND_FULLWIDTH_FORMS
+    characters to only apply to the correct subset (Daniel Cheng via
+    Mike McCandless)
+
+ * LUCENE-1576: Fix BrazilianAnalyzer to downcase tokens after
+    StandardTokenizer so that stop words with mixed case are filtered
+    out.  (Rafael Cunha de Almeida, Douglas Campos via Mike McCandless)
+
+ * LUCENE-1491: EdgeNGramTokenFilter no longer stops on tokens shorter than minimum n-gram size.
+    (Todd Teak via Otis Gospodnetic)
+
+ * LUCENE-1683: Fixed JavaUtilRegexCapabilities (an impl used by
+    RegexQuery) to use Matcher.matches() not Matcher.lookingAt() so
+    that the regexp must match the entire string, not just a prefix.
+    (Trejkaz via Mike McCandless)
+
+ * LUCENE-1792: Fix new query parser to set rewrite method for
+    multi-term queries. (Luis Alves, Mike McCandless via Michael Busch)
+
+ * LUCENE-1828: Fix memory index to call TokenStream.reset() and
+    TokenStream.end(). (Tim Smith via Michael Busch)
+
+ * LUCENE-1912: Fix fast-vector-highlighter issue when two or more
+   terms are concatenated (Koji Sekiguchi via Mike McCandless)
+
+New features
+
+ * LUCENE-1531: Added support for BoostingTermQuery to XML query parser. (Karl Wettin)
+
+ * LUCENE-1435: Added contrib/collation, a CollationKeyFilter
+    allowing you to convert tokens into CollationKeys encoded using
+    IndexableBinaryStringTools.  This allows for faster RangeQuery when
+    a field needs to use a custom Collator.  (Steven Rowe via Mike
+    McCandless)
+
+ * LUCENE-1591: EnWikiDocMaker, LineDocMaker, WriteLineDoc can now
+    read/write bz2 using Apache commons compress library.  This means
+    you can download the .bz2 export from http://wikipedia.org and
+    immediately index it.  (Shai Erera via Mike McCandless)
+
+ * LUCENE-1629: Add SmartChineseAnalyzer to contrib/analyzers.  It
+    improves on CJKAnalyzer and ChineseAnalyzer by handling Chinese
+    sentences properly.  SmartChineseAnalyzer uses a Hidden Markov
+    Model to tokenize Chinese words in a more intelligent way.
+    (Xiaoping Gao via Mike McCandless)
+
+ * LUCENE-1676: Added DelimitedPayloadTokenFilter class for automatically adding payloads "in-stream" (Grant Ingersoll)    
+ 
+ * LUCENE-1578: Support for loading unoptimized readers to the
+    constructor of InstantiatedIndex. (Karl Wettin)
+
+ * LUCENE-1704: Allow specifying the Tidy configuration file when
+    parsing HTML docs with contrib/ant.  (Keith Sprochi via Mike
+    McCandless)
+
+ * LUCENE-1522: Added contrib/fast-vector-highlighter, a new alternative
+    highlighter.  (Koji Sekiguchi via Mike McCandless)
+
+ * LUCENE-1740: Added "analyzer" command to Lucli, enabling changing
+    the analyzer from the default StandardAnalyzer.  (Bernd Fondermann
+    via Mike McCandless)
+
+ * LUCENE-1272: Add get/setBoost to MoreLikeThis. (Jonathan
+    Leibiusky via Mike McCandless)
+ 
+ * LUCENE-1745: Added constructors to JakartaRegexpCapabilities and
+    JavaUtilRegexCapabilities as well as static flags to support
+    configuring a RegexCapabilities implementation with the
+    implementation-specific modifier flags. Allows for callers to
+    customize the RegexQuery using the implementation-specific options
+    and fine tune how regular expressions are compiled and
+    matched. (Marc Zampetti zampettim@aim.com via Mike McCandless)
+ 
+ * LUCENE-1567: Added a new QueryParser framework, that allows 
+    implementing a new query syntax in a flexible and efficient way.
+    This new QueryParser will be moved to Lucene's core in release
+    3.0 and will then replace the current core QueryParser, which
+    has been deprecated with this patch.
+    (Luis Alves and Adriano Campos via Michael Busch)
+    
+ * LUCENE-1486: Added ComplexPhraseQueryParser, an extension of QueryParser 
+    that allows a subset of the Lucene query language to be embedded in
+    PhraseQuerys. Wildcard, Range, and Fuzzy queries, as well as limited 
+    boolean logic, can be used within quote operators with this parser, ie: 
+    "(jo* -john) smyth~". (Mark Harwood via Mark Miller)
+    
+ * Added web-based demo of functionality in contrib's XML Query Parser
+    packaged as War file (Mark Harwood)
+
+ * LUCENE-1406: Added Arabic analyzer.  (Robert Muir via Grant Ingersoll)
+
+ * LUCENE-1628: Added Persian analyzer.  (Robert Muir)
+
+ * LUCENE-1813: Add option to ReverseStringFilter to mark reversed tokens.
+    (Andrzej Bialecki via Robert Muir)
+
+Optimizations
+
+ * LUCENE-1643: Re-use the collation key (RawCollationKey) for
+     better performance, in ICUCollationKeyFilter.  (Robert Muir via
+     Mike McCandless)
+
+ * LUCENE-1794: Implement TokenStream reuse for contrib Analyzers, 
+     and implement reset() for TokenStreams to support reuse.  (Robert Muir)
+
+Documentation
+
+ * LUCENE-1876: added missing package level documentation for numerous
+     contrib packages.
+     (Steven Rowe & Robert Muir)
+
+Build
+
+ * LUCENE-1728: Split contrib/analyzers into common and smartcn modules. 
+   Contrib/analyzers now builds an additional lucene-smartcn Jar file. All
+   smartcn classes are not included in the lucene-analyzers JAR file.
+   (Robert Muir via Simon Willnauer)
+ 
+ * LUCENE-1829: Fix contrib query parser to properly create javacc files.
+   (Jan-Pascal and Luis Alves via Michael Busch)      
+
+Test Cases
+
+
+======================= Release 2.4.0 2008-10-06 =======================
+
+Changes in runtime behavior
+
+ (None)
+
+API Changes
+
+ 1. 
+
+ (None)
+
+Bug fixes
+
+ 1. LUCENE-1312: Added full support for InstantiatedIndexReader#getFieldNames()
+    and tests that assert that deleted documents behaves as they should (they did).
+    (Jason Rutherglen, Karl Wettin)
+
+ 2. LUCENE-1318: InstantiatedIndexReader.norms(String, b[], int) didn't treat
+    the array offset right. (Jason Rutherglen via Karl Wettin)
+
+New features
+
+ 1. LUCENE-1320: ShingleMatrixFilter, multidimensional shingle token filter. (Karl Wettin)
+
+ 2. LUCENE-1142: Updated Snowball package, org.tartarus distribution revision 500.
+    Introducing Hungarian, Turkish and Romanian support, updated older stemmers
+    and optimized (reflectionless) SnowballFilter.
+    IMPORTANT NOTICE ON BACKWARDS COMPATIBILITY: an index created using the 2.3.2 (or older)
+    might not be compatible with these updated classes as some algorithms have changed.
+    (Karl Wettin)
+
+ 3. LUCENE-1016: TermVectorAccessor, transparent vector space access via stored vectors
+    or by resolving the inverted index. (Karl Wettin) 
+
+Documentation
+
+ (None)
+
+Build
+
+ (None)
+
+Test Cases
+
+ (None)
