@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<project name="join" default="default">
+  <description>
+    Index-time and Query-time joins for normalized content
+  </description>
+
+  <import file="../module-build.xml"/>
+
+  <path id="classpath">
+    <pathelement path="${grouping.jar}"/>
+    <path refid="base.classpath"/>
+  </path>
+
+  <path id="run.classpath">
+    <path refid="classpath"/>
+    <pathelement location="${build.dir}/classes/java"/>
+  </path>
+
+  <target name="init" depends="module-build.init,jar-grouping"/>
+
+  <target name="javadocs" depends="javadocs-grouping,compile-core">
+    <invoke-module-javadoc>
+      <links>
+        <link href="../grouping"/>
+      </links>
+    </invoke-module-javadoc>
+  </target>
+
+</project>

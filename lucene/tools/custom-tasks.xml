@@ -1,0 +1,69 @@
+
+<project name="custom-tasks">
+  <description>
+    This file is designed for importing into a main build file, and not intended
+    for standalone use.
+  </description>
+
+  <target name="load-custom-tasks" unless="custom-tasks.loaded">
+    <dirname file="${ant.file.custom-tasks}" property="custom-tasks.dir"/>
+    <taskdef resource="lucene-solr.antlib.xml">
+      <classpath>
+        <pathelement location="${custom-tasks.dir}/../build/tools/classes/java" />
+        <fileset dir="${custom-tasks.dir}/lib" includes="asm-debug-all-4.1.jar" />
+      </classpath>
+    </taskdef>
+    <property name="custom-tasks.loaded" value="true"/>
+  </target>
+
+  <filtermapper id="license-mapper-defaults">
+    <!-- Normalize input paths. -->
+    <replacestring from="\" to="/" />
+    <replaceregex pattern="\.jar$" replace="" flags="gi" />
+    
+    <!-- Some typical snapshot/minimalized JAR suffixes. -->
+    <replaceregex pattern="-min$" replace="" flags="gi" />
+    <replaceregex pattern="SNAPSHOT$" replace="" flags="gi" />
+
+    <!-- Typical version patterns. -->
+    <replaceregex pattern="\.rc[0-9]+" replace="" flags="gi" />
+    <replaceregex pattern="\-(r)?([0-9\-\_\.])+(b(eta)?([0-9\-\.])*)?$" replace="" flags="gi" />
+
+    <!-- git hashcode pattern: its always 40 chars right? -->
+    <replaceregex pattern="\-[a-z0-9]{40,40}$" replace="" flags="gi" />
+  </filtermapper>
+
+  <macrodef name="license-check-macro">
+    <attribute name="dir" />
+    <attribute name="licensedir" />
+    <element name="additional-excludes" optional="true" />
+    <element name="additional-filters"  optional="true" />
+    <sequential>
+      <!-- LICENSE and NOTICE verification macro. -->
+      <echo>License check under: @{dir}</echo>
+      <licenses licenseDirectory="@{licensedir}">
+        <fileset dir="@{dir}">
+          <include name="**/*.jar" />
+          <!-- Speed up scanning a bit. -->
+          <exclude name="**/.git/**" />
+          <exclude name="**/.svn/**" />
+          <exclude name="**/bin/**" />
+          <exclude name="**/build/**" />
+          <exclude name="**/dist/**" />
+          <exclude name="**/src/**" />
+          <additional-excludes />
+        </fileset>
+
+        <licenseMapper>
+          <chainedmapper>
+            <filtermapper refid="license-mapper-defaults"/>
+            <filtermapper>
+              <!-- Non-typical version patterns. -->
+              <additional-filters />
+            </filtermapper>
+          </chainedmapper>
+        </licenseMapper>
+      </licenses>
+    </sequential>
+  </macrodef>
+</project>

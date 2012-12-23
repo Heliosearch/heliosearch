@@ -1,0 +1,8 @@
+# Apache Lucene Migration Guide
+
+## Separation of IndexDocument and StoredDocument (LUCENE-3312)
+
+The API of oal.document was restructured to differentiate between stored 
+documents and indexed documents. IndexReader.document(int) now returns 
+StoredDocument instead of Document. In most cases a simple replacement
+of the return type is enough to upgrade.

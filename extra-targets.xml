@@ -1,0 +1,124 @@
+<?xml version="1.0"?>
+
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+ 
+        http://www.apache.org/licenses/LICENSE-2.0
+ 
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+ -->
+
+<project name="extra-targets" basedir=".">
+  <description>
+    This file is designed for importing into a main build file, and not intended
+    for standalone use.
+  </description>
+  
+  <import file="lucene/common-build.xml"/>
+
+  <!--
+   Run after Junit tests.
+   
+   This target is in a separate file, as it needs to include common-build.xml,
+   but must run from top-level!
+   -->
+  <target name="-generate-clover-reports" depends="clover">
+    <fail unless="run.clover">Clover not enabled!</fail>
+    <mkdir dir="${clover.report.dir}"/>
+    <fileset dir="." id="clover.test.result.files">
+      <include name="*/build/**/test/TEST-*.xml"/>
+      <exclude name="lucene/build/backwards/**"/>
+    </fileset>
+    <clover-report>
+      <current outfile="${clover.report.dir}" title="${final.name}" numThreads="0">
+        <format type="html" filter="assert"/>
+        <testresults refid="clover.test.result.files"/>
+      </current>
+      <current outfile="${clover.report.dir}/clover.xml" title="${final.name}">
+        <format type="xml" filter="assert"/>
+        <testresults refid="clover.test.result.files"/>
+      </current>
+    </clover-report>
+    <echo>You can find the merged Lucene/Solr Clover report in '${clover.report.dir}'.</echo>
+  </target>
+
+  <target name="-run-maven-build" depends="install-maven-tasks">
+    <mvn xmlns="antlib:org.apache.maven.artifact.ant" pom="${maven-build-dir}/pom.xml"
+      mavenVersion="${maven-version}" failonerror="true" fork="true">
+      <arg value="-fae"/>
+      <arg value="install"/>
+      <syspropertyset>
+        <propertyref builtin="commandline"/>
+      </syspropertyset>
+    </mvn>
+  </target>
+
+  <target xmlns:ivy="antlib:org.apache.ivy.ant" name="-check-svn-working-copy" depends="ivy-availability-check,ivy-fail,ivy-configure,resolve-groovy">
+    <ivy:cachepath organisation="org.tmatesoft.svnkit" module="svnkit" revision="1.7.6"
+      inline="true" conf="default" type="jar" transitive="true" pathid="svnkit.classpath"/>
+    <script language="groovy" taskname="svn">
+      <classpath>
+        <path refid="groovy.classpath"/>
+        <path refid="svnkit.classpath"/>
+      </classpath><![CDATA[
+      import org.tmatesoft.svn.core.*;
+      import org.tmatesoft.svn.core.wc.*;
+      
+      SVNClientManager manager = SVNClientManager.newInstance();
+      SVNStatusClient statusClient = manager.getStatusClient();
+      SVNWCClient wcClient = manager.getWCClient();
+      
+      File basedir = new File(project.getProperty('basedir')).getAbsoluteFile();
+      int baseLen = basedir.toString().length();
+      def convertRelative = {
+        file -> file.getAbsolutePath().substring(baseLen + 1).replace(File.separatorChar, (char)'/');
+      }
+      
+      Set missingProps = new TreeSet(), unversioned = new TreeSet();
+
+      self.log('Getting all versioned and unversioned files...');
+      statusClient.doStatus(basedir, SVNRevision.WORKING, SVNDepth.fromRecurse(true), false, true, false, false, {
+        status ->
+        SVNStatusType nodeStatus = status.getNodeStatus();
+        if (nodeStatus == SVNStatusType.STATUS_UNVERSIONED) {
+          unversioned.add(convertRelative(status.getFile()));
+        } else if (status.getKind() == SVNNodeKind.FILE && nodeStatus != SVNStatusType.STATUS_DELETED) {
+          missingProps.add(convertRelative(status.getFile()));
+        }
+      } as ISVNStatusHandler, null);
+
+      self.log('Filtering files with existing svn:eol-style...');
+      wcClient.doGetProperty(basedir, 'svn:eol-style', SVNRevision.WORKING, SVNRevision.WORKING, true, {
+        file, prop -> missingProps.remove(convertRelative(file));
+      } as ISVNPropertyHandler);
+      
+      self.log('Filtering files with binary svn:mime-type...');
+      wcClient.doGetProperty(basedir, 'svn:mime-type', SVNRevision.WORKING, SVNRevision.WORKING, true, {
+        file, prop ->
+        prop = SVNPropertyValue.getPropertyAsString(prop.getValue());
+        if (prop.startsWith('application/') || prop.startsWith('image/')) {
+          missingProps.remove(convertRelative(file));
+        }
+      } as ISVNPropertyHandler);
+      
+      def convertSet2String = {
+        set -> set ? ('* ' + set.join(project.getProperty('line.separator') + '* ')) : null
+      };
+      project.setProperty('svn.checkprops.failed', convertSet2String(missingProps));
+      project.setProperty('svn.unversioned.failed', convertSet2String(unversioned));
+    ]]></script>
+    <fail if="svn.checkprops.failed"
+      message="The following files are missing svn:eol-style (or binary svn:mime-type):${line.separator}${svn.checkprops.failed}"/>
+    <fail if="svn.unversioned.failed"
+      message="Source checkout is dirty after running tests!!! Offending files:${line.separator}${svn.unversioned.failed}"/>
+  </target>
+</project>

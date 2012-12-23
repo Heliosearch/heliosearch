@@ -1,0 +1,572 @@
+<?xml version="1.0"?>
+
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+ 
+        http://www.apache.org/licenses/LICENSE-2.0
+ 
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+ -->
+
+<project name="lucene" default="default" basedir="."
+         xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+
+  <import file="common-build.xml"/>
+
+  <path id="classpath">
+    <pathelement location="${common.dir}/build/core/classes/java"/>
+  </path>
+
+  <patternset id="binary.build.dist.patterns"
+              includes="docs/,**/*.jar,**/*.war"
+              excludes="poms/**,**/*-src.jar,**/*-javadoc.jar"
+  />
+  <patternset id="binary.root.dist.patterns"
+              includes="LICENSE.txt,NOTICE.txt,README.txt,
+                        MIGRATE.txt,JRE_VERSION_MIGRATION.txt,
+                        SYSTEM_REQUIREMENTS.txt,
+                        CHANGES.txt,
+                        **/lib/*.jar,
+                        licenses/**,
+                        */docs/,**/README*"
+              excludes="build/**,site/**,tools/**,**/lib/*servlet-api*.jar"
+  />
+
+
+  <!-- ================================================================== -->
+  <!-- Prepares the build directory                                       -->
+  <!-- ================================================================== -->
+
+  <target name="test-core" description="Runs unit tests for the core Lucene code">
+    <ant dir="${common.dir}/core" target="test" inheritAll="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+    </ant>
+  </target>
+
+  <!-- "-clover.load" is *not* a useless dependency. do not remove -->
+  <target name="test" depends="-clover.load, test-core, test-modules, test-backwards"
+          description="Runs all unit tests (core, modules and back-compat)"
+  />
+
+  <target name="pitest" depends="pitest-modules"
+          description="Runs pitests (core, modules and back-compat)"
+  />
+
+  <path id="backwards.test.compile.classpath">
+    <path refid="junit-path"/>
+    <path refid="ant-path"/>
+    <fileset dir="${backwards.dir}/lib">
+      <include name="lucene-core*.jar"/>
+    </fileset>
+  </path>
+	
+  <path id="backwards.junit.classpath">
+    <path refid="junit-path"/>
+    <path refid="classpath"/>
+    <pathelement location="${build.dir.backwards}/classes/test"/>
+    <pathelement path="${java.class.path}"/>
+  </path>
+
+  <target name="compile-backwards" depends="compile-core"
+  	description="Runs tests of a previous Lucene version.">
+	<sequential>
+      <mkdir dir="${build.dir.backwards}"/>	  
+      
+      <!-- TODO: separate test-framework from core tests (because META-INF duplicates in trunk) -->
+      
+      <!-- compile branch tests against previous version JAR file -->	
+      <compile-test-macro srcdir="${backwards.dir}/test-framework/src/java" destdir="${build.dir.backwards}/classes/test"
+                  test.classpath="backwards.test.compile.classpath" javac.source="${javac.source.backwards}" javac.target="${javac.target.backwards}"/>
+      <!-- Copy the resources folder (if existent) -->
+      <copy todir="${build.dir.backwards}/classes/test">
+        <fileset dir="${backwards.dir}/test-framework/src/resources" erroronmissingdir="no"/>
+      </copy>
+      <compile-test-macro srcdir="${backwards.dir}/core/src/test" destdir="${build.dir.backwards}/classes/test"
+                  test.classpath="backwards.test.compile.classpath" javac.source="${javac.source.backwards}" javac.target="${javac.target.backwards}"/>
+      
+
+  	</sequential>
+  </target>	
+
+  <target name="backwards-test-warning" depends="check-backwards-params" if="backwards.ignoring.params">
+    <echo>
+       Warning: Ignoring your multiplier and nightly settings for backwards tests.
+       These tests are for API compatibility only!
+    </echo>
+  </target>
+
+  <!--
+  Add dependency after 4.0: depends="compile-backwards, backwards-test-warning"
+  and uncomment inside of this target.
+  -->
+  <target name="test-backwards" depends="install-junit4-taskdef">
+    <!--
+    <mkdir dir="${build.dir.backwards}/test"/>
+    <backwards-test-macro/>
+    -->
+  </target>
+
+  <target name="check-backwards-params">
+    <condition property="backwards.ignoring.params">
+      <or>
+        <istrue value="${tests.nightly}"/>
+        <not><equals arg1="${tests.multiplier}" arg2="1"/></not>
+      </or>
+    </condition>
+  </target>
+
+  <macrodef name="backwards-test-macro">
+  	<attribute name="threadNum" default="1"/>
+  	<attribute name="threadTotal" default="1"/>
+  	<sequential>
+  	  <!-- run branch tests against trunk jar:
+          Note: we disable multiplier/nightly because the purpose is to find API breaks
+          -->
+      <test-macro 
+        dataDir="${backwards.dir}/core/src/test" 
+        tempDir="${build.dir.backwards}/test" 
+        junit.classpath="backwards.junit.classpath" 
+        junit.output.dir="${junit.output.dir.backwards}" 
+        tests.nightly="false"
+        tests.multiplier="1"
+        threadNum="@{threadNum}" 
+        threadTotal="@{threadTotal}"/>
+    </sequential>
+  </macrodef>
+
+  <target name="compile-core" depends="compile-lucene-core"/>
+
+  <!-- Validation (license/notice/api checks). -->
+  <target name="validate" depends="check-licenses,rat-sources,check-forbidden-apis" description="Validate stuff." />
+
+  <!-- Validation here depends on compile-tools: but we want to compile modules' tools too -->
+  <target name="compile-tools" depends="common.compile-tools">
+  	<modules-crawl target="compile-tools" failonerror="true"/>
+  </target>
+
+  <target name="check-licenses" depends="compile-tools,resolve,load-custom-tasks" description="Validate license stuff.">
+    <license-check-macro dir="${basedir}" licensedir="${common.dir}/licenses" />
+  </target>
+
+  <target name="check-forbidden-apis" depends="compile-tools,compile-test,load-custom-tasks,-check-forbidden-jdk-apis,-check-forbidden-test-apis,-check-system-out" description="Check forbidden API calls in compiled class files"/>
+
+  <target name="-check-forbidden-jdk-apis">
+    <forbidden-apis> 
+      <apiFileSet dir="${custom-tasks.dir}/forbiddenApis">
+        <include name="jdk.txt" />
+        <include name="jdk-deprecated.txt" />
+        <include name="executors.txt" />
+      </apiFileSet>
+      <fileset dir="${basedir}/build" includes="**/*.class" />
+    </forbidden-apis>
+  </target>
+
+  <target name="-check-forbidden-test-apis">
+    <forbidden-apis apiFile="${custom-tasks.dir}/forbiddenApis/tests.txt"> 
+      <classpath refid="junit-path"/>
+      <fileset dir="${basedir}/build" includes="**/classes/test/**/*.class,test-framework/**/*.class" />
+    </forbidden-apis>
+  </target>
+
+  <target name="-check-system-out">
+    <forbidden-apis apiFile="${custom-tasks.dir}/forbiddenApis/system-out.txt">
+      <fileset dir="${basedir}/build">
+        <include name="**/classes/java/**/*.class"/>
+        <!-- this is basically tests -->
+        <exclude name="test-framework/**"/>
+        <!-- exclude command line tools -->
+        <exclude name="core/classes/java/org/apache/lucene/index/CheckIndex.class"/>
+        <exclude name="core/classes/java/org/apache/lucene/index/IndexUpgrader.class"/>
+        <exclude name="core/classes/java/org/apache/lucene/store/LockVerifyServer.class"/>
+        <exclude name="core/classes/java/org/apache/lucene/store/LockStressTest.class"/>
+        <exclude name="analysis/stempel/classes/java/org/egothor/stemmer/Compile.class"/>
+        <exclude name="analysis/stempel/classes/java/org/egothor/stemmer/DiffIt.class"/>
+        <exclude name="benchmark/**"/>
+        <exclude name="demo/classes/java/org/apache/lucene/demo/IndexFiles.class"/>
+        <exclude name="demo/classes/java/org/apache/lucene/demo/SearchFiles.class"/>
+        <exclude name="misc/classes/java/org/apache/lucene/index/CompoundFileExtractor.class"/>
+        <exclude name="misc/classes/java/org/apache/lucene/index/IndexSplitter.class"/>
+        <exclude name="misc/classes/java/org/apache/lucene/index/MultiPassIndexSplitter.class"/>
+        <exclude name="misc/classes/java/org/apache/lucene/misc/GetTermInfo.class"/>
+        <exclude name="misc/classes/java/org/apache/lucene/misc/HighFreqTerms.class"/>
+        <exclude name="misc/classes/java/org/apache/lucene/misc/IndexMergeTool.class"/>
+        <!-- not printing, just checking if its a system stream -->
+        <exclude name="core/classes/java/org/apache/lucene/util/PrintStreamInfoStream.class"/>
+        <!-- not printing, just generated code from javacc -->
+        <exclude name="queryparser/classes/java/org/apache/lucene/queryparser/classic/QueryParserTokenManager.class"/>
+        <exclude name="queryparser/classes/java/org/apache/lucene/queryparser/flexible/standard/parser/StandardSyntaxParserTokenManager.class"/>
+        <exclude name="queryparser/classes/java/org/apache/lucene/queryparser/surround/parser/QueryParserTokenManager.class"/>
+      </fileset>
+    </forbidden-apis>
+  </target>
+
+  <target name="resolve">
+    <sequential>
+      <ant dir="test-framework" target="resolve" inheritall="false">
+         <propertyset refid="uptodate.and.compiled.properties"/>
+      </ant>
+      <ant dir="${common.dir}/tools" target="resolve" inheritAll="false">
+         <propertyset refid="uptodate.and.compiled.properties"/>
+      </ant>
+      <modules-crawl target="resolve" failonerror="true"/>
+    </sequential>
+  </target>
+
+  <target name="documentation" description="Generate all documentation"
+    depends="javadocs,changes-to-html,process-webpages"/>
+  <target name="javadoc" depends="javadocs"/>
+  <target name="javadocs" description="Generate javadoc" depends="javadocs-lucene-core, javadocs-modules, javadocs-test-framework"/>
+
+  <target name="documentation-lint" depends="-ecj-javadoc-lint,-documentation-lint,-documentation-lint-unsupported"
+          description="Validates the generated documentation (HTML errors, broken links,...)"/>
+
+  <!-- we check for broken links across all documentation -->
+  <target name="-documentation-lint" if="documentation-lint.supported" depends="documentation">
+    <echo message="checking for broken html..."/>
+    <jtidy-macro>
+       <!-- NOTE: must currently exclude deprecated-list due to a javadocs bug (as of 1.7.0_09)
+            javadocs generates invalid XML if you deprecate a method that takes a parameter
+            with a generic type -->
+      <fileset dir="build/docs" includes="**/*.html" excludes="**/deprecated-list.html"/>
+    </jtidy-macro>
+    <echo message="Checking for broken links..."/>
+    <check-broken-links dir="build/docs"/>
+    <echo message="Checking for missing docs..."/>
+    <!-- TODO: change this level=method -->
+    <check-missing-javadocs dir="build/docs" level="class"/>
+    <!-- too many classes to fix overall to just enable
+         the above to be level="method" right now, but we
+         can prevent the modules that don't have problems
+         from getting any worse -->
+    <!-- analyzers-common: problems -->
+    <check-missing-javadocs dir="build/docs/analyzers-icu" level="method"/>
+    <!-- analyzers-kuromoji: problems -->
+    <check-missing-javadocs dir="build/docs/analyzers-morfologik" level="method"/>
+    <check-missing-javadocs dir="build/docs/analyzers-phonetic" level="method"/>
+    <!-- analyzers-smartcn: problems -->
+    <check-missing-javadocs dir="build/docs/analyzers-stempel" level="method"/>
+    <!-- analyzers-uima: problems -->
+    <!-- benchmark: problems -->
+    <check-missing-javadocs dir="build/docs/classification" level="method"/>
+    <!-- codecs: problems -->
+    <!-- core: problems -->
+    <check-missing-javadocs dir="build/docs/demo" level="method"/>
+    <!-- facet: problems -->
+    <!-- grouping: problems -->
+    <!-- highlighter: problems -->
+    <check-missing-javadocs dir="build/docs/join" level="method"/>
+    <check-missing-javadocs dir="build/docs/memory" level="method"/>
+    <!-- misc: problems -->
+    <!-- queries: problems -->
+    <!-- queryparser: problems -->
+    <!-- sandbox: problems -->
+    <!-- spatial: problems -->
+    <check-missing-javadocs dir="build/docs/suggest" level="method"/>
+    <!-- test-framework: problems -->
+
+    <!-- too much to fix core/ for now, but enforce full javadocs for key packages -->
+    <check-missing-javadocs dir="build/docs/core/org/apache/lucene/analysis" level="method"/>
+    <check-missing-javadocs dir="build/docs/core/org/apache/lucene/document" level="method"/>
+    <check-missing-javadocs dir="build/docs/core/org/apache/lucene/search/similarities" level="method"/>
+    <check-missing-javadocs dir="build/docs/core/org/apache/lucene/index" level="method"/>
+    <check-missing-javadocs dir="build/docs/core/org/apache/lucene/codecs" level="method"/>
+  </target>
+  
+  <target name="-ecj-javadoc-lint" depends="documentation,compile-test-framework,-ecj-resolve">
+    <subant target="-ecj-javadoc-lint" failonerror="true" inheritall="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+      <fileset dir="core" includes="build.xml"/>
+      <fileset dir="test-framework" includes="build.xml"/>
+    </subant>
+    <modules-crawl target="-ecj-javadoc-lint"/>
+  </target>
+
+  <target name="process-webpages" depends="resolve-groovy,resolve-pegdown">
+    <makeurl property="process-webpages.buildfiles" separator="|">
+      <fileset dir="." includes="**/build.xml" excludes="build.xml,analysis/*,build/**,tools/**,backwards/**,site/**"/>
+    </makeurl>
+    <!--
+      The XSL input file is ignored completely, but XSL expects one to be given,
+      so we pass ourself (${ant.file}) here. The list of module build.xmls is given
+      via string parameter, that must be splitted by the XSL at '|'.
+    --> 
+    <xslt in="${ant.file}" out="${javadoc.dir}/index.html" style="site/xsl/index.xsl" force="true">
+      <outputproperty name="method" value="html"/>
+      <outputproperty name="version" value="4.0"/>
+      <outputproperty name="encoding" value="UTF-8"/>
+      <outputproperty name="indent" value="yes"/>
+      <param name="buildfiles" expression="${process-webpages.buildfiles}"/>
+      <param name="version" expression="${version}"/>
+    </xslt>
+    
+    <pegdown todir="${javadoc.dir}">
+      <fileset dir="." includes="MIGRATE.txt,JRE_VERSION_MIGRATION.txt,SYSTEM_REQUIREMENTS.txt"/>
+      <globmapper from="*.txt" to="*.html"/>
+    </pegdown>
+
+    <copy todir="${javadoc.dir}">
+      <fileset dir="site/html" includes="**/*"/>
+    </copy>
+  </target>
+	
+  <target name="javadocs-modules" description="Generate javadoc for modules classes">
+    <modules-crawl target="javadocs"
+                   failonerror="true"/>
+  </target>
+
+  <!-- rat-sources-typedef is *not* a useless dependency. do not remove -->
+  <target name="rat-sources" depends="rat-sources-typedef">
+    <subant target="rat-sources" failonerror="true" inheritall="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+      <fileset dir="core" includes="build.xml"/>
+      <fileset dir="test-framework" includes="build.xml"/>
+      <fileset dir="tools" includes="build.xml"/>
+    </subant>
+    <modules-crawl target="rat-sources"/>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- D I S T R I B U T I O N                                            -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="package" depends="jar-core, jar-test-framework, build-modules, init-dist, documentation"/>
+
+  <target name="nightly" depends="test, package-tgz">
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Packages the distribution with zip                                 -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="package-zip" depends="package"
+    description="--> Generates the Lucene distribution as .zip">
+
+    <delete file="${dist.dir}/lucene-${version}.zip"/>
+    <zip destfile="${dist.dir}/lucene-${version}.zip">
+      <zipfileset prefix="lucene-${version}" dir=".">
+        <patternset refid="binary.root.dist.patterns"/>
+      </zipfileset>
+      <zipfileset prefix="lucene-${version}" dir="${build.dir}">
+        <patternset refid="binary.build.dist.patterns"/>
+      </zipfileset>
+    </zip>
+	<make-checksums file="${dist.dir}/lucene-${version}.zip"/>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- packages the distribution with tar-gzip                            -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+
+  <!-- TODO: fix this stuff to not be a duplicate of the zip logic above! -->
+  <target name="package-tgz" depends="package"
+    description="--> Generates the lucene distribution as .tgz">
+
+    <delete file="${dist.dir}/lucene-${version}.tgz"/>
+    <tar tarfile="${dist.dir}/lucene-${version}.tgz"
+      longfile="gnu" compression="gzip">
+      <tarfileset prefix="lucene-${version}" dir=".">
+        <patternset refid="binary.root.dist.patterns"/>
+      </tarfileset>
+      <tarfileset prefix="lucene-${version}" dir="${build.dir}">
+        <patternset refid="binary.build.dist.patterns"/>
+      </tarfileset>
+    </tar>
+    <make-checksums file="${dist.dir}/lucene-${version}.tgz"/>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- packages the distribution with zip and tar-gzip                    -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="package-all-binary" depends="package-zip, package-tgz"
+    description="--> Generates the .tgz and .zip distributions"/>
+
+  <!-- ================================================================== -->
+  <!-- same as package-all. it is just here for compatibility.            -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="dist" depends="package-all-binary"/>
+
+  <!-- ================================================================== -->
+  <!-- S O U R C E  D I S T R I B U T I O N                               -->
+  <!-- ================================================================== -->
+    <target name="init-dist" >
+
+        <!-- Package is not called first if packaging src standalone, so the dist.dir may not exist -->
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${maven.dist.dir}"/>
+    </target>
+
+  <!-- ================================================================== -->
+  <!-- Packages the sources from "svn export" with tar-gzip               -->
+  <!-- ================================================================== -->
+  <target name="package-tgz-src" depends="init-dist"
+          description="--> Generates the Lucene source distribution from 'svn export' as .tgz">
+    <property name="source.package.file"
+              value="${dist.dir}/lucene-${version}-src.tgz"/>
+    <delete file="${source.package.file}"/>
+    <svn-export-source source.dir="."/>
+
+    <!-- Exclude javadoc package-list files under licenses incompatible with the ASL -->
+    <delete dir="${svn.export.dir}/tools/javadoc/java6"/>
+    <!-- Exclude clover license files incompatible with the ASL -->
+    <delete dir="${svn.export.dir}/tools/clover"/>
+
+    <build-changes changes.src.file="${svn.export.dir}/CHANGES.txt"
+                   changes.target.dir="${svn.export.dir}/docs/changes"
+                   changes.product="LUCENE"/>
+    <tar tarfile="${source.package.file}" compression="gzip" longfile="gnu">
+      <tarfileset prefix="lucene-${version}" dir="${svn.export.dir}"/>
+    </tar>
+    <make-checksums file="${source.package.file}"/>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Packages the sources from local working copy with tar-gzip     -->
+  <!-- ================================================================== -->
+  <target name="package-local-src-tgz" depends="init-dist"
+    description="--> Packages the Lucene source from the local working copy">
+    <mkdir dir="${common.dir}/build"/>
+    <property name="source.package.file"
+              value="${common.dir}/build/lucene-${version}-src.tgz"/>
+    <delete file="${source.package.file}"/>
+    <tar tarfile="${source.package.file}" compression="gzip" longfile="gnu">
+      <tarfileset prefix="lucene-${version}" dir=".">
+        <patternset refid="lucene.local.src.package.patterns"/>
+      </tarfileset>
+    </tar>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- same as package-tgz-src. it is just here for compatibility.        -->
+  <!-- ================================================================== -->
+  <target name="dist-src" depends="package-tgz-src"/>
+
+  <target name="dist-all" depends="dist, dist-src"/>
+
+  <target name="copy-to-stage">
+    <copy-to-stage-macro artifacts.dir="${dist.dir}"/>
+  </target>
+
+  <target name="prepare-release-no-sign" depends="clean, dist-all, generate-maven-artifacts"/>
+  <target name="prepare-release" depends="prepare-release-no-sign, sign-artifacts"/>
+  <target name="stage" depends="prepare-release, copy-to-stage">
+
+  </target>
+
+  <!-- install-maven-tasks is *not* a useless dependency. do not remove -->
+  <target name="generate-maven-artifacts" depends="install-maven-tasks">
+    <sequential>
+      <subant target="dist-maven" failonerror="true" inheritall="false">
+        <propertyset refid="uptodate.and.compiled.properties"/>
+        <fileset dir="${common.dir}/core" includes="build.xml"/>
+        <fileset dir="${common.dir}/test-framework" includes="build.xml"/>
+      </subant>
+      
+      <modules-crawl target="dist-maven"/>
+    </sequential>
+  </target>
+	
+  <target name="-validate-maven-dependencies" depends="compile-tools, install-maven-tasks, load-custom-tasks">
+    <sequential>
+      <subant target="-validate-maven-dependencies" failonerror="true" inheritall="false">
+        <propertyset refid="uptodate.and.compiled.properties"/>
+        <fileset dir="${common.dir}/core" includes="build.xml"/>
+        <fileset dir="${common.dir}/test-framework" includes="build.xml"/>
+      </subant>
+      
+      <modules-crawl target="-validate-maven-dependencies"/>
+    </sequential>
+  </target>
+	
+  <!-- ================================================================== -->
+  <!-- support for signing the artifacts using gpg                        -->
+  <!-- ================================================================== -->
+  <target name="sign-artifacts">
+    <sign-artifacts-macro artifacts.dir="${dist.dir}"/>
+  </target>
+
+  <target name="build-modules" depends="compile-test"
+          description="Builds all additional modules and their tests">
+    <modules-crawl target="build-artifacts-and-tests"/>
+  </target>
+
+  <target name="compile-test" description="Builds core, test-framework, and modules tests">
+    <sequential>
+      <ant dir="core" target="compile-test" inheritall="false">
+        <propertyset refid="uptodate.and.compiled.properties"/>
+      </ant>
+      <modules-crawl target="compile-test" failonerror="true"/>
+    </sequential>
+  </target>
+  
+  <target name="test-modules" depends="compile-test">
+    <modules-crawl target="test" failonerror="true"/>
+  </target>
+
+  <target name="changes-to-html">
+    <build-changes changes.product="LUCENE"/>
+  </target>
+
+  <target name="pitest-modules" depends="compile-test">
+    <modules-crawl target="pitest" failonerror="false"/>
+  </target>
+
+  <!--
+   Committer helpers
+   -->
+
+  <property name="patch.file" value="${basedir}/../patches/${patch.name}"/>
+  <!-- Apply a patch.  Assumes  patch can be applied in the basedir.
+  -Dpatch.name assumes the patch is located in ${basedir}/../patches/${patch.name}
+  -Dpatch.file means the patch can be located anywhere on the file system
+  -->
+  <target name="apply-patch" depends="clean" description="Apply a patch file.  Set -Dpatch.file, or -Dpatch.name when the patch is in the directory ../patches/">
+    <patch patchfile="${patch.file}" strip="0"/>
+  </target>
+
+  <target name="jar-test-framework">
+    <ant dir="${common.dir}/test-framework" target="jar-core" inheritAll="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+    </ant>
+  </target>
+
+  <!-- Override common-build.xml definition to check for the jar already being up-to-date -->
+  <target name="jar-core" depends="check-lucene-core-uptodate,compile-lucene-core" unless="lucene-core.uptodate">
+    <ant dir="${common.dir}/core" target="jar-core" inheritAll="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+    </ant>
+    <property name="core.compiled" value="true"/>
+    <property name="lucene-core.uptodate" value="true"/>
+  </target>
+
+  <target name="get-jenkins-line-docs" unless="enwiki.exists">
+    <sequential>
+      <!-- TODO: can get .lzma instead (it's ~17% smaller) but there's no builtin ant support...? -->
+      <get src="http://people.apache.org/~mikemccand/enwiki.random.lines.txt.bz2"
+           dest="enwiki.random.lines.txt.bz2"/>
+      <bunzip2 src="enwiki.random.lines.txt.bz2" dest="enwiki.random.lines.txt"/>
+    </sequential>
+  </target>
+
+  <target name="jar-checksums" depends="resolve">
+    <jar-checksum-macro srcdir="${common.dir}" dstdir="${common.dir}/licenses"/>
+  </target>
+
+</project>

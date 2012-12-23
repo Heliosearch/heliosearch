@@ -1,0 +1,58 @@
+<!--
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<html>
+  <head>
+    <title>Faceted Search API</title>
+  </head>
+  <body>
+    <h1>Faceted Search API</h1>
+    
+    API for faceted search has several interfaces - simple, top level ones, adequate for most users,
+    and advanced, more complicated ones, for the more advanced users. 
+    
+    <p>
+    
+    We now describe the simpler interfaces.
+    There are mainly 3 interfaces for faceted search:
+    <ol>
+      <li>{@link org.apache.lucene.facet.search.params.FacetRequest Facets Request}
+          defines requirements:
+          <ul> 
+              <li>which facets are required, e.g. depth</li>
+              <li>what is computed for each facet - e.g. count, score.</li>
+          </ul>
+      </li>
+      <li>{@link org.apache.lucene.facet.search.FacetsAccumulator Facets Extractor}
+          Controls how facets are extracted, with variations of:
+          <ul> 
+              <li>default (partitioned, like all extractors). </li>
+              <li>sampled - inspects only a fraction of the documents.</li>
+          </ul>
+      </li>
+      <li>{@link org.apache.lucene.facet.search.FacetResultsHandler Facet Results Handler }
+          Controls how results are further processed and merged (also between partitions):
+          <ul> 
+              <li>Top K.</li>
+              <li>Tree.</li>
+              <li>Tree with top K at each level</li>
+              <li>...</li>
+          </ul>
+      </li>
+    </ol>
+
+  </body>
+</html>
