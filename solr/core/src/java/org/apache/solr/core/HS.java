@@ -43,26 +43,27 @@ public class HS
   }
 
   public static long arraySizeBytes(long ptr) {
+    assert(ptr>=4096); // should never be on first page, or negative
     return unsafe.getLong(ptr - SIZE_OFFSET);
   }
 
   public static int getInt(long ptr, int index) {
-    assert ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
+    assert (index>=0) && ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
     return unsafe.getInt(ptr + (((long)index)<<2));
   }
 
   public static void setInt(long ptr, int index, int val) {
-    assert ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
+    assert (index>=0) && ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
     unsafe.putInt(ptr + (((long)index)<<2), val);
   }
 
   public static long getLong(long ptr, int index) {
-    assert ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
+    assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
     return unsafe.getLong(ptr + (((long) index) << 3));
   }
 
   public static void setLong(long ptr, int index, long val) {
-    assert ((((long)index)<<3+1)) <= arraySizeBytes(ptr);
+    assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
     unsafe.putLong(ptr + (((long) index) << 3), val);
   }
 

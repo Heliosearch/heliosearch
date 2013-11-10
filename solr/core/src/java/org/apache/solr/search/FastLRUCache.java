@@ -17,6 +17,7 @@ package org.apache.solr.search;
  */
 
 import org.apache.solr.common.SolrException;
+import org.apache.solr.core.RefCount;
 import org.apache.solr.util.ConcurrentLRUCache;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
@@ -149,19 +150,27 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
     if (isAutowarmingOn()) {
       int sz = autowarm.getWarmCount(other.size());
       Map items = other.cache.getLatestAccessedItems(sz);
-      Map.Entry[] itemsArr = new Map.Entry[items.size()];
-      int counter = 0;
-      for (Object mapEntry : items.entrySet()) {
-        itemsArr[counter++] = (Map.Entry) mapEntry;
-      }
-      for (int i = itemsArr.length - 1; i >= 0; i--) {
-        try {
-          boolean continueRegen = regenerator.regenerateItem(searcher,
-                  this, old, itemsArr[i].getKey(), itemsArr[i].getValue());
-          if (!continueRegen) break;
+      try {
+        Map.Entry[] itemsArr = new Map.Entry[items.size()];
+        int counter = 0;
+        for (Object mapEntry : items.entrySet()) {
+          itemsArr[counter++] = (Map.Entry) mapEntry;
         }
-        catch (Throwable e) {
-          SolrException.log(log, "Error during auto-warming of key:" + itemsArr[i].getKey(), e);
+        for (int i = itemsArr.length - 1; i >= 0; i--) {
+          try {
+            boolean continueRegen = regenerator.regenerateItem(searcher,
+                this, old, itemsArr[i].getKey(), itemsArr[i].getValue());
+            if (!continueRegen) break;
+          }
+          catch (Throwable e) {
+            SolrException.log(log, "Error during auto-warming of key:" + itemsArr[i].getKey(), e);
+          }
+        }
+      } finally {
+        for (Object o : items.values()) {
+          if (o instanceof RefCount) {
+            ((RefCount)o).decref();
+          }
         }
       }
     }
