@@ -20,6 +20,7 @@ package org.apache.solr.search;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.core.RefCount;
 
 /**
  * <code>DocSet</code> represents an unordered set of Lucene Document Ids.
@@ -32,7 +33,7 @@ import org.apache.solr.common.SolrException;
  *
  * @since solr 0.9
  */
-public interface DocSet /* extends Collection<Integer> */ {
+public interface DocSet extends RefCount /* extends Collection<Integer> */ {
   
   /**
    * Adds the specified document if it is not currently in the DocSet

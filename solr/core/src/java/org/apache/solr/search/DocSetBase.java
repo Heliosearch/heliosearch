@@ -218,4 +218,21 @@ abstract class DocSetBase implements DocSet {
     }
   }
 
+
+  // Default RefCount methods that do nothing
+  @Override
+  public int getRefCount() {
+    return 1;
+  }
+
+  @Override
+  public int incref() {
+    return 1;
+  }
+
+  @Override
+  public int decref() {
+    return 1;
+  }
+
 }
