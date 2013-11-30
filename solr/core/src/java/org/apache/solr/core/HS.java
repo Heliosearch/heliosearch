@@ -3,6 +3,7 @@ package org.apache.solr.core;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class HS
 {
@@ -21,10 +22,24 @@ public class HS
     }
   }
 
+
+  private static final AtomicLong numAlloc = new AtomicLong();
+  private static final AtomicLong numFree = new AtomicLong();
+
   public static final int HEADER_SIZE = 16;
   public static final int SIZE_OFFSET = 8;
 
+  public static long getNumAllocations() {
+    return numAlloc.get();
+  }
+
+  public static long getNumFrees() {
+    return numFree.get();
+  }
+
   public static long allocArray(long numElements, int elementSize) throws OutOfMemoryError {
+    numAlloc.incrementAndGet();
+
     // zero array?
     // any JVM accounting for memory allocated this way?
     long sz = numElements * elementSize;
@@ -37,6 +52,8 @@ public class HS
   }
 
   public static void freeArray(long ptr) {
+    numFree.incrementAndGet();
+
     // zero out length to trip asserts that try to use the memory after this point
     unsafe.putLong(ptr - SIZE_OFFSET, 0);
     unsafe.freeMemory(ptr - HEADER_SIZE);

@@ -27,6 +27,7 @@ import org.apache.lucene.util.LuceneTestCase;
  * To change this template use File | Settings | File Templates.
  */
 public class TestHS extends LuceneTestCase {
+
   public void testLongArray() {
     long arr = HS.allocArray(5, 8);
 
@@ -41,7 +42,11 @@ public class TestHS extends LuceneTestCase {
     assertEquals(c1, HS.getLong(arr, 0));
     assertEquals(c2, HS.getLong(arr, 4));
 
+    assertTrue( HS.getNumAllocations() > HS.getNumFrees() );
+
     HS.freeArray(arr);
+
+    assertEquals( HS.getNumAllocations() , HS.getNumFrees() );
   }
 
   public void testIntArray() {
