@@ -214,7 +214,10 @@ public class CoreAdminHandler extends RequestHandlerBase {
           this.handleRequestApplyUpdatesAction(req, rsp);
           break;
         }
-        
+        case REQUESTBUFFERUPDATES:  {
+          this.handleRequestBufferUpdatesAction(req, rsp);
+          break;
+        }
         default: {
           this.handleCustomAction(req, rsp);
           break;
@@ -593,6 +596,15 @@ public class CoreAdminHandler extends RequestHandlerBase {
             "No such core exists '" + cname + "'");
       } else {
         if (coreContainer.getZkController() != null) {
+          // we are unloading, cancel any ongoing recovery
+          // so there are no races to publish state
+          // we will try to cancel again later before close
+          if (core != null) {
+            if (coreContainer.getZkController() != null) {
+              core.getSolrCoreState().cancelRecovery();
+            }
+          }
+          
           log.info("Unregistering core " + core.getName() + " from cloudstate.");
           try {
             coreContainer.getZkController().unregister(cname,
@@ -793,7 +805,7 @@ public class CoreAdminHandler extends RequestHandlerBase {
     try {
       core = coreContainer.getCore(cname);
       if (core != null) {
-        syncStrategy = new SyncStrategy();
+        syncStrategy = new SyncStrategy(core.getCoreDescriptor().getCoreContainer().getUpdateShardHandler());
         
         Map<String,Object> props = new HashMap<String,Object>();
         props.put(ZkStateReader.BASE_URL_PROP, zkController.getBaseUrl());
@@ -963,6 +975,7 @@ public class CoreAdminHandler extends RequestHandlerBase {
     SolrParams params = req.getParams();
     String cname = params.get(CoreAdminParams.NAME, "");
     SolrCore core = coreContainer.getCore(cname);
+    log.info("Applying buffered updates on core: " + cname);
     try {
       UpdateLog updateLog = core.getUpdateHandler().getUpdateLog();
       if (updateLog.getState() != UpdateLog.State.BUFFERING)  {
@@ -997,6 +1010,31 @@ public class CoreAdminHandler extends RequestHandlerBase {
         core.close();
     }
     
+  }
+
+  private void handleRequestBufferUpdatesAction(SolrQueryRequest req, SolrQueryResponse rsp) {
+    SolrParams params = req.getParams();
+    String cname = params.get(CoreAdminParams.NAME, "");
+    SolrCore core = coreContainer.getCore(cname);
+    log.info("Starting to buffer updates on core:" + cname);
+    try {
+      UpdateLog updateLog = core.getUpdateHandler().getUpdateLog();
+      if (updateLog.getState() != UpdateLog.State.ACTIVE)  {
+        throw new SolrException(ErrorCode.SERVER_ERROR, "Core " + cname + " not in active state");
+      }
+      updateLog.bufferUpdates();
+      rsp.add("core", cname);
+      rsp.add("status", "BUFFERING");
+    } catch (Throwable e) {
+      if (e instanceof SolrException)
+        throw (SolrException)e;
+      else
+        throw new SolrException(ErrorCode.SERVER_ERROR, "Could not start buffering updates", e);
+    } finally {
+      if (req != null) req.close();
+      if (core != null)
+        core.close();
+    }
   }
 
   /**

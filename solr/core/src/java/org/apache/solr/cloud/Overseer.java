@@ -34,6 +34,7 @@ import org.apache.solr.common.cloud.DocCollection;
 import org.apache.solr.common.cloud.DocRouter;
 import org.apache.solr.common.cloud.ImplicitDocRouter;
 import org.apache.solr.common.cloud.Replica;
+import org.apache.solr.common.cloud.RoutingRule;
 import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.solr.common.cloud.ZkCoreNodeProps;
@@ -53,6 +54,8 @@ public class Overseer {
   public static final String DELETECORE = "deletecore";
   public static final String REMOVECOLLECTION = "removecollection";
   public static final String REMOVESHARD = "removeshard";
+  public static final String ADD_ROUTING_RULE = "addroutingrule";
+  public static final String REMOVE_ROUTING_RULE = "removeroutingrule";
 
   private static final int STATE_UPDATE_DELAY = 1500;  // delay between cloud state updates
 
@@ -60,6 +63,8 @@ public class Overseer {
   
   static enum LeaderStatus { DONT_KNOW, NO, YES };
 
+  private long lastUpdatedTime = 0;
+  
   private class ClusterStateUpdater implements Runnable, ClosableThread {
     
     private final ZkStateReader reader;
@@ -148,33 +153,51 @@ public class Overseer {
           break;
         }
         else if (LeaderStatus.YES != isLeader) {
-          log.debug("am_i_leader unclear {}", isLeader);                  
+          log.debug("am_i_leader unclear {}", isLeader);
           continue; // not a no, not a yes, try ask again
+        }
+        DistributedQueue.QueueEvent head = null;
+        try {
+          head = stateUpdateQueue.peek(true);
+        } catch (KeeperException e) {
+          if (e.code() == KeeperException.Code.SESSIONEXPIRED) {
+            log.warn(
+                "Solr cannot talk to ZK, exiting Overseer main queue loop", e);
+            return;
+          }
+          log.error("Exception in Overseer main queue loop", e);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return;
+          
+        } catch (Exception e) {
+          log.error("Exception in Overseer main queue loop", e);
         }
         synchronized (reader.getUpdateLock()) {
           try {
-            byte[] head = stateUpdateQueue.peek();
-            
-            if (head != null) {
-              reader.updateClusterState(true);
-              ClusterState clusterState = reader.getClusterState();
+            reader.updateClusterState(true);
+            ClusterState clusterState = reader.getClusterState();
+
+            while (head != null) {
+              final ZkNodeProps message = ZkNodeProps.load(head.getBytes());
+              final String operation = message.getStr(QUEUE_OPERATION);
+
+              clusterState = processMessage(clusterState, message, operation);
+              workQueue.offer(head.getBytes());
+
+              stateUpdateQueue.poll();
+
+              if (System.currentTimeMillis() - lastUpdatedTime > STATE_UPDATE_DELAY) break;
               
-              while (head != null) {
-                final ZkNodeProps message = ZkNodeProps.load(head);
-                final String operation = message.getStr(QUEUE_OPERATION);
-                
-                clusterState = processMessage(clusterState, message, operation);
-                workQueue.offer(head);
-                
-                stateUpdateQueue.poll();
-                head = stateUpdateQueue.peek();
-              }
-              zkClient.setData(ZkStateReader.CLUSTER_STATE,
-                  ZkStateReader.toJSON(clusterState), true);
+              // if an event comes in the next 100ms batch it together
+              head = stateUpdateQueue.peek(100); 
             }
+            lastUpdatedTime = System.currentTimeMillis();
+            zkClient.setData(ZkStateReader.CLUSTER_STATE,
+                ZkStateReader.toJSON(clusterState), true);
             // clean work queue
-            while (workQueue.poll() != null);
-            
+            while (workQueue.poll() != null) ;
+
           } catch (KeeperException e) {
             if (e.code() == KeeperException.Code.SESSIONEXPIRED) {
               log.warn("Solr cannot talk to ZK, exiting Overseer main queue loop", e);
@@ -190,11 +213,6 @@ public class Overseer {
           }
         }
         
-        try {
-          Thread.sleep(STATE_UPDATE_DELAY);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
       }
     }
 
@@ -228,6 +246,10 @@ public class Overseer {
         clusterState = updateShardState(clusterState, message);
       } else if (OverseerCollectionProcessor.CREATECOLLECTION.equals(operation)) {
          clusterState = buildCollection(clusterState, message);
+      } else if (Overseer.ADD_ROUTING_RULE.equals(operation)) {
+        clusterState = addRoutingRule(clusterState, message);
+      } else if (Overseer.REMOVE_ROUTING_RULE.equals(operation))  {
+        clusterState = removeRoutingRule(clusterState, message);
       } else {
         throw new RuntimeException("unknown operation:" + operation
             + " contents:" + message.getProperties());
@@ -273,6 +295,72 @@ public class Overseer {
           props.remove(Slice.PARENT);
         }
         props.put(Slice.STATE, message.getStr(key));
+        Slice newSlice = new Slice(slice.getName(), slice.getReplicasCopy(), props);
+        clusterState = updateSlice(clusterState, collection, newSlice);
+      }
+
+      return clusterState;
+    }
+
+    private ClusterState addRoutingRule(ClusterState clusterState, ZkNodeProps message) {
+      String collection = message.getStr(ZkStateReader.COLLECTION_PROP);
+      String shard = message.getStr(ZkStateReader.SHARD_ID_PROP);
+      String routeKey = message.getStr("routeKey");
+      String range = message.getStr("range");
+      String targetCollection = message.getStr("targetCollection");
+      String targetShard = message.getStr("targetShard");
+      String expireAt = message.getStr("expireAt");
+
+      Slice slice = clusterState.getSlice(collection, shard);
+      if (slice == null)  {
+        throw new RuntimeException("Overseer.addRoutingRule unknown collection: " + collection + " slice:" + shard);
+      }
+
+      Map<String, RoutingRule> routingRules = slice.getRoutingRules();
+      if (routingRules == null)
+        routingRules = new HashMap<String, RoutingRule>();
+      RoutingRule r = routingRules.get(routeKey);
+      if (r == null) {
+        Map<String, Object> map = new HashMap<String, Object>();
+        map.put("routeRanges", range);
+        map.put("targetCollection", targetCollection);
+        map.put("expireAt", expireAt);
+        RoutingRule rule = new RoutingRule(routeKey, map);
+        routingRules.put(routeKey, rule);
+      } else  {
+        // add this range
+        Map<String, Object> map = r.shallowCopy();
+        map.put("routeRanges", map.get("routeRanges") + "," + range);
+        map.put("expireAt", expireAt);
+        routingRules.put(routeKey, new RoutingRule(routeKey, map));
+      }
+
+      Map<String, Object> props = slice.shallowCopy();
+      props.put("routingRules", routingRules);
+
+      Slice newSlice = new Slice(slice.getName(), slice.getReplicasCopy(), props);
+      clusterState = updateSlice(clusterState, collection, newSlice);
+      return clusterState;
+    }
+
+    private ClusterState removeRoutingRule(ClusterState clusterState, ZkNodeProps message) {
+      String collection = message.getStr(ZkStateReader.COLLECTION_PROP);
+      String shard = message.getStr(ZkStateReader.SHARD_ID_PROP);
+      String routeKeyStr = message.getStr("routeKey");
+
+      log.info("Overseer.removeRoutingRule invoked for collection: " + collection
+          + " shard: " + shard + " routeKey: " + routeKeyStr);
+
+      Slice slice = clusterState.getSlice(collection, shard);
+      if (slice == null)  {
+        log.warn("Unknown collection: " + collection + " shard: " + shard);
+        return clusterState;
+      }
+      Map<String, RoutingRule> routingRules = slice.getRoutingRules();
+      if (routingRules != null) {
+        routingRules.remove(routeKeyStr); // no rules left
+        Map<String, Object> props = slice.shallowCopy();
+        props.put("routingRules", routingRules);
         Slice newSlice = new Slice(slice.getName(), slice.getReplicasCopy(), props);
         clusterState = updateSlice(clusterState, collection, newSlice);
       }
@@ -862,11 +950,9 @@ public class Overseer {
     
   }
   
-  private OverseerThread ccThread;
+  private volatile OverseerThread ccThread;
 
-  private OverseerThread updaterThread;
-
-  private volatile boolean isClosed;
+  private volatile OverseerThread updaterThread;
 
   private ZkStateReader reader;
 
@@ -881,6 +967,7 @@ public class Overseer {
   }
   
   public void start(String id) {
+    close();
     log.info("Overseer (id=" + id + ") starting");
     createOverseerNode(reader.getZkClient());
     //launch cluster state updater thread
@@ -897,8 +984,11 @@ public class Overseer {
     ccThread.start();
   }
   
+  public OverseerThread getUpdaterThread() {
+    return updaterThread;
+  }
+  
   public void close() {
-    isClosed = true;
     if (updaterThread != null) {
       try {
         updaterThread.close();
@@ -915,12 +1005,8 @@ public class Overseer {
         log.error("Error closing ccThread", t);
       }
     }
-    
-    try {
-      reader.close();
-    } catch (Throwable t) {
-      log.error("Error closing zkStateReader", t);
-    }
+    updaterThread = null;
+    ccThread = null;
   }
 
   /**

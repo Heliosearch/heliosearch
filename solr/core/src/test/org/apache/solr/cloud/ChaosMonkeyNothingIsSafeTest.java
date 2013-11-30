@@ -37,7 +37,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +44,6 @@ import com.carrotsearch.randomizedtesting.annotations.ThreadLeakLingering;
 
 @Slow
 @ThreadLeakLingering(linger = 60000)
-@Ignore
 public class ChaosMonkeyNothingIsSafeTest extends AbstractFullDistribZkTestBase {
   public static Logger log = LoggerFactory.getLogger(ChaosMonkeyNothingIsSafeTest.class);
   
@@ -146,7 +144,7 @@ public class ChaosMonkeyNothingIsSafeTest extends AbstractFullDistribZkTestBase 
       if (RUN_LENGTH != -1) {
         runLength = RUN_LENGTH;
       } else {
-        int[] runTimes = new int[] {5000,6000,10000,15000,15000,30000,30000,45000,90000,120000};
+        int[] runTimes = new int[] {5000,6000,10000,15000,25000,30000,30000,45000,90000,120000};
         runLength = runTimes[random().nextInt(runTimes.length - 1)];
       }
       
@@ -160,18 +158,12 @@ public class ChaosMonkeyNothingIsSafeTest extends AbstractFullDistribZkTestBase 
         indexThread.safeStop();
       }
       
+      // start any downed jetties to be sure we still will end up with a leader per shard...
+      
       // wait for stop...
       for (StopableThread indexThread : threads) {
         indexThread.join();
       }
-      
-       // we expect full throttle fails, but cloud client should not easily fail
-       // but it's allowed to fail and sometimes does, so commented out for now
-//       for (StopableThread indexThread : threads) {
-//         if (indexThread instanceof StopableIndexingThread && !(indexThread instanceof FullThrottleStopableIndexingThread)) {
-//           assertEquals(0, ((StopableIndexingThread) indexThread).getFails());
-//         }
-//       }
       
       // try and wait for any replications and what not to finish...
       
@@ -192,6 +184,13 @@ public class ChaosMonkeyNothingIsSafeTest extends AbstractFullDistribZkTestBase 
       zkStateReader.updateClusterState(true);
       assertTrue(zkStateReader.getClusterState().getLiveNodes().size() > 0);
       
+      
+      // we expect full throttle fails, but cloud client should not easily fail
+      for (StopableThread indexThread : threads) {
+        if (indexThread instanceof StopableIndexingThread && !(indexThread instanceof FullThrottleStopableIndexingThread)) {
+          assertEquals("There were expected update fails", 0, ((StopableIndexingThread) indexThread).getFails());
+        }
+      }
       
       // full throttle thread can
       // have request fails 

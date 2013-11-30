@@ -74,7 +74,7 @@ public class ChaosMonkey {
   private boolean causeConnectionLoss;
   private boolean aggressivelyKillLeaders;
   private Map<String,CloudJettyRunner> shardToLeaderJetty;
-  private long startTime;
+  private volatile long startTime;
 
   private Thread monkeyThread;
   
@@ -460,7 +460,7 @@ public class ChaosMonkey {
              if (!deadPool.isEmpty()) {
                int index = random.nextInt(deadPool.size());
                JettySolrRunner jetty = deadPool.get(index).jetty;
-               if (!ChaosMonkey.start(jetty)) {
+               if (jetty.isStopped() && !ChaosMonkey.start(jetty)) {
                  continue;
                }
                //System.out.println("started on port:" + jetty.getLocalPort());
@@ -518,6 +518,10 @@ public class ChaosMonkey {
       monkeyThread.join();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    }
+    float runtime = (System.currentTimeMillis() - startTime)/1000.0f;
+    if (runtime > 20 && stops.get() == 0) {
+      LuceneTestCase.fail("The Monkey ran for over 20 seconds and no jetties were stopped - this is worth investigating!");
     }
   }
 

@@ -18,6 +18,7 @@ package org.apache.lucene.classification;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.AtomicReader;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.mlt.MoreLikeThis;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -25,6 +26,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.WildcardQuery;
 import org.apache.lucene.util.BytesRef;
 
 import java.io.IOException;
@@ -47,6 +49,9 @@ public class KNearestNeighborClassifier implements Classifier<BytesRef> {
   private final int k;
   private Query query;
 
+  private int minDocsFreq;
+  private int minTermFreq;
+
   /**
    * Create a {@link Classifier} using kNN algorithm
    *
@@ -57,6 +62,19 @@ public class KNearestNeighborClassifier implements Classifier<BytesRef> {
   }
 
   /**
+   * Create a {@link Classifier} using kNN algorithm
+   *
+   * @param k           the number of neighbors to analyze as an <code>int</code>
+   * @param minDocsFreq the minimum number of docs frequency for MLT to be set with {@link MoreLikeThis#setMinDocFreq(int)}
+   * @param minTermFreq the minimum number of term frequency for MLT to be set with {@link MoreLikeThis#setMinTermFreq(int)}
+   */
+  public KNearestNeighborClassifier(int k, int minDocsFreq, int minTermFreq) {
+    this.k = k;
+    this.minDocsFreq = minDocsFreq;
+    this.minTermFreq = minTermFreq;
+  }
+
+  /**
    * {@inheritDoc}
    */
   @Override
@@ -64,20 +82,16 @@ public class KNearestNeighborClassifier implements Classifier<BytesRef> {
     if (mlt == null) {
       throw new IOException("You must first call Classifier#train");
     }
-    Query q;
     BooleanQuery mltQuery = new BooleanQuery();
     for (String textFieldName : textFieldNames) {
       mltQuery.add(new BooleanClause(mlt.like(new StringReader(text), textFieldName), BooleanClause.Occur.SHOULD));
     }
+    Query classFieldQuery = new WildcardQuery(new Term(classFieldName, "*"));
+    mltQuery.add(new BooleanClause(classFieldQuery, BooleanClause.Occur.MUST));
     if (query != null) {
-      BooleanQuery bq = new BooleanQuery();
-      bq.add(query, BooleanClause.Occur.MUST);
-      bq.add(mltQuery, BooleanClause.Occur.MUST);
-      q = bq;
-    } else {
-      q = mltQuery;
+      mltQuery.add(query, BooleanClause.Occur.MUST);
     }
-    TopDocs topDocs = indexSearcher.search(q, k);
+    TopDocs topDocs = indexSearcher.search(mltQuery, k);
     return selectClassFromNeighbors(topDocs);
   }
 
@@ -95,11 +109,11 @@ public class KNearestNeighborClassifier implements Classifier<BytesRef> {
     }
     double max = 0;
     BytesRef assignedClass = new BytesRef();
-    for (BytesRef cl : classCounts.keySet()) {
-      Integer count = classCounts.get(cl);
+    for (Map.Entry<BytesRef, Integer> entry : classCounts.entrySet()) {
+      Integer count = entry.getValue();
       if (count > max) {
         max = count;
-        assignedClass = cl.clone();
+        assignedClass = entry.getKey().clone();
       }
     }
     double score = max / (double) k;
@@ -119,13 +133,7 @@ public class KNearestNeighborClassifier implements Classifier<BytesRef> {
    */
   @Override
   public void train(AtomicReader atomicReader, String textFieldName, String classFieldName, Analyzer analyzer, Query query) throws IOException {
-    this.textFieldNames = new String[]{textFieldName};
-    this.classFieldName = classFieldName;
-    mlt = new MoreLikeThis(atomicReader);
-    mlt.setAnalyzer(analyzer);
-    mlt.setFieldNames(new String[]{textFieldName});
-    indexSearcher = new IndexSearcher(atomicReader);
-    this.query = query;
+    train(atomicReader, new String[]{textFieldName}, classFieldName, analyzer, query);
   }
 
   /**
@@ -139,6 +147,12 @@ public class KNearestNeighborClassifier implements Classifier<BytesRef> {
     mlt.setAnalyzer(analyzer);
     mlt.setFieldNames(textFieldNames);
     indexSearcher = new IndexSearcher(atomicReader);
+    if (minDocsFreq > 0) {
+      mlt.setMinDocFreq(minDocsFreq);
+    }
+    if (minTermFreq > 0) {
+      mlt.setMinTermFreq(minTermFreq);
+    }
     this.query = query;
   }
 }

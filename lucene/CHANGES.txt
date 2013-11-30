@@ -61,6 +61,36 @@ Optimizations
   on Windows if NIOFSDirectory is used, mmapped files are still locked.
   (Michael Poindexter, Robert Muir, Uwe Schindler)
 
+======================= Lucene 4.7.0 =======================
+
+New Features
+
+* LUCENE-5336: Add SimpleQueryParser: parser for human-entered queries.
+  (Jack Conradson via Robert Muir)
+
+* LUCENE-5329: suggest: DocumentDictionary and
+  DocumentExpressionDictionary are now lenient for dirty documents
+  (missing the term, weight or payload).  (Areek Zillur via
+  Mike McCandless)
+
+Build
+
+* LUCENE-5217: Maven config: get dependencies from Ant+Ivy config; disable
+  transitive dependency resolution for all depended-on artifacts by putting
+  an exclusion for each transitive dependency in the <dependencyManagement>
+  section of the grandparent POM. (Steve Rowe)
+
+* LUCENE-5322: Clean up / simplify Maven-related Ant targets.
+  (Steve Rowe)
+
+* LUCENE-5347: Upgrade forbidden-apis checker to version 1.4.
+  (Uwe Schindler)
+
+Bug fixes
+
+* LUCENE-5285: Improved highlighting of multi-valued fields with
+  FastVectorHighlighter. (Nik Everett via Adrien Grand)
+
 ======================= Lucene 4.6.0 =======================
 
 New Features
@@ -148,41 +178,14 @@ New Features
   
 * LUCENE-5297: Allow to range-facet on any ValueSource, not just
   NumericDocValues fields. (Shai Erera)
+  
+* LUCENE-5337: Add Payload support to FileDictionary (Suggest) and make it more
+  configurable (Areek Zilluer via Erick Erickson)
 
 Bug Fixes
 
-* LUCENE-4998: Fixed a few places to pass IOContext.READONCE instead
-  of IOContext.READ (Shikhar Bhushan via Mike McCandless)
-
-* LUCENE-5242: DirectoryTaxonomyWriter.replaceTaxonomy did not fully reset
-  its state, which could result in exceptions being thrown, as well as
-  incorrect ordinals returned from getParent. (Shai Erera)
-
-* LUCENE-5254: Fixed bounded memory leak, where objects like live
-  docs bitset were not freed from an starting reader after reopening
-  to a new reader and closing the original one.  (Shai Erera, Mike
-  McCandless)
-
-* LUCENE-5262: Fixed file handle leaks when multiple attempts to open an 
-  NRT reader hit exceptions. (Shai Erera)
-
-* LUCENE-5263: Transient IOExceptions, e.g. due to disk full or file
-  descriptor exhaustion, hit at unlucky times inside IndexWriter could
-  lead to silently losing deletions. (Shai Erera, Mike McCandless)
-
-* LUCENE-5264: CommonTermsQuery ignored minMustMatch if only high-frequent
-  terms were present in the query and the high-frequent operator was set
-  to SHOULD. (Simon Willnauer)
-
-* LUCENE-5269: Fix bug in NGramTokenFilter where it would sometimes count
-  unicode characters incorrectly. (Mike McCandless, Robert Muir)
-
 * LUCENE-5272: OpenBitSet.ensureCapacity did not modify numBits, causing 
   false assertion errors in fastSet. (Shai Erera)
-
-* LUCENE-5289: IndexWriter.hasUncommittedChanges was returning false
-  when there were buffered delete-by-Term.  (Shalin Shekhar Mangar,
-  Mike McCandless)
 
 * LUCENE-5303: OrdinalsCache did not use coreCacheKey, resulting in
   over caching across multiple threads. (Mike McCandless, Shai Erera)
@@ -196,7 +199,11 @@ Bug Fixes
   deleted at a later point in time. This could cause short-term disk
   pollution or OOM if in-memory directories are used. (Simon Willnauer)
 
-API Changes:
+* LUCENE-5342: Fixed bulk-merge issue in CompressingStoredFieldsFormat which
+  created corrupted segments when mixing chunk sizes.
+  Lucene41StoredFieldsFormat is not impacted. (Adrien Grand, Robert Muir)
+
+API Changes
 
 * LUCENE-5222: Add SortField.needsScores(). Previously it was not possible
   for a custom Sort that makes use of the relevance score to work correctly
@@ -278,14 +285,6 @@ Build
   should be identical across all distributions. (Steve Rowe, Uwe Schindler,
   Shalin Shekhar Mangar)
 
-* LUCENE-5217: Maven config: get dependencies from Ant+Ivy config; disable
-  transitive dependency resolution for all depended-on artifacts by putting
-  an exclusion for each transitive dependency in the <dependencyManagement>
-  section of the grandparent POM. (Steve Rowe)
-  
-* LUCENE-5322: Clean up / simplify Maven-related Ant targets.
-  (Steve Rowe)
-
 * LUCENE-4753: Run forbidden-apis Ant task per module. This allows more
   improvements and prevents OOMs after the number of class files
   raised recently.  (Uwe Schindler)
@@ -296,6 +295,40 @@ Tests
   patterns. Previously it could only behave like CharTokenizer (where a character
   is either a "word" character or not), but now it gives a general longest-match
   behavior.  (Nik Everett via Robert Muir)
+
+======================= Lucene 4.5.1 =======================
+
+Bug Fixes
+
+* LUCENE-4998: Fixed a few places to pass IOContext.READONCE instead
+  of IOContext.READ (Shikhar Bhushan via Mike McCandless)
+
+* LUCENE-5242: DirectoryTaxonomyWriter.replaceTaxonomy did not fully reset
+  its state, which could result in exceptions being thrown, as well as
+  incorrect ordinals returned from getParent. (Shai Erera)
+
+* LUCENE-5254: Fixed bounded memory leak, where objects like live
+  docs bitset were not freed from an starting reader after reopening
+  to a new reader and closing the original one.  (Shai Erera, Mike
+  McCandless)
+
+* LUCENE-5262: Fixed file handle leaks when multiple attempts to open an
+  NRT reader hit exceptions. (Shai Erera)
+
+* LUCENE-5263: Transient IOExceptions, e.g. due to disk full or file
+  descriptor exhaustion, hit at unlucky times inside IndexWriter could
+  lead to silently losing deletions. (Shai Erera, Mike McCandless)
+
+* LUCENE-5264: CommonTermsQuery ignored minMustMatch if only high-frequent
+  terms were present in the query and the high-frequent operator was set
+  to SHOULD. (Simon Willnauer)
+
+* LUCENE-5269: Fix bug in NGramTokenFilter where it would sometimes count
+  unicode characters incorrectly. (Mike McCandless, Robert Muir)
+
+* LUCENE-5289: IndexWriter.hasUncommittedChanges was returning false
+  when there were buffered delete-by-Term.  (Shalin Shekhar Mangar,
+  Mike McCandless)
 
 ======================= Lucene 4.5.0 =======================
 

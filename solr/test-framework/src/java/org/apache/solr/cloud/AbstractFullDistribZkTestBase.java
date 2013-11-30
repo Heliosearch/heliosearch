@@ -255,9 +255,7 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     server.setParallelUpdates(random().nextBoolean());
     if (defaultCollection != null) server.setDefaultCollection(defaultCollection);
     server.getLbServer().getHttpClient().getParams()
-        .setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 5000);
-    server.getLbServer().getHttpClient().getParams()
-        .setParameter(CoreConnectionPNames.SO_TIMEOUT, 30000);
+        .setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, 15000);
     return server;
   }
   
@@ -616,7 +614,11 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
   @Override
   protected void indexDoc(SolrInputDocument doc) throws IOException,
       SolrServerException {
-    controlClient.add(doc);
+    
+    UpdateRequest req = new UpdateRequest();
+    req.add(doc);
+    req.setParam("CONTROL", "TRUE");
+    req.process(controlClient);
     
     // if we wanted to randomly pick a client - but sometimes they may be
     // down...
@@ -1373,7 +1375,11 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
           Integer delete = deletes.remove(0);
           try {
             numDeletes++;
-            controlClient.deleteById(Integer.toString(delete));
+            UpdateRequest req = new UpdateRequest();
+            req.deleteById(Integer.toString(delete));
+            req.setParam("CONTROL", "TRUE");
+            req.process(controlClient);
+            
             cloudClient.deleteById(Integer.toString(delete));
           } catch (Exception e) {
             System.err.println("REQUEST FAILED:");
@@ -1732,12 +1738,15 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     }
   }
   
-  volatile CloudSolrServer commondCloudSolrServer;
+  private CloudSolrServer commondCloudSolrServer;
+  
   protected CloudSolrServer getCommonCloudSolrServer() {
-    if (commondCloudSolrServer == null) {
-      synchronized(this) {
+    synchronized (this) {
+      if (commondCloudSolrServer == null) {
         try {
-          commondCloudSolrServer = new CloudSolrServer(zkServer.getZkAddress(), random().nextBoolean());
+          commondCloudSolrServer = new CloudSolrServer(zkServer.getZkAddress(),
+              random().nextBoolean());
+          commondCloudSolrServer.getLbServer().setConnectionTimeout(30000);
           commondCloudSolrServer.setParallelUpdates(random().nextBoolean());
           commondCloudSolrServer.setDefaultCollection(DEFAULT_COLLECTION);
           commondCloudSolrServer.connect();

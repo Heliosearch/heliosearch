@@ -113,6 +113,8 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
       vals[i] = "test " + i;
     }
     indexr(id, 17, "SubjectTerms_mfacet", vals);
+    
+    
 
     for (int i=100; i<150; i++) {
       indexr(id, i);      
@@ -315,6 +317,7 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
     handle.put("explain", SKIPVAL);  // internal docids differ, idf differs w/o global idf
     handle.put("debug", UNORDERED);
     handle.put("time", SKIPVAL);
+    handle.put("track", SKIP); //track is not included in single node search
     query("q","now their fox sat had put","fl","*,score",CommonParams.DEBUG_QUERY, "true");
     query("q", "id:[1 TO 5]", CommonParams.DEBUG_QUERY, "true");
     query("q", "id:[1 TO 5]", CommonParams.DEBUG, CommonParams.TIMING);
@@ -395,6 +398,15 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
     // Thread.sleep(10000000000L);
 
     FieldCache.DEFAULT.purgeAllCaches();   // avoid FC insanity
+
+    del("*:*"); // delete all docs and test stats request
+    commit();
+    try {
+      query("q", "*:*", "stats", "true", "stats.field", "stats_dt", "stats.calcdistinct", "true");
+    } catch (Exception e) {
+      log.error("Exception on distrib stats request on empty index", e);
+      fail("NullPointerException with stats request on empty index");
+    }
   }
   
   protected void queryPartialResults(final List<String> upShards, 
