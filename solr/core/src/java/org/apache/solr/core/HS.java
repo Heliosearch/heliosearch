@@ -37,13 +37,18 @@ public class HS
     return numFree.get();
   }
 
-  public static long allocArray(long numElements, int elementSize) throws OutOfMemoryError {
+  public static long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
     numAlloc.incrementAndGet();
 
     // zero array?
     // any JVM accounting for memory allocated this way?
     long sz = numElements * elementSize;
     long addr = unsafe.allocateMemory(sz + HEADER_SIZE);
+
+    if (zero) {
+      unsafe.setMemory(addr, sz + HEADER_SIZE, (byte)0);
+    }
+
     // should never be 0 since we always add a header
     addr += HEADER_SIZE;
     // TODO: add to a set to keep track of native memory?

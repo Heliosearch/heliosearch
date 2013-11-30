@@ -29,7 +29,12 @@ import org.apache.lucene.util.LuceneTestCase;
 public class TestHS extends LuceneTestCase {
 
   public void testLongArray() {
-    long arr = HS.allocArray(5, 8);
+    long arr = HS.allocArray(5, 8, true);
+
+    // make sure array is zeroed
+    assertEquals(HS.getLong(arr, 0), 0);
+    assertEquals(HS.getLong(arr, 4), 0);
+
 
     assertEquals(40, HS.arraySizeBytes(arr));
 
@@ -50,7 +55,7 @@ public class TestHS extends LuceneTestCase {
   }
 
   public void testIntArray() {
-    long arr = HS.allocArray(5, 4);
+    long arr = HS.allocArray(5, 4, false);
 
     assertEquals(20, HS.arraySizeBytes(arr));
 
@@ -67,7 +72,7 @@ public class TestHS extends LuceneTestCase {
   }
 
   public void testAsserts() {
-    long arr = HS.allocArray(5, 8);
+    long arr = HS.allocArray(5, 8, false);
 
     boolean failed=false;
     try {
