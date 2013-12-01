@@ -269,7 +269,7 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
     int doca = HS.getInt(a, i);
     int docb = HS.getInt(b, j);
     for(;;) {
-      // switch on the sign bit somehow?  Hopefull JVM is smart enough to just test once.
+      // switch on the sign bit somehow?  Hopefully JVM is smart enough to just test once.
 
       // Since set a is less dense then set b, doca is likely to be greater than docb so
       // check that case first.  This resulted in a 13% speedup.
