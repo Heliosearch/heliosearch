@@ -219,6 +219,9 @@ abstract class DocSetBase implements DocSet {
   }
 
 
+  @Override
+  public abstract DocSet clone();
+
   // Default RefCount methods that do nothing
   @Override
   public int getRefCount() {

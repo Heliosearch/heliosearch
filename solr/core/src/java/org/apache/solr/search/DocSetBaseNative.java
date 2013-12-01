@@ -26,6 +26,7 @@ import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.core.HS;
 import org.apache.solr.core.RefCount;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,9 +49,17 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
   @Override
   public int decref() {
     int count = refcount.decrementAndGet();
-    if (count == 0) {
-      close();
+    if (count > 0) {
+      return count;
     }
+
+    if (count < 0) {
+      // too many frees detected...
+      throw new RuntimeException("Too many frees detected for native DocSet " + this);
+    }
+
+    // count == 0 if we got here... close the resources.
+    close();
     return count;
   }
 
@@ -112,21 +121,21 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
   public DocSet intersection(DocSet other) {
     // intersection is overloaded in the smaller DocSets to be more
     // efficient, so dispatch off of it instead.
-    if (!(other instanceof BitDocSet)) {
+    if (!(other instanceof BitDocSetNative)) {
       return other.intersection(this);
     }
 
     // Default... handle with bitsets.
     OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
     newbits.and(other.getBits());
-    return new BitDocSet(newbits);
+    return new BitDocSetNative(newbits);
   }
 
   @Override
   public boolean intersects(DocSet other) {
     // intersection is overloaded in the smaller DocSets to be more
     // efficient, so dispatch off of it instead.
-    if (!(other instanceof BitDocSet)) {
+    if (!(other instanceof BitDocSetNative)) {
       return other.intersects(this);
     }
     // less efficient way: get the intersection size
@@ -136,16 +145,19 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public DocSet union(DocSet other) {
+    if (other instanceof BitDocSetNative) {
+      return other.union(this);
+    }
     OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
     newbits.or(other.getBits());
-    return new BitDocSet(newbits);
+    return new BitDocSetNative(newbits);
   }
 
   @Override
   public int intersectionSize(DocSet other) {
     // intersection is overloaded in the smaller DocSets to be more
     // efficient, so dispatch off of it instead.
-    if (!(other instanceof BitDocSet)) {
+    if (!(other instanceof BitDocSetNative)) {
       return other.intersectionSize(this);
     }
     // less efficient way: do the intersection then get it's size
@@ -161,7 +173,7 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
   public DocSet andNot(DocSet other) {
     OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
     newbits.andNot(other.getBits());
-    return new BitDocSet(newbits);
+    return new BitDocSetNative(newbits);
   }
 
   @Override
@@ -243,5 +255,8 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
       target.fastSet(iter.nextDoc());
     }
   }
+
+  @Override
+  public abstract DocSet clone();
 
 }

@@ -168,11 +168,7 @@ public class DocSlice extends DocSetBase implements DocList {
   }
 
   @Override
-  protected DocSlice clone() {
-    try {
-      // DocSlice is not currently mutable
-      DocSlice slice = (DocSlice) super.clone();
-    } catch (CloneNotSupportedException e) {}
-    return null;
+  public DocSlice clone() {
+    return new DocSlice(offset, len, docs, scores, matches, maxScore);
   }
 }

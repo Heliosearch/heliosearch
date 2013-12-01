@@ -50,6 +50,13 @@ public class TestDocSet extends LuceneTestCase {
   Random rand;
   float loadfactor;
 
+  boolean intersect = true;
+  boolean union = true;
+  boolean andNot = true;
+  boolean intersectSz = true;
+  boolean unionSz = true;
+  boolean andNotSz = true;
+
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -84,6 +91,36 @@ public class TestDocSet extends LuceneTestCase {
   }
 
 
+  public DocSet getIntDocSetNative(OpenBitSet bs) {
+    int[] docs = new int[(int)bs.cardinality()];
+    OpenBitSetIterator iter = new OpenBitSetIterator(bs);
+    for (int i=0; i<docs.length; i++) {
+      docs[i] = iter.nextDoc();
+    }
+    return new SortedIntDocSetNative(docs);
+  }
+
+  public DocSet getBitDocSetNative(OpenBitSet bs) {
+    BitDocSetNative set = new BitDocSetNative((int)bs.capacity());
+    OpenBitSetIterator iter = new OpenBitSetIterator(bs);
+    for (;;) {
+      int doc = iter.nextDoc();
+      if (doc == DocIdSetIterator.NO_MORE_DOCS) break;
+      set.fastSet(doc);
+    }
+    return set;
+  }
+
+
+  public DocSet getSmallSet(OpenBitSet obs) {
+    return getIntDocSet(obs);
+  }
+
+  public DocSet getBigSet(OpenBitSet obs) {
+    return getBitDocSet(obs);
+  }
+
+
   public DocSet getBitDocSet(OpenBitSet bs) {
     return new BitDocSet(bs);
   }
@@ -109,20 +146,39 @@ public class TestDocSet extends LuceneTestCase {
     switch(rand.nextInt(10)) {
       case 0: return getHashDocSet(bs);
 
-      case 1: return getBitDocSet(bs);
-      case 2: return getBitDocSet(bs);
-      case 3: return getBitDocSet(bs);
+      case 1: return getBigSet(bs);
+      case 2: return getBigSet(bs);
+      case 3: return getBigSet(bs);
 
-      case 4: return getIntDocSet(bs);
-      case 5: return getIntDocSet(bs);
-      case 6: return getIntDocSet(bs);
-      case 7: return getIntDocSet(bs);
-      case 8: return getIntDocSet(bs);
+      case 4: return getSmallSet(bs);
+      case 5: return getSmallSet(bs);
+      case 6: return getSmallSet(bs);
+      case 7: return getSmallSet(bs);
+      case 8: return getSmallSet(bs);
 
       case 9: return getDocSlice(bs);
     }
     return null;
   }
+
+  // types of docsets that can be a filter
+  public DocSet getFilterDocSet(OpenBitSet bs) {
+    switch(rand.nextInt(10)) {
+      case 0: return getBigSet(bs);
+      case 1: return getBigSet(bs);
+      case 2: return getBigSet(bs);
+      case 3: return getBigSet(bs);
+      case 4: return getSmallSet(bs);
+      case 5: return getSmallSet(bs);
+      case 6: return getSmallSet(bs);
+      case 7: return getSmallSet(bs);
+      case 8: return getSmallSet(bs);
+      case 9: return getSmallSet(bs);
+    }
+
+    return null;
+  }
+
 
   public void checkEqual(OpenBitSet bs, DocSet set) {
     for (int i=0; i<set.size(); i++) {
@@ -152,32 +208,54 @@ public class TestDocSet extends LuceneTestCase {
   protected void doSingle(int maxSize) {
     int sz = rand.nextInt(maxSize+1);
     int sz2 = rand.nextInt(maxSize);
-    OpenBitSet bs1 = getRandomSet(sz, rand.nextInt(sz+1));
+    OpenBitSet bs1 = getRandomSet(sz, rand.nextInt(sz2+1));
     OpenBitSet bs2 = getRandomSet(sz, rand.nextInt(sz2+1));
 
+    DocSet test1 = getDocSet(bs1);
+    DocSet test2 = getDocSet(bs2);
+
+    doSingle(bs1, bs2, test1, test2);
+
+    test1.decref();
+    test2.decref();
+  }
+
+  protected void doSingle(OpenBitSet bs1, OpenBitSet bs2, DocSet test1, DocSet test2) {
     DocSet a1 = new BitDocSet(bs1);
     DocSet a2 = new BitDocSet(bs2);
-    DocSet b1 = getDocSet(bs1);
-    DocSet b2 = getDocSet(bs2);
 
-    checkEqual(bs1,b1);
-    checkEqual(bs2,b2);
+    checkEqual(bs1,test1);
+    checkEqual(bs2,test2);
 
-    iter(a1,b1);
-    iter(a2,b2);
+    iter(a1,test1);
+    iter(a2,test2);
 
     OpenBitSet a_and = (OpenBitSet) bs1.clone(); a_and.and(bs2);
     OpenBitSet a_or = (OpenBitSet) bs1.clone(); a_or.or(bs2);
     // OpenBitSet a_xor = (OpenBitSet)bs1.clone(); a_xor.xor(bs2);
     OpenBitSet a_andn = (OpenBitSet) bs1.clone(); a_andn.andNot(bs2);
 
-    checkEqual(a_and, b1.intersection(b2));
-    checkEqual(a_or, b1.union(b2));
-    checkEqual(a_andn, b1.andNot(b2));
+    if (intersect) {
+      DocSet result1 = test1.intersection(test2);
+      checkEqual(a_and, result1);
+      result1.decref();
+    }
 
-    assertEquals(a_and.cardinality(), b1.intersectionSize(b2));
-    assertEquals(a_or.cardinality(), b1.unionSize(b2));
-    assertEquals(a_andn.cardinality(), b1.andNotSize(b2));
+    if (union) {
+      DocSet result2 = test1.union(test2);
+      checkEqual(a_or, result2);
+      result2.decref();
+    }
+
+    if (andNot) {
+      DocSet result3 = test1.andNot(test2);
+      checkEqual(a_andn, result3);
+      result3.decref();
+    }
+
+    if (intersectSz) assertEquals(a_and.cardinality(), test1.intersectionSize(test2));
+    if (unionSz) assertEquals(a_or.cardinality(), test1.unionSize(test2));
+    if (andNotSz) assertEquals(a_andn.cardinality(), test1.andNotSize(test2));
   }
 
 
@@ -472,11 +550,46 @@ public class TestDocSet extends LuceneTestCase {
     }
   }
 
+  public void doFilterTest(IndexReader reader, DocSet a, DocSet b) throws IOException {
+    IndexReaderContext topLevelContext = reader.getContext();
+
+    Filter fa = a.getTopFilter();
+    Filter fb = b.getTopFilter();
+
+    /*** top level filters are no longer supported
+     // test top-level
+     DocIdSet da = fa.getDocIdSet(topLevelContext);
+     DocIdSet db = fb.getDocIdSet(topLevelContext);
+     doTestIteratorEqual(da, db);
+     ***/
+
+    DocIdSet da;
+    DocIdSet db;
+    List<AtomicReaderContext> leaves = topLevelContext.leaves();
+
+    // first test in-sequence sub readers
+    for (AtomicReaderContext readerContext : leaves) {
+      da = fa.getDocIdSet(readerContext, null);
+      db = fb.getDocIdSet(readerContext, null);
+      doTestIteratorEqual(da, db);
+    }
+
+    int nReaders = leaves.size();
+    // now test out-of-sequence sub readers
+    for (int i=0; i<nReaders; i++) {
+      AtomicReaderContext readerContext = leaves.get(rand.nextInt(nReaders));
+      da = fa.getDocIdSet(readerContext, null);
+      db = fb.getDocIdSet(readerContext, null);
+      doTestIteratorEqual(da, db);
+    }
+  }
+
+
   public void doFilterTest(IndexReader reader) throws IOException {
     IndexReaderContext topLevelContext = reader.getContext();
     OpenBitSet bs = getRandomSet(reader.maxDoc(), rand.nextInt(reader.maxDoc()+1));
     DocSet a = new BitDocSet(bs);
-    DocSet b = getIntDocSet(bs);
+    DocSet b = getFilterDocSet(bs);
 
     Filter fa = a.getTopFilter();
     Filter fb = b.getTopFilter();
@@ -507,6 +620,9 @@ public class TestDocSet extends LuceneTestCase {
       db = fb.getDocIdSet(readerContext, null);
       doTestIteratorEqual(da, db);
     }
+
+    a.decref();
+    b.decref();
   }
 
   public void testFilter() throws IOException {

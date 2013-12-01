@@ -49,7 +49,21 @@ public class TestHS extends LuceneTestCase {
 
     assertTrue( HS.getNumAllocations() > HS.getNumFrees() );
 
+    long[] arrx = new long[100];
+    HS.copyLongs(arr, 2, arrx, 50, 3);
+    assertEquals(c2, arrx[52]);
+
+    HS.copyLongs(arrx, 50, arr, 1, 4);
+    assertEquals(c2, HS.getLong(arr, 3));
+
+    long arr2 = HS.allocArray(200,8, true);
+    HS.copyLongs(arr, 1, arr2, 100, 4);
+    for (int i=0; i<4; i++) {
+      assertEquals(HS.getLong(arr, i+1), HS.getLong(arr2, i+100));
+    }
+
     HS.freeArray(arr);
+    HS.freeArray(arr2);
 
     assertEquals( HS.getNumAllocations() , HS.getNumFrees() );
   }
@@ -68,7 +82,21 @@ public class TestHS extends LuceneTestCase {
     assertEquals(c1, HS.getInt(arr, 0));
     assertEquals(c2, HS.getInt(arr, 4));
 
+    int[] arrx = new int[100];
+    HS.copyInts(arr, 2, arrx, 50, 3);
+    assertEquals(c2, arrx[52]);
+
+    HS.copyInts(arrx, 50, arr, 1, 4);
+    assertEquals(c2, HS.getInt(arr, 3));
+
+    long arr2 = HS.allocArray(200,4, true);
+    HS.copyInts(arr, 1, arr2, 100, 4);
+    for (int i=0; i<4; i++) {
+      assertEquals(HS.getInt(arr, i+1), HS.getInt(arr2, i+100));
+    }
+
     HS.freeArray(arr);
+    HS.freeArray(arr2);
   }
 
   public void testAsserts() {

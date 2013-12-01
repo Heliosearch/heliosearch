@@ -33,7 +33,7 @@ import org.apache.solr.core.RefCount;
  *
  * @since solr 0.9
  */
-public interface DocSet extends RefCount /* extends Collection<Integer> */ {
+public interface DocSet extends RefCount, Cloneable /* extends Collection<Integer> */ {
   
   /**
    * Adds the specified document if it is not currently in the DocSet
@@ -150,6 +150,8 @@ public interface DocSet extends RefCount /* extends Collection<Integer> */ {
    * The target should be sized large enough to accommodate all of the documents before calling this method.
    */
   public void setBitsOn(OpenBitSet target);
+
+  public DocSet clone();
 
   public static DocSet EMPTY = new SortedIntDocSet(new int[0], 0);
 }

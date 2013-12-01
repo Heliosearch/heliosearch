@@ -27,13 +27,19 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.core.HS;
 import org.apache.solr.core.RefCount;
-import sun.misc.Unsafe;
 
 
 public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount {
   protected final long array;
   protected final int len;
 
+  public void check() {
+    if (len != HS.arraySizeBytes(array)>>2) {
+      String s = "############# ERROR SortedIntDocSetNative len=" + len + " array size in bytes ==" + HS.arraySizeBytes(array);
+      System.out.println(s);
+      throw new RuntimeException(s);
+    }
+  }
 
   @Override
   protected void close() {
@@ -52,16 +58,18 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
    * @param len  Number of ids in the list
    */
   public SortedIntDocSetNative(int[] docs, int len) {
-    assert len <= docs.length;
-    array = HS.allocArray(len, 4, false);
+    assert len>=0 && len <= docs.length;
     this.len = len;
-    HS.copyToPointer(array, 0, docs, 0, len);
+    array = HS.allocArray(len, 4, false);
+    HS.copyInts(docs, 0, array, 0, len);
+    check();
   }
 
   public SortedIntDocSetNative(long nativeIntArray, int len) {
-    array = nativeIntArray;
+    assert len>=0 && len <= (HS.arraySizeBytes(nativeIntArray)>>2);
+    this.array = nativeIntArray;
     this.len = len;
-    assert len <= (HS.arraySizeBytes(nativeIntArray)>>2);
+    check();
   }
 
   @Override
@@ -77,12 +85,6 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   public static int[] zeroInts = new int[0];
   public static SortedIntDocSetNative zero = new SortedIntDocSetNative(zeroInts);
 
-  public static int[] shrink(int[] arr, int newSize) {
-    if (arr.length == newSize) return arr;
-    int[] newArr = new int[newSize];
-    System.arraycopy(arr, 0, newArr, 0, newSize);
-    return newArr;
-  }
 
   public static int intersectionSize(long smallerSortedList, int a_size, long biggerSortedList, int b_size) {
     final long a = smallerSortedList;
@@ -227,7 +229,12 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
       // assume other implementations are better at random access than we are,
       // true of BitDocSet and HashDocSet.
       int icount = 0;
+      check();
       for (int i=0; i<len; i++) {
+ if (len != HS.arraySizeBytes(array)>>2) {
+// len is 43, array size is 0, how did this happen???
+   System.out.println("nocommit ###############################################");
+ }
         if (other.exists( HS.getInt(array,i) )) icount++;
       }
       return icount;
@@ -527,7 +534,7 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   public static int andNot(long a, int lena, long b, int lenb, int[] target) {
     if (lena==0) return 0;
     if (lenb==0) {
-      System.arraycopy(a,0,target,0,lena);
+      HS.copyInts(a, 0, target, 0, lena);
       return lena;
     }
 
@@ -558,7 +565,7 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
     int leftover=lena - i;
 
     if (leftover > 0) {
-      System.arraycopy(a,i,target,count,leftover);
+      HS.copyInts(a, i, target, count, leftover);
       count += leftover;
     }
 
@@ -567,7 +574,10 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
 
   @Override
   public DocSet andNot(DocSet other) {
-    if (other.size()==0) return this;
+    if (other.size()==0) {
+      this.incref();
+      return this;
+    }
 
     if (!(other instanceof SortedIntDocSetNative)) {
       int count = 0;
@@ -800,9 +810,9 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   }
 
   @Override
-  protected SortedIntDocSetNative clone() {
+  public SortedIntDocSetNative clone() {
     long newArr = HS.allocArray(len, 4, false);
-    HS.copyInts(array, 0, len, newArr, 0);
+    HS.copyInts(array, 0, newArr, 0, len);
     return new SortedIntDocSetNative(newArr, len);
   }
 }

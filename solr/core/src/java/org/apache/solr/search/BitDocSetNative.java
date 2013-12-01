@@ -34,7 +34,7 @@ import java.util.Arrays;
 
 
 public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
-  protected final long array;
+  final long array;
   protected final int wlen; // number of words in the array
   protected int size = -1;  // number of docs in the set (cached for perf)
 
@@ -51,11 +51,17 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
   public BitDocSetNative(BitDocSetNative other) {
     this.wlen = other.wlen;
     this.array = HS.allocArray(wlen, 8, false);  // don't zero memory since we will copy over it
-    HS.unsafe.copyMemory(other.array, this.array, wlen<<3);
+    HS.copyLongs(other.array, 0, array, 0, wlen);
+  }
+
+  public BitDocSetNative(OpenBitSet other) {
+    this.wlen = other.getNumWords();
+    this.array = HS.allocArray(wlen, 8, false);  // don't zero memory since we will copy over it
+    HS.copyLongs(other.getBits(), 0, this.array, 0, wlen);
   }
 
   public int capacity() {
-    return wlen<<3;
+    return wlen<<6;
   }
 
   public DocIterator iterator() {
@@ -124,7 +130,13 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
 
   @Override
   public OpenBitSet getBits() {
-    throw new UnsupportedOperationException();
+    // HS-TODO: if used in production, we should optimize
+    OpenBitSet obs = new OpenBitSet(capacity());
+    long[] target = obs.getBits();
+    for (int i=0; i<wlen; i++) {
+      target[i] = HS.getLong(array, i);
+    }
+    return obs;
   }
 
   @Override
@@ -238,9 +250,10 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
   }
 
   public static boolean intersects(BitDocSetNative a, BitDocSetNative b) {
-    int nWords = a.numWords();
+    assert(a.wlen == b.wlen);
+    int nWords = a.wlen;
     for (int i=0; i<nWords; i++) {
-      if ( (HS.getLong(a.array, nWords) & HS.getLong(b.array, nWords)) != 0 ) {
+      if ( (HS.getLong(a.array, nWords) & HS.getLong(b.array, i)) != 0 ) {
         return true;
       }
     }
@@ -251,44 +264,48 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
    * Neither set is modified.
    */
   public static int intersectionCount(BitDocSetNative a, BitDocSetNative b) {
+    assert(a.wlen == b.wlen);
     int nWords = a.numWords();
     int result = 0;
     for (int i=0; i<nWords; i++) {
-      long w1 = HS.getLong(a.array, nWords);
-      long w2 = HS.getLong(b.array, nWords);
+      long w1 = HS.getLong(a.array, i);
+      long w2 = HS.getLong(b.array, i);
       result += Long.bitCount(w1 & w2);
     }
     return result;
   }
 
   public static int unionCount(BitDocSetNative a, BitDocSetNative b) {
+    assert(a.wlen == b.wlen);
     int nWords = a.numWords();
     int result = 0;
     for (int i=0; i<nWords; i++) {
-      long w1 = HS.getLong(a.array, nWords);
-      long w2 = HS.getLong(b.array, nWords);
+      long w1 = HS.getLong(a.array, i);
+      long w2 = HS.getLong(b.array, i);
       result += Long.bitCount(w1 | w2);
     }
     return result;
   }
 
   public static int andNotCount(BitDocSetNative a, BitDocSetNative b) {
+    assert(a.wlen == b.wlen);
     int nWords = a.numWords();
     int result = 0;
     for (int i=0; i<nWords; i++) {
-      long w1 = HS.getLong(a.array, nWords);
-      long w2 = HS.getLong(b.array, nWords);
+      long w1 = HS.getLong(a.array, i);
+      long w2 = HS.getLong(b.array, i);
       result += Long.bitCount(w1 & ~w2);
     }
     return result;
   }
 
   public static int xorCount(BitDocSetNative a, BitDocSetNative b) {
+    assert(a.wlen == b.wlen);
     int nWords = a.numWords();
     int result = 0;
     for (int i=0; i<nWords; i++) {
-      long w1 = HS.getLong(a.array, nWords);
-      long w2 = HS.getLong(b.array, nWords);
+      long w1 = HS.getLong(a.array, i);
+      long w2 = HS.getLong(b.array, i);
       result += Long.bitCount(w1 ^ w2);
     }
     return result;
@@ -355,6 +372,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
 
   /** this = this AND other */
   public void intersectMe(BitDocSetNative other) {
+    assert this.wlen == other.wlen;
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -366,6 +384,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
 
   /** this = this OR other */
   public void unionMe(BitDocSetNative other) {
+    assert this.wlen == other.wlen;
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -377,6 +396,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
 
   /** Remove all elements set in other. this = this AND_NOT other */
   public void remove(BitDocSetNative other) {
+    assert this.wlen == other.wlen;
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -388,6 +408,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
 
   /** Remove all elements set in other. this = this AND_NOT other */
   public void xorMe(BitDocSetNative other) {
+    assert this.wlen == other.wlen;
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -488,7 +509,7 @@ throw new UnsupportedOperationException();
   }
 
   @Override
-  protected BitDocSetNative clone() {
+  public BitDocSetNative clone() {
     return new BitDocSetNative(this);
   }
 

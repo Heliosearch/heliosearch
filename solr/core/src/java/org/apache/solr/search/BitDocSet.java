@@ -243,7 +243,7 @@ public class BitDocSet extends DocSetBase {
   }
 
   @Override
-  protected BitDocSet clone() {
+  public BitDocSet clone() {
     return new BitDocSet((OpenBitSet)bits.clone(), size);
   }
 

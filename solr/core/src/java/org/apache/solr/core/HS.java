@@ -46,6 +46,7 @@ public class HS
     long addr = unsafe.allocateMemory(sz + HEADER_SIZE);
 
     if (zero) {
+      // zero all the memory, including the header
       unsafe.setMemory(addr, sz + HEADER_SIZE, (byte)0);
     }
 
@@ -58,15 +59,14 @@ public class HS
 
   public static void freeArray(long ptr) {
     numFree.incrementAndGet();
-
-    // zero out length to trip asserts that try to use the memory after this point
-    unsafe.putLong(ptr - SIZE_OFFSET, 0);
+    unsafe.putLong(ptr - SIZE_OFFSET, -123456789L);  // put negative length tp trip asserts
     unsafe.freeMemory(ptr - HEADER_SIZE);
   }
 
   public static long arraySizeBytes(long ptr) {
-    assert(ptr>=4096); // should never be on first page, or negative
-    return unsafe.getLong(ptr - SIZE_OFFSET);
+    long sz = unsafe.getLong(ptr - SIZE_OFFSET);
+    assert ptr >= 4096 && sz >= 0;     // if this assertion trips, it's most likely because of a double free
+    return sz;
   }
 
   public static int getInt(long ptr, int index) {
@@ -89,21 +89,53 @@ public class HS
     unsafe.putLong(ptr + (((long) index) << 3), val);
   }
 
-  public static void copyToPointer(long targetPointer, long targetPos, int[] srcArray, int srcPos, int srcLength) {
-    long start = targetPos<<2;
-    long nbytes = ((long)srcLength) << 2;
-    assert start + nbytes <= arraySizeBytes(targetPointer);
-    unsafe.copyMemory(srcArray, Unsafe.ARRAY_INT_BASE_OFFSET + (srcPos<<2), null, targetPointer+start, nbytes);
+  public static void copyInts(int[] srcArray, int srcOff, long targetPointer, long targetOff,  int numElements) {
+    long targetOffBytes = targetOff<<2;
+    long nbytes = ((long)numElements) << 2;
+    assert srcOff>=0 && targetOff>=0 && (targetOffBytes + nbytes) <= arraySizeBytes(targetPointer);
+    unsafe.copyMemory(srcArray, Unsafe.ARRAY_INT_BASE_OFFSET + (((long)srcOff)<<2), null, targetPointer+targetOffBytes, nbytes);
   }
 
-  public static void copyInts(long src, long srcOff, long len, long dest, long destOff) {
-    long srcStart = src + (srcOff<<2);
-    long destStart = dest + (destOff<<2);
-    long nBytes = len << 2;
-    assert(srcStart+nBytes <= arraySizeBytes(src) && destStart+nBytes <= arraySizeBytes(dest));
-    unsafe.copyMemory(srcStart, destStart, nBytes);
+  public static void copyLongs(long[] srcArray, int srcOff, long targetPointer, long targetOff,  int numElements) {
+    long targetOffBytes = targetOff<<3;
+    long nbytes = ((long)numElements) << 3;
+    assert srcOff>=0 && targetOff>=0 && (targetOffBytes + nbytes) <= arraySizeBytes(targetPointer);
+    unsafe.copyMemory(srcArray, Unsafe.ARRAY_LONG_BASE_OFFSET + (((long)srcOff)<<3), null, targetPointer+targetOffBytes, nbytes);
   }
 
+  public static void copyInts(long sourcePointer, long srcOff, int[] targetArray, int targetOff, int numElements) {
+    long srcOffBytes = srcOff<<2;
+    long nbytes = ((long)numElements) << 2;
+    assert srcOff>=0 && targetOff>=0 && (srcOffBytes + nbytes) <= arraySizeBytes(sourcePointer) && (targetOff+numElements<=targetArray.length);
+    unsafe.copyMemory(null, sourcePointer+srcOffBytes, targetArray, Unsafe.ARRAY_INT_BASE_OFFSET + (((long)targetOff)<<2), nbytes);
+  }
+
+  public static void copyLongs(long sourcePointer, long srcOff, long[] targetArray, int targetOff, int numElements) {
+    long srcOffBytes = srcOff<<3;
+    long nbytes = ((long)numElements) << 3;
+    assert srcOff>=0 && targetOff>=0 && (srcOffBytes + nbytes) <= arraySizeBytes(sourcePointer) && (targetOff+numElements<=targetArray.length);
+    unsafe.copyMemory(null, sourcePointer+srcOffBytes, targetArray, Unsafe.ARRAY_LONG_BASE_OFFSET + (((long)targetOff)<<3), nbytes);
+  }
+
+  public static void copyInts(long src, long srcOff, long dest, long destOff, long len) {
+    long srcOffBytes = srcOff<<2;
+    long destOffBytes = destOff<<2;
+    long nBytes = len<<2;
+    assert(srcOff>=0 && destOff>=0 && srcOffBytes+nBytes <= arraySizeBytes(src) && destOffBytes+nBytes <= arraySizeBytes(dest));
+    unsafe.copyMemory(src+srcOffBytes, dest+destOffBytes, nBytes);
+  }
+
+  public static void copyLongs(long src, long srcOff, long dest, long destOff, long len) {
+    long srcOffBytes = srcOff<<3;
+    long destOffBytes = destOff<<3;
+    long nBytes = len<<3;
+    assert(srcOff>=0 && destOff>=0 && srcOffBytes+nBytes <= arraySizeBytes(src) && destOffBytes+nBytes <= arraySizeBytes(dest));
+    unsafe.copyMemory(src+srcOffBytes, dest+destOffBytes, nBytes);
+  }
+
+
+
+  // TODO: introduce the concept of a reference list to ease deallocation?  (just an auto-expanding long[])
 
   // TODO: YCS: a finalizer to clean up native memory?
 }
