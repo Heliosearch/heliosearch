@@ -33,13 +33,6 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   protected final long array;
   protected final int len;
 
-  public void check() {
-    if (len != HS.arraySizeBytes(array)>>2) {
-      String s = "############# ERROR SortedIntDocSetNative len=" + len + " array size in bytes ==" + HS.arraySizeBytes(array);
-      System.out.println(s);
-      throw new RuntimeException(s);
-    }
-  }
 
   @Override
   protected void close() {
@@ -62,14 +55,12 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
     this.len = len;
     array = HS.allocArray(len, 4, false);
     HS.copyInts(docs, 0, array, 0, len);
-    check();
   }
 
   public SortedIntDocSetNative(long nativeIntArray, int len) {
     assert len>=0 && len <= (HS.arraySizeBytes(nativeIntArray)>>2);
     this.array = nativeIntArray;
     this.len = len;
-    check();
   }
 
   @Override
@@ -81,9 +72,6 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   public long memSize() {
     return HS.arraySizeBytes(array)+8;
   }
-
-  public static int[] zeroInts = new int[0];
-  public static SortedIntDocSetNative zero = new SortedIntDocSetNative(zeroInts);
 
 
   public static int intersectionSize(long smallerSortedList, int a_size, long biggerSortedList, int b_size) {
@@ -229,12 +217,7 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
       // assume other implementations are better at random access than we are,
       // true of BitDocSet and HashDocSet.
       int icount = 0;
-      check();
       for (int i=0; i<len; i++) {
- if (len != HS.arraySizeBytes(array)>>2) {
-// len is 43, array size is 0, how did this happen???
-   System.out.println("nocommit ###############################################");
- }
         if (other.exists( HS.getInt(array,i) )) icount++;
       }
       return icount;

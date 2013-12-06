@@ -38,12 +38,11 @@ public class HS
   }
 
   public static long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
-    numAlloc.incrementAndGet();
-
-    // zero array?
     // any JVM accounting for memory allocated this way?
     long sz = numElements * elementSize;
     long addr = unsafe.allocateMemory(sz + HEADER_SIZE);
+
+    numAlloc.incrementAndGet();
 
     if (zero) {
       // zero all the memory, including the header

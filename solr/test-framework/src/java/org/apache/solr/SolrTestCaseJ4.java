@@ -120,6 +120,7 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
   @BeforeClass 
   @SuppressWarnings("unused")
   private static void beforeClass() {
+    HSTest.startTracking();
     System.setProperty("jetty.testMode", "true");
     System.setProperty("enable.update.log", usually() ? "true" : "false");
     System.setProperty("tests.shardhandler.randomSeed", Long.toString(random().nextLong()));
@@ -146,6 +147,7 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
     System.clearProperty("useCompoundFile");
     
     IpTables.unblockAllPorts();
+    HSTest.endTracking();
   }
 
   private static boolean changedFactory = false;
@@ -350,7 +352,7 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
       fail(msg);
     }
  }
-  
+
   /** Causes an exception matching the regex pattern to not be logged. */
   public static void ignoreException(String pattern) {
     if (SolrException.ignorePatterns == null)

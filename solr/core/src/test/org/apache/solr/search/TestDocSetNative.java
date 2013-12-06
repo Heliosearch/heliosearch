@@ -37,6 +37,9 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.lucene.util.OpenBitSetIterator;
+import org.apache.solr.HSTest;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -49,12 +52,40 @@ import java.util.Random;
 public class TestDocSetNative extends TestDocSet {
 
   {
+    // flags to help only testing certain parts to help narrow down bugs
     intersect = true;
     union = true;
     andNot = true;
     intersectSz = true;
     unionSz = true;
     andNotSz = true;
+  }
+
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+    HSTest.startTracking();
+  }
+
+  @Override
+  public void tearDown() throws Exception {
+    HSTest.endTracking();
+    super.tearDown();
+  }
+
+
+  public void testTracking() throws Exception {
+    HSTest.startTracking();
+    DocSet s1 = new SortedIntDocSetNative(new int[1]);
+    boolean caught = false;
+    try {
+      HSTest.endTracking();
+    } catch (Throwable th) {
+      caught = true;
+      System.out.println("SUCCESSFULLY CAUGHT: " + th);
+    }
+    assertTrue(caught);
+    s1.decref();
   }
 
 
