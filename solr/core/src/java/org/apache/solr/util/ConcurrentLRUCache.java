@@ -17,6 +17,7 @@ package org.apache.solr.util;
  */
 
 import org.apache.lucene.util.PriorityQueue;
+import org.apache.solr.core.RefCount;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,6 +91,10 @@ public class ConcurrentLRUCache<K,V> {
     if (e == null) {
       if (islive) stats.missCounter.incrementAndGet();
       return null;
+    }
+    if (e.value instanceof RefCount) {
+      int ref = ((RefCount)e.value).incref();
+      if (ref < 0) return null; // a concurrent decref() beat us to the punch
     }
     if (islive) e.lastAccessed = stats.accessCounter.incrementAndGet();
     return e.value;
@@ -397,6 +402,9 @@ public class ConcurrentLRUCache<K,V> {
     stats.size.decrementAndGet();
     stats.evictionCounter.incrementAndGet();
     if(evictionListener != null) evictionListener.evictedEntry(o.key,o.value);
+    if (o.value instanceof RefCount) {
+      ((RefCount)o.value).decref();
+    }
   }
 
   /**
@@ -446,14 +454,20 @@ public class ConcurrentLRUCache<K,V> {
       for (Map.Entry<Object, CacheEntry<K,V>> entry : map.entrySet()) {
         CacheEntry<K,V> ce = entry.getValue();
         ce.lastAccessedCopy = ce.lastAccessed;
-        if (tree.size() < n) {
-          tree.add(ce);
-        } else {
-          if (ce.lastAccessedCopy > tree.last().lastAccessedCopy) {
-            tree.remove(tree.last());
-            tree.add(ce);
+
+        if (tree.size() < n || ce.lastAccessedCopy > tree.last().lastAccessedCopy) {
+          if (ce.value instanceof RefCount) {
+            int ref = ((RefCount)ce.value).incref();
+            if (ref  <= 0) continue;
+          }
+          if (tree.size() >= n) {
+            CacheEntry<K,V> old = tree.pollLast();
+            if (old.value instanceof RefCount) {
+              ((RefCount)ce.value).decref();
+            }
           }
         }
+
       }
     } finally {
       markAndSweepLock.unlock();
@@ -515,13 +529,20 @@ public class ConcurrentLRUCache<K,V> {
     }
   }
 
- private boolean isDestroyed =  false;
+  private boolean isDestroyed =  false;
   public void destroy() {
     try {
       if(cleanupThread != null){
         cleanupThread.stopThread();
       }
     } finally {
+
+      for (CacheEntry<K,V> ce : map.values()) {
+        if (ce.value instanceof RefCount) {
+          ((RefCount)ce.value).decref();
+        }
+      }
+
       isDestroyed = true;
     }
   }
