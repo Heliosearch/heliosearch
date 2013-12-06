@@ -44,6 +44,15 @@ Upgrading from Solr 4.x
 Detailed Change List
 ----------------------
 
+New Features
+----------------------
+
+* SOLR-1301: Add a Solr contrib that allows for building Solr indexes via 
+  Hadoop's MapReduce. (Matt Revelle, Alexander Kanarsky, Steve Rowe, 
+  Mark Miller, Greg Bowyer, Jason Rutherglen, Kris Jirapinyo, Jason Venner ,
+  Andrzej Bialecki, Patrick Hunt, Wolfgang Hoschek, Roman Shaposhnik, 
+  Eric Wong)
+
 Other Changes
 ----------------------
 
@@ -108,6 +117,15 @@ New Features
 
 * SOLR-5506: Support docValues in CollationField and ICUCollationField.
   (Robert Muir)
+  
+ * SOLR-5518: Added EditFileRequestHandler to deal with security issues around modifying
+   solr configuration files.
+
+* SOLR-5023: Add support for deleteInstanceDir to be passed from SolrJ for Core
+  Unload action. (Lyubov Romanchuk, shalin)
+
+* SOLR-1871: The 'map' function query accepts a ValueSource as target and
+  default value. (Chris Harris, shalin)
 
 Bug Fixes
 ----------------------
@@ -166,6 +184,14 @@ Bug Fixes
 * SOLR-5515: NPE when getting stats on date field with empty result on
   SolrCloud. (Alexander Sagen, shalin)
 
+* SOLR-5204: StatsComponent and SpellCheckComponent do not support the
+  shards.tolerant=true parameter. (Anca Kopetz, shalin)
+
+* SOLR-5527: DIH logs spurious warning for special commands. (shalin)
+
+* SOLR-5524: Exception when using Query Function inside Scale Function.
+  (Trey Grainger, yonik)
+  
 Optimizations
 ----------------------
 
@@ -196,6 +222,14 @@ Other Changes
 
 * SOLR-5499: Log a warning if /get is not registered when using SolrCloud.
   (Daniel Collins via shalin)
+
+* SOLR-5517: Return HTTP error on POST requests with no Content-Type.
+  (Ryan Ernst, Uwe Schindler)
+
+* SOLR-5502: Added a test for tri-level compositeId routing with documents
+  having a "/" in a document id. (Anshum Gupta via Mark Miller)
+
+* SOLR-5539: Admin UI - Remove ability to create/modify files (steffkes)
 
 ==================  4.6.0 ==================
 

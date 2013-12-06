@@ -73,6 +73,9 @@ New Features
   (missing the term, weight or payload).  (Areek Zillur via
   Mike McCandless)
 
+* SOLR-1871: The RangeMapFloatFunction accepts an arbitrary ValueSource
+  as target and default values. (Chris Harris, shalin)
+
 Build
 
 * LUCENE-5217: Maven config: get dependencies from Ant+Ivy config; disable
@@ -85,6 +88,8 @@ Build
 
 * LUCENE-5347: Upgrade forbidden-apis checker to version 1.4.
   (Uwe Schindler)
+
+* LUCENE-4381: Upgrade analysis/icu to 52.1. (Robert Muir)
 
 Bug fixes
 
