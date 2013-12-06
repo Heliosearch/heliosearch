@@ -167,7 +167,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   private String path;
   private final boolean reserveDirectory;
   private final boolean createdDirectory; 
-  
+  private final int smallSetSize;
   private static DirectoryReader getReader(SolrCore core, SolrIndexConfig config, DirectoryFactory directoryFactory, String path) throws IOException {
     DirectoryReader reader = null;
     Directory dir = directoryFactory.get(path, DirContext.DEFAULT, config.lockType);
@@ -196,6 +196,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     this.schema = schema;
     this.name = "Searcher@" + Integer.toHexString(hashCode()) + (name!=null ? " "+name : "");
     log.info("Opening " + this.name);
+    this.smallSetSize = (this.reader.maxDoc()>>6)+5;
 
     if (directoryFactory.searchersReserveCommitPoints()) {
       // reserve commit point for life of searcher
@@ -877,7 +878,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     if (pf.answer != null) return pf.answer;
 
 
-    DocSetCollector setCollector = new DocSetCollector(maxDoc()>>6, maxDoc());
+    DocSetCollector setCollector = new DocSetCollector(smallSetSize, maxDoc());
     Collector collector = setCollector;
     if (pf.postFilter != null) {
       pf.postFilter.setLastDelegate(collector);
@@ -1050,7 +1051,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       if (result != null) return result;
     }
 
-    int smallSetSize = maxDoc()>>6;
+
     int scratchSize = Math.min(smallSetSize, largestPossible);
     if (deState.scratch == null || deState.scratch.length < scratchSize)
       deState.scratch = new int[scratchSize];
@@ -1121,7 +1122,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
   // query must be positive
   protected DocSet getDocSetNC(Query query, DocSet filter) throws IOException {
-    DocSetCollector collector = new DocSetCollector(maxDoc()>>6, maxDoc());
+    DocSetCollector collector = new DocSetCollector(smallSetSize, maxDoc());
 
     if (filter==null) {
       super.search(query,null,collector);
@@ -1544,7 +1545,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     boolean needScores = (cmd.getFlags() & GET_SCORES) != 0;
     boolean terminateEarly = (cmd.getFlags() & TERMINATE_EARLY) == TERMINATE_EARLY;
     int maxDoc = maxDoc();
-    int smallSetSize = maxDoc>>6;
+
 
     ProcessedFilter pf = getProcessedFilter(cmd.getFilter(), cmd.getFilterList());
     final Filter luceneFilter = pf.filter;
@@ -1621,7 +1622,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         topCollector = TopFieldCollector.create(weightSort(cmd.getSort()), len, false, needScores, needScores, true);
       }
 
-      DocSetCollector setCollector = new DocSetDelegateCollector(maxDoc>>6, maxDoc, topCollector);
+      DocSetCollector setCollector = new DocSetDelegateCollector(smallSetSize, maxDoc, topCollector);
       Collector collector = setCollector;
       if (terminateEarly) {
         collector = new EarlyTerminatingCollector(collector, cmd.len);
