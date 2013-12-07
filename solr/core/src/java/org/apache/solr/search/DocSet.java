@@ -153,5 +153,7 @@ public interface DocSet extends RefCount, Cloneable, AutoCloseable /* extends Co
 
   public DocSet clone();
 
+  public void close();
+
   public static DocSet EMPTY = new SortedIntDocSet(new int[0], 0);
 }

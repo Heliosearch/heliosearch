@@ -53,7 +53,7 @@ public class DocSetDelegateCollector extends DocSetCollector {
     } else {
       // this conditional could be removed if BitSet was preallocated, but that
       // would take up more memory, and add more GC time...
-      if (bits==null) bits = new OpenBitSet(maxDoc);
+      if (bits==null) bits = new BitDocSetNative(maxDoc);
       bits.fastSet(doc);
     }
 
@@ -68,7 +68,8 @@ public class DocSetDelegateCollector extends DocSetCollector {
     } else {
       // set the bits for ids that were collected in the array
       for (int i=0; i<scratch.length; i++) bits.fastSet(scratch[i]);
-      return new BitDocSet(bits,pos);
+      bits.setSize(pos);
+      return bits;
     }
   }
 

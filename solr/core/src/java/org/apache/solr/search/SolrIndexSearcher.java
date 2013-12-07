@@ -787,7 +787,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     // using heuristics about what to cache, and mustCache==true, (or if we
     // want this method to start using heuristics too) then
     // this needs to change.
-    getDocSet(query);
+    DocSet answer = getDocSet(query);
+    answer.decref();
   }
 
   /**
@@ -818,13 +819,27 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     if (filterCache != null) {
       DocSet absAnswer = filterCache.get(absQ);
       if (absAnswer!=null) {
-        if (positive) return absAnswer;
-        else return getPositiveDocSet(matchAllDocsQuery).andNot(absAnswer);
+        if (positive) {
+          return absAnswer;
+        }
+        else {
+          // what about the getPositiveSet?
+          DocSet all = getPositiveDocSet(matchAllDocsQuery);
+          DocSet answer = all.andNot(absAnswer);
+          all.decref();
+          absAnswer.decref();
+          return answer;
+        }
       }
     }
 
     DocSet absAnswer = getDocSetNC(absQ, null);
-    DocSet answer = positive ? absAnswer : getPositiveDocSet(matchAllDocsQuery).andNot(absAnswer);
+    DocSet answer = absAnswer;
+    if (!positive) {
+      DocSet all = getPositiveDocSet(matchAllDocsQuery);
+      answer = all.andNot(absAnswer);
+      all.decref();
+    }
 
     if (filterCache != null) {
       // cache negative queries as positive
@@ -839,21 +854,32 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     DocSet answer;
     if (filterCache != null) {
       answer = filterCache.get(q);
-      if (answer!=null) return answer;
+      if (answer!=null) {
+        return answer;
+      }
     }
-    answer = getDocSetNC(q,null);
-    if (filterCache != null) filterCache.put(
-        q,answer);
+    answer = getDocSetNC(q, null);
+    if (filterCache != null) {
+      answer.incref();
+      filterCache.put(q, answer);
+    }
     return answer;
   }
 
   private static Query matchAllDocsQuery = new MatchAllDocsQuery();
 
 
+
   public static class ProcessedFilter {
     public DocSet answer;  // the answer, if non-null
     public Filter filter;
     public DelegatingCollector postFilter;
+
+    public void close() {
+      if (answer != null) {
+        answer.decref();
+      }
+    }
   }
 
 
@@ -941,7 +967,10 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     int smallestIndex = -1;
 
     if (setFilter != null) {
+      setFilter.incref();   // one for sets[] ref
+      setFilter.incref();   // one for answer ref
       answer = sets[end++] = setFilter;
+
       smallestIndex = end;
     }
 
@@ -998,11 +1027,21 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
     // do negative queries first to shrink set size
     for (int i=0; i<end; i++) {
-      if (neg[i]) answer = answer.andNot(sets[i]);
+      if (neg[i]) {
+        DocSet oldAnswer = answer;
+        answer = answer.andNot(sets[i]);
+        oldAnswer.decref();
+        sets[i].decref();
+      }
     }
 
     for (int i=0; i<end; i++) {
-      if (!neg[i] && i!=smallestIndex) answer = answer.intersection(sets[i]);
+      if (!neg[i] && i!=smallestIndex) {
+        DocSet oldAnswer = answer;
+        answer = answer.intersection(sets[i]);
+        oldAnswer.decref();
+        sets[i].decref();
+      }
     }
 
     if (notCached != null) {
@@ -1023,7 +1062,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       }
 
       if (answer != null) {
-        pf.filter = answer.getTopFilter();
+        pf.filter = answer.getTopFilter();         // TODO: how to decref???
       }
     }
 
@@ -1045,8 +1084,11 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     boolean useCache = filterCache != null && largestPossible >= deState.minSetSizeCached;
     TermQuery key = null;
 
+    // HS_TODO: if not using cache, cache a native array and allow SortedIntDocSetNative to use that w/o a copy.
+    // Same with BitDocSetNative?
+
     if (useCache) {
-      key = new TermQuery(new Term(deState.fieldName, BytesRef.deepCopyOf(deState.termsEnum.term())));
+      key = new TermQuery(new Term(deState.fieldName, BytesRef.deepCopyOf(deState.termsEnum.term())));   // HS_TODO... YCS WHY COPY?  WE ARE CHECKING ONLY
       DocSet result = filterCache.get(key);
       if (result != null) return result;
     }
@@ -1059,7 +1101,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     final int[] docs = deState.scratch;
     int upto = 0;
     int bitsSet = 0;
-    OpenBitSet obs = null;
+    BitDocSetNative obs = null;
 
     DocsEnum docsEnum = deState.termsEnum.docs(deState.liveDocs, deState.docsEnum, DocsEnum.FLAG_NONE);
     if (deState.docsEnum == null) {
@@ -1076,7 +1118,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         int docid;
         
         if (largestPossible > docs.length) {
-          if (obs == null) obs = new OpenBitSet(maxDoc());
+          if (obs == null) obs = new BitDocSetNative(maxDoc());
           while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
             obs.fastSet(docid + base);
             bitsSet++;
@@ -1090,7 +1132,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     } else {
       int docid;
       if (largestPossible > docs.length) {
-        if (obs == null) obs = new OpenBitSet(maxDoc());
+        if (obs == null) obs = new BitDocSetNative(maxDoc());
         while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
           obs.fastSet(docid);
           bitsSet++;
@@ -1108,12 +1150,21 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         obs.fastSet(docs[i]);  
       }
       bitsSet += upto;
-      result = new BitDocSet(obs, bitsSet);
+      obs.setSize(bitsSet);
+      result = obs;
     } else {
-      result = upto==0 ? DocSet.EMPTY : new SortedIntDocSet(Arrays.copyOf(docs, upto));
+      if (useCache) {
+        // TODO: YCS: how to handle native empty?
+        // or have a native instance hang around forever (which would be a memory leak unless we
+        // did some sort of HS finalizer or something.
+        result = upto==0 ? DocSet.EMPTY : new SortedIntDocSetNative(docs, upto);
+      } else {
+        result = upto==0 ? DocSet.EMPTY : new SortedIntDocSet(Arrays.copyOf(docs, upto));
+      }
     }
 
     if (useCache) {
+      result.incref();  // one for the cache
       filterCache.put(key, result);
     }
     
@@ -1165,14 +1216,21 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     if (filterCache != null) {
       first = filterCache.get(absQ);
       if (first==null) {
-        first = getDocSetNC(absQ,null);
-        filterCache.put(absQ,first);
+        first = getDocSetNC(absQ, null);
+        filterCache.put(absQ, first);
       }
       return positive ? first.intersection(filter) : filter.andNot(first);
     }
 
     // If there isn't a cache, then do a single filtered query if positive.
-    return positive ? getDocSetNC(absQ,filter) : filter.andNot(getPositiveDocSet(absQ));
+    if (positive) {
+      return getDocSetNC(absQ,filter);
+    } else {
+      DocSet absSet = getPositiveDocSet(absQ);
+      DocSet answer = filter.andNot(absSet);
+      absSet.decref();
+      return answer;
+    }
   }
 
   /**
@@ -1341,7 +1399,6 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       }
     }
 
-    // disable useFilterCache optimization temporarily
     if (useFilterCache) {
       // now actually use the filter cache.
       // for large filters that match few documents, this may be
@@ -1349,7 +1406,11 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       if (out.docSet == null) {
         out.docSet = getDocSet(cmd.getQuery(),cmd.getFilter());
         DocSet bigFilt = getDocSet(cmd.getFilterList());
-        if (bigFilt != null) out.docSet = out.docSet.intersection(bigFilt);
+        if (bigFilt != null) {
+          DocSet old = out.docSet;
+          out.docSet = out.docSet.intersection(bigFilt);
+          old.decref();
+        }
       }
       // todo: there could be a sortDocSet that could take a list of
       // the filters instead of anding them first...
@@ -1364,7 +1425,10 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         // the base query and all filters.
         DocSet qDocSet = getDocListAndSetNC(qr,cmd);
         // cache the docSet matching the query w/o filtering
-        if (qDocSet!=null && filterCache!=null && !qr.isPartialResults()) filterCache.put(cmd.getQuery(),qDocSet);
+        if (qDocSet!=null && filterCache!=null && !qr.isPartialResults()) {
+          qDocSet.incref();
+          filterCache.put(cmd.getQuery(),qDocSet);
+        }
       } else {
         getDocListNC(qr,cmd);
         //Parameters: cmd.getQuery(),theFilt,cmd.getSort(),0,supersetMaxDoc,cmd.getFlags(),cmd.getTimeAllowed(),responseHeader);
@@ -1955,7 +2019,9 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       // Negative query if absolute value different from original
       Query absQ = QueryUtils.getAbs(a);
       DocSet positiveA = getPositiveDocSet(absQ);
-      return a==absQ ? b.intersectionSize(positiveA) : b.andNotSize(positiveA);
+      int count = a==absQ ? b.intersectionSize(positiveA) : b.andNotSize(positiveA);
+      positiveA.decref();
+      return count;
     } else {
       // If there isn't a cache, then do a single filtered query
       // NOTE: we cannot use FilteredQuery, because BitDocSet assumes it will never 
@@ -1971,8 +2037,10 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
   /** @lucene.internal */
   public int numDocs(DocSet a, DocsEnumState deState) throws IOException {
-    // Negative query if absolute value different from original
-    return a.intersectionSize(getDocSet(deState));
+    DocSet b = getDocSet(deState);
+    int count = a.intersectionSize(b);
+    b.decref();
+    return count;
   }
 
   public static class DocsEnumState {
@@ -1996,35 +2064,32 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
    */
   public int numDocs(Query a, Query b) throws IOException {
     Query absA = QueryUtils.getAbs(a);
-    Query absB = QueryUtils.getAbs(b);     
-    DocSet positiveA = getPositiveDocSet(absA);
-    DocSet positiveB = getPositiveDocSet(absB);
+    Query absB = QueryUtils.getAbs(b);
 
-    // Negative query if absolute value different from original
-    if (a==absA) {
-      if (b==absB) return positiveA.intersectionSize(positiveB);
-      return positiveA.andNotSize(positiveB);
+    try (
+        DocSet positiveA = getPositiveDocSet(absA);
+        DocSet positiveB = getPositiveDocSet(absB);
+    ) {
+
+      // Negative query if absolute value different from original
+      if (a==absA) {
+        if (b==absB) return positiveA.intersectionSize(positiveB);
+        return positiveA.andNotSize(positiveB);
+      }
+      if (b==absB) return positiveB.andNotSize(positiveA);
+
+      // if both negative, we need to create a temp DocSet since we
+      // don't have a counting method that takes three.
+      // -a -b == *:*.andNot(a).andNotSize(b) == *.*.andNotSize(a.union(b))
+      // we use the last form since the intermediate DocSet should normally be smaller.
+      DocSet all = getPositiveDocSet(matchAllDocsQuery);
+      DocSet union = positiveA.union(positiveB);
+      int count = all.andNotSize(union);
+      all.decref();
+      union.decref();
+      return count;
     }
-    if (b==absB) return positiveB.andNotSize(positiveA);
 
-    // if both negative, we need to create a temp DocSet since we
-    // don't have a counting method that takes three.
-    DocSet all = getPositiveDocSet(matchAllDocsQuery);
-
-    // -a -b == *:*.andNot(a).andNotSize(b) == *.*.andNotSize(a.union(b))
-    // we use the last form since the intermediate DocSet should normally be smaller.
-    return all.andNotSize(positiveA.union(positiveB));
-  }
-
-
-  /**
-   * Takes a list of docs (the doc ids actually), and returns an array 
-   * of Documents containing all of the stored fields.
-   */
-  public StoredDocument[] readDocs(DocList ids) throws IOException {
-     StoredDocument[] docs = new StoredDocument[ids.size()];
-     readDocs(docs,ids);
-     return docs;
   }
 
 

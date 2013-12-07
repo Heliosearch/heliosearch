@@ -133,8 +133,7 @@ public class CommandHandler {
       collectors.addAll(command.create());
     }
 
-    ProcessedFilter filter = searcher.getProcessedFilter
-      (queryCommand.getFilter(), queryCommand.getFilterList());
+    ProcessedFilter filter = searcher.getProcessedFilter(queryCommand.getFilter(), queryCommand.getFilterList());
     Query query = QueryUtils.makeQueryable(queryCommand.getQuery());
 
     if (truncateGroups) {
