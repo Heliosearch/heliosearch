@@ -59,11 +59,16 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
     }
 
     // count == 0 if we got here... close the resources.
-    close();
+    free();
     return count;
   }
 
-  protected abstract void close();
+  protected abstract void free();
+
+  @Override  // for AutoCloseable
+  public void close() {
+    decref();
+  }
 
   // Not implemented efficiently... for testing purposes only
   @Override

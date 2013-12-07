@@ -39,7 +39,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
   protected int size = -1;  // number of docs in the set (cached for perf)
 
   @Override
-  protected void close() {
+  protected void free() {
     HS.freeArray(array);
   }
 
@@ -173,6 +173,13 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
    */
   public void invalidateSize() {
     size=-1;
+  }
+
+  /** expert:
+   * Sets the number of bits set.  This is not validated!
+   */
+  public void setSize(int size) {
+    this.size = size;
   }
 
 

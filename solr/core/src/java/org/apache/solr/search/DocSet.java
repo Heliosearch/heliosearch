@@ -33,7 +33,7 @@ import org.apache.solr.core.RefCount;
  *
  * @since solr 0.9
  */
-public interface DocSet extends RefCount, Cloneable /* extends Collection<Integer> */ {
+public interface DocSet extends RefCount, Cloneable, AutoCloseable /* extends Collection<Integer> */ {
   
   /**
    * Adds the specified document if it is not currently in the DocSet

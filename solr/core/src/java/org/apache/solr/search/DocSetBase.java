@@ -238,4 +238,7 @@ abstract class DocSetBase implements DocSet {
     return 1;
   }
 
+  @Override // for AutoCloseable
+  public void close() {
+  }
 }

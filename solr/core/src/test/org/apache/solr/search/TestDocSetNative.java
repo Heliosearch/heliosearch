@@ -88,6 +88,23 @@ public class TestDocSetNative extends TestDocSet {
     s1.decref();
   }
 
+  public void testTryWith() throws Exception {
+    OpenBitSet obs = getRandomSet(10,5);
+
+    try(
+        DocSet a = getBitDocSetNative(obs);
+        DocSet b = getIntDocSetNative(obs);
+        DocSet c = a.intersection(b);
+        DocSet d = a.union(b);
+        ) {
+
+      assertEquals(c.size(), a.intersectionSize(b));
+      assertEquals(d.size(), a.unionSize(b));
+
+    }
+
+    // ref counting code should take care of testing this...
+  }
 
   public void testSimple() throws Exception {
     OpenBitSet obs1 = getRandomSet(10,5);

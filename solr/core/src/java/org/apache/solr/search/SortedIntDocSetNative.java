@@ -35,7 +35,7 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
 
 
   @Override
-  protected void close() {
+  protected void free() {
     HS.freeArray(array);
   }
 
