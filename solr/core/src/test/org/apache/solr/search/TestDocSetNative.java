@@ -88,6 +88,19 @@ public class TestDocSetNative extends TestDocSet {
     s1.decref();
   }
 
+  public void testDoubleFree() throws Exception {
+    DocSet s1 = new SortedIntDocSetNative(new int[1]);
+    boolean caught = false;
+    try {
+      s1.decref();
+      s1.decref();  // if we are really unlucky, this test could fail because the memory could be used for something else between the two decrefs...
+    } catch (Throwable th) {
+      caught = true;
+      System.out.println("SUCCESSFULLY CAUGHT: " + th);
+    }
+    assertTrue(caught);
+  }
+
   public void testTryWith() throws Exception {
     OpenBitSet obs = getRandomSet(10,5);
 
