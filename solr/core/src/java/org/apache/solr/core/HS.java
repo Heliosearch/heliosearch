@@ -120,9 +120,11 @@ public class HS
           StringBuilder sb = new StringBuilder();
           // sb.append("PTR: " + info.ptr + " ALLOCATED AT ");
           sb.append("PTR: " + info.ptr + " SIZE=" + arraySizeBytes(info.ptr) + " ALLOCATED AT ");
-          for (StackTraceElement elem : info.stack) {
+          for (int i=1; i<info.stack.length; i++) {    // first elem is getStackTrace
+            String elemS = info.stack[i].toString();
+            if (!(elemS.contains(".solr.") || elemS.contains(".lucene."))) break;
             sb.append('\t');
-            sb.append(elem);
+            sb.append(elemS);
             sb.append('\n');
           }
           log.error(sb.toString());
@@ -158,8 +160,8 @@ public class HS
   }
 
   public static long arraySizeBytes(long ptr) {
+    assert ptr >= 4095 && unsafe.getLong(ptr - SIZE_OFFSET) >= 0;     // if this assertion trips, it's most likely because of a double free
     long sz = unsafe.getLong(ptr - SIZE_OFFSET);
-    assert ptr >= 4096 && sz >= 0;     // if this assertion trips, it's most likely because of a double free
     return sz;
   }
 

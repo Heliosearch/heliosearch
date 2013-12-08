@@ -1229,7 +1229,7 @@ public class SimpleFacetsHS {
               "Unable to range facet on field:" + sf);
     }
 
-    resOuter.add(key, getFacetRangeCounts(sf, calc));
+    resOuter.add(key, getFacetRangeCounts(sf, (RangeEndpointCalculator)calc));    // redundant cast helps intellij to resolve
   }
 
   private <T extends Comparable<T>> NamedList getFacetRangeCounts

@@ -18,6 +18,9 @@ package org.apache.solr.core;
  */
 
 import org.apache.lucene.util.LuceneTestCase;
+import org.apache.solr.SolrTestCaseJ4;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created with IntelliJ IDEA.
@@ -27,6 +30,7 @@ import org.apache.lucene.util.LuceneTestCase;
  * To change this template use File | Settings | File Templates.
  */
 public class TestHS extends LuceneTestCase {
+  private static Logger log = LoggerFactory.getLogger(TestHS.class);
 
   public void testLongArray() {
     long arr = HS.allocArray(5, 8, true);
@@ -100,6 +104,7 @@ public class TestHS extends LuceneTestCase {
   }
 
   public void testAsserts() {
+    log.warn("CHECKPOINT 1");
     long arr = HS.allocArray(5, 8, false);
 
     boolean failed=false;
@@ -110,6 +115,7 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 2");
     failed=false;
     try {
       HS.getLong(arr, 5);
@@ -118,6 +124,7 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 3");
     failed=false;
     try {
       HS.setInt(arr, 10, 0);
@@ -126,6 +133,7 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 4");
     failed=false;
     try {
       HS.getInt(arr, 10);
@@ -138,6 +146,7 @@ public class TestHS extends LuceneTestCase {
     // negative indexes
     //
 
+    log.warn("CHECKPOINT 5");
     failed=false;
     try {
       HS.setLong(arr, -1, 0);
@@ -146,6 +155,7 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 6");
     failed=false;
     try {
       HS.getLong(arr, -1);
@@ -153,6 +163,8 @@ public class TestHS extends LuceneTestCase {
       failed = true;
     }
     assertTrue(failed);
+
+    log.warn("CHECKPOINT 7");
     failed=false;
     try {
       HS.setInt(arr, -1, 0);
@@ -161,6 +173,7 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 8");
     failed=false;
     try {
       HS.getInt(arr, -1);
@@ -172,6 +185,7 @@ public class TestHS extends LuceneTestCase {
     //
     // zero arrays
     //
+    log.warn("CHECKPOINT 9");
     failed=false;
     try {
       HS.setLong(0, 0, 0);
@@ -180,6 +194,7 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 10");
     failed=false;
     try {
       HS.getLong(0, 0);
@@ -188,12 +203,15 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 11");
     failed=false;
     try {
       HS.setInt(0, 0, 0);
     } catch (Throwable e) {
       failed = true;
     }
+
+    log.warn("CHECKPOINT 12");
     assertTrue(failed);
     failed=false;
     try {
@@ -205,6 +223,8 @@ public class TestHS extends LuceneTestCase {
 
 
     HS.freeArray(arr);
+    log.warn("CHECKPOINT 13");
+
   }
 
 
