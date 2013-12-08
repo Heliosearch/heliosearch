@@ -2282,6 +2282,11 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       if( filterList != null ) {
         throw new IllegalArgumentException( "Either filter or filterList may be set in the QueryCommand, but not both." );
       }
+      if (this.filter != null) {
+        // overwriting filter...
+        this.filter.decref();
+        throw new RuntimeException("TEMPORARY EXCEPTION JUST TO CHECK IF THIS HAPPENS!  REMOVE_ME");  // nocommit
+      }
       this.filter = filter;
       return this;
     }
@@ -2363,7 +2368,11 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     public void setDocSet(DocSet set) {
       if( docListAndSet == null ) {
         docListAndSet = new DocListAndSet();
+      } else if (docListAndSet.docSet != null) {
+        docListAndSet.docSet.decref();
+        throw new RuntimeException("TEMPORARY EXCEPTION JUST TO CHECK IF THIS HAPPENS!  REMOVE_ME");  // nocommit
       }
+
       docListAndSet.docSet = set;
     }
 
