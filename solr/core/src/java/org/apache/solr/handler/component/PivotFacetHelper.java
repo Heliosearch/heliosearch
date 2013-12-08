@@ -18,6 +18,7 @@
 package org.apache.solr.handler.component;
 
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.request.SimpleFacetsHS;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.DocSet;
@@ -46,7 +47,7 @@ import java.util.Map;
 /**
  * @since solr 4.0
  */
-public class PivotFacetHelper extends SimpleFacets
+public class PivotFacetHelper extends SimpleFacetsHS
 {
 
   protected int minMatch;
