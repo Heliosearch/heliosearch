@@ -646,9 +646,10 @@ public class SimpleFacetsHS {
   public static int getFieldMissingCount(SolrIndexSearcher searcher, DocSet docs, String fieldName)
     throws IOException {
     SchemaField sf = searcher.getSchema().getField(fieldName);
-    DocSet hasVal = searcher.getDocSet
-        (sf.getType().getRangeQuery(null, sf, null, null, false, false));
-    return docs.andNotSize(hasVal);
+    DocSet hasVal = searcher.getDocSet(sf.getType().getRangeQuery(null, sf, null, null, false, false));
+    int count = docs.andNotSize(hasVal);
+    hasVal.decref();
+    return count;
   }
 
 
