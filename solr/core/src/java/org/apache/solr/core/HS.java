@@ -1,13 +1,20 @@
 package org.apache.solr.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.lang.reflect.Field;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class HS
 {
-  public static boolean loaded = false;
+  private static Logger log = LoggerFactory.getLogger(HS.class);
+
   public static final Unsafe unsafe;
 
   private static native void print();
@@ -22,6 +29,111 @@ public class HS
     }
   }
 
+
+  public static class Allocator {
+    public long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
+      // any JVM accounting for memory allocated this way?
+      long sz = numElements * elementSize;
+      long addr = unsafe.allocateMemory(sz + HEADER_SIZE);
+
+      numAlloc.incrementAndGet();
+
+      if (zero) {
+        // zero all the memory, including the header
+        unsafe.setMemory(addr, sz + HEADER_SIZE, (byte)0);
+      }
+
+      // should never be 0 since we always add a header
+      addr += HEADER_SIZE;
+      unsafe.putLong(addr - SIZE_OFFSET, sz);
+
+      return addr;
+    }
+
+    public void freeArray(long ptr) {
+      numFree.incrementAndGet();
+      unsafe.putLong(ptr - SIZE_OFFSET, -123456789L);  // put negative length to trip asserts
+      unsafe.freeMemory(ptr - HEADER_SIZE);
+    }
+
+    public void reset() {
+      // TODO - reset numAlloc and numFree here?
+    }
+
+    public void debug() {
+
+    }
+  }
+
+  // An allocator for debugging that tracks every allocation
+  public static class TrackingAllocator extends Allocator {
+    private static class Info {
+      long ptr;
+      StackTraceElement[] stack;
+    }
+
+    Map<Long, Info> map = new LinkedHashMap<>();
+
+    @Override
+    public long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
+      Info info = new Info();
+      Thread thread = Thread.currentThread();
+      info.stack = thread.getStackTrace();
+      // TODO: would storing String take up less space?
+      // ManagementFactory.getThreadMXBean().getThreadInfo(Thread.currentThread().getId());
+
+      synchronized (this) {
+        long ptr = super.allocArray(numElements, elementSize, zero);
+
+        info.ptr = ptr;
+        Info prev = map.put(ptr, info);
+
+        if (prev != null) {
+          throw new RuntimeException("HS Allocator ERROR : should be impossible!!!");
+        }
+
+        return ptr;
+      }
+    }
+
+    @Override
+    public void freeArray(long ptr) {
+      synchronized (this) {
+        Info curr = map.remove(ptr);
+
+        if (curr == null) {
+          // TODO: if we provide a way to clear, it's not an error.
+          // TODO: will it be possible to dynamically switch to a debugging allocator?  would be good for debugging live customer site...
+          // perhaps detect if we have been switched on and not consider this an error...
+          throw new RuntimeException("HS Allocator ERROR: no record of " + ptr + " , bad pointer or double free.");
+        }
+
+        super.freeArray(ptr);
+      }
+    }
+
+    @Override
+    public void debug() {
+
+      synchronized (this) {
+        for (Info info : map.values()) {
+          StringBuilder sb = new StringBuilder();
+          // sb.append("PTR: " + info.ptr + " ALLOCATED AT ");
+          sb.append("PTR: " + info.ptr + " SIZE=" + arraySizeBytes(info.ptr) + " ALLOCATED AT ");
+          for (StackTraceElement elem : info.stack) {
+            sb.append('\t');
+            sb.append(elem);
+            sb.append('\n');
+          }
+          log.error(sb.toString());
+        }
+
+      }
+    }
+  }
+
+  // public static Allocator allocator = new Allocator();
+  public static Allocator allocator = new TrackingAllocator();
 
   private static final AtomicLong numAlloc = new AtomicLong();
   private static final AtomicLong numFree = new AtomicLong();
@@ -38,28 +150,11 @@ public class HS
   }
 
   public static long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
-    // any JVM accounting for memory allocated this way?
-    long sz = numElements * elementSize;
-    long addr = unsafe.allocateMemory(sz + HEADER_SIZE);
-
-    numAlloc.incrementAndGet();
-
-    if (zero) {
-      // zero all the memory, including the header
-      unsafe.setMemory(addr, sz + HEADER_SIZE, (byte)0);
-    }
-
-    // should never be 0 since we always add a header
-    addr += HEADER_SIZE;
-    // TODO: add to a set to keep track of native memory?
-    unsafe.putLong(addr - SIZE_OFFSET, sz);
-    return addr;
+    return allocator.allocArray(numElements, elementSize, zero);
   }
 
   public static void freeArray(long ptr) {
-    numFree.incrementAndGet();
-    unsafe.putLong(ptr - SIZE_OFFSET, -123456789L);  // put negative length tp trip asserts
-    unsafe.freeMemory(ptr - HEADER_SIZE);
+    allocator.freeArray(ptr);
   }
 
   public static long arraySizeBytes(long ptr) {

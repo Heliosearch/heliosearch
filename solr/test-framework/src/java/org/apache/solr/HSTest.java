@@ -27,6 +27,8 @@ public class HSTest {
   }
 
   public static void endTrackingMemory() {
+    HS.allocator.debug();
+
     long endAllocations = HS.getNumAllocations();
     long endFrees = HS.getNumFrees();
 
