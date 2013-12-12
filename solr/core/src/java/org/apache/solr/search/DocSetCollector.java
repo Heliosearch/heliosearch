@@ -72,7 +72,7 @@ public class DocSetCollector extends Collector {
   public DocSet getDocSet() {
     if (pos<=scratch.length) {
       // assumes docs were collected in sorted order!
-      return new SortedIntDocSet(scratch, pos);
+      return new SortedIntDocSetNative(scratch, pos);
     } else {
       // set the bits for ids that were collected in the array
       for (int i=0; i<scratch.length; i++) bits.fastSet(scratch[i]);

@@ -38,6 +38,7 @@ import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.lucene.util.OpenBitSetIterator;
 import org.apache.solr.HSTest;
+import org.apache.solr.SolrTestCaseJ4;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -79,10 +80,12 @@ public class TestDocSetNative extends TestDocSet {
     DocSet s1 = new SortedIntDocSetNative(new int[1]);
     boolean caught = false;
     try {
+      DocSetBaseNative.debug();  // to test display
+
       HSTest.endTracking();
     } catch (Throwable th) {
       caught = true;
-      System.out.println("SUCCESSFULLY CAUGHT: " + th);
+      SolrTestCaseJ4.log.info("SUCCESSFULLY CAUGHT: " + th);
     }
     assertTrue(caught);
     s1.decref();
@@ -96,7 +99,7 @@ public class TestDocSetNative extends TestDocSet {
       s1.decref();  // if we are really unlucky, this test could fail because the memory could be used for something else between the two decrefs...
     } catch (Throwable th) {
       caught = true;
-      System.out.println("SUCCESSFULLY CAUGHT: " + th);
+      SolrTestCaseJ4.log.info("SUCCESSFULLY CAUGHT: " + th);
     }
     assertTrue(caught);
   }

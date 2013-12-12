@@ -28,12 +28,97 @@ import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.core.HS;
 import org.apache.solr.core.RefCount;
+import org.apache.solr.core.SolrCore;
+import org.slf4j.Logger;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** A base class that may be useful for implementing DocSets */
-abstract class DocSetBaseNative implements RefCount, DocSet {
+public abstract class DocSetBaseNative implements RefCount, DocSet {
+  public static Logger log = SolrCore.log;
+
   private final AtomicInteger refcount = new AtomicInteger(1);
+
+  // public static void debug() {}
+
+
+
+  public static Map<DocSetBaseNative, Object> debugMap = new IdentityHashMap<>();
+
+  public static void debug() {
+    Collection<DocSetBaseNative> sets;
+
+    synchronized (DocSetBaseNative.class) {
+      if (debugMap.isEmpty()) return;
+      sets = new ArrayList<>(debugMap.keySet());
+    }
+
+    log.error("DOCSET ALLOCATION LIST size=" + sets.size());
+    for (DocSetBaseNative set : sets) {
+      log.error(" ###### SET " + set + " refcount=" + set.refcount.get() + "events=" + set.events);
+    }
+
+    // throw new RuntimeException("LEAKED DOCSETS");
+  }
+
+  private List<String> events = new ArrayList<String>();
+
+  private String whereAmI(String start) {
+    Thread thread = Thread.currentThread();
+    StackTraceElement[] stack = thread.getStackTrace();
+    StringBuilder sb = new StringBuilder(2000);
+    sb.append(start);
+    for (int i=3; i<stack.length; i++) {    // first elem is stack trace, second will be incref_debug, third will be incref
+      String elemS = stack[i].toString();
+      if (!(elemS.contains(".solr.") || elemS.contains(".lucene."))) break;
+      sb.append('\t');
+      sb.append(elemS);
+      sb.append('\n');
+    }
+    return sb.toString();
+  }
+
+  {
+    events.add( whereAmI("ALLOC " + this) );
+    synchronized (DocSetBaseNative.class) {
+      debugMap.put(this, this);
+    }
+  }
+
+  private void debug_incref() {
+    synchronized (events) {
+      events.add( whereAmI("incref " + " before=" + refcount.get() + " :\n") );
+    }
+
+    if (refcount.get() <= 0) {
+      SolrCore.log.error("TRYING TO INCREF DEAD DOCSET :\n" + events);
+      throw new RuntimeException("TRYING TO INCREF DEAD DOCSET");
+    }
+
+
+
+  }
+
+  private void debug_decref() {
+    synchronized (events) {
+      events.add( whereAmI("decref " + " before=" + refcount.get() + " :\n") );
+    }
+
+    if (refcount.get() <= 0) {
+      SolrCore.log.error("TRYING TO FREE DEAD DOCSET :\n" + events);
+      throw new RuntimeException("TRYING TO FREE DEAD DOCSET");
+    }
+
+    if (refcount.get() == 1) {
+      debugMap.remove(this);
+    }
+  }
+
 
   @Override
   public int getRefCount() {
@@ -42,12 +127,16 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public int incref() {
+    debug_incref();
+    // TODO: optimize this
     if (refcount.get() <= 0) return refcount.get();  // never increment once it hits 0
     return refcount.incrementAndGet();
   }
 
   @Override
   public int decref() {
+    debug_decref();
+
     int count = refcount.decrementAndGet();
     if (count > 0) {
       return count;
@@ -55,7 +144,7 @@ abstract class DocSetBaseNative implements RefCount, DocSet {
 
     if (count < 0) {
       // too many frees detected...
-      throw new RuntimeException("Too many frees detected for native DocSet " + this);
+      throw new RuntimeException("Too many decrefs detected for native DocSet " + this);
     }
 
     // count == 0 if we got here... close the resources.

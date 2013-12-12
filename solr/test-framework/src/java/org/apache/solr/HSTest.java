@@ -2,6 +2,7 @@ package org.apache.solr;
 
 import junit.framework.TestCase;
 import org.apache.solr.core.HS;
+import org.apache.solr.search.DocSetBaseNative;
 import org.slf4j.Logger;
 
 public class HSTest {
@@ -27,6 +28,8 @@ public class HSTest {
   }
 
   public static void endTrackingMemory() {
+    DocSetBaseNative.debug();
+
     HS.allocator.debug();
 
     long endAllocations = HS.getNumAllocations();
