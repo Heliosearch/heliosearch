@@ -29,7 +29,7 @@ import java.io.IOException;
  *
  */
 
-public class DocSetCollector extends Collector {
+public class DocSetCollector extends Collector implements AutoCloseable {
   int pos=0;
   BitDocSetNative bits;
   final int maxDoc;
@@ -77,7 +77,9 @@ public class DocSetCollector extends Collector {
       // set the bits for ids that were collected in the array
       for (int i=0; i<scratch.length; i++) bits.fastSet(scratch[i]);
       bits.setSize(pos);
-      return bits;
+      DocSet answer = bits;
+      bits = null; // null out so we know we don't need to free later
+      return answer;
     }
   }
 
@@ -93,5 +95,12 @@ public class DocSetCollector extends Collector {
   @Override
   public boolean acceptsDocsOutOfOrder() {
     return false;
+  }
+
+  @Override
+  public void close() {
+    if (bits != null) {
+      bits.decref();
+    }
   }
 }

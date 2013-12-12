@@ -905,46 +905,51 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
 
     DocSetCollector setCollector = new DocSetCollector(smallSetSize, maxDoc());
-    Collector collector = setCollector;
-    if (pf.postFilter != null) {
-      pf.postFilter.setLastDelegate(collector);
-      collector = pf.postFilter;
-    }
 
-    for (final AtomicReaderContext leaf : leafContexts) {
-      final AtomicReader reader = leaf.reader();
-      final Bits liveDocs = reader.getLiveDocs();   // TODO: the filter may already only have liveDocs...
-      DocIdSet idSet = null;
-      if (pf.filter != null) {
-        idSet = pf.filter.getDocIdSet(leaf, liveDocs);
-        if (idSet == null) continue;
-      }
-      DocIdSetIterator idIter = null;
-      if (idSet != null) {
-        idIter = idSet.iterator();
-        if (idIter == null) continue;
+    try {
+      Collector collector = setCollector;
+      if (pf.postFilter != null) {
+        pf.postFilter.setLastDelegate(collector);
+        collector = pf.postFilter;
       }
 
-      collector.setNextReader(leaf);
-      int max = reader.maxDoc();
-
-      if (idIter == null) {
-        for (int docid = 0; docid<max; docid++) {
-          if (liveDocs != null && !liveDocs.get(docid)) continue;
-          collector.collect(docid);
+      for (final AtomicReaderContext leaf : leafContexts) {
+        final AtomicReader reader = leaf.reader();
+        final Bits liveDocs = reader.getLiveDocs();   // TODO: the filter may already only have liveDocs...
+        DocIdSet idSet = null;
+        if (pf.filter != null) {
+          idSet = pf.filter.getDocIdSet(leaf, liveDocs);
+          if (idSet == null) continue;
         }
-      } else {
-        for (int docid = -1; (docid = idIter.advance(docid+1)) < max; ) {
-          collector.collect(docid);
+        DocIdSetIterator idIter = null;
+        if (idSet != null) {
+          idIter = idSet.iterator();
+          if (idIter == null) continue;
+        }
+
+        collector.setNextReader(leaf);
+        int max = reader.maxDoc();
+
+        if (idIter == null) {
+          for (int docid = 0; docid<max; docid++) {
+            if (liveDocs != null && !liveDocs.get(docid)) continue;
+            collector.collect(docid);
+          }
+        } else {
+          for (int docid = -1; (docid = idIter.advance(docid+1)) < max; ) {
+            collector.collect(docid);
+          }
         }
       }
-    }
 
-    if(collector instanceof DelegatingCollector) {
-      ((DelegatingCollector) collector).finish();
-    }
+      if(collector instanceof DelegatingCollector) {
+        ((DelegatingCollector) collector).finish();
+      }
 
-    return setCollector.getDocSet();
+      return setCollector.getDocSet();
+    } finally {
+      setCollector.close();
+    }
   }
 
 
@@ -1175,13 +1180,17 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   protected DocSet getDocSetNC(Query query, DocSet filter) throws IOException {
     DocSetCollector collector = new DocSetCollector(smallSetSize, maxDoc());
 
-    if (filter==null) {
-      super.search(query,null,collector);
-    } else {
-      Filter luceneFilter = filter.getTopFilter();
-      super.search(query, luceneFilter, collector);
+    try {
+      if (filter==null) {
+        super.search(query, null, collector);
+      } else {
+        Filter luceneFilter = filter.getTopFilter();
+        super.search(query, luceneFilter, collector);
+      }
+      return collector.getDocSet();
+    } finally {
+      collector.close();
     }
-    return collector.getDocSet();
   }
 
 
@@ -1610,9 +1619,11 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     boolean terminateEarly = (cmd.getFlags() & TERMINATE_EARLY) == TERMINATE_EARLY;
     int maxDoc = maxDoc();
 
-
+    DocSetCollector setCollector = null;
     ProcessedFilter pf = getProcessedFilter(cmd.getFilter(), cmd.getFilterList());
     final Filter luceneFilter = pf.filter;
+
+    try {
 
     Query query = QueryUtils.makeQueryable(cmd.getQuery());
     final long timeAllowed = cmd.getTimeAllowed();
@@ -1622,7 +1633,6 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       final float[] topscore = new float[] { Float.NEGATIVE_INFINITY };
 
       Collector collector;
-      DocSetCollector setCollector;
 
        if (!needScores) {
          collector = setCollector = new DocSetCollector(smallSetSize, maxDoc);
@@ -1686,7 +1696,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         topCollector = TopFieldCollector.create(weightSort(cmd.getSort()), len, false, needScores, needScores, true);
       }
 
-      DocSetCollector setCollector = new DocSetDelegateCollector(smallSetSize, maxDoc, topCollector);
+      setCollector = new DocSetDelegateCollector(smallSetSize, maxDoc, topCollector);
       Collector collector = setCollector;
       if (terminateEarly) {
         collector = new EarlyTerminatingCollector(collector, cmd.len);
@@ -1738,6 +1748,9 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     // TODO: currently we don't generate the DocSet for the base query,
     // but the QueryDocSet == CompleteDocSet if filter==null.
     return pf.filter==null && pf.postFilter==null ? qr.getDocSet() : null;
+    } finally {
+      if (setCollector != null) setCollector.close();
+    }
   }
 
 

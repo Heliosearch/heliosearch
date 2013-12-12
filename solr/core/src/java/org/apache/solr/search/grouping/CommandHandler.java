@@ -165,15 +165,19 @@ public class CommandHandler {
 
   private DocSet computeDocSet(Query query, ProcessedFilter filter, List<Collector> collectors) throws IOException {
     int maxDoc = searcher.maxDoc();
-    DocSetCollector docSetCollector;
+    DocSetCollector docSetCollector = null;
+    try {
     if (collectors.isEmpty()) {
-      docSetCollector = new DocSetCollector(maxDoc >> 6, maxDoc);
+      docSetCollector = new DocSetCollector((maxDoc >> 6)+5, maxDoc);
     } else {
       Collector wrappedCollectors = MultiCollector.wrap(collectors.toArray(new Collector[collectors.size()]));
-      docSetCollector = new DocSetDelegateCollector(maxDoc >> 6, maxDoc, wrappedCollectors);
+      docSetCollector = new DocSetDelegateCollector((maxDoc >> 6)+5, maxDoc, wrappedCollectors);
     }
     searchWithTimeLimiter(query, filter, docSetCollector);
     return docSetCollector.getDocSet();
+    } finally {
+      docSetCollector.close();
+    }
   }
 
   @SuppressWarnings("unchecked")
