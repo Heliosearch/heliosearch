@@ -870,10 +870,17 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
 
 
-  public static class ProcessedFilter {
-    public DocSet answer;  // the answer, if non-null
+  public static class ProcessedFilter implements AutoCloseable {
+    private DocSet answer;  // the answer, if non-null
     public Filter filter;
     public DelegatingCollector postFilter;
+
+
+    public DocSet getAnswer() {
+      DocSet ret = answer;
+      answer = null;
+      return ret;
+    }
 
     public void close() {
       if (answer != null) {
@@ -901,7 +908,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
    */
   public DocSet getDocSet(List<Query> queries) throws IOException {
     ProcessedFilter pf = getProcessedFilter(null, queries);
-    if (pf.answer != null) return pf.answer;
+    DocSet answer = pf.getAnswer();
+    if (answer != null) return answer;
 
 
     DocSetCollector setCollector = new DocSetCollector(smallSetSize, maxDoc());
@@ -949,6 +957,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       return setCollector.getDocSet();
     } finally {
       setCollector.close();
+      pf.close();
     }
   }
 
@@ -1470,135 +1479,139 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
     boolean needScores = (cmd.getFlags() & GET_SCORES) != 0;
     boolean terminateEarly = (cmd.getFlags() & TERMINATE_EARLY) == TERMINATE_EARLY;
-    
+
     Query query = QueryUtils.makeQueryable(cmd.getQuery());
 
     ProcessedFilter pf = getProcessedFilter(cmd.getFilter(), cmd.getFilterList());
     final Filter luceneFilter = pf.filter;
 
-    // handle zero case...
-    if (lastDocRequested<=0) {
-      final float[] topscore = new float[] { Float.NEGATIVE_INFINITY };
-      final int[] numHits = new int[1];
+    try {
+      // handle zero case...
+      if (lastDocRequested<=0) {
+        final float[] topscore = new float[] { Float.NEGATIVE_INFINITY };
+        final int[] numHits = new int[1];
 
-      Collector collector;
+        Collector collector;
 
-      if (!needScores) {
-        collector = new Collector () {
-          @Override
-          public void setScorer(Scorer scorer) {
-          }
-          @Override
-          public void collect(int doc) {
-            numHits[0]++;
-          }
-          @Override
-          public void setNextReader(AtomicReaderContext context) {
-          }
-          @Override
-          public boolean acceptsDocsOutOfOrder() {
-            return true;
-          }
-        };
-      } else {
-        collector = new Collector() {
-          Scorer scorer;
-          @Override
-          public void setScorer(Scorer scorer) {
-            this.scorer = scorer;
-          }
-          @Override
-          public void collect(int doc) throws IOException {
-            numHits[0]++;
-            float score = scorer.score();
-            if (score > topscore[0]) topscore[0]=score;            
-          }
-          @Override
-          public void setNextReader(AtomicReaderContext context) {
-          }
-          @Override
-          public boolean acceptsDocsOutOfOrder() {
-            return true;
-          }
-        };
-      }
-      if (terminateEarly) {
-        collector = new EarlyTerminatingCollector(collector, cmd.len);
-      }
-      if( timeAllowed > 0 ) {
-        collector = new TimeLimitingCollector(collector, TimeLimitingCollector.getGlobalCounter(), timeAllowed);
-      }
-      if (pf.postFilter != null) {
-        pf.postFilter.setLastDelegate(collector);
-        collector = pf.postFilter;
-      }
-
-      try {
-        super.search(query, luceneFilter, collector);
-        if(collector instanceof DelegatingCollector) {
-          ((DelegatingCollector)collector).finish();
-        }
-      }
-      catch( TimeLimitingCollector.TimeExceededException x ) {
-        log.warn( "Query: " + query + "; " + x.getMessage() );
-        qr.setPartialResults(true);
-      }
-
-      nDocsReturned=0;
-      ids = new int[nDocsReturned];
-      scores = new float[nDocsReturned];
-      totalHits = numHits[0];
-      maxScore = totalHits>0 ? topscore[0] : 0.0f;
-    } else {
-      TopDocsCollector topCollector;
-      if (cmd.getSort() == null) {
-        if(cmd.getScoreDoc() != null) {
-          topCollector = TopScoreDocCollector.create(len, cmd.getScoreDoc(), true); //create the Collector with InOrderPagingCollector
+        if (!needScores) {
+          collector = new Collector () {
+            @Override
+            public void setScorer(Scorer scorer) {
+            }
+            @Override
+            public void collect(int doc) {
+              numHits[0]++;
+            }
+            @Override
+            public void setNextReader(AtomicReaderContext context) {
+            }
+            @Override
+            public boolean acceptsDocsOutOfOrder() {
+              return true;
+            }
+          };
         } else {
-          topCollector = TopScoreDocCollector.create(len, true);
+          collector = new Collector() {
+            Scorer scorer;
+            @Override
+            public void setScorer(Scorer scorer) {
+              this.scorer = scorer;
+            }
+            @Override
+            public void collect(int doc) throws IOException {
+              numHits[0]++;
+              float score = scorer.score();
+              if (score > topscore[0]) topscore[0]=score;
+            }
+            @Override
+            public void setNextReader(AtomicReaderContext context) {
+            }
+            @Override
+            public boolean acceptsDocsOutOfOrder() {
+              return true;
+            }
+          };
+        }
+        if (terminateEarly) {
+          collector = new EarlyTerminatingCollector(collector, cmd.len);
+        }
+        if( timeAllowed > 0 ) {
+          collector = new TimeLimitingCollector(collector, TimeLimitingCollector.getGlobalCounter(), timeAllowed);
+        }
+        if (pf.postFilter != null) {
+          pf.postFilter.setLastDelegate(collector);
+          collector = pf.postFilter;
         }
 
+        try {
+          super.search(query, luceneFilter, collector);
+          if(collector instanceof DelegatingCollector) {
+            ((DelegatingCollector)collector).finish();
+          }
+        }
+        catch( TimeLimitingCollector.TimeExceededException x ) {
+          log.warn( "Query: " + query + "; " + x.getMessage() );
+          qr.setPartialResults(true);
+        }
+
+        nDocsReturned=0;
+        ids = new int[nDocsReturned];
+        scores = new float[nDocsReturned];
+        totalHits = numHits[0];
+        maxScore = totalHits>0 ? topscore[0] : 0.0f;
       } else {
-        topCollector = TopFieldCollector.create(weightSort(cmd.getSort()), len, false, needScores, needScores, true);
-      }
-      Collector collector = topCollector;
-      if (terminateEarly) {
-        collector = new EarlyTerminatingCollector(collector, cmd.len);
-      }
-      if( timeAllowed > 0 ) {
-        collector = new TimeLimitingCollector(collector, TimeLimitingCollector.getGlobalCounter(), timeAllowed);
-      }
-      if (pf.postFilter != null) {
-        pf.postFilter.setLastDelegate(collector);
-        collector = pf.postFilter;
-      }
-      try {
-        super.search(query, luceneFilter, collector);
-        if(collector instanceof DelegatingCollector) {
-          ((DelegatingCollector)collector).finish();
+        TopDocsCollector topCollector;
+        if (cmd.getSort() == null) {
+          if(cmd.getScoreDoc() != null) {
+            topCollector = TopScoreDocCollector.create(len, cmd.getScoreDoc(), true); //create the Collector with InOrderPagingCollector
+          } else {
+            topCollector = TopScoreDocCollector.create(len, true);
+          }
+
+        } else {
+          topCollector = TopFieldCollector.create(weightSort(cmd.getSort()), len, false, needScores, needScores, true);
+        }
+        Collector collector = topCollector;
+        if (terminateEarly) {
+          collector = new EarlyTerminatingCollector(collector, cmd.len);
+        }
+        if( timeAllowed > 0 ) {
+          collector = new TimeLimitingCollector(collector, TimeLimitingCollector.getGlobalCounter(), timeAllowed);
+        }
+        if (pf.postFilter != null) {
+          pf.postFilter.setLastDelegate(collector);
+          collector = pf.postFilter;
+        }
+        try {
+          super.search(query, luceneFilter, collector);
+          if(collector instanceof DelegatingCollector) {
+            ((DelegatingCollector)collector).finish();
+          }
+        }
+        catch( TimeLimitingCollector.TimeExceededException x ) {
+          log.warn( "Query: " + query + "; " + x.getMessage() );
+          qr.setPartialResults(true);
+        }
+
+        totalHits = topCollector.getTotalHits();
+        TopDocs topDocs = topCollector.topDocs(0, len);
+        maxScore = totalHits>0 ? topDocs.getMaxScore() : 0.0f;
+        nDocsReturned = topDocs.scoreDocs.length;
+        ids = new int[nDocsReturned];
+        scores = (cmd.getFlags()&GET_SCORES)!=0 ? new float[nDocsReturned] : null;
+        for (int i=0; i<nDocsReturned; i++) {
+          ScoreDoc scoreDoc = topDocs.scoreDocs[i];
+          ids[i] = scoreDoc.doc;
+          if (scores != null) scores[i] = scoreDoc.score;
         }
       }
-      catch( TimeLimitingCollector.TimeExceededException x ) {
-        log.warn( "Query: " + query + "; " + x.getMessage() );
-        qr.setPartialResults(true);
-      }
 
-      totalHits = topCollector.getTotalHits();
-      TopDocs topDocs = topCollector.topDocs(0, len);
-      maxScore = totalHits>0 ? topDocs.getMaxScore() : 0.0f;
-      nDocsReturned = topDocs.scoreDocs.length;
-      ids = new int[nDocsReturned];
-      scores = (cmd.getFlags()&GET_SCORES)!=0 ? new float[nDocsReturned] : null;
-      for (int i=0; i<nDocsReturned; i++) {
-        ScoreDoc scoreDoc = topDocs.scoreDocs[i];
-        ids[i] = scoreDoc.doc;
-        if (scores != null) scores[i] = scoreDoc.score;
-      }
+      int sliceLen = Math.min(lastDocRequested,nDocsReturned);
+      if (sliceLen < 0) sliceLen=0;
+      qr.setDocList(new DocSlice(0,sliceLen,ids,scores,totalHits,maxScore));
+    } finally {
+      pf.close();
     }
-
-    int sliceLen = Math.min(lastDocRequested,nDocsReturned);
-    if (sliceLen < 0) sliceLen=0;
-    qr.setDocList(new DocSlice(0,sliceLen,ids,scores,totalHits,maxScore));
   }
 
   // any DocSet returned is for the query only, without any filtering... that way it may
@@ -1750,6 +1763,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     return pf.filter==null && pf.postFilter==null ? qr.getDocSet() : null;
     } finally {
       if (setCollector != null) setCollector.close();
+      pf.close();
     }
   }
 
