@@ -835,7 +835,10 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
     DocSet absAnswer = getDocSetNC(absQ, null);
     DocSet answer = absAnswer;
-    if (!positive) {
+    if (positive) {
+      absAnswer.incref();
+      answer = absAnswer;
+    } else {
       DocSet all = getPositiveDocSet(matchAllDocsQuery);
       answer = all.andNot(absAnswer);
       all.decref();
@@ -844,6 +847,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     if (filterCache != null) {
       // cache negative queries as positive
       filterCache.put(absQ, absAnswer);
+    } else {
+      absAnswer.decref();  // free if we aren't putting it in the cache
     }
 
     return answer;
@@ -1076,7 +1081,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       }
 
       if (answer != null) {
-        pf.filter = answer.getTopFilter();         // TODO: how to decref???
+        pf.filter = answer.getTopFilter();
       }
     }
 

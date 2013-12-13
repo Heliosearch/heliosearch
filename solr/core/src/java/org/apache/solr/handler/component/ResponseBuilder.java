@@ -425,4 +425,12 @@ public class ResponseBuilder
   {
     this.scoreDoc = scoreDoc;
   }
+
+
+
+  public void close() {
+    if (results != null && results.docSet != null) {
+      results.docSet.decref();
+    }
+  }
 }

@@ -57,16 +57,26 @@ public class TestFilterCache extends SolrTestCaseJ4 {
     assertU(commit());
 
     assertJQ(req("q","*:*", "fq","id:(1 2)"));  // small set
-//    assertJQ(req("q","*:*", "fq","id:[0 TO 99]"));  // big set
+    assertJQ(req("q","*:*", "fq","id:[0 TO 99]"));  // big set
+    assertJQ(req("q","*:*", "fq","-id:[0 TO 99]"));  // negative hit
+    assertJQ(req("q","*:*", "fq","-id:[0 TO 999]"));  // negative miss
+    assertJQ(req("q","*:*", "fq","id:[0 TO 999]"));  // positive hit
 
-    /**
-    assertJQ(req("q","*:*", "fq","id:(1 2)"));  // test again for cache hit
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "fq","id:(2 3)")); // small+small
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "fq","id:[* TO *]")); // small+large
+    assertJQ(req("q","*:*", "fq","*:* -id:1", "fq","id:[* TO *]")); // large+large
 
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "fq","id:(2 3)", "fq","id:(3 4)")); // three
+
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.field", "title", "facet.method","enum", "facet.missing","true"));
+
+
+    /***
     // test cache purge
-    for (int i=0; i<1000; i++) {
+    for (int i=0; i<1200; i++) {
       assertJQ(req("q","*:*", "fq","id:1 id:"+(i+100)));  // test again for cache hit
     }
-   **/
+    ***/
 
   }
 

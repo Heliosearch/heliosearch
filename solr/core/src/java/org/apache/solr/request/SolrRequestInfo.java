@@ -69,6 +69,15 @@ public class SolrRequestInfo {
           }
         }
       }
+
+      if (info.rb != null) {
+        try {
+          info.rb.close();
+        } catch (Throwable throwable) {
+          SolrException.log(SolrCore.log, "Exception during close hook", throwable);
+        }
+      }
+
     } finally {
       threadLocal.remove();
     }
