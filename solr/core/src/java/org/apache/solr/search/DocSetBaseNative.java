@@ -50,12 +50,13 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   public static Map<DocSetBaseNative, Object> debugMap = new IdentityHashMap<>();
 
-  public static void debug() {
+  public static void debug(boolean clear) {
     Collection<DocSetBaseNative> sets;
 
     synchronized (DocSetBaseNative.class) {
       if (debugMap.isEmpty()) return;
       sets = new ArrayList<>(debugMap.keySet());
+      if (clear) debugMap.clear();  // avoid all calls after this point from seeing same leaks
     }
 
     log.error("DOCSET ALLOCATION LIST size=" + sets.size());

@@ -28,7 +28,7 @@ public class HSTest {
   }
 
   public static void endTrackingMemory() {
-    DocSetBaseNative.debug();
+    DocSetBaseNative.debug(true);
 
     HS.allocator.debug();
 

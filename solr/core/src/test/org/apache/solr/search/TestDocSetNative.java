@@ -80,7 +80,7 @@ public class TestDocSetNative extends TestDocSet {
     DocSet s1 = new SortedIntDocSetNative(new int[1]);
     boolean caught = false;
     try {
-      DocSetBaseNative.debug();  // to test display
+      DocSetBaseNative.debug(false);  // to test display
 
       HSTest.endTracking();
     } catch (Throwable th) {

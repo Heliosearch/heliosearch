@@ -177,7 +177,8 @@ public class SolrConfig extends Config {
     enableLazyFieldLoading = getBool("query/enableLazyFieldLoading", false);
 
     
-    filterCacheConfig = CacheConfig.getConfig(this, "query/filterCache");        filterCacheConfig.clazz = FastLRUCache.class;  // HS - filterCache needs to be FastLRUCache
+    filterCacheConfig = CacheConfig.getConfig(this, "query/filterCache");
+    if (filterCacheConfig != null) filterCacheConfig.clazz = FastLRUCache.class;  // HS - filterCache needs to be FastLRUCache
     queryResultCacheConfig = CacheConfig.getConfig(this, "query/queryResultCache");
     documentCacheConfig = CacheConfig.getConfig(this, "query/documentCache");
     CacheConfig conf = CacheConfig.getConfig(this, "query/fieldValueCache");
