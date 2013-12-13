@@ -114,9 +114,14 @@ public class HS
 
     @Override
     public void debug() {
-
       synchronized (this) {
+        int n = map.size();
+        int show = Math.min(n, 20);
+        if (n > 0) {
+          log.error("CURRENT ALLOCATIONS=" + n + (n==show ? "" : " Showing first " + show));
+        }
         for (Info info : map.values()) {
+          if (--show < 0) break;
           StringBuilder sb = new StringBuilder();
           // sb.append("PTR: " + info.ptr + " ALLOCATED AT ");
           sb.append("PTR: " + info.ptr + " SIZE=" + arraySizeBytes(info.ptr) + " ALLOCATED AT ");

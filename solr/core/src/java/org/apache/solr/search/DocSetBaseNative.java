@@ -59,7 +59,9 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
     }
 
     log.error("DOCSET ALLOCATION LIST size=" + sets.size());
+    int show=20;
     for (DocSetBaseNative set : sets) {
+      if (--show < 0) break;
       log.error(" ###### SET " + set + " refcount=" + set.refcount.get() + "events=" + set.events);
     }
 
@@ -70,6 +72,8 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   private String whereAmI(String start) {
     Thread thread = Thread.currentThread();
+    // TODO: cache StackTraceElements instead?  Also dedup equal traces?
+    // are they the same across different calls?
     StackTraceElement[] stack = thread.getStackTrace();
     StringBuilder sb = new StringBuilder(2000);
     sb.append(start);
@@ -84,7 +88,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
   }
 
   {
-    events.add( whereAmI("ALLOC " + this) );
+    events.add( whereAmI("ALLOC ") );
     synchronized (DocSetBaseNative.class) {
       debugMap.put(this, this);
     }
@@ -92,11 +96,11 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   private void debug_incref() {
     synchronized (events) {
-      events.add( whereAmI("incref " + " before=" + refcount.get() + " :\n") );
+      events.add( whereAmI("INCREF cnt=" + refcount.get() + " :\n") );
     }
 
     if (refcount.get() <= 0) {
-      SolrCore.log.error("TRYING TO INCREF DEAD DOCSET :\n" + events);
+      SolrCore.log.error("TRYING TO INCREF DEAD DOCSET : " + this + "\n" + events);
       throw new RuntimeException("TRYING TO INCREF DEAD DOCSET");
     }
 
@@ -106,11 +110,11 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   private void debug_decref() {
     synchronized (events) {
-      events.add( whereAmI("decref " + " before=" + refcount.get() + " :\n") );
+      events.add( whereAmI("DECREF cnt=" + refcount.get() + " :\n") );
     }
 
     if (refcount.get() <= 0) {
-      SolrCore.log.error("TRYING TO FREE DEAD DOCSET :\n" + events);
+      SolrCore.log.error("TRYING TO FREE DEAD DOCSET :" + this + "\n" + events);
       throw new RuntimeException("TRYING TO FREE DEAD DOCSET");
     }
 
