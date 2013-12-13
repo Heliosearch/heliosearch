@@ -143,6 +143,7 @@ public class PivotFacetHelper extends SimpleFacetsHS
             Query query = new TermQuery(new Term(field, termval));
             subset = searcher.getDocSet(query, docs);
           }
+          super.cleanup();
           super.docs = subset;//used by getTermCounts()
 
           NamedList<Integer> nl = this.getTermCounts(subField);

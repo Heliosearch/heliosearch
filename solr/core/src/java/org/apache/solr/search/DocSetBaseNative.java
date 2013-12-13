@@ -96,7 +96,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   private void debug_incref() {
     synchronized (events) {
-      events.add( whereAmI("INCREF cnt=" + refcount.get() + " :\n") );
+      events.add( whereAmI("INCREF cnt=" + (refcount.get()+1) + " :\n") );
     }
 
     if (refcount.get() <= 0) {
@@ -110,7 +110,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   private void debug_decref() {
     synchronized (events) {
-      events.add( whereAmI("DECREF cnt=" + refcount.get() + " :\n") );
+      events.add( whereAmI("DECREF cnt=" + (refcount.get()-1) + " :\n") );
     }
 
     if (refcount.get() <= 0) {

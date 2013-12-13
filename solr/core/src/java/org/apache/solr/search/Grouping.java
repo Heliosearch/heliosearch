@@ -281,125 +281,128 @@ public class Grouping {
     DocListAndSet out = new DocListAndSet();
     qr.setDocListAndSet(out);
 
-    SolrIndexSearcher.ProcessedFilter pf = searcher.getProcessedFilter(cmd.getFilter(), cmd.getFilterList());
-    final Filter luceneFilter = pf.filter;
-    maxDoc = searcher.maxDoc();
+    try(
+        SolrIndexSearcher.ProcessedFilter pf = searcher.getProcessedFilter(cmd.getFilter(), cmd.getFilterList());
+    ) {
+      final Filter luceneFilter = pf.filter;
+      maxDoc = searcher.maxDoc();
 
-    needScores = (cmd.getFlags() & SolrIndexSearcher.GET_SCORES) != 0;
-    boolean cacheScores = false;
-    // NOTE: Change this when groupSort can be specified per group
-    if (!needScores && !commands.isEmpty()) {
-      if (commands.get(0).groupSort == null) {
-        cacheScores = true;
-      } else {
-        for (SortField field : commands.get(0).groupSort.getSort()) {
-          if (field.getType() == SortField.Type.SCORE) {
-            cacheScores = true;
-            break;
+      needScores = (cmd.getFlags() & SolrIndexSearcher.GET_SCORES) != 0;
+      boolean cacheScores = false;
+      // NOTE: Change this when groupSort can be specified per group
+      if (!needScores && !commands.isEmpty()) {
+        if (commands.get(0).groupSort == null) {
+          cacheScores = true;
+        } else {
+          for (SortField field : commands.get(0).groupSort.getSort()) {
+            if (field.getType() == SortField.Type.SCORE) {
+              cacheScores = true;
+              break;
+            }
           }
         }
+      } else if (needScores) {
+        cacheScores = needScores;
       }
-    } else if (needScores) {
-      cacheScores = needScores;
-    }
-    getDocSet = (cmd.getFlags() & SolrIndexSearcher.GET_DOCSET) != 0;
-    getDocList = (cmd.getFlags() & SolrIndexSearcher.GET_DOCLIST) != 0;
-    query = QueryUtils.makeQueryable(cmd.getQuery());
+      getDocSet = (cmd.getFlags() & SolrIndexSearcher.GET_DOCSET) != 0;
+      getDocList = (cmd.getFlags() & SolrIndexSearcher.GET_DOCLIST) != 0;
+      query = QueryUtils.makeQueryable(cmd.getQuery());
 
-    for (Command cmd : commands) {
-      cmd.prepare();
-    }
-
-    AbstractAllGroupHeadsCollector<?> allGroupHeadsCollector = null;
-    List<Collector> collectors = new ArrayList<Collector>(commands.size());
-    for (Command cmd : commands) {
-      Collector collector = cmd.createFirstPassCollector();
-      if (collector != null) {
-        collectors.add(collector);
+      for (Command cmd : commands) {
+        cmd.prepare();
       }
-      if (getGroupedDocSet && allGroupHeadsCollector == null) {
-        collectors.add(allGroupHeadsCollector = cmd.createAllGroupCollector());
+
+      AbstractAllGroupHeadsCollector<?> allGroupHeadsCollector = null;
+      List<Collector> collectors = new ArrayList<Collector>(commands.size());
+      for (Command cmd : commands) {
+        Collector collector = cmd.createFirstPassCollector();
+        if (collector != null) {
+          collectors.add(collector);
+        }
+        if (getGroupedDocSet && allGroupHeadsCollector == null) {
+          collectors.add(allGroupHeadsCollector = cmd.createAllGroupCollector());
+        }
       }
-    }
 
-    Collector allCollectors = MultiCollector.wrap(collectors.toArray(new Collector[collectors.size()]));
-    DocSetCollector setCollector = null;
-    if (getDocSet && allGroupHeadsCollector == null) {
-      setCollector = new DocSetDelegateCollector(maxDoc >> 6, maxDoc, allCollectors);
-      allCollectors = setCollector;
-    }
-
-    CachingCollector cachedCollector = null;
-    if (cacheSecondPassSearch && allCollectors != null) {
-      int maxDocsToCache = (int) Math.round(maxDoc * (maxDocsPercentageToCache / 100.0d));
-      // Only makes sense to cache if we cache more than zero.
-      // Maybe we should have a minimum and a maximum, that defines the window we would like caching for.
-      if (maxDocsToCache > 0) {
-        allCollectors = cachedCollector = CachingCollector.create(allCollectors, cacheScores, maxDocsToCache);
+      Collector allCollectors = MultiCollector.wrap(collectors.toArray(new Collector[collectors.size()]));
+      DocSetCollector setCollector = null;
+      if (getDocSet && allGroupHeadsCollector == null) {
+        setCollector = new DocSetDelegateCollector(maxDoc >> 6, maxDoc, allCollectors);
+        allCollectors = setCollector;
       }
-    }
 
-    if (pf.postFilter != null) {
-      pf.postFilter.setLastDelegate(allCollectors);
-      allCollectors = pf.postFilter;
-    }
+      CachingCollector cachedCollector = null;
+      if (cacheSecondPassSearch && allCollectors != null) {
+        int maxDocsToCache = (int) Math.round(maxDoc * (maxDocsPercentageToCache / 100.0d));
+        // Only makes sense to cache if we cache more than zero.
+        // Maybe we should have a minimum and a maximum, that defines the window we would like caching for.
+        if (maxDocsToCache > 0) {
+          allCollectors = cachedCollector = CachingCollector.create(allCollectors, cacheScores, maxDocsToCache);
+        }
+      }
 
-    if (allCollectors != null) {
-      searchWithTimeLimiter(luceneFilter, allCollectors);
-    }
+      if (pf.postFilter != null) {
+        pf.postFilter.setLastDelegate(allCollectors);
+        allCollectors = pf.postFilter;
+      }
 
-    if (getGroupedDocSet && allGroupHeadsCollector != null) {
-      FixedBitSet fixedBitSet = allGroupHeadsCollector.retrieveGroupHeads(maxDoc);
-      long[] bits = fixedBitSet.getBits();
-      OpenBitSet openBitSet = new OpenBitSet(bits, bits.length);
-      qr.setDocSet(new BitDocSet(openBitSet));
-    } else if (getDocSet) {
-      qr.setDocSet(setCollector.getDocSet());
-    }
+      if (allCollectors != null) {
+        searchWithTimeLimiter(luceneFilter, allCollectors);
+      }
 
-    collectors.clear();
-    for (Command cmd : commands) {
-      Collector collector = cmd.createSecondPassCollector();
-      if (collector != null)
-        collectors.add(collector);
-    }
+      if (getGroupedDocSet && allGroupHeadsCollector != null) {
+        FixedBitSet fixedBitSet = allGroupHeadsCollector.retrieveGroupHeads(maxDoc);
+        long[] bits = fixedBitSet.getBits();
+        OpenBitSet openBitSet = new OpenBitSet(bits, bits.length);
+        qr.setDocSet(new BitDocSet(openBitSet));
+      } else if (getDocSet) {
+        qr.setDocSet(setCollector.getDocSet());
+      }
 
-    if (!collectors.isEmpty()) {
-      Collector secondPhaseCollectors = MultiCollector.wrap(collectors.toArray(new Collector[collectors.size()]));
-      if (collectors.size() > 0) {
-        if (cachedCollector != null) {
-          if (cachedCollector.isCached()) {
-            cachedCollector.replay(secondPhaseCollectors);
+      collectors.clear();
+      for (Command cmd : commands) {
+        Collector collector = cmd.createSecondPassCollector();
+        if (collector != null)
+          collectors.add(collector);
+      }
+
+      if (!collectors.isEmpty()) {
+        Collector secondPhaseCollectors = MultiCollector.wrap(collectors.toArray(new Collector[collectors.size()]));
+        if (collectors.size() > 0) {
+          if (cachedCollector != null) {
+            if (cachedCollector.isCached()) {
+              cachedCollector.replay(secondPhaseCollectors);
+            } else {
+              signalCacheWarning = true;
+              logger.warn(String.format(Locale.ROOT, "The grouping cache is active, but not used because it exceeded the max cache limit of %d percent", maxDocsPercentageToCache));
+              logger.warn("Please increase cache size or disable group caching.");
+              searchWithTimeLimiter(luceneFilter, secondPhaseCollectors);
+            }
           } else {
-            signalCacheWarning = true;
-            logger.warn(String.format(Locale.ROOT, "The grouping cache is active, but not used because it exceeded the max cache limit of %d percent", maxDocsPercentageToCache));
-            logger.warn("Please increase cache size or disable group caching.");
+            if (pf.postFilter != null) {
+              pf.postFilter.setLastDelegate(secondPhaseCollectors);
+              secondPhaseCollectors = pf.postFilter;
+            }
             searchWithTimeLimiter(luceneFilter, secondPhaseCollectors);
           }
-        } else {
-          if (pf.postFilter != null) {
-            pf.postFilter.setLastDelegate(secondPhaseCollectors);
-            secondPhaseCollectors = pf.postFilter;
-          }
-          searchWithTimeLimiter(luceneFilter, secondPhaseCollectors);
         }
       }
-    }
 
-    for (Command cmd : commands) {
-      cmd.finish();
-    }
-
-    qr.groupedResults = grouped;
-
-    if (getDocList) {
-      int sz = idSet.size();
-      int[] ids = new int[sz];
-      int idx = 0;
-      for (int val : idSet) {
-        ids[idx++] = val;
+      for (Command cmd : commands) {
+        cmd.finish();
       }
-      qr.setDocList(new DocSlice(0, sz, ids, null, maxMatches, maxScore));
+
+      qr.groupedResults = grouped;
+
+      if (getDocList) {
+        int sz = idSet.size();
+        int[] ids = new int[sz];
+        int idx = 0;
+        for (int val : idSet) {
+          ids[idx++] = val;
+        }
+        qr.setDocList(new DocSlice(0, sz, ids, null, maxMatches, maxScore));
+      }
     }
   }
 

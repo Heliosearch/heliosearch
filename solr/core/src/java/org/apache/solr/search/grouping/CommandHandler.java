@@ -133,17 +133,20 @@ public class CommandHandler {
       collectors.addAll(command.create());
     }
 
-    ProcessedFilter filter = searcher.getProcessedFilter(queryCommand.getFilter(), queryCommand.getFilterList());
-    Query query = QueryUtils.makeQueryable(queryCommand.getQuery());
+    try(
+      ProcessedFilter filter = searcher.getProcessedFilter(queryCommand.getFilter(), queryCommand.getFilterList());
+    ) {
+      Query query = QueryUtils.makeQueryable(queryCommand.getQuery());
 
-    if (truncateGroups) {
-      docSet = computeGroupedDocSet(query, filter, collectors);
-    } else if (needDocset) {
-      docSet = computeDocSet(query, filter, collectors);
-    } else if (!collectors.isEmpty()) {
-      searchWithTimeLimiter(query, filter, MultiCollector.wrap(collectors.toArray(new Collector[nrOfCommands])));
-    } else {
-      searchWithTimeLimiter(query, filter, null);
+      if (truncateGroups) {
+        docSet = computeGroupedDocSet(query, filter, collectors);
+      } else if (needDocset) {
+        docSet = computeDocSet(query, filter, collectors);
+      } else if (!collectors.isEmpty()) {
+        searchWithTimeLimiter(query, filter, MultiCollector.wrap(collectors.toArray(new Collector[nrOfCommands])));
+      } else {
+        searchWithTimeLimiter(query, filter, null);
+      }
     }
   }
 

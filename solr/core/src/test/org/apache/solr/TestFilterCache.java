@@ -69,6 +69,10 @@ public class TestFilterCache extends SolrTestCaseJ4 {
     assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.field", "title", "facet.method","fc", "facet.missing","true"));
     assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.query", "id:1", "facet.query", "id:(2 3)"));
 
+    // test filter exclusion
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "fq","{!tag=x}id:(2,3)", "facet","true", "facet.query", "id:1", "facet.query", "{!ex=x}id:(1 2 3)"));
+
+
     // test warming
     assertU(commit());
 
