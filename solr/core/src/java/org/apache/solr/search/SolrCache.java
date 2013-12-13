@@ -81,7 +81,7 @@ public interface SolrCache<K,V> extends SolrInfoMBean {
   public int size();
 
   /** :TODO: copy from Map */
-  public V put(K key, V value);
+  public void put(K key, V value);
 
   /** :TODO: copy from Map */
   public V get(K key);

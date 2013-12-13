@@ -465,6 +465,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
                     .setFlags(flags);
                   QueryResult qr = new QueryResult();
                   newSearcher.getDocListC(qr,qc);
+                  DocSet set = qr.getDocSet();
+                  if (set != null) set.decref();
                   return true;
                 }
               }
@@ -1051,18 +1053,18 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     // do negative queries first to shrink set size
     for (int i=0; i<end; i++) {
       if (neg[i]) {
-        DocSet oldAnswer = scratch;
+        DocSet prev = scratch;
         scratch = scratch.andNot(sets[i]);
-        oldAnswer.decref();
+        prev.decref();
         sets[i].decref();
       }
     }
 
     for (int i=0; i<end; i++) {
-      if (!neg[i] && i!=smallestIndex) {
-        DocSet oldAnswer = scratch;
+      if (!neg[i] && i != smallestIndex) {
+        DocSet prev = scratch;
         scratch = scratch.intersection(sets[i]);
-        oldAnswer.decref();
+        prev.decref();
         sets[i].decref();
       }
     }
@@ -2175,21 +2177,6 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     return cacheMap.get(cacheName);
   }
 
-  /**
-   * lookup an entry in a generic cache
-   */
-  public Object cacheLookup(String cacheName, Object key) {
-    SolrCache cache = cacheMap.get(cacheName);
-    return cache==null ? null : cache.get(key);
-  }
-
-  /**
-   * insert an entry in a generic cache
-   */
-  public Object cacheInsert(String cacheName, Object key, Object val) {
-    SolrCache cache = cacheMap.get(cacheName);
-    return cache==null ? null : cache.put(key,val);
-  }
 
   public long getOpenTime() {
     return openTime;

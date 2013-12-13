@@ -55,12 +55,22 @@ public class TestFilterCache extends SolrTestCaseJ4 {
     assertJQ(req("q","*:*", "fq","*:* -id:1", "fq","id:[* TO *]")); // large+large
 
     assertJQ(req("q","*:*", "fq","id:(1 2)", "fq","id:(2 3)", "fq","id:(3 4)")); // three
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "fq","-id:(2 3)", "fq","id:(3 4)")); // three, one negative
+    assertJQ(req("q","*:*", "fq","-id:1", "fq","-id:2", "fq","-id:3", "fq","-id:4")); // all negative
+    assertJQ(req("q","*:*", "fq","*:* -id:1", "fq","-id:2", "fq","-id:3", "fq","-id:4")); // one positive
+    assertJQ(req("q","*:*", "fq","-id:1", "fq","*:* -id:2", "fq","-id:3", "fq","*:* -id:4")); // two positive
+
+
+    assertJQ(req("q","*:*", "fq","-id:1", "fq","*:* -id:2", "fq","-id:3", "fq","*:* -id:4")); // two positive
+
 
     // faceting tests
     assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.field", "title", "facet.method","enum", "facet.missing","true"));
     assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.field", "title", "facet.method","fc", "facet.missing","true"));
     assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.query", "id:1", "facet.query", "id:(2 3)"));
 
+    // test warming
+    assertU(commit());
 
     /***
     // test cache purge

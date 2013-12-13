@@ -457,13 +457,14 @@ public class ConcurrentLRUCache<K,V> {
 
         if (tree.size() < n || ce.lastAccessedCopy > tree.last().lastAccessedCopy) {
           if (ce.value instanceof RefCount) {
+            tree.add(ce);
             int ref = ((RefCount)ce.value).incref();
             if (ref  <= 0) continue;
           }
           if (tree.size() >= n) {
             CacheEntry<K,V> old = tree.pollLast();
             if (old.value instanceof RefCount) {
-              ((RefCount)ce.value).decref();
+              ((RefCount)old.value).decref();
             }
           }
         }

@@ -52,6 +52,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
     this.wlen = other.wlen;
     this.array = HS.allocArray(wlen, 8, false);  // don't zero memory since we will copy over it
     HS.copyLongs(other.array, 0, array, 0, wlen);
+    // Don't set size... the purpose of making a copy will be to change it.
   }
 
   public BitDocSetNative(OpenBitSet other) {

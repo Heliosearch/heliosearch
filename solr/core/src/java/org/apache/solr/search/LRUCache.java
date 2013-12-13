@@ -111,7 +111,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public V put(K key, V value) {
+  public void put(K key, V value) {
     synchronized (map) {
       if (getState() == State.LIVE) {
         stats.inserts.incrementAndGet();
@@ -120,7 +120,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
       // increment local inserts regardless of state???
       // it does make it more consistent with the current size...
       inserts++;
-      return map.put(key,value);
+      map.put(key,value);
     }
   }
 

@@ -76,6 +76,8 @@ public class SolrRequestInfo {
         } catch (Throwable throwable) {
           SolrException.log(SolrCore.log, "Exception during close hook", throwable);
         }
+      } else {
+        // System.err.println("######### NO RESPONSE BUILDER FOR " + info.req);
       }
 
     } finally {

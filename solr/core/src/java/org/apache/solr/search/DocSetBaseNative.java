@@ -62,7 +62,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
     int show=20;
     for (DocSetBaseNative set : sets) {
       if (--show < 0) break;
-      log.error(" ###### SET " + set + " refcount=" + set.refcount.get() + "events=" + set.events);
+      log.error(" ###### SET " + set + " refcount=" + set.refcount.get() + " events=" + set.events);
     }
 
     // throw new RuntimeException("LEAKED DOCSETS");

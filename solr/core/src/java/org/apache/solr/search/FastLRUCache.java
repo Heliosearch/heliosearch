@@ -121,8 +121,11 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public V put(K key, V value) {
-    return cache.put(key, value);
+  public void put(K key, V value) {
+    Object old = cache.put(key, value);
+    if (old instanceof RefCount) {
+      ((RefCount)old).decref();
+    }
   }
 
   @Override
@@ -167,6 +170,10 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
           }
         }
       } finally {
+
+        if (items.size() > 0 && items.values().iterator().next() instanceof DocSet) {
+          System.err.println("######################### CACHE CONTAINS DOCSETS!!!");
+        }
         for (Object o : items.values()) {
           if (o instanceof RefCount) {
             ((RefCount)o).decref();

@@ -137,8 +137,8 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
   }
 
   @Override
-  public V put(K key, V value) {
-    return cache.put(key, value);
+  public void put(K key, V value) {
+    cache.put(key, value);
   }
 
   @Override
