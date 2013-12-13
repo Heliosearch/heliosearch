@@ -142,6 +142,7 @@ public class UnInvertedField extends DocTermOrds {
       docsEnum = deState.docsEnum;
       DocSet set = searcher.getDocSet(deState);
       maxTermCounts[termNum] = set.size();
+      set.decref();
     }
   }
 
