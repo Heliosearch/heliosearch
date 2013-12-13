@@ -855,6 +855,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   }
 
   // only handle positive (non negative) queries
+  // Caller is responsible for calling decref when done
   DocSet getPositiveDocSet(Query q) throws IOException {
     DocSet answer;
     if (filterCache != null) {
@@ -879,7 +880,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     private DocSet answer;  // the answer, if non-null
     public Filter filter;
     public DelegatingCollector postFilter;
-
+    DocSet scratch; // is this the best way to keep track of other resources to close here?
 
     public DocSet getAnswer() {
       DocSet ret = answer;
@@ -890,6 +891,9 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     public void close() {
       if (answer != null) {
         answer.decref();
+      }
+      if (scratch != null) {
+        scratch.close();
       }
     }
   }
@@ -975,7 +979,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       return pf;
     }
 
-    DocSet answer=null;
+    DocSet scratch=null;
 
     boolean[] neg = new boolean[queries.size()+1];
     DocSet[] sets = new DocSet[queries.size()+1];
@@ -987,8 +991,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
     if (setFilter != null) {
       setFilter.incref();   // one for sets[] ref
-      setFilter.incref();   // one for answer ref
-      answer = sets[end++] = setFilter;
+      setFilter.incref();   // one for scratch ref
+      scratch = sets[end++] = setFilter;
 
       smallestIndex = end;
     }
@@ -1030,7 +1034,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         if (sz<smallestCount) {
           smallestCount=sz;
           smallestIndex=end;
-          answer = sets[end];
+          scratch = sets[end];
         }
       } else {
         neg[end] = true;
@@ -1040,15 +1044,15 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     }
 
     // Are all of our normal cached filters negative?
-    if (end > 0 && answer==null) {
-      answer = getPositiveDocSet(matchAllDocsQuery);
+    if (end > 0 && scratch==null) {
+      scratch = getPositiveDocSet(matchAllDocsQuery);
     }
 
     // do negative queries first to shrink set size
     for (int i=0; i<end; i++) {
       if (neg[i]) {
-        DocSet oldAnswer = answer;
-        answer = answer.andNot(sets[i]);
+        DocSet oldAnswer = scratch;
+        scratch = scratch.andNot(sets[i]);
         oldAnswer.decref();
         sets[i].decref();
       }
@@ -1056,8 +1060,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
     for (int i=0; i<end; i++) {
       if (!neg[i] && i!=smallestIndex) {
-        DocSet oldAnswer = answer;
-        answer = answer.intersection(sets[i]);
+        DocSet oldAnswer = scratch;
+        scratch = scratch.intersection(sets[i]);
         oldAnswer.decref();
         sets[i].decref();
       }
@@ -1070,18 +1074,21 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         Query qq = QueryUtils.makeQueryable(q);
         weights.add(createNormalizedWeight(qq));
       }
-      pf.filter = new FilterImpl(answer, weights);
+      pf.filter = new FilterImpl(scratch, weights);
     } else {
       if (postFilters == null) {
-        if (answer == null) {
-          answer = getPositiveDocSet(matchAllDocsQuery);
+        if (scratch == null) {
+          scratch = getPositiveDocSet(matchAllDocsQuery);
         }
-        // "answer" is the only part of the filter, so set it.
-        pf.answer = answer;
+        // "scratch" is the only part of the filter, so set it.
+        pf.answer = scratch;
+      } else {
+        // if we aren't going to use the DocSet as the "answer", then make sure we free it in close()
+        pf.scratch = scratch;
       }
 
-      if (answer != null) {
-        pf.filter = answer.getTopFilter();
+      if (scratch != null) {
+        pf.filter = scratch.getTopFilter();
       }
     }
 
