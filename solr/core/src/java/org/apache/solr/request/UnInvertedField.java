@@ -448,7 +448,7 @@ public class UnInvertedField extends DocTermOrds {
 
     if (missing) {
       // TODO: a faster solution for this?
-      res.add(null, SimpleFacets.getFieldMissingCount(searcher, baseDocs, field));
+      res.add(null, SimpleFacetsHS.getFieldMissingCount(searcher, baseDocs, field));
     }
 
     //System.out.println("  res=" + res);

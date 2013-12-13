@@ -211,7 +211,7 @@ class PerSegmentSingleValuedFaceting {
 
     if (missing) {
       if (!hasMissingCount) {
-        missingCount = SimpleFacets.getFieldMissingCount(searcher,docs,fieldName);
+        missingCount = SimpleFacetsHS.getFieldMissingCount(searcher,docs,fieldName);
       }
       res.add(null, missingCount);
     }

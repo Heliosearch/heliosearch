@@ -17,21 +17,9 @@ package org.apache.solr;
  * limitations under the License.
  */
 
-import org.apache.solr.request.SolrQueryRequest;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.noggit.JSONUtil;
-import org.noggit.ObjectBuilder;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class TestFilterCache extends SolrTestCaseJ4 {
 
@@ -68,7 +56,10 @@ public class TestFilterCache extends SolrTestCaseJ4 {
 
     assertJQ(req("q","*:*", "fq","id:(1 2)", "fq","id:(2 3)", "fq","id:(3 4)")); // three
 
+    // faceting tests
     assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.field", "title", "facet.method","enum", "facet.missing","true"));
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.field", "title", "facet.method","fc", "facet.missing","true"));
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.query", "id:1", "facet.query", "id:(2 3)"));
 
 
     /***
