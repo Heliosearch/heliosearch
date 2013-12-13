@@ -1456,11 +1456,18 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         // this currently conflates returning the docset for the base query vs
         // the base query and all filters.
         DocSet qDocSet = getDocListAndSetNC(qr,cmd);
+
         // cache the docSet matching the query w/o filtering
         if (qDocSet!=null && filterCache!=null && !qr.isPartialResults()) {
           qDocSet.incref();
           filterCache.put(cmd.getQuery(),qDocSet);
         }
+
+        // if we aren't returning the docset in the query results, then decref it...
+        if (qDocSet != null && qr.getDocSet() != qDocSet) {
+          qDocSet.decref();
+        }
+
       } else {
         getDocListNC(qr,cmd);
         //Parameters: cmd.getQuery(),theFilt,cmd.getSort(),0,supersetMaxDoc,cmd.getFlags(),cmd.getTimeAllowed(),responseHeader);

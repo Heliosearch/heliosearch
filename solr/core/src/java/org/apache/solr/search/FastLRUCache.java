@@ -171,14 +171,12 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
         }
       } finally {
 
-        if (items.size() > 0 && items.values().iterator().next() instanceof DocSet) {
-          System.err.println("######################### CACHE CONTAINS DOCSETS!!!");
-        }
         for (Object o : items.values()) {
           if (o instanceof RefCount) {
             ((RefCount)o).decref();
           }
         }
+
       }
     }
     warmupTime = System.currentTimeMillis() - warmingStartTime;
