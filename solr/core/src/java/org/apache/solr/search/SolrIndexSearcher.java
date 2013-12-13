@@ -1084,9 +1084,6 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         }
         // "scratch" is the only part of the filter, so set it.
         pf.answer = scratch;
-      } else {
-        // if we aren't going to use the DocSet as the "answer", then make sure we free it in close()
-        pf.scratch = scratch;
       }
 
       if (scratch != null) {
@@ -1103,6 +1100,9 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       }
     }
 
+    if (pf.answer != scratch) {
+      pf.scratch = scratch;  // clean up scratch docset if we didn't use it as the "answer"
+    }
     return pf;
   }
 
@@ -1464,7 +1464,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         }
 
         // if we aren't returning the docset in the query results, then decref it...
-        if (qDocSet != null && qr.getDocSet() != qDocSet) {
+        if (qDocSet != null && qDocSet != qr.getDocSet()) {
           qDocSet.decref();
         }
 
