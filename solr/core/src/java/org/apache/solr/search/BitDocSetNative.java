@@ -637,4 +637,5 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
       }
     };
   }
+
 }

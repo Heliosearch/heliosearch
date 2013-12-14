@@ -238,6 +238,16 @@ abstract class DocSetBase implements DocSet {
     return 1;
   }
 
+  @Override
+  public boolean tryIncref() {
+    return true;
+  }
+
+  @Override
+  public boolean tryDecref() {
+    return true;
+  }
+
   @Override // for AutoCloseable
   public void close() {
   }

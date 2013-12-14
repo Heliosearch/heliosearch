@@ -133,29 +133,66 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
   @Override
   public int incref() {
     debug_incref();
-    // TODO: optimize this
-    if (refcount.get() <= 0) return refcount.get();  // never increment once it hits 0
-    return refcount.incrementAndGet();
+
+    int count;
+    while ((count = refcount.get()) > 0) {
+      if (refcount.compareAndSet(count, count+1)) {
+        return count+1;
+      }
+    }
+    throw new RuntimeException("Trying to incref freed native DocSet " + this);
   }
 
   @Override
   public int decref() {
     debug_decref();
 
-    int count = refcount.decrementAndGet();
-    if (count > 0) {
-      return count;
+    int count;
+    while ((count = refcount.get()) > 0) {
+      int newCount = count - 1;
+      if (refcount.compareAndSet(count, newCount)) {
+        if (newCount == 0) {
+          free();
+        }
+        return newCount;
+      }
     }
 
-    if (count < 0) {
-      // too many frees detected...
-      throw new RuntimeException("Too many decrefs detected for native DocSet " + this);
-    }
-
-    // count == 0 if we got here... close the resources.
-    free();
-    return count;
+    throw new RuntimeException("Too many decrefs detected for native DocSet " + this);
   }
+
+
+  @Override
+  public boolean tryIncref() {
+    debug_incref();
+
+    int count;
+    while ((count = refcount.get()) > 0) {
+      if (refcount.compareAndSet(count, count+1)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean tryDecref() {
+    debug_decref();
+
+    int count;
+    while ((count = refcount.get()) > 0) {
+      int newCount = count - 1;
+      if (refcount.compareAndSet(count, newCount)) {
+        if (newCount == 0) {
+          free();
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
+
 
   protected abstract void free();
 

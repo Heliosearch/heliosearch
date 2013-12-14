@@ -124,7 +124,7 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   public void put(K key, V value) {
     Object old = cache.put(key, value);
     if (old instanceof RefCount) {
-      ((RefCount)old).decref();
+      ((RefCount)old).tryDecref();
     }
   }
 
