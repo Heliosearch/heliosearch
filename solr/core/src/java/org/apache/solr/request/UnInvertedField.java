@@ -267,10 +267,13 @@ public class UnInvertedField extends DocTermOrds {
 
       boolean doNegative = baseSize > maxDoc >> 1 && termInstances > 0
               && startTerm==0 && endTerm==numTermsInField
-              && docs instanceof BitDocSet;
+              && (docs instanceof BitDocSet || docs instanceof BitDocSetNative);
 
       if (doNegative) {
-        OpenBitSet bs = (OpenBitSet)((BitDocSet)docs).getBits().clone();
+        OpenBitSet bs = docs.getBits();
+        if (docs instanceof BitDocSet) {
+          bs = bs.clone(); // don't mess with internal obs of BitDocSet
+        }
         bs.flip(0, maxDoc);
         // TODO: when iterator across negative elements is available, use that
         // instead of creating a new bitset and inverting.
@@ -488,139 +491,155 @@ public class UnInvertedField extends DocTermOrds {
 
     if (baseSize <= 0) return allstats;
 
-    DocSet missing = docs.andNot( searcher.getDocSet(new TermRangeQuery(field, null, null, false, false)) );
+    DocSet all = searcher.getDocSet(new TermRangeQuery(field, null, null, false, false));
+    DocSet missing = docs.andNot( all );
+    all.decref();
 
-    int i = 0;
-    final FieldFacetStats[] finfo = new FieldFacetStats[facet.length];
-    //Initialize facetstats, if facets have been passed in
-    SortedDocValues si;
-    for (String f : facet) {
-      SchemaField facet_sf = searcher.getSchema().getField(f);
-      finfo[i] = new FieldFacetStats(searcher, f, sf, facet_sf, calcDistinct);
-      i++;
-    }
+    try {
 
-    final int[] index = this.index;
-    final int[] counts = new int[numTermsInField];//keep track of the number of times we see each word in the field for all the documents in the docset
+      int i = 0;
+      final FieldFacetStats[] finfo = new FieldFacetStats[facet.length];
+      //Initialize facetstats, if facets have been passed in
+      SortedDocValues si;
+      for (String f : facet) {
+        SchemaField facet_sf = searcher.getSchema().getField(f);
+        finfo[i] = new FieldFacetStats(searcher, f, sf, facet_sf, calcDistinct);
+        i++;
+      }
 
-    TermsEnum te = getOrdTermsEnum(searcher.getAtomicReader());
+      final int[] index = this.index;
+      final int[] counts = new int[numTermsInField];//keep track of the number of times we see each word in the field for all the documents in the docset
 
-    boolean doNegative = false;
-    if (finfo.length == 0) {
-      //if we're collecting statistics with a facet field, can't do inverted counting
-      doNegative = baseSize > maxDoc >> 1 && termInstances > 0
-              && docs instanceof BitDocSet;
-    }
+      TermsEnum te = getOrdTermsEnum(searcher.getAtomicReader());
 
-    if (doNegative) {
-      OpenBitSet bs = (OpenBitSet) ((BitDocSet) docs).getBits().clone();
-      bs.flip(0, maxDoc);
-      // TODO: when iterator across negative elements is available, use that
-      // instead of creating a new bitset and inverting.
-      docs = new BitDocSet(bs, maxDoc - baseSize);
-      // simply negating will mean that we have deleted docs in the set.
-      // that should be OK, as their entries in our table should be empty.
-    }
+      boolean doNegative = false;
+      if (finfo.length == 0) {
+        //if we're collecting statistics with a facet field, can't do inverted counting
+        doNegative = baseSize > maxDoc >> 1 && termInstances > 0
+            && (docs instanceof BitDocSet || docs instanceof BitDocSetNative);
+      }
 
-    // For the biggest terms, do straight set intersections
-    for (TopTerm tt : bigTerms.values()) {
-      // TODO: counts could be deferred if sorted==false
-      if (tt.termNum >= 0 && tt.termNum < numTermsInField) {
-        final Term t = new Term(field, tt.term);
-        if (finfo.length == 0) {
-          counts[tt.termNum] = searcher.numDocs(new TermQuery(t), docs);
-        } else {
-          //COULD BE VERY SLOW
-          //if we're collecting stats for facet fields, we need to iterate on all matching documents
-          DocSet bigTermDocSet = searcher.getDocSet(new TermQuery(t)).intersection(docs);
-          DocIterator iter = bigTermDocSet.iterator();
-          while (iter.hasNext()) {
-            int doc = iter.nextDoc();
-            counts[tt.termNum]++;
-            for (FieldFacetStats f : finfo) {
-              f.facetTermNum(doc, tt.termNum);
-            }
+      if (doNegative) {
+        OpenBitSet bs = docs.getBits();
+        if (docs instanceof BitDocSet) {
+          bs = bs.clone(); // don't mess with internal obs of BitDocSet
+        }
+        bs.flip(0, maxDoc);
+        // TODO: when iterator across negative elements is available, use that
+        // instead of creating a new bitset and inverting.
+        docs = new BitDocSet(bs, maxDoc - baseSize);
+        // simply negating will mean that we have deleted docs in the set.
+        // that should be OK, as their entries in our table should be empty.
+      }
+
+      // For the biggest terms, do straight set intersections
+      for (TopTerm tt : bigTerms.values()) {
+        // TODO: counts could be deferred if sorted==false
+        if (tt.termNum >= 0 && tt.termNum < numTermsInField) {
+          final Term t = new Term(field, tt.term);
+          if (finfo.length == 0) {
+            counts[tt.termNum] = searcher.numDocs(new TermQuery(t), docs);
+          } else {
+            //COULD BE VERY SLOW
+            //if we're collecting stats for facet fields, we need to iterate on all matching documents
+            try (
+                DocSet tdocs = searcher.getDocSet(new TermQuery(t));
+                DocSet bigTermDocSet = tdocs.intersection(docs);
+            ) {
+              DocIterator iter = bigTermDocSet.iterator();
+              while (iter.hasNext()) {
+                int doc = iter.nextDoc();
+                counts[tt.termNum]++;
+                for (FieldFacetStats f : finfo) {
+                  f.facetTermNum(doc, tt.termNum);
+                }
+              }
+            }  // end try-with
+
           }
         }
       }
-    }
 
 
-    if (termInstances > 0) {
-      DocIterator iter = docs.iterator();
-      while (iter.hasNext()) {
-        int doc = iter.nextDoc();
-        int code = index[doc];
+      if (termInstances > 0) {
+        DocIterator iter = docs.iterator();
+        while (iter.hasNext()) {
+          int doc = iter.nextDoc();
+          int code = index[doc];
 
-        if ((code & 0xff) == 1) {
-          int pos = code >>> 8;
-          int whichArray = (doc >>> 16) & 0xff;
-          byte[] arr = tnums[whichArray];
-          int tnum = 0;
-          for (; ;) {
-            int delta = 0;
+          if ((code & 0xff) == 1) {
+            int pos = code >>> 8;
+            int whichArray = (doc >>> 16) & 0xff;
+            byte[] arr = tnums[whichArray];
+            int tnum = 0;
             for (; ;) {
-              byte b = arr[pos++];
-              delta = (delta << 7) | (b & 0x7f);
-              if ((b & 0x80) == 0) break;
-            }
-            if (delta == 0) break;
-            tnum += delta - TNUM_OFFSET;
-            counts[tnum]++;
-            for (FieldFacetStats f : finfo) {
-              f.facetTermNum(doc, tnum);
-            }
-          }
-        } else {
-          int tnum = 0;
-          int delta = 0;
-          for (; ;) {
-            delta = (delta << 7) | (code & 0x7f);
-            if ((code & 0x80) == 0) {
+              int delta = 0;
+              for (; ;) {
+                byte b = arr[pos++];
+                delta = (delta << 7) | (b & 0x7f);
+                if ((b & 0x80) == 0) break;
+              }
               if (delta == 0) break;
               tnum += delta - TNUM_OFFSET;
               counts[tnum]++;
               for (FieldFacetStats f : finfo) {
                 f.facetTermNum(doc, tnum);
               }
-              delta = 0;
             }
-            code >>>= 8;
+          } else {
+            int tnum = 0;
+            int delta = 0;
+            for (; ;) {
+              delta = (delta << 7) | (code & 0x7f);
+              if ((code & 0x80) == 0) {
+                if (delta == 0) break;
+                tnum += delta - TNUM_OFFSET;
+                counts[tnum]++;
+                for (FieldFacetStats f : finfo) {
+                  f.facetTermNum(doc, tnum);
+                }
+                delta = 0;
+              }
+              code >>>= 8;
+            }
           }
         }
       }
-    }
-    
-    // add results in index order
-    for (i = 0; i < numTermsInField; i++) {
-      int c = doNegative ? maxTermCounts[i] - counts[i] : counts[i];
-      if (c == 0) continue;
-      BytesRef value = getTermValue(te, i);
 
-      allstats.accumulate(value, c);
-      //as we've parsed the termnum into a value, lets also accumulate fieldfacet statistics
-      for (FieldFacetStats f : finfo) {
-        f.accumulateTermNum(i, value);
-      }
-    }
+      // add results in index order
+      for (i = 0; i < numTermsInField; i++) {
+        int c = doNegative ? maxTermCounts[i] - counts[i] : counts[i];
+        if (c == 0) continue;
+        BytesRef value = getTermValue(te, i);
 
-    int c = missing.size();
-    allstats.addMissing(c);
-
-    if (finfo.length > 0) {
-      for (FieldFacetStats f : finfo) {
-        Map<String, StatsValues> facetStatsValues = f.facetStatsValues;
-        FieldType facetType = searcher.getSchema().getFieldType(f.name);
-        for (Map.Entry<String,StatsValues> entry : facetStatsValues.entrySet()) {
-          String termLabel = entry.getKey();
-          int missingCount = searcher.numDocs(new TermQuery(new Term(f.name, facetType.toInternal(termLabel))), missing);
-          entry.getValue().addMissing(missingCount);
+        allstats.accumulate(value, c);
+        //as we've parsed the termnum into a value, lets also accumulate fieldfacet statistics
+        for (FieldFacetStats f : finfo) {
+          f.accumulateTermNum(i, value);
         }
-        allstats.addFacet(f.name, facetStatsValues);
       }
-    }
 
-    return allstats;
+      int c = missing.size();
+      allstats.addMissing(c);
+
+      if (finfo.length > 0) {
+        for (FieldFacetStats f : finfo) {
+          Map<String, StatsValues> facetStatsValues = f.facetStatsValues;
+          FieldType facetType = searcher.getSchema().getFieldType(f.name);
+          for (Map.Entry<String,StatsValues> entry : facetStatsValues.entrySet()) {
+            String termLabel = entry.getKey();
+            int missingCount = searcher.numDocs(new TermQuery(new Term(f.name, facetType.toInternal(termLabel))), missing);
+            entry.getValue().addMissing(missingCount);
+          }
+          allstats.addFacet(f.name, facetStatsValues);
+        }
+      }
+
+      return allstats;
+
+    } finally {
+      missing.decref();
+    }
 
   }
 
