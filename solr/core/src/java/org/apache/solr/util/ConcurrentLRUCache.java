@@ -94,7 +94,7 @@ public class ConcurrentLRUCache<K,V> {
     }
     if (e.value instanceof RefCount) {
       int ref = ((RefCount)e.value).incref();
-      if (ref < 0) return null; // a concurrent decref() beat us to the punch
+      if (ref <= 0) return null; // a concurrent decref() beat us to the punch
     }
     if (islive) e.lastAccessed = stats.accessCounter.incrementAndGet();
     return e.value;
@@ -456,12 +456,12 @@ public class ConcurrentLRUCache<K,V> {
         ce.lastAccessedCopy = ce.lastAccessed;
 
         if (tree.size() < n || ce.lastAccessedCopy > tree.last().lastAccessedCopy) {
+          tree.add(ce);
           if (ce.value instanceof RefCount) {
-            tree.add(ce);
             int ref = ((RefCount)ce.value).incref();
             if (ref  <= 0) continue;
           }
-          if (tree.size() >= n) {
+          if (tree.size() > n) {
             CacheEntry<K,V> old = tree.pollLast();
             if (old.value instanceof RefCount) {
               ((RefCount)old.value).decref();
