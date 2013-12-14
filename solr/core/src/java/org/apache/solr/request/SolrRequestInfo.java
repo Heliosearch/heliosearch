@@ -19,6 +19,7 @@ package org.apache.solr.request;
 
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.CommonParams;
+import org.apache.solr.core.Diagnostics;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.response.SolrQueryResponse;
@@ -60,6 +61,12 @@ public class SolrRequestInfo {
   public static void clearRequestInfo() {
     try {
       SolrRequestInfo info = threadLocal.get();
+
+      // TODO: detect if a search or update has no RequestInfo by inspecting stack trace?
+      if (info == null) {
+        // SolrCore.log.warn("Thread has no SolrRequestInfo! thread=" + Diagnostics.toString(Thread.currentThread().getStackTrace()));
+      }
+
       if (info != null && info.closeHooks != null) {
         for (Closeable hook : info.closeHooks) {
           try {
@@ -70,7 +77,7 @@ public class SolrRequestInfo {
         }
       }
 
-      if (info.rb != null) {
+      if (info != null && info.rb != null) {
         try {
           info.rb.close();
         } catch (Throwable throwable) {
