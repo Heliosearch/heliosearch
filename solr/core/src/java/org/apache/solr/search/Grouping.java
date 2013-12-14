@@ -831,6 +831,8 @@ public class Grouping {
     TopDocsCollector topCollector;
     FilterCollector collector;
 
+    DocSet groupFilt;
+
     /**
      * {@inheritDoc}
      */
@@ -844,7 +846,7 @@ public class Grouping {
      */
     @Override
     protected Collector createFirstPassCollector() throws IOException {
-      DocSet groupFilt = searcher.getDocSet(query);
+      groupFilt = searcher.getDocSet(query);
       topCollector = newCollector(groupSort, needScores);
       collector = new FilterCollector(groupFilt, topCollector);
       return collector;
@@ -864,14 +866,18 @@ public class Grouping {
      */
     @Override
     protected void finish() throws IOException {
-      TopDocsCollector topDocsCollector = (TopDocsCollector) collector.getDelegate();
-      TopDocs topDocs = topDocsCollector.topDocs();
-      GroupDocs<String> groupDocs = new GroupDocs<String>(Float.NaN, topDocs.getMaxScore(), topDocs.totalHits, topDocs.scoreDocs, query.toString(), null);
-      if (main) {
-        mainResult = getDocList(groupDocs);
-      } else {
-        NamedList rsp = commonResponse();
-        addDocList(rsp, groupDocs);
+      try {
+        TopDocsCollector topDocsCollector = (TopDocsCollector) collector.getDelegate();
+        TopDocs topDocs = topDocsCollector.topDocs();
+        GroupDocs<String> groupDocs = new GroupDocs<String>(Float.NaN, topDocs.getMaxScore(), topDocs.totalHits, topDocs.scoreDocs, query.toString(), null);
+        if (main) {
+          mainResult = getDocList(groupDocs);
+        } else {
+          NamedList rsp = commonResponse();
+          addDocList(rsp, groupDocs);
+        }
+      } finally {
+        groupFilt.decref();
       }
     }
 
