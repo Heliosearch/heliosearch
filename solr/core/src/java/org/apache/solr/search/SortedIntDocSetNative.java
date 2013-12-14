@@ -63,6 +63,10 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
     this.len = len;
   }
 
+  public long getIntArrayPointer() {
+    return array;
+  }
+
   @Override
   public int size()      {
     return len;

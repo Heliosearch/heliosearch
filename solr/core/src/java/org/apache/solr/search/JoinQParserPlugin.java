@@ -28,6 +28,7 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.CoreContainer;
+import org.apache.solr.core.HS;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.request.LocalSolrQueryRequest;
@@ -40,6 +41,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -282,207 +284,238 @@ class JoinQuery extends Query {
       DocSet fromSet = fromSearcher.getDocSet(q);
       fromSetSize = fromSet.size();
 
-      List<DocSet> resultList = new ArrayList<DocSet>(10);
+      LinkedList<DocSet> resultList = new LinkedList<DocSet>();
+      try {
 
-      // make sure we have a set that is fast for random access, if we will use it for that
-      DocSet fastForRandomSet = fromSet;
-      if (minDocFreqFrom>0 && fromSet instanceof SortedIntDocSet) {
-        SortedIntDocSet sset = (SortedIntDocSet)fromSet;
-        fastForRandomSet = new HashDocSet(sset.getDocs(), 0, sset.size());
-      }
-
-      Fields fromFields = fromSearcher.getAtomicReader().fields();
-      Fields toFields = fromSearcher==toSearcher ? fromFields : toSearcher.getAtomicReader().fields();
-      if (fromFields == null) return DocSet.EMPTY;
-      Terms terms = fromFields.terms(fromField);
-      Terms toTerms = toFields.terms(toField);
-      if (terms == null || toTerms==null) return DocSet.EMPTY;
-      String prefixStr = TrieField.getMainValuePrefix(fromSearcher.getSchema().getFieldType(fromField));
-      BytesRef prefix = prefixStr == null ? null : new BytesRef(prefixStr);
-
-      BytesRef term = null;
-      TermsEnum  termsEnum = terms.iterator(null);
-      TermsEnum  toTermsEnum = toTerms.iterator(null);
-      SolrIndexSearcher.DocsEnumState fromDeState = null;
-      SolrIndexSearcher.DocsEnumState toDeState = null;
-
-      if (prefix == null) {
-        term = termsEnum.next();
-      } else {
-        if (termsEnum.seekCeil(prefix) != TermsEnum.SeekStatus.END) {
-          term = termsEnum.term();
+        // make sure we have a set that is fast for random access, if we will use it for that
+        DocSet fastForRandomSet = fromSet;
+        if (minDocFreqFrom>0 && fromSet instanceof SortedIntDocSetNative) {
+          SortedIntDocSetNative sset = (SortedIntDocSetNative)fromSet;
+          fastForRandomSet = new HashDocSet(sset.getIntArrayPointer(), 0, sset.size(), HashDocSet.DEFAULT_INVERSE_LOAD_FACTOR);
         }
-      }
 
-      Bits fromLiveDocs = fromSearcher.getAtomicReader().getLiveDocs();
-      Bits toLiveDocs = fromSearcher == toSearcher ? fromLiveDocs : toSearcher.getAtomicReader().getLiveDocs();
+        Fields fromFields = fromSearcher.getAtomicReader().fields();
+        Fields toFields = fromSearcher==toSearcher ? fromFields : toSearcher.getAtomicReader().fields();
+        if (fromFields == null) return DocSet.EMPTY;
+        Terms terms = fromFields.terms(fromField);
+        Terms toTerms = toFields.terms(toField);
+        if (terms == null || toTerms==null) return DocSet.EMPTY;
+        String prefixStr = TrieField.getMainValuePrefix(fromSearcher.getSchema().getFieldType(fromField));
+        BytesRef prefix = prefixStr == null ? null : new BytesRef(prefixStr);
 
-      fromDeState = new SolrIndexSearcher.DocsEnumState();
-      fromDeState.fieldName = fromField;
-      fromDeState.liveDocs = fromLiveDocs;
-      fromDeState.termsEnum = termsEnum;
-      fromDeState.docsEnum = null;
-      fromDeState.minSetSizeCached = minDocFreqFrom;
+        BytesRef term = null;
+        TermsEnum  termsEnum = terms.iterator(null);
+        TermsEnum  toTermsEnum = toTerms.iterator(null);
+        SolrIndexSearcher.DocsEnumState fromDeState = null;
+        SolrIndexSearcher.DocsEnumState toDeState = null;
 
-      toDeState = new SolrIndexSearcher.DocsEnumState();
-      toDeState.fieldName = toField;
-      toDeState.liveDocs = toLiveDocs;
-      toDeState.termsEnum = toTermsEnum;
-      toDeState.docsEnum = null;
-      toDeState.minSetSizeCached = minDocFreqTo;
+        if (prefix == null) {
+          term = termsEnum.next();
+        } else {
+          if (termsEnum.seekCeil(prefix) != TermsEnum.SeekStatus.END) {
+            term = termsEnum.term();
+          }
+        }
 
-      while (term != null) {
-        if (prefix != null && !StringHelper.startsWith(term, prefix))
-          break;
+        Bits fromLiveDocs = fromSearcher.getAtomicReader().getLiveDocs();
+        Bits toLiveDocs = fromSearcher == toSearcher ? fromLiveDocs : toSearcher.getAtomicReader().getLiveDocs();
 
-        fromTermCount++;
+        fromDeState = new SolrIndexSearcher.DocsEnumState();
+        fromDeState.fieldName = fromField;
+        fromDeState.liveDocs = fromLiveDocs;
+        fromDeState.termsEnum = termsEnum;
+        fromDeState.docsEnum = null;
+        fromDeState.minSetSizeCached = minDocFreqFrom;
 
-        boolean intersects = false;
-        int freq = termsEnum.docFreq();
-        fromTermTotalDf++;
+        toDeState = new SolrIndexSearcher.DocsEnumState();
+        toDeState.fieldName = toField;
+        toDeState.liveDocs = toLiveDocs;
+        toDeState.termsEnum = toTermsEnum;
+        toDeState.docsEnum = null;
+        toDeState.minSetSizeCached = minDocFreqTo;
 
-        if (freq < minDocFreqFrom) {
-          fromTermDirectCount++;
-          // OK to skip liveDocs, since we check for intersection with docs matching query
-          fromDeState.docsEnum = fromDeState.termsEnum.docs(null, fromDeState.docsEnum, DocsEnum.FLAG_NONE);
-          DocsEnum docsEnum = fromDeState.docsEnum;
+        while (term != null) {
+          if (prefix != null && !StringHelper.startsWith(term, prefix))
+            break;
 
-          if (docsEnum instanceof MultiDocsEnum) {
-            MultiDocsEnum.EnumWithSlice[] subs = ((MultiDocsEnum)docsEnum).getSubs();
-            int numSubs = ((MultiDocsEnum)docsEnum).getNumSubs();
-            outer: for (int subindex = 0; subindex<numSubs; subindex++) {
-              MultiDocsEnum.EnumWithSlice sub = subs[subindex];
-              if (sub.docsEnum == null) continue;
-              int base = sub.slice.start;
+          fromTermCount++;
+
+          boolean intersects = false;
+          int freq = termsEnum.docFreq();
+          fromTermTotalDf++;
+
+          if (freq < minDocFreqFrom) {
+            fromTermDirectCount++;
+            // OK to skip liveDocs, since we check for intersection with docs matching query
+            fromDeState.docsEnum = fromDeState.termsEnum.docs(null, fromDeState.docsEnum, DocsEnum.FLAG_NONE);
+            DocsEnum docsEnum = fromDeState.docsEnum;
+
+            if (docsEnum instanceof MultiDocsEnum) {
+              MultiDocsEnum.EnumWithSlice[] subs = ((MultiDocsEnum)docsEnum).getSubs();
+              int numSubs = ((MultiDocsEnum)docsEnum).getNumSubs();
+              outer: for (int subindex = 0; subindex<numSubs; subindex++) {
+                MultiDocsEnum.EnumWithSlice sub = subs[subindex];
+                if (sub.docsEnum == null) continue;
+                int base = sub.slice.start;
+                int docid;
+                while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                  if (fastForRandomSet.exists(docid+base)) {
+                    intersects = true;
+                    break outer;
+                  }
+                }
+              }
+            } else {
               int docid;
-              while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
-                if (fastForRandomSet.exists(docid+base)) {
+              while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                if (fastForRandomSet.exists(docid)) {
                   intersects = true;
-                  break outer;
+                  break;
                 }
               }
             }
           } else {
-            int docid;
-            while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
-              if (fastForRandomSet.exists(docid)) {
-                intersects = true;
-                break;
-              }
-            }
+            // use the filter cache
+            DocSet fromTermSet = fromSearcher.getDocSet(fromDeState);
+            intersects = fromSet.intersects(fromTermSet);
+            fromTermSet.decref();
           }
-        } else {
-          // use the filter cache
-          DocSet fromTermSet = fromSearcher.getDocSet(fromDeState);
-          intersects = fromSet.intersects(fromTermSet);
-        }
 
-        if (intersects) {
-          fromTermHits++;
-          fromTermHitsTotalDf++;
-          TermsEnum.SeekStatus status = toTermsEnum.seekCeil(term);
-          if (status == TermsEnum.SeekStatus.END) break;
-          if (status == TermsEnum.SeekStatus.FOUND) {
-            toTermHits++;
-            int df = toTermsEnum.docFreq();
-            toTermHitsTotalDf += df;
-            if (resultBits==null && df + resultListDocs > maxSortedIntSize && resultList.size() > 0) {
-              resultBits = new OpenBitSet(toSearcher.maxDoc());
-            }
-
-            // if we don't have a bitset yet, or if the resulting set will be too large
-            // use the filterCache to get a DocSet
-            if (toTermsEnum.docFreq() >= minDocFreqTo || resultBits == null) {
-              // use filter cache
-              DocSet toTermSet = toSearcher.getDocSet(toDeState);
-              resultListDocs += toTermSet.size();
-              if (resultBits != null) {
-                toTermSet.setBitsOn(resultBits);
-              } else {
-                if (toTermSet instanceof BitDocSet) {
-                  resultBits = (OpenBitSet)((BitDocSet)toTermSet).bits.clone();
-                } else {
-                  resultList.add(toTermSet);
-                }
+          if (intersects) {
+            fromTermHits++;
+            fromTermHitsTotalDf++;
+            TermsEnum.SeekStatus status = toTermsEnum.seekCeil(term);
+            if (status == TermsEnum.SeekStatus.END) break;
+            if (status == TermsEnum.SeekStatus.FOUND) {
+              toTermHits++;
+              int df = toTermsEnum.docFreq();
+              toTermHitsTotalDf += df;
+              if (resultBits==null && df + resultListDocs > maxSortedIntSize && resultList.size() > 0) {
+                resultBits = new OpenBitSet(toSearcher.maxDoc());
               }
-            } else {
-              toTermDirectCount++;
 
-              // need to use liveDocs here so we don't map to any deleted ones
-              toDeState.docsEnum = toDeState.termsEnum.docs(toDeState.liveDocs, toDeState.docsEnum, DocsEnum.FLAG_NONE);
-              DocsEnum docsEnum = toDeState.docsEnum;              
-
-              if (docsEnum instanceof MultiDocsEnum) {
-                MultiDocsEnum.EnumWithSlice[] subs = ((MultiDocsEnum)docsEnum).getSubs();
-                int numSubs = ((MultiDocsEnum)docsEnum).getNumSubs();
-                for (int subindex = 0; subindex<numSubs; subindex++) {
-                  MultiDocsEnum.EnumWithSlice sub = subs[subindex];
-                  if (sub.docsEnum == null) continue;
-                  int base = sub.slice.start;
-                  int docid;
-                  while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
-                    resultListDocs++;
-                    resultBits.fastSet(docid + base);
+              // if we don't have a bitset yet, or if the resulting set will be too large
+              // use the filterCache to get a DocSet
+              if (toTermsEnum.docFreq() >= minDocFreqTo || resultBits == null) {
+                // use filter cache
+                DocSet toTermSet = toSearcher.getDocSet(toDeState);
+                resultListDocs += toTermSet.size();
+                if (resultBits != null) {
+                  toTermSet.setBitsOn(resultBits);
+                  toTermSet.decref();
+                } else {
+                  if (toTermSet instanceof BitDocSetNative) {
+                    resultBits = ((BitDocSetNative)toTermSet).toOpenBitSet();
+                    toTermSet.decref();
+                  } else if (toTermSet instanceof BitDocSet) {
+                    // shouldn't happen any more?
+                    resultBits = (OpenBitSet)((BitDocSet)toTermSet).bits.clone();
+                  } else {
+                    // should be SortedIntDocSetNative
+                    resultList.add(toTermSet);
                   }
                 }
               } else {
-                int docid;
-                while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
-                  resultListDocs++;
-                  resultBits.fastSet(docid);
+                toTermDirectCount++;
+
+                // need to use liveDocs here so we don't map to any deleted ones
+                toDeState.docsEnum = toDeState.termsEnum.docs(toDeState.liveDocs, toDeState.docsEnum, DocsEnum.FLAG_NONE);
+                DocsEnum docsEnum = toDeState.docsEnum;
+
+                if (docsEnum instanceof MultiDocsEnum) {
+                  MultiDocsEnum.EnumWithSlice[] subs = ((MultiDocsEnum)docsEnum).getSubs();
+                  int numSubs = ((MultiDocsEnum)docsEnum).getNumSubs();
+                  for (int subindex = 0; subindex<numSubs; subindex++) {
+                    MultiDocsEnum.EnumWithSlice sub = subs[subindex];
+                    if (sub.docsEnum == null) continue;
+                    int base = sub.slice.start;
+                    int docid;
+                    while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                      resultListDocs++;
+                      resultBits.fastSet(docid + base);
+                    }
+                  }
+                } else {
+                  int docid;
+                  while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                    resultListDocs++;
+                    resultBits.fastSet(docid);
+                  }
                 }
               }
+
             }
-
           }
+
+          term = termsEnum.next();
         }
 
-        term = termsEnum.next();
-      }
+        smallSetsDeferred = resultList.size();
 
-      smallSetsDeferred = resultList.size();
+        if (resultBits != null) {
 
-      if (resultBits != null) {
+          for(;;) {
+            DocSet set = resultList.pollFirst();
+            if (set == null) break;
+            set.setBitsOn(resultBits);
+            set.decref();
+          }
+          return new BitDocSet(resultBits);
+        }
+
+        if (resultList.size()==0) {
+          return DocSet.EMPTY;
+        }
+
+        /** This could be off-heap, and we don't want to have to try and free it later
+         if (resultList.size() == 1) {
+         return resultList.get(0);
+         }
+         **/
+
+        int sz = 0;
+
+        for (DocSet set : resultList)
+          sz += set.size();
+
+        int[] docs = new int[sz];
+        int pos = 0;
+
+        for(;;) {
+          DocSet set = resultList.pollFirst();
+          if (set == null) break;
+          if (set instanceof SortedIntDocSet) {
+            System.arraycopy(((SortedIntDocSet)set).getDocs(), 0, docs, pos, set.size());
+          } else {
+            HS.copyInts(((SortedIntDocSetNative)set).getIntArrayPointer(), 0, docs, pos, set.size());
+          }
+          pos += set.size();
+          set.decref();
+        }
+
+        Arrays.sort(docs);  // TODO: try switching to timsort or something like a bucket sort for numbers...
+        int[] dedup = new int[sz];
+        pos = 0;
+        int last = -1;
+        for (int doc : docs) {
+          if (doc != last)
+            dedup[pos++] = doc;
+          last = doc;
+        }
+
+        if (pos != dedup.length) {
+          dedup = Arrays.copyOf(dedup, pos);
+        }
+
+        return new SortedIntDocSet(dedup, dedup.length);
+
+      } finally {
+        fromSet.decref();
+        // resultList should be empty, except if an exception happened somewhere
         for (DocSet set : resultList) {
-          set.setBitsOn(resultBits);
+          set.decref();
         }
-        return new BitDocSet(resultBits);
       }
-
-      if (resultList.size()==0) {
-        return DocSet.EMPTY;
-      }
-
-      if (resultList.size() == 1) {
-        return resultList.get(0);
-      }
-
-      int sz = 0;
-
-      for (DocSet set : resultList)
-        sz += set.size();
-
-      int[] docs = new int[sz];
-      int pos = 0;
-      for (DocSet set : resultList) {
-        System.arraycopy(((SortedIntDocSet)set).getDocs(), 0, docs, pos, set.size());
-        pos += set.size();
-      }
-      Arrays.sort(docs);
-      int[] dedup = new int[sz];
-      pos = 0;
-      int last = -1;
-      for (int doc : docs) {
-        if (doc != last)
-          dedup[pos++] = doc;
-        last = doc;
-      }
-
-      if (pos != dedup.length) {
-        dedup = Arrays.copyOf(dedup, pos);
-      }
-
-      return new SortedIntDocSet(dedup, dedup.length);
     }
 
     @Override

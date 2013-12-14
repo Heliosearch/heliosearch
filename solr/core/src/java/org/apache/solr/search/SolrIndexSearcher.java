@@ -1187,7 +1187,9 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         // did some sort of HS finalizer or something.
         result = upto==0 ? DocSet.EMPTY : new SortedIntDocSetNative(docs, upto);
       } else {
-        result = upto==0 ? DocSet.EMPTY : new SortedIntDocSet(Arrays.copyOf(docs, upto));
+        // TODO: use native scratch?  It won't stick around anyway...
+        // result = upto==0 ? DocSet.EMPTY : new SortedIntDocSet(Arrays.copyOf(docs, upto));
+        result = upto==0 ? DocSet.EMPTY : new SortedIntDocSetNative(docs, upto);
       }
     }
 
@@ -2018,7 +2020,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     }
 
     // bit of a hack to tell if a set is sorted - do it better in the future.
-    boolean inOrder = set instanceof BitDocSet || set instanceof SortedIntDocSet;
+    boolean inOrder = set instanceof BitDocSet || set instanceof SortedIntDocSet || set instanceof BitDocSetNative || set instanceof SortedIntDocSetNative;
 
     TopDocsCollector topCollector = TopFieldCollector.create(weightSort(sort), nDocs, false, false, false, inOrder);
 

@@ -61,6 +61,13 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
     HS.copyLongs(other.getBits(), 0, this.array, 0, wlen);
   }
 
+  public OpenBitSet toOpenBitSet() {
+    long[] longArray = new long[wlen];
+    HS.copyLongs(array, 0, longArray, 0, wlen);
+    return new OpenBitSet(longArray, wlen);
+    // Don't set size... the purpose of making a copy will be to change it.
+  }
+
   public int capacity() {
     return wlen<<6;
   }
@@ -261,7 +268,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
     assert(a.wlen == b.wlen);
     int nWords = a.wlen;
     for (int i=0; i<nWords; i++) {
-      if ( (HS.getLong(a.array, nWords) & HS.getLong(b.array, i)) != 0 ) {
+      if ( (HS.getLong(a.array, i) & HS.getLong(b.array, i)) != 0 ) {
         return true;
       }
     }
@@ -484,7 +491,14 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
 
   @Override
   public void setBitsOn(OpenBitSet target) {
-throw new UnsupportedOperationException();
+    assert this.wlen == target.getNumWords();
+    long thisArr = this.array;
+    long[] otherArr = target.getBits();
+    // testing against zero can be more efficient
+    int pos=wlen;
+    while(--pos>=0) {
+      otherArr[pos] |= HS.getLong(thisArr, pos);
+    }
   }
 
   @Override
