@@ -68,10 +68,6 @@ public class QueryCommand implements Command<QueryCommandResult> {
       return setQuery(parser.getQuery());
     }
 
-    public Builder setDocSet(DocSet docSet) {
-      this.docSet = docSet;
-      return this;
-    }
 
     /**
      * Sets the docSet based on the created {@link DocSet}
@@ -81,7 +77,8 @@ public class QueryCommand implements Command<QueryCommandResult> {
      * @throws IOException If I/O related errors occur.
      */
     public Builder setDocSet(SolrIndexSearcher searcher) throws IOException {
-      return setDocSet(searcher.getDocSet(query));
+      this.docSet = searcher.getDocSet(query);
+      return this;
     }
 
     public Builder setDocsToCollect(int docsToCollect) {
@@ -96,6 +93,10 @@ public class QueryCommand implements Command<QueryCommandResult> {
 
     public QueryCommand build() {
       if (sort == null || query == null || docSet == null || docsToCollect == null) {
+        if (docSet != null) {
+          docSet.decref();
+          docSet = null;
+        }
         throw new IllegalStateException("All fields must be set");
       }
 
@@ -152,5 +153,12 @@ public class QueryCommand implements Command<QueryCommandResult> {
   @Override
   public Sort getSortWithinGroup() {
     return null;
+  }
+
+  @Override
+  public void close() {
+    if (docSet != null) {
+      docSet.decref();
+    }
   }
 }

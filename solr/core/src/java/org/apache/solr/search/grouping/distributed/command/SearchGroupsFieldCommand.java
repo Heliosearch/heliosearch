@@ -123,6 +123,10 @@ public class SearchGroupsFieldCommand implements Command<Pair<Integer, Collectio
   }
 
   @Override
+  public void close() {
+  }
+
+  @Override
   public Sort getGroupSort() {
     return groupSort;
   }

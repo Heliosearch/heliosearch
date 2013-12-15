@@ -359,11 +359,15 @@ public class QueryComponent extends SearchComponent
           }
 
           CommandHandler commandHandler = secondPhaseBuilder.build();
-          commandHandler.execute();
-          TopGroupsResultTransformer serializer = new TopGroupsResultTransformer(rb);
-          rsp.add("secondPhase", commandHandler.processResult(result, serializer));
-          rb.setResult(result);
-          return;
+          try {
+            commandHandler.execute();
+            TopGroupsResultTransformer serializer = new TopGroupsResultTransformer(rb);
+            rsp.add("secondPhase", commandHandler.processResult(result, serializer));
+            rb.setResult(result);
+            return;
+          } finally {
+            commandHandler.close();
+          }
         }
 
         int maxDocsPercentageToCache = params.getInt(GroupParams.GROUP_CACHE_PERCENTAGE, 0);

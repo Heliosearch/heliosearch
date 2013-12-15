@@ -157,4 +157,8 @@ public class TopGroupsFieldCommand implements Command<TopGroups<BytesRef>> {
   public Sort getSortWithinGroup() {
     return sortWithinGroup;
   }
+
+  @Override
+  public void close() {
+  }
 }

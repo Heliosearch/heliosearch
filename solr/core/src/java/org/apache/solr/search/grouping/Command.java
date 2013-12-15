@@ -31,7 +31,7 @@ import java.util.List;
  *
  * @lucene.experimental
  */
-public interface Command<T> {
+public interface Command<T> extends AutoCloseable {
 
   /**
    * Returns a list of {@link Collector} instances to be
@@ -65,4 +65,5 @@ public interface Command<T> {
    */
   Sort getSortWithinGroup();
 
+  void close();
 }

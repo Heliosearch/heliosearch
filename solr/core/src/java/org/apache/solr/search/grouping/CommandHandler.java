@@ -39,7 +39,8 @@ import java.util.List;
  *
  * @lucene.experimental
  */
-public class CommandHandler {
+public class CommandHandler implements AutoCloseable {
+
 
   public static class Builder {
 
@@ -229,4 +230,12 @@ public class CommandHandler {
   public int getTotalHitCount() {
     return totalHitCount;
   }
+
+  @Override
+  public void close() {
+    for (Command command : commands) {
+      command.close();
+    }
+  }
+
 }
