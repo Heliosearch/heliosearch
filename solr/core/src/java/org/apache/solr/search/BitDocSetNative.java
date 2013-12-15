@@ -290,6 +290,19 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
     return result;
   }
 
+  public static int intersectionCount(BitDocSetNative a, OpenBitSet b) {
+    assert(a.wlen == b.getNumWords());
+    int nWords = a.numWords();
+    long[] bArray = b.getBits();
+    int result = 0;
+    for (int i=0; i<nWords; i++) {
+      long w1 = HS.getLong(a.array, i);
+      long w2 = bArray[i];
+      result += Long.bitCount(w1 & w2);
+    }
+    return result;
+  }
+
   public static int unionCount(BitDocSetNative a, BitDocSetNative b) {
     assert(a.wlen == b.wlen);
     int nWords = a.numWords();

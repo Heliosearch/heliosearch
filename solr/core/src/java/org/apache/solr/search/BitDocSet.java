@@ -168,7 +168,10 @@ public class BitDocSet extends DocSetBase {
   public int intersectionSize(DocSet other) {
     if (other instanceof BitDocSet) {
       return (int)OpenBitSet.intersectionCount(this.bits, ((BitDocSet)other).bits);
-    } else {
+    } else if (other instanceof BitDocSetNative) {
+      return BitDocSetNative.intersectionCount((BitDocSetNative)other, this.bits);
+    }
+    else {
       // they had better not call us back!
       return other.intersectionSize(this);
     }
