@@ -259,6 +259,38 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
     return (word & bitmask) != 0;
   }
 
+  public void flip(int startIndex, int endIndex) {
+    if (endIndex <= startIndex) return;
+    int startWord = (startIndex>>6);
+
+    // since endIndex is one past the end, this is index of the last
+    // word to be changed.
+    int endWord = (endIndex-1) >> 6;
+
+    /*** Grrr, java shifting wraps around so -1L>>>64 == -1
+     * for that reason, make sure not to use endmask if the bits to flip will
+     * be zero in the last word (redefine endWord to be the last changed...)
+     long startmask = -1L << (startIndex & 0x3f);     // example: 11111...111000
+     long endmask = -1L >>> (64-(endIndex & 0x3f));   // example: 00111...111111
+     ***/
+
+    long startmask = -1L << startIndex;
+    long endmask = -1L >>> -endIndex;  // 64-(endIndex&0x3f) is the same as -endIndex due to wrap
+
+    if (startWord == endWord) {
+      HS.setLong(array, startWord, HS.getLong(array, startWord) ^ (startmask & endmask) );
+      return;
+    }
+
+    HS.setLong(array, startWord, HS.getLong(array, startWord) ^ startmask);
+
+    for (int i=startWord+1; i<endWord; i++) {
+      HS.setLong(array, i, ~HS.getLong(array, i));
+    }
+
+    HS.setLong(array, endWord, HS.getLong(array, endWord) ^ endmask);
+  }
+
   /** @return the number of set bits */
   public long cardinality() {
     return size();
