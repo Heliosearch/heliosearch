@@ -1251,9 +1251,12 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       first = filterCache.get(absQ);
       if (first==null) {
         first = getDocSetNC(absQ, null);
+        first.incref();
         filterCache.put(absQ, first);
       }
-      return positive ? first.intersection(filter) : filter.andNot(first);
+      DocSet answer = positive ? first.intersection(filter) : filter.andNot(first);
+      first.decref();
+      return answer;
     }
 
     // If there isn't a cache, then do a single filtered query if positive.

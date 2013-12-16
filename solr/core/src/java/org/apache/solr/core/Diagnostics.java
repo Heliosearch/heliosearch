@@ -53,53 +53,78 @@ public class Diagnostics {
   }
 
 
-  public static String toString(StackTraceElement[] stackTrace, String... startClass_startMethod_end) {
-    String startAfterClass = startClass_startMethod_end != null && startClass_startMethod_end.length >= 3 ? startClass_startMethod_end[2] : null;
-    String startAfterMethod = startClass_startMethod_end != null && startClass_startMethod_end.length >= 2 ? startClass_startMethod_end[1] : null;
-    String endSubstring = startClass_startMethod_end != null && startClass_startMethod_end.length >= 1 ? startClass_startMethod_end[0] : null;
+  public static String toString(StackTraceElement[] stackTrace, int skip) {
     StringBuilder sb = new StringBuilder(2048);
     try {
-      appendStackTrace(sb, stackTrace, startAfterClass, startAfterMethod, endSubstring);
+      appendStackTrace(sb, stackTrace, skip, null, null, null);
     } catch (Exception e) {
       // impossible
     }
     return sb.toString();
   }
 
-  public static void appendStackTrace(Appendable out, StackTraceElement[] stackTrace, String startAfterClass, String startAfterMethod, String endSubstring) throws IOException {
-    if (startAfterClass == null && startAfterMethod == null) {
-      startAfterClass = Diagnostics.class.getName();
+  public static String toString(StackTraceElement[] stackTrace, String... startClass_startMethod_end) {
+    String startClass = startClass_startMethod_end != null && startClass_startMethod_end.length >= 1 ? startClass_startMethod_end[0] : null;
+    String startMethod = startClass_startMethod_end != null && startClass_startMethod_end.length >= 2 ? startClass_startMethod_end[1] : null;
+    String endSubstring = startClass_startMethod_end != null && startClass_startMethod_end.length >= 3 ? startClass_startMethod_end[2] : null;
+    StringBuilder sb = new StringBuilder(2048);
+    try {
+      appendStackTrace(sb, stackTrace, -1, startClass, startMethod, endSubstring);
+    } catch (Exception e) {
+      // impossible
     }
+    return sb.toString();
+  }
+
+  public static void appendStackTrace(Appendable out, StackTraceElement[] stackTrace, int skip, String startClass, String startMethod, String endSubstring) throws IOException {
+    if (startClass == null && startMethod == null && skip < 0) {
+      startClass = Diagnostics.class.getName();
+    }
+
     if (endSubstring == null) {
       endSubstring = ".solr.";
     }
 
     int lastInteresting = stackTrace.length;
-    while (--lastInteresting >= 0) {
+    while (endSubstring != null && --lastInteresting >= 0) {
       StackTraceElement trace = stackTrace[lastInteresting];
       if (trace.getClassName().contains(endSubstring)) break;
     }
 
-    for (int i=0; i<lastInteresting; i++) {
-      StackTraceElement trace = stackTrace[i];
-      String className = trace.getClassName();
-      String method = trace.getMethodName();
+    int firstInteresting = skip;
 
-      boolean classMatch = className.equals(startAfterClass);
-      boolean methodMatch = method.equals(startAfterMethod);
+    if (firstInteresting < 0 && (startClass != null || startMethod != null) ) {
 
-      if (
-          (classMatch && (startAfterMethod==null || methodMatch))
-          ||
-          (methodMatch && (startAfterClass==null || classMatch))
-         )
-      {
-        break;
+      boolean matched = false;
+      for (firstInteresting=0; firstInteresting < lastInteresting; firstInteresting++) {
+        StackTraceElement trace = stackTrace[firstInteresting];
+        String className = trace.getClassName();
+        String method = trace.getMethodName();
+        boolean classMatch = startClass!=null && className.contains(startClass);
+        boolean methodMatch = startMethod!=null && method.contains(startMethod);
+
+        if ( (classMatch || startClass == null) && (methodMatch || startMethod == null) )
+        {
+          matched = true;
+          continue;
+        }
+
+        if (matched) break;
       }
 
+      firstInteresting--;
+    }
+
+    appendStackTrace(out, stackTrace, firstInteresting, lastInteresting+1);
+  }
+
+  public static void appendStackTrace(Appendable out, StackTraceElement[] stackTrace, int start, int end) throws IOException {
+    for (int i=Math.max(0,start); i<end; i++) {
+      StackTraceElement trace = stackTrace[i];
       out.append("\n\t");
       appendStackTraceElement(out, trace);
     }
+    out.append("\n");
   }
 
   public static void appendStackTraceElement(Appendable out, StackTraceElement e) throws IOException {

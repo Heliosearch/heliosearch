@@ -351,10 +351,6 @@ public class SimpleFacetsHS {
     ENUM, FC, FCS;
   }
 
-  public NamedList<Integer> getTermCounts(String field) throws IOException {
-    return getTermCounts(field, this.docs);
-  }
-
   public NamedList<Integer> getTermCounts(String field, DocSet base) throws IOException {
     int offset = params.getFieldInt(field, FacetParams.FACET_OFFSET, 0);
     int limit = params.getFieldInt(field, FacetParams.FACET_LIMIT, 100);

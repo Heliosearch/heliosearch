@@ -121,18 +121,7 @@ public class HS
           log.error("CURRENT ALLOCATIONS=" + n + (n==show ? "" : " Showing first " + show));
         }
         for (Info info : map.values()) {
-          if (--show < 0) break;
-          StringBuilder sb = new StringBuilder();
-          // sb.append("PTR: " + info.ptr + " ALLOCATED AT ");
-          sb.append("PTR: " + info.ptr + " SIZE=" + arraySizeBytes(info.ptr) + " ALLOCATED AT ");
-          for (int i=1; i<info.stack.length; i++) {    // first elem is getStackTrace
-            String elemS = info.stack[i].toString();
-            if (!(elemS.contains(".solr.") || elemS.contains(".lucene."))) break;
-            sb.append('\t');
-            sb.append(elemS);
-            sb.append('\n');
-          }
-          log.error(sb.toString());
+          log.error("PTR: " + info.ptr + " SIZE=" + arraySizeBytes(info.ptr) + " ALLOCATED AT " + Diagnostics.toString(info.stack, HS.class.getSimpleName()));
         }
 
       }

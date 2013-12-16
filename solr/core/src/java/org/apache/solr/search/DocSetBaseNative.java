@@ -26,6 +26,7 @@ import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.core.Diagnostics;
 import org.apache.solr.core.HS;
 import org.apache.solr.core.RefCount;
 import org.apache.solr.core.SolrCore;
@@ -45,8 +46,6 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
   private final AtomicInteger refcount = new AtomicInteger(1);
 
   // public static void debug() {}
-
-
 
   public static Map<DocSetBaseNative, Object> debugMap = new IdentityHashMap<>();
 
@@ -69,23 +68,21 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
     // throw new RuntimeException("LEAKED DOCSETS");
   }
 
-  private List<String> events = new ArrayList<String>();
-
-  private String whereAmI(String start) {
-    Thread thread = Thread.currentThread();
-    // TODO: cache StackTraceElements instead?  Also dedup equal traces?
-    // are they the same across different calls?
-    StackTraceElement[] stack = thread.getStackTrace();
-    StringBuilder sb = new StringBuilder(2000);
-    sb.append(start);
-    for (int i=3; i<stack.length; i++) {    // first elem is stack trace, second will be incref_debug, third will be incref
-      String elemS = stack[i].toString();
-      if (!(elemS.contains(".solr.") || elemS.contains(".lucene."))) break;
-      sb.append('\t');
-      sb.append(elemS);
-      sb.append('\n');
+  private static class Trace {
+    String event;
+    StackTraceElement[] trace;
+    public String toString() {
+      return event + Diagnostics.toString(trace, DocSetBaseNative.class.getSimpleName());
     }
-    return sb.toString();
+  }
+
+  private List<Trace> events = new ArrayList<Trace>();
+
+  private Trace whereAmI(String event) {
+    Trace debug = new Trace();
+    debug.event = event;
+    debug.trace = Thread.currentThread().getStackTrace();
+    return debug;
   }
 
   {
@@ -97,25 +94,22 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   private void debug_incref() {
     synchronized (events) {
-      events.add( whereAmI("INCREF cnt=" + (refcount.get()+1) + " :\n") );
+      events.add( whereAmI("INCREF cnt=" + (refcount.get()+1) + " :") );
     }
 
     if (refcount.get() <= 0) {
       SolrCore.log.error("TRYING TO INCREF DEAD DOCSET : " + this + "\n" + events);
       throw new RuntimeException("TRYING TO INCREF DEAD DOCSET");
     }
-
-
-
   }
 
   private void debug_decref() {
     synchronized (events) {
-      events.add( whereAmI("DECREF cnt=" + (refcount.get()-1) + " :\n") );
+      events.add( whereAmI("DECREF cnt=" + (refcount.get()-1) + " :") );
     }
 
     if (refcount.get() <= 0) {
-      SolrCore.log.error("TRYING TO FREE DEAD DOCSET :" + this + "\n" + events);
+      SolrCore.log.error("TRYING TO FREE DEAD DOCSET :" + this + " :" + events);
       throw new RuntimeException("TRYING TO FREE DEAD DOCSET");
     }
 

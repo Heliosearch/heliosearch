@@ -44,6 +44,9 @@ public class TestFilterCache extends SolrTestCaseJ4 {
 
     assertU(commit());
 
+    assertJQ(req("q","*:*", "fq","id:(1 2)", "facet","true", "facet.pivot", "name,title"));
+
+
     assertJQ(req("q","*:*", "fq","id:(1 2)"));  // small set
     assertJQ(req("q","*:*", "fq","id:[0 TO 99]"));  // big set
     assertJQ(req("q","*:*", "fq","-id:[0 TO 99]"));  // negative hit
