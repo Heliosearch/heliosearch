@@ -128,8 +128,8 @@ public class HS
     }
   }
 
-  // public static Allocator allocator = new Allocator();
-  public static Allocator allocator = new TrackingAllocator();
+  public static Allocator allocator = new Allocator();
+  // public static Allocator allocator = new TrackingAllocator();
 
   private static final AtomicLong numAlloc = new AtomicLong();
   private static final AtomicLong numFree = new AtomicLong();

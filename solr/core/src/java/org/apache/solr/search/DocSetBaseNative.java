@@ -45,8 +45,9 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   private final AtomicInteger refcount = new AtomicInteger(1);
 
-  // public static void debug() {}
+  public static void debug(boolean clear) {}
 
+  /********************* uncomment to track all incref/decref calls
   public static Map<DocSetBaseNative, Object> debugMap = new IdentityHashMap<>();
 
   public static void debug(boolean clear) {
@@ -117,6 +118,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
       debugMap.remove(this);
     }
   }
+  ******************************************************/
 
 
   @Override
@@ -126,7 +128,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public int incref() {
-    debug_incref();
+    // debug_incref();
 
     int count;
     while ((count = refcount.get()) > 0) {
@@ -139,7 +141,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public int decref() {
-    debug_decref();
+    // debug_decref();
 
     int count;
     while ((count = refcount.get()) > 0) {
@@ -158,7 +160,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public boolean tryIncref() {
-    debug_incref();
+    // debug_incref();
 
     int count;
     while ((count = refcount.get()) > 0) {
@@ -171,7 +173,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public boolean tryDecref() {
-    debug_decref();
+    // debug_decref();
 
     int count;
     while ((count = refcount.get()) > 0) {
