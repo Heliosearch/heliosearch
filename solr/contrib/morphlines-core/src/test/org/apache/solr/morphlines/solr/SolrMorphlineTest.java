@@ -22,9 +22,9 @@ import org.apache.lucene.util.Constants;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.cloudera.cdk.morphline.api.Record;
-import com.cloudera.cdk.morphline.base.Fields;
-import com.cloudera.cdk.morphline.base.Notifications;
+import org.kitesdk.morphline.api.Record;
+import org.kitesdk.morphline.base.Fields;
+import org.kitesdk.morphline.base.Notifications;
 
 public class SolrMorphlineTest extends AbstractSolrMorphlineTestBase {
 
@@ -57,18 +57,21 @@ public class SolrMorphlineTest extends AbstractSolrMorphlineTestBase {
     
   @Test
   public void testTokenizeText() throws Exception {
-    morphline = createMorphline("test-morphlines/tokenizeText");    
-    Record record = new Record();
-    record.put(Fields.MESSAGE, "Hello World!");
-    record.put(Fields.MESSAGE, "\nFoo@Bar.com #%()123");
-    Record expected = record.copy();
-    expected.getFields().putAll("tokens", Arrays.asList("hello", "world", "foo", "bar.com", "123"));
-    startSession();
-    Notifications.notifyBeginTransaction(morphline);
-    assertTrue(morphline.process(record));
-    assertEquals(1, collector.getNumStartEvents());
-    Notifications.notifyCommitTransaction(morphline);
-    assertEquals(expected, collector.getFirstRecord());
+    morphline = createMorphline("test-morphlines/tokenizeText");
+    for (int i = 0; i < 3; i++) {
+      Record record = new Record();
+      record.put(Fields.MESSAGE, "Hello World!");
+      record.put(Fields.MESSAGE, "\nFoo@Bar.com #%()123");
+      Record expected = record.copy();
+      expected.getFields().putAll("tokens", Arrays.asList("hello", "world", "foo", "bar.com", "123"));
+      collector.reset();
+      startSession();
+      Notifications.notifyBeginTransaction(morphline);
+      assertTrue(morphline.process(record));
+      assertEquals(1, collector.getNumStartEvents());
+      Notifications.notifyCommitTransaction(morphline);
+      assertEquals(expected, collector.getFirstRecord());
+    }
   }
     
 }

@@ -219,10 +219,6 @@ public final class ZkController {
               
               // seems we dont need to do this again...
               // Overseer.createClientNodes(zkClient, getNodeName());
-              ShardHandler shardHandler;
-              String adminPath;
-              shardHandler = cc.getShardHandlerFactory().getShardHandler();
-              adminPath = cc.getAdminPath();
               
               cc.cancelCoreRecoveries();
               
@@ -301,7 +297,6 @@ public final class ZkController {
       // before registering as live, make sure everyone is in a
       // down state
       for (CoreDescriptor descriptor : descriptors) {
-        final String coreZkNodeName = descriptor.getCloudDescriptor().getCoreNodeName();
         try {
           descriptor.getCloudDescriptor().setLeader(false);
           publish(descriptor, ZkStateReader.DOWN, updateLastPublished);
@@ -321,7 +316,9 @@ public final class ZkController {
             continue;
           }
         }
+      }
         
+      for (CoreDescriptor descriptor : descriptors) {
         // if it looks like we are going to be the leader, we don't
         // want to wait for the following stuff
         CloudDescriptor cloudDesc = descriptor.getCloudDescriptor();
@@ -335,19 +332,23 @@ public final class ZkController {
                   ZkStateReader.COLLECTIONS_ZKNODE + "/" + collection
                       + "/leader_elect/" + slice + "/election", null, true).size();
           if (children == 0) {
-            return;
+            log.debug("looks like we are going to be the leader for collection {} shard {}", collection, slice);
+            continue;
           }
 
         } catch (NoNodeException e) {
-         return;
+          log.debug("looks like we are going to be the leader for collection {} shard {}", collection, slice);
+          continue;
         } catch (InterruptedException e2) {
           Thread.currentThread().interrupt();
         } catch (KeeperException e) {
           log.warn("", e);
           Thread.currentThread().interrupt();
         }
-        
+
+        final String coreZkNodeName = descriptor.getCloudDescriptor().getCoreNodeName();
         try {
+          log.debug("calling waitForLeaderToSeeDownState for coreZkNodeName={} collection={} shard={}", new Object[] {coreZkNodeName,  collection, slice});
           waitForLeaderToSeeDownState(descriptor, coreZkNodeName);
         } catch (Exception e) {
           SolrException.log(log, "", e);
@@ -739,6 +740,8 @@ public final class ZkController {
    * @return the shardId for the SolrCore
    */
   public String register(String coreName, final CoreDescriptor desc, boolean recoverReloadedCores, boolean afterExpiration) throws Exception {  
+    // pre register has published our down state
+    
     final String baseUrl = getBaseUrl();
     
     final CloudDescriptor cloudDesc = desc.getCloudDescriptor();
@@ -796,9 +799,6 @@ public final class ZkController {
       // TODO: should this be moved to another thread? To recoveryStrat?
       // TODO: should this actually be done earlier, before (or as part of)
       // leader election perhaps?
-      // TODO: if I'm the leader, ensure that a replica that is trying to recover waits until I'm
-      // active (or don't make me the
-      // leader until my local replay is done.
 
       UpdateLog ulog = core.getUpdateHandler().getUpdateLog();
       if (!core.isReloaded() && ulog != null) {

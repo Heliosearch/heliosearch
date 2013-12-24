@@ -214,9 +214,9 @@ public class CoreContainer {
 
     zkSys.initZooKeeper(this, solrHome, cfg);
 
-    collectionsHandler = new CollectionsHandler(this);
-    infoHandler = new InfoHandler(this);
-    coreAdminHandler = createMultiCoreHandler(cfg.getCoreAdminHandlerClass());
+    collectionsHandler = createHandler(cfg.getCollectionsHandlerClass(), CollectionsHandler.class);
+    infoHandler        = createHandler(cfg.getInfoHandlerClass(), InfoHandler.class);
+    coreAdminHandler   = createHandler(cfg.getCoreAdminHandlerClass(), CoreAdminHandler.class);
 
     containerProperties = cfg.getSolrProperties("solr");
 
@@ -256,7 +256,7 @@ public class CoreContainer {
                     preRegisterInZk(cd);
                   }
                   c = create(cd);
-                  registerCore(cd.isTransient(), name, c, false);
+                  registerCore(cd.isTransient(), name, c, false, false);
                 } catch (Throwable t) {
               /*    if (isZooKeeperAware()) {
                     try {
@@ -316,6 +316,20 @@ public class CoreContainer {
         ExecutorUtil.shutdownNowAndAwaitTermination(coreLoadExecutor);
       }
     }
+    
+    if (isZooKeeperAware()) {
+      // register in zk in background threads
+      Collection<SolrCore> cores = getCores();
+      if (cores != null) {
+        for (SolrCore core : cores) {
+          try {
+            zkSys.registerInZk(core, true);
+          } catch (Throwable t) {
+            SolrException.log(log, "Error registering SolrCore", t);
+          }
+        }
+      }
+    }
   }
 
   private static void checkForDuplicateCoreNames(List<CoreDescriptor> cds) {
@@ -343,21 +357,11 @@ public class CoreContainer {
     log.info("Shutting down CoreContainer instance="
         + System.identityHashCode(this));
     
-    if (isZooKeeperAware()) {
-      try {
-        zkSys.getZkController().publishAndWaitForDownStates();
-      } catch (KeeperException e) {
-        log.error("", e);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        log.warn("", e);
-      }
-    }
     isShutDown = true;
-
+    
     if (isZooKeeperAware()) {
-      zkSys.publishCoresAsDown(solrCores.getCores());
       cancelCoreRecoveries();
+      zkSys.publishCoresAsDown(solrCores.getCores());
     }
 
     try {
@@ -434,6 +438,10 @@ public class CoreContainer {
   }
 
   protected SolrCore registerCore(boolean isTransientCore, String name, SolrCore core, boolean returnPrevNotClosed) {
+    return registerCore(isTransientCore, name, core, returnPrevNotClosed, true);
+  }
+  
+  protected SolrCore registerCore(boolean isTransientCore, String name, SolrCore core, boolean returnPrevNotClosed, boolean registerInZk) {
     if( core == null ) {
       throw new RuntimeException( "Can not register a null core." );
     }
@@ -476,7 +484,9 @@ public class CoreContainer {
 
     if( old == null || old == core) {
       log.info( "registering core: "+name );
-      zkSys.registerInZk(core);
+      if (registerInZk) {
+        zkSys.registerInZk(core, false);
+      }
       return null;
     }
     else {
@@ -484,7 +494,9 @@ public class CoreContainer {
       if (!returnPrevNotClosed) {
         old.close();
       }
-      zkSys.registerInZk(core);
+      if (registerInZk) {
+        zkSys.registerInZk(core, false);
+      }
       return old;
     }
   }
@@ -778,10 +790,10 @@ public class CoreContainer {
     return null;
   }
 
-  /** 
+  /**
    * Gets a core by name and increase its refcount.
    *
-   * @see SolrCore#close() 
+   * @see SolrCore#close()
    * @param name the core name
    * @return the core if found, null if a SolrCore by this name does not exist
    * @exception SolrException if a SolrCore with this name failed to be initialized
@@ -800,7 +812,7 @@ public class CoreContainer {
     // OK, it's not presently in any list, is it in the list of dynamic cores but not loaded yet? If so, load it.
     CoreDescriptor desc = solrCores.getDynamicDescriptor(name);
     if (desc == null) { //Nope, no transient core with this name
-      
+
       // if there was an error initalizing this core, throw a 500
       // error with the details for clients attempting to access it.
       Exception e = getCoreInitFailures().get(name);
@@ -831,7 +843,7 @@ public class CoreContainer {
       }
     } catch(Exception ex){
       // remains to be seen how transient cores and such
-      // will work in SolrCloud mode, but just to be future 
+      // will work in SolrCloud mode, but just to be future
       // proof...
       /*if (isZooKeeperAware()) {
         try {
@@ -851,26 +863,25 @@ public class CoreContainer {
     return core;
   }
 
-  // ---------------- Multicore self related methods ---------------
-  /** 
-   * Creates a CoreAdminHandler for this MultiCore.
-   * @return a CoreAdminHandler
-   */
-  protected CoreAdminHandler createMultiCoreHandler(final String adminHandlerClass) {
-    return loader.newAdminHandlerInstance(CoreContainer.this, adminHandlerClass);
+  // ---------------- CoreContainer request handlers --------------
+
+  protected <T> T createHandler(String handlerClass, Class<T> clazz) {
+    return loader.newInstance(handlerClass, clazz, null, new Class[] { CoreContainer.class }, new Object[] { this });
   }
 
   public CoreAdminHandler getMultiCoreHandler() {
     return coreAdminHandler;
   }
-  
+
   public CollectionsHandler getCollectionsHandler() {
     return collectionsHandler;
   }
-  
+
   public InfoHandler getInfoHandler() {
     return infoHandler;
   }
+
+  // ---------------- Multicore self related methods ---------------
 
   /**
    * the default core name, or null if there is no default core name
@@ -878,7 +889,7 @@ public class CoreContainer {
   public String getDefaultCoreName() {
     return cfg.getDefaultCoreName();
   }
-  
+
   // all of the following properties aren't synchronized
   // but this should be OK since they normally won't be changed rapidly
   @Deprecated

@@ -109,7 +109,7 @@ New Features
   set of distinct values and their count. This can also be specified per field
   e.g. 'f.field.stats.calcdistinct'. (Elran Dvir via shalin)
 
-* SOLR-5378: A new SuggestComponent that fully utilizes the Lucene suggester
+* SOLR-5378, SOLR-5528: A new SuggestComponent that fully utilizes the Lucene suggester
   module and adds pluggable dictionaries, payloads and better distributed support.
   This is intended to eventually replace the Suggester support through the
   SpellCheckComponent. (Areek Zillur, Varun Thacker via shalin)
@@ -128,6 +128,9 @@ New Features
 
 * SOLR-1871: The 'map' function query accepts a ValueSource as target and
   default value. (Chris Harris, shalin)
+
+* SOLR-5556: Allow class of CollectionsHandler and InfoHandler to be specified
+  in solr.xml. (Gregory Chanan, Alan Woodward)
 
 Bug Fixes
 ----------------------
@@ -207,6 +210,9 @@ Bug Fixes
 
 * SOLR-5543: Core swaps resulted in duplicate core entries in solr.xml when 
   using solr.xml persistence. (Bill Bell, Alan Woodward)
+
+* SOLR-5562: ConcurrentUpdateSolrServer constructor ignores supplied httpclient.
+  (Kyle Halliday via Mark Miller)
   
 Optimizations
 ----------------------
@@ -220,6 +226,9 @@ Optimizations
   logs (steffkes)
 
 * SOLR-5512: Optimize DocValuesFacets. (Robert Muir)
+
+* SOLR-5576: Improve concurrency when registering and waiting for all 
+  SolrCore's to register a DOWN state. (Christine Poerschke via Mark Miller)
 
 Other Changes
 ---------------------
@@ -255,6 +264,34 @@ Other Changes
 
 * SOLR-5555: LBHttpSolrServer and CloudSolrServer constructors don't need to
   declare MalformedURLExceptions (Sushil Bajracharya, Alan Woodward)
+
+* SOLR-5565: Raise default ZooKeeper session timeout to 30 seconds from 15
+  seconds. (Mark Miller)
+
+* SOLR-5574: CoreContainer shutdown publishes all nodes as down and waits to
+  see that and then again publishes all nodes as down. (Mark Miller)
+
+==================  4.6.1  ==================
+
+Versions of Major Components
+---------------------
+Apache Tika 1.4
+Carrot2 3.8.0
+Velocity 1.7 and Velocity Tools 2.0
+Apache UIMA 2.3.1
+Apache ZooKeeper 3.4.5
+
+Detailed Change List
+----------------------
+
+Bug Fixes
+----------------------
+
+* SOLR-5408: CollapsingQParserPlugin scores incorrectly when multiple sort criteria are used
+  (Brandon Chapman, Joel Bernstein)
+
+* SOLR-5416: CollapsingQParserPlugin breaks Tag/Exclude Faceting (David Boychuck, Joel Bernstein)
+
 
 ==================  4.6.0 ==================
 
