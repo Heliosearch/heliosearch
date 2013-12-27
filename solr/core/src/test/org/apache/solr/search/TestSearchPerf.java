@@ -145,6 +145,7 @@ public class TestSearchPerf extends AbstractSolrTestCase {
     for (int i=0; i<iter; i++) {
       DocSet set = searcher.getDocSetNC(q, null);
       ret += set.size();
+      set.decref();
     }
 
     long end = System.currentTimeMillis();

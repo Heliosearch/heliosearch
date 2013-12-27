@@ -1230,21 +1230,48 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   }
 
   // query must be positive
-  protected DocSet getDocSetNC(Query query, DocSet filter) throws IOException {
-    DocSetCollector collector = new DocSetCollector(smallSetSize, maxDoc());
+  DocSet getDocSetNC(Query query, DocSet filter) throws IOException {
+    try (
+        DocSetCollector collector = new DocSetCollector(smallSetSize, maxDoc())
+    ) {
 
-    try {
       if (filter==null) {
-        super.search(query, null, collector);
+        if (query instanceof TermQuery) {
+          Term t = ((TermQuery)query).getTerm();
+          // TODO: use MultiTermsEnum or look up all at once so we can see the idf ahead of time?
+          for (final AtomicReaderContext leaf : leafContexts) {
+            final AtomicReader reader = leaf.reader();
+            collector.setNextReader(leaf);
+            Fields fields = reader.fields();
+            if (fields == null) continue;
+            Terms terms = fields.terms(t.field());
+            if (terms == null) continue;
+            BytesRef termBytes = t.bytes();
+
+            final TermsEnum termsEnum = terms.iterator(null);
+            if (!termsEnum.seekExact(termBytes)) continue;
+            Bits liveDocs = reader.getLiveDocs();
+            DocsEnum docsEnum = termsEnum.docs(liveDocs, null, DocsEnum.FLAG_NONE);
+            // docsEnum currently defined to not return null
+            int docid;
+            while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+              collector.collect(docid);
+            }
+
+          }
+        } else {
+          super.search(query,null,collector);
+        }
+        return collector.getDocSet();
+
       } else {
         Filter luceneFilter = filter.getTopFilter();
         super.search(query, luceneFilter, collector);
+        return collector.getDocSet();
       }
-      return collector.getDocSet();
-    } finally {
-      collector.close();
     }
   }
+
 
 
   /**

@@ -26,7 +26,7 @@ import org.apache.lucene.util.OpenBitSet;
 import java.io.IOException;
 
 /**
- *
+ *DocSetCollector must be closed after use.
  */
 
 public class DocSetCollector extends Collector implements AutoCloseable {
@@ -101,6 +101,7 @@ public class DocSetCollector extends Collector implements AutoCloseable {
   public void close() {
     if (bits != null) {
       bits.decref();
+      bits = null;
     }
   }
 }

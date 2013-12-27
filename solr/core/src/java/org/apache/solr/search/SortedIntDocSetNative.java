@@ -685,7 +685,7 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
       @Override
       public DocIdSet getDocIdSet(final AtomicReaderContext context, final Bits acceptDocs) {
         AtomicReader reader = context.reader();
-        // all Solr DocSets that are used as filters only include live docs
+        // all Solr DocSets that are used as filters already only include live docs
         final Bits acceptDocs2 = acceptDocs == null ? null : (reader.getLiveDocs() == acceptDocs ? null : acceptDocs);
 
         final int base = context.docBase;
