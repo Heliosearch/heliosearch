@@ -142,6 +142,11 @@ public final class SolrCore implements SolrInfoMBean {
   
   public static Logger log = LoggerFactory.getLogger(SolrCore.class);
 
+  static {
+    // effectively disable max clauses on boolean query
+    BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
+  }
+
   private String name;
   private String logid; // used to show what name is set
   private CoreDescriptor coreDescriptor;
@@ -168,19 +173,6 @@ public final class SolrCore implements SolrInfoMBean {
   private final ReentrantLock ruleExpiryLock;
 
   public long getStartTime() { return startTime; }
-
-  static int boolean_query_max_clause_count = Integer.MIN_VALUE;
-  // only change the BooleanQuery maxClauseCount once for ALL cores...
-  void booleanQueryMaxClauseCount()  {
-    synchronized(SolrCore.class) {
-      if (boolean_query_max_clause_count == Integer.MIN_VALUE) {
-        boolean_query_max_clause_count = solrConfig.booleanQueryMaxClauseCount;
-        BooleanQuery.setMaxClauseCount(boolean_query_max_clause_count);
-      } else if (boolean_query_max_clause_count != solrConfig.booleanQueryMaxClauseCount ) {
-        log.debug("BooleanQuery.maxClauseCount= " +boolean_query_max_clause_count+ ", ignoring " +solrConfig.booleanQueryMaxClauseCount);
-      }
-    }
-  }
 
   
   /**
@@ -732,8 +724,7 @@ public final class SolrCore implements SolrInfoMBean {
     this.startTime = System.currentTimeMillis();
     this.maxWarmingSearchers = config.maxWarmingSearchers;
 
-    booleanQueryMaxClauseCount();
-  
+
     final CountDownLatch latch = new CountDownLatch(1);
 
     try {

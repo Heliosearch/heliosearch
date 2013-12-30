@@ -156,7 +156,7 @@ public class SolrConfig extends Config {
     // Parse indexConfig section, using mainIndex as backup in case old config is used
     indexConfig = new SolrIndexConfig(this, "indexConfig", mainIndexConfig);
    
-    booleanQueryMaxClauseCount = getInt("query/maxBooleanClauses", BooleanQuery.getMaxClauseCount());
+
     log.info("Using Lucene MatchVersion: " + luceneMatchVersion);
 
     // Warn about deprecated / discontinued parameters
@@ -301,7 +301,6 @@ public class SolrConfig extends Config {
   }
 
   /* The set of materialized parameters: */
-  public final int booleanQueryMaxClauseCount;
 // SolrIndexSearcher - nutch optimizer -- Disabled since 3.1
 //  public final boolean filtOptEnabled;
 //  public final int filtOptCacheSize;
