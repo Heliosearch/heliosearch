@@ -18,9 +18,9 @@
 package org.apache.solr.schema;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.docvalues.DocTermsIndexDocValues;
-import org.apache.lucene.queries.function.valuesource.FieldCacheSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
+import org.apache.solr.search.function.valuesource.FieldCacheSource;
 
 import java.io.IOException;
 import java.util.Map;
@@ -37,8 +37,8 @@ public class StrFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    return new DocTermsIndexDocValues(this, readerContext, field) {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    return new DocTermsIndexFuncValues(this, readerContext, field) {
 
       @Override
       protected String toTerm(String readableValue) {

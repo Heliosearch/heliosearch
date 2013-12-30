@@ -31,8 +31,8 @@ import com.spatial4j.core.shape.Shape;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.index.StorableField;
-import org.apache.lucene.queries.function.FunctionQuery;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FunctionQuery;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.FilteredQuery;
 import org.apache.lucene.search.Query;
@@ -46,6 +46,7 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.response.TextResponseWriter;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.SpatialOptions;
+import org.apache.solr.search.function.ValueSourceAdapter;
 import org.apache.solr.util.MapListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -242,9 +243,9 @@ public abstract class AbstractSpatialFieldType<T extends SpatialStrategy> extend
     ValueSource valueSource;
     if ("distance".equals(score)) {
       double multiplier = 1.0;//TODO support units=kilometers
-      valueSource = strategy.makeDistanceValueSource(spatialArgs.getShape().getCenter(), multiplier);
+      valueSource = new ValueSourceAdapter(strategy.makeDistanceValueSource(spatialArgs.getShape().getCenter(), multiplier));
     } else if ("recipDistance".equals(score)) {
-      valueSource = strategy.makeRecipDistanceValueSource(spatialArgs.getShape());
+      valueSource = new ValueSourceAdapter(strategy.makeRecipDistanceValueSource(spatialArgs.getShape()));
     } else {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "'score' local-param must be one of 'none', 'distance', or 'recipDistance'");
     }

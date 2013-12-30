@@ -17,7 +17,12 @@ package org.apache.solr.search.grouping.distributed.command;
  * limitations under the License.
  */
 
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.TopDocsCollector;
+import org.apache.lucene.search.TopFieldCollector;
+import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.QParser;
@@ -59,7 +64,7 @@ public class QueryCommand implements Command<QueryCommandResult> {
      * The groupQueryString is parsed into a query.
      *
      * @param groupQueryString The group query string to parse
-     * @param request The current request
+     * @param request          The current request
      * @return this
      */
     public Builder setQuery(String groupQueryString, SolrQueryRequest request) throws SyntaxError {

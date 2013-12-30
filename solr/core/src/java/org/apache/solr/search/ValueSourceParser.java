@@ -19,13 +19,13 @@ package org.apache.solr.search;
 import com.spatial4j.core.distance.DistanceUtils;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queries.function.BoostedQuery;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.BoolDocValues;
-import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
-import org.apache.lucene.queries.function.docvalues.LongDocValues;
-import org.apache.lucene.queries.function.valuesource.*;
+import org.apache.solr.search.function.BoostedQuery;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.BoolFuncValues;
+import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
+import org.apache.solr.search.function.funcvalues.LongDocValues;
+import org.apache.solr.search.function.valuesource.*;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.SortField;
@@ -186,7 +186,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
             return "mod";
           }
           @Override
-          protected float func(int doc, FunctionValues aVals, FunctionValues bVals) {
+          protected float func(int doc, FuncValues aVals, FuncValues bVals) {
             return aVals.floatVal(doc) % bVals.floatVal(doc);
           }
         };
@@ -215,7 +215,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
           }
 
           @Override
-          protected float func(int doc, FunctionValues vals) {
+          protected float func(int doc, FuncValues vals) {
             return Math.abs(vals.floatVal(doc));
           }
         };
@@ -251,7 +251,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
           }
 
           @Override
-          protected float func(int doc, FunctionValues aVals, FunctionValues bVals) {
+          protected float func(int doc, FuncValues aVals, FuncValues bVals) {
             return aVals.floatVal(doc) - bVals.floatVal(doc);
           }
         };
@@ -400,133 +400,133 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
 
     addParser(new DoubleParser("rad") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return vals.doubleVal(doc) * DistanceUtils.DEGREES_TO_RADIANS;
       }
     });
     addParser(new DoubleParser("deg") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return vals.doubleVal(doc) * DistanceUtils.RADIANS_TO_DEGREES;
       }
     });
     addParser(new DoubleParser("sqrt") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.sqrt(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("cbrt") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.cbrt(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("log") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.log10(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("ln") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.log(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("exp") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.exp(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("sin") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.sin(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("cos") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.cos(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("tan") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.tan(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("asin") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.asin(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("acos") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.acos(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("atan") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.atan(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("sinh") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.sinh(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("cosh") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.cosh(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("tanh") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.tanh(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("ceil") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.ceil(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("floor") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.floor(vals.doubleVal(doc));
       }
     });
     addParser(new DoubleParser("rint") {
       @Override
-      public double func(int doc, FunctionValues vals) {
+      public double func(int doc, FuncValues vals) {
         return Math.rint(vals.doubleVal(doc));
       }
     });
     addParser(new Double2Parser("pow") {
       @Override
-      public double func(int doc, FunctionValues a, FunctionValues b) {
+      public double func(int doc, FuncValues a, FuncValues b) {
         return Math.pow(a.doubleVal(doc), b.doubleVal(doc));
       }
     });
     addParser(new Double2Parser("hypot") {
       @Override
-      public double func(int doc, FunctionValues a, FunctionValues b) {
+      public double func(int doc, FuncValues a, FuncValues b) {
         return Math.hypot(a.doubleVal(doc), b.doubleVal(doc));
       }
     });
     addParser(new Double2Parser("atan2") {
       @Override
-      public double func(int doc, FunctionValues a, FunctionValues b) {
+      public double func(int doc, FuncValues a, FuncValues b) {
         return Math.atan2(a.doubleVal(doc), b.doubleVal(doc));
       }
     });
@@ -676,7 +676,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
             return "exists";
           }
           @Override
-          protected boolean func(int doc, FunctionValues vals) {
+          protected boolean func(int doc, FuncValues vals) {
             return vals.exists(doc);
           }
         };
@@ -689,7 +689,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
         ValueSource vs = fp.parseValueSource();
         return new SimpleBoolFunction(vs) {
           @Override
-          protected boolean func(int doc, FunctionValues vals) {
+          protected boolean func(int doc, FuncValues vals) {
             return !vals.boolVal(doc);
           }
           @Override
@@ -711,8 +711,8 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
             return "and";
           }
           @Override
-          protected boolean func(int doc, FunctionValues[] vals) {
-            for (FunctionValues dv : vals)
+          protected boolean func(int doc, FuncValues[] vals) {
+            for (FuncValues dv : vals)
               if (!dv.boolVal(doc)) return false;
             return true;
           }
@@ -730,8 +730,8 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
             return "or";
           }
           @Override
-          protected boolean func(int doc, FunctionValues[] vals) {
-            for (FunctionValues dv : vals)
+          protected boolean func(int doc, FuncValues[] vals) {
+            for (FuncValues dv : vals)
               if (dv.boolVal(doc)) return true;
             return false;
           }
@@ -749,9 +749,9 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
             return "xor";
           }
           @Override
-          protected boolean func(int doc, FunctionValues[] vals) {
+          protected boolean func(int doc, FuncValues[] vals) {
             int nTrue=0, nFalse=0;
-            for (FunctionValues dv : vals) {
+            for (FuncValues dv : vals) {
               if (dv.boolVal(doc)) nTrue++;
               else nFalse++;
             }
@@ -935,7 +935,7 @@ class DateValueSourceParser extends ValueSourceParser {
         }
 
         @Override
-        protected float func(int doc, FunctionValues aVals, FunctionValues bVals) {
+        protected float func(int doc, FuncValues aVals, FuncValues bVals) {
           return ms1 - bVals.longVal(doc);
         }
       };
@@ -949,7 +949,7 @@ class DateValueSourceParser extends ValueSourceParser {
         }
 
         @Override
-        protected float func(int doc, FunctionValues aVals, FunctionValues bVals) {
+        protected float func(int doc, FuncValues aVals, FuncValues bVals) {
           return aVals.longVal(doc) - ms2;
         }
       };
@@ -963,7 +963,7 @@ class DateValueSourceParser extends ValueSourceParser {
         }
 
         @Override
-        protected float func(int doc, FunctionValues aVals, FunctionValues bVals) {
+        protected float func(int doc, FuncValues aVals, FuncValues bVals) {
           return aVals.longVal(doc) - bVals.longVal(doc);
         }
       };
@@ -992,7 +992,7 @@ class LongConstValueSource extends ConstNumberSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
     return new LongDocValues(this) {
       @Override
       public float floatVal(int doc) {
@@ -1081,7 +1081,7 @@ abstract class DoubleParser extends NamedParser {
     super(name);
   }
 
-  public abstract double func(int doc, FunctionValues vals);
+  public abstract double func(int doc, FuncValues vals);
 
   @Override
   public ValueSource parse(FunctionQParser fp) throws SyntaxError {
@@ -1099,9 +1099,9 @@ abstract class DoubleParser extends NamedParser {
     }
 
     @Override
-    public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-      final FunctionValues vals =  source.getValues(context, readerContext);
-      return new DoubleDocValues(this) {
+    public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+      final FuncValues vals =  source.getValues(context, readerContext);
+      return new DoubleFuncValues(this) {
         @Override
         public double doubleVal(int doc) {
           return func(doc, vals);
@@ -1121,7 +1121,7 @@ abstract class Double2Parser extends NamedParser {
     super(name);
   }
 
-  public abstract double func(int doc, FunctionValues a, FunctionValues b);
+  public abstract double func(int doc, FuncValues a, FuncValues b);
 
   @Override
   public ValueSource parse(FunctionQParser fp) throws SyntaxError {
@@ -1147,10 +1147,10 @@ abstract class Double2Parser extends NamedParser {
     }
 
     @Override
-    public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-      final FunctionValues aVals =  a.getValues(context, readerContext);
-      final FunctionValues bVals =  b.getValues(context, readerContext);
-      return new DoubleDocValues(this) {
+    public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+      final FuncValues aVals =  a.getValues(context, readerContext);
+      final FuncValues bVals =  b.getValues(context, readerContext);
+      return new DoubleFuncValues(this) {
          @Override
         public double doubleVal(int doc) {
           return func(doc, aVals, bVals);
@@ -1201,8 +1201,8 @@ class BoolConstValueSource extends ConstNumberSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    return new BoolDocValues(this) {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    return new BoolFuncValues(this) {
       @Override
       public boolean boolVal(int doc) {
         return constant;
@@ -1262,7 +1262,7 @@ class TestValueSource extends ValueSource {
   }
   
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
     if (context.get(this) == null) {
       SolrRequestInfo requestInfo = SolrRequestInfo.getRequestInfo();
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "testfunc: unweighted value source detected.  delegate="+source + " request=" + (requestInfo==null ? "null" : requestInfo.getReq()));

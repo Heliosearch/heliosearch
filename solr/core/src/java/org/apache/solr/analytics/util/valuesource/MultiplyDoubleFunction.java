@@ -17,8 +17,8 @@
 
 package org.apache.solr.analytics.util.valuesource;
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.analytics.util.AnalyticsParams;
 
 /**
@@ -37,9 +37,9 @@ public class MultiplyDoubleFunction extends MultiDoubleFunction {
   }
 
   @Override
-  protected double func(int doc, FunctionValues[] valsArr) {
+  protected double func(int doc, FuncValues[] valsArr) {
     double product = 1d;
-    for (FunctionValues val : valsArr) {
+    for (FuncValues val : valsArr) {
       product *= val.doubleVal(doc);
     }
     return product;

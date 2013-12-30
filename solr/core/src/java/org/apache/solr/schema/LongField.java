@@ -17,10 +17,8 @@
 
 package org.apache.solr.schema;
 
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.LongFieldSource;
-import org.apache.lucene.index.GeneralField;
-import org.apache.lucene.index.IndexableField;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.LongFieldSource;
 import org.apache.lucene.index.StorableField;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;

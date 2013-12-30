@@ -105,13 +105,13 @@ public class IgnoreAcceptDocsQuery extends Query {
 
   @Override
   public int hashCode() {
-    return q.hashCode()*31;
+    return q.hashCode() * 31;
   }
 
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof IgnoreAcceptDocsQuery)) return false;
-    IgnoreAcceptDocsQuery other = (IgnoreAcceptDocsQuery)o;
+    IgnoreAcceptDocsQuery other = (IgnoreAcceptDocsQuery) o;
     return q.equals(other.q);
   }
 

@@ -23,10 +23,8 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.util.NamedList;
-import org.apache.solr.schema.FieldType;
 
 /**
  * StatsValue defines the interface for the collection of statistical values about fields and facets.

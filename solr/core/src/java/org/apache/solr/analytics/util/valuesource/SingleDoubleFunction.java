@@ -21,9 +21,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 
 /**
  * Abstract {@link ValueSource} implementation which wraps one ValueSource
@@ -42,12 +42,12 @@ public abstract class SingleDoubleFunction extends ValueSource {
   }
 
   abstract String name();
-  abstract double func(int doc, FunctionValues vals);
+  abstract double func(int doc, FuncValues vals);
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues vals =  source.getValues(context, readerContext);
-    return new DoubleDocValues(this) {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues vals =  source.getValues(context, readerContext);
+    return new DoubleFuncValues(this) {
       @Override
       public double doubleVal(int doc) {
         return func(doc, vals);

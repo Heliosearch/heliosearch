@@ -1,6 +1,6 @@
 package org.apache.solr.search;
 
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.*;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.index.IndexReader;

@@ -18,10 +18,10 @@ package org.apache.solr.search.function.distance;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.FloatDocValues;
 import org.apache.lucene.search.spell.StringDistance;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 
 import java.io.IOException;
 import java.util.Map;
@@ -44,10 +44,10 @@ public class StringDistanceFunction extends ValueSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues str1DV = str1.getValues(context, readerContext);
-    final FunctionValues str2DV = str2.getValues(context, readerContext);
-    return new FloatDocValues(this) {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues str1DV = str1.getValues(context, readerContext);
+    final FuncValues str2DV = str2.getValues(context, readerContext);
+    return new FloatFuncValues(this) {
 
       @Override
       public float floatVal(int doc) {
@@ -59,7 +59,7 @@ public class StringDistanceFunction extends ValueSource {
         StringBuilder sb = new StringBuilder();
         sb.append("strdist").append('(');
         sb.append(str1DV.toString(doc)).append(',').append(str2DV.toString(doc))
-                .append(", dist=").append(dist.getClass().getName());
+            .append(", dist=").append(dist.getClass().getName());
         sb.append(')');
         return sb.toString();
       }

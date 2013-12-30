@@ -17,8 +17,6 @@
 
 package org.apache.solr.search.join;
 
-import org.apache.lucene.search.CachingWrapperFilter;
-import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.QueryWrapperFilter;
@@ -34,8 +32,10 @@ import org.apache.solr.search.SolrConstantScoreQuery;
 import org.apache.solr.search.SyntaxError;
 
 class BlockJoinParentQParser extends QParser {
-  /** implementation detail subject to change */
-  public String CACHE_NAME="perSegFilter";
+  /**
+   * implementation detail subject to change
+   */
+  public String CACHE_NAME = "perSegFilter";
 
   protected String getParentFilterLocalParamName() {
     return "which";
@@ -53,10 +53,10 @@ class BlockJoinParentQParser extends QParser {
 
     String queryText = localParams.get(QueryParsing.V);
     // there is no child query, return parent filter from cache
-    if (queryText == null || queryText.length()==0) {
-                  SolrConstantScoreQuery wrapped = new SolrConstantScoreQuery(getFilter(parentQ));
-                  wrapped.setCache(false);
-                  return wrapped;
+    if (queryText == null || queryText.length() == 0) {
+      SolrConstantScoreQuery wrapped = new SolrConstantScoreQuery(getFilter(parentQ));
+      wrapped.setCache(false);
+      return wrapped;
     }
     QParser childrenParser = subQuery(queryText, null);
     Query childrenQuery = childrenParser.getQuery();

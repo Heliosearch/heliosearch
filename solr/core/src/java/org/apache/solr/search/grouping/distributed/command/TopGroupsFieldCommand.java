@@ -19,13 +19,13 @@ package org.apache.solr.search.grouping.distributed.command;
 
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.grouping.GroupDocs;
-import org.apache.lucene.search.grouping.SearchGroup;
-import org.apache.lucene.search.grouping.TopGroups;
-import org.apache.lucene.search.grouping.term.TermSecondPassGroupingCollector;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.grouping.Command;
+import org.apache.solr.search.grouping.GroupDocs;
+import org.apache.solr.search.grouping.SearchGroup;
+import org.apache.solr.search.grouping.TermSecondPassGroupingCollector;
+import org.apache.solr.search.grouping.TopGroups;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -84,7 +84,7 @@ public class TopGroupsFieldCommand implements Command<TopGroups<BytesRef>> {
     }
 
     public TopGroupsFieldCommand build() {
-      if (field == null || groupSort == null ||  sortWithinGroup == null || firstPhaseGroups == null ||
+      if (field == null || groupSort == null || sortWithinGroup == null || firstPhaseGroups == null ||
           maxDocPerGroup == null) {
         throw new IllegalStateException("All required fields must be set");
       }
@@ -127,7 +127,7 @@ public class TopGroupsFieldCommand implements Command<TopGroups<BytesRef>> {
 
     List<Collector> collectors = new ArrayList<Collector>();
     secondPassCollector = new TermSecondPassGroupingCollector(
-          field.getName(), firstPhaseGroups, groupSort, sortWithinGroup, maxDocPerGroup, needScores, needMaxScore, true
+        field.getName(), firstPhaseGroups, groupSort, sortWithinGroup, maxDocPerGroup, needScores, needMaxScore, true
     );
     collectors.add(secondPassCollector);
     return collectors;

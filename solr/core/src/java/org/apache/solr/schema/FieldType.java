@@ -28,7 +28,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.index.FieldInfo.IndexOptions;
 import org.apache.lucene.index.StorableField;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.DocTermOrdsRangeFilter;
 import org.apache.lucene.search.DocTermOrdsRewriteMethod;

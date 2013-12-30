@@ -17,14 +17,21 @@ package org.apache.solr.search.grouping;
  * limitations under the License.
  */
 
-import org.apache.lucene.search.*;
-import org.apache.lucene.search.grouping.AbstractAllGroupHeadsCollector;
-import org.apache.lucene.search.grouping.term.TermAllGroupHeadsCollector;
+import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.Filter;
+import org.apache.lucene.search.MultiCollector;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TimeLimitingCollector;
+import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.util.NamedList;
-import org.apache.solr.search.*;
-import org.apache.solr.search.SolrIndexSearcher.ProcessedFilter;
+import org.apache.solr.search.BitDocSet;
+import org.apache.solr.search.DocSet;
+import org.apache.solr.search.DocSetCollector;
+import org.apache.solr.search.DocSetDelegateCollector;
 import org.apache.solr.search.QueryUtils;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.SolrIndexSearcher.ProcessedFilter;
 import org.apache.solr.search.grouping.distributed.shardresultserializer.ShardResultTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,8 +141,8 @@ public class CommandHandler implements AutoCloseable {
       collectors.addAll(command.create());
     }
 
-    try(
-      ProcessedFilter filter = searcher.getProcessedFilter(queryCommand.getFilter(), queryCommand.getFilterList());
+    try (
+        ProcessedFilter filter = searcher.getProcessedFilter(queryCommand.getFilter(), queryCommand.getFilterList());
     ) {
       Query query = QueryUtils.makeQueryable(queryCommand.getQuery());
 
@@ -171,14 +178,14 @@ public class CommandHandler implements AutoCloseable {
     int maxDoc = searcher.maxDoc();
     DocSetCollector docSetCollector = null;
     try {
-    if (collectors.isEmpty()) {
-      docSetCollector = new DocSetCollector((maxDoc >> 6)+5, maxDoc);
-    } else {
-      Collector wrappedCollectors = MultiCollector.wrap(collectors.toArray(new Collector[collectors.size()]));
-      docSetCollector = new DocSetDelegateCollector((maxDoc >> 6)+5, maxDoc, wrappedCollectors);
-    }
-    searchWithTimeLimiter(query, filter, docSetCollector);
-    return docSetCollector.getDocSet();
+      if (collectors.isEmpty()) {
+        docSetCollector = new DocSetCollector((maxDoc >> 6) + 5, maxDoc);
+      } else {
+        Collector wrappedCollectors = MultiCollector.wrap(collectors.toArray(new Collector[collectors.size()]));
+        docSetCollector = new DocSetDelegateCollector((maxDoc >> 6) + 5, maxDoc, wrappedCollectors);
+      }
+      searchWithTimeLimiter(query, filter, docSetCollector);
+      return docSetCollector.getDocSet();
     } finally {
       docSetCollector.close();
     }
@@ -194,13 +201,13 @@ public class CommandHandler implements AutoCloseable {
   }
 
   /**
-   * Invokes search with the specified filter and collector.  
+   * Invokes search with the specified filter and collector.
    * If a time limit has been specified then wrap the collector in the TimeLimitingCollector
    */
-  private void searchWithTimeLimiter(final Query query, 
-                                     final ProcessedFilter filter, 
+  private void searchWithTimeLimiter(final Query query,
+                                     final ProcessedFilter filter,
                                      Collector collector) throws IOException {
-    if (queryCommand.getTimeAllowed() > 0 ) {
+    if (queryCommand.getTimeAllowed() > 0) {
       collector = new TimeLimitingCollector(collector, TimeLimitingCollector.getGlobalCounter(), queryCommand.getTimeAllowed());
     }
 
@@ -219,7 +226,7 @@ public class CommandHandler implements AutoCloseable {
       searcher.search(query, luceneFilter, collector);
     } catch (TimeLimitingCollector.TimeExceededException x) {
       partialResults = true;
-      logger.warn( "Query: " + query + "; " + x.getMessage() );
+      logger.warn("Query: " + query + "; " + x.getMessage());
     }
 
     if (includeHitCount) {

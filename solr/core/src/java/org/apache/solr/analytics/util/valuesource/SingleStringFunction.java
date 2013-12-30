@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.StrDocValues;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.StrFuncValues;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.mutable.MutableValue;
-import org.apache.lucene.util.mutable.MutableValueStr;
+import org.apache.solr.search.mutable.MutableValue;
+import org.apache.solr.search.mutable.MutableValueStr;
 
 /**
  * Abstract {@link ValueSource} implementation which wraps one ValueSource
@@ -45,12 +45,12 @@ public abstract class SingleStringFunction extends ValueSource {
   }
 
   abstract String name();
-  abstract CharSequence func(int doc, FunctionValues vals);
+  abstract CharSequence func(int doc, FuncValues vals);
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues vals =  source.getValues(context, readerContext);
-    return new StrDocValues(this) {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues vals =  source.getValues(context, readerContext);
+    return new StrFuncValues(this) {
       @Override
       public String strVal(int doc) {
         CharSequence cs = func(doc, vals);

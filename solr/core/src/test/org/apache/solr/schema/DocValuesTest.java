@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.FieldInfo.DocValuesType;
 import org.apache.lucene.index.FieldInfos;
-import org.apache.lucene.queries.function.FunctionValues;
+import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.search.SolrIndexSearcher;
@@ -69,7 +69,7 @@ public class DocValuesTest extends SolrTestCaseJ4 {
         final SchemaField doubleDv = schema.getField("doubledv");
         final SchemaField longDv = schema.getField("longdv");
 
-        FunctionValues values = floatDv.getType().getValueSource(floatDv, null).getValues(null, searcher.getAtomicReader().leaves().get(0));
+        FuncValues values = floatDv.getType().getValueSource(floatDv, null).getValues(null, searcher.getAtomicReader().leaves().get(0));
         assertEquals(1f, values.floatVal(0), 0f);
         assertEquals(1f, values.objectVal(0));
         values = intDv.getType().getValueSource(intDv, null).getValues(null, searcher.getAtomicReader().leaves().get(0));

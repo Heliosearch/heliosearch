@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.util.mutable.MutableValue;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.mutable.MutableValue;
 
 /**
  * <code>StatsCollector</code> implementations reduce a list of Objects to a single value.
@@ -43,7 +43,7 @@ public interface StatsCollector {
   void setNextReader(AtomicReaderContext context) throws IOException;
   
   MutableValue getValue();
-  FunctionValues getFunction();
+  FuncValues getFunction();
   
   /**
    * @return The set of statistics being computed by the stats collector.

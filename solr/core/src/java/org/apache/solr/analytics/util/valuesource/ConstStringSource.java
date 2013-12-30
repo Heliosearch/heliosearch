@@ -17,7 +17,7 @@
 
 package org.apache.solr.analytics.util.valuesource;
 
-import org.apache.lucene.queries.function.valuesource.LiteralValueSource;
+import org.apache.solr.search.function.valuesource.LiteralValueSource;
 import org.apache.solr.analytics.util.AnalyticsParams;
 
 /**

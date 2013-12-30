@@ -17,14 +17,12 @@
 
 package org.apache.solr.schema;
 
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.FloatFieldSource;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.FloatFieldSource;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.search.QParser;
-import org.apache.lucene.index.GeneralField;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.StorableField;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;

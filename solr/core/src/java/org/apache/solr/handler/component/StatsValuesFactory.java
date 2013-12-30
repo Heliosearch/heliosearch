@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.*;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.EnumFieldValue;
 import org.apache.solr.common.SolrException;
@@ -84,7 +84,7 @@ abstract class AbstractStatsValues<T> implements StatsValues {
   protected long countDistinct;
   protected Set<T> distinctValues;
   private ValueSource valueSource;
-  protected FunctionValues values;
+  protected FuncValues values;
   protected boolean calcDistinct = false;
   
   // facetField   facetValue

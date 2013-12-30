@@ -16,7 +16,7 @@
  */
 package org.apache.solr.search;
 
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;

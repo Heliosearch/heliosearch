@@ -31,9 +31,9 @@ import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.search.grouping.AbstractAllGroupHeadsCollector;
-import org.apache.lucene.search.grouping.term.TermAllGroupsCollector;
-import org.apache.lucene.search.grouping.term.TermGroupFacetCollector;
+import org.apache.solr.search.grouping.AbstractAllGroupHeadsCollector;
+import org.apache.solr.search.grouping.TermAllGroupsCollector;
+import org.apache.solr.search.grouping.TermGroupFacetCollector;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.FixedBitSet;
@@ -63,7 +63,6 @@ import org.apache.solr.schema.SortableFloatField;
 import org.apache.solr.schema.SortableIntField;
 import org.apache.solr.schema.SortableLongField;
 import org.apache.solr.schema.TrieField;
-import org.apache.solr.search.BitDocSet;
 import org.apache.solr.search.BitDocSetNative;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocSet;
@@ -256,7 +255,6 @@ public class SimpleFacetsHS {
    *
    * @see #getFacetQueryCounts
    * @see #getFacetFieldCounts
-   * @see #getFacetDateCounts
    * @see #getFacetRangeCounts
    * @see org.apache.solr.common.params.FacetParams#FACET
    * @return a NamedList of Facet Count info or null
@@ -353,7 +351,7 @@ public class SimpleFacetsHS {
 
   public NamedList<Integer> getTermCounts(String field, DocSet base) throws IOException {
     int offset = params.getFieldInt(field, FacetParams.FACET_OFFSET, 0);
-    int limit = params.getFieldInt(field, FacetParams.FACET_LIMIT, 100);
+    int limit = params.getFieldInt(field, FacetParams.FACET_LIMIT, 10);
     if (limit == 0) return new NamedList<Integer>();
     Integer mincount = params.getFieldInt(field, FacetParams.FACET_MINCOUNT);
     if (mincount==null) {
@@ -968,9 +966,7 @@ public class SimpleFacetsHS {
    * SolrParams
    *
    * @see org.apache.solr.common.params.FacetParams#FACET_DATE
-   * @deprecated Use getFacetRangeCounts which is more generalized
    */
-  @Deprecated
   public NamedList<Object> getFacetDateCounts()
     throws IOException, SyntaxError {
 
@@ -991,9 +987,8 @@ public class SimpleFacetsHS {
   }
 
   /**
-   * @deprecated Use getFacetRangeCounts which is more generalized
+   * Use getFacetRangeCounts which is more generalized
    */
-  @Deprecated
   public void getFacetDateCounts(String dateFacet, NamedList<Object> resOuter)
       throws IOException, SyntaxError {
 

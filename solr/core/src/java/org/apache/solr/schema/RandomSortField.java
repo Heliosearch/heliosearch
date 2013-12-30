@@ -20,15 +20,13 @@ package org.apache.solr.schema;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.lucene.index.GeneralField;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.StorableField;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.IntDocValues;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.IntFuncValues;
 import org.apache.lucene.search.*;
 import org.apache.solr.response.TextResponseWriter;
 import org.apache.solr.search.QParser;
@@ -165,8 +163,8 @@ public class RandomSortField extends FieldType {
     }
 
     @Override
-    public FunctionValues getValues(Map context, final AtomicReaderContext readerContext) throws IOException {
-      return new IntDocValues(this) {
+    public FuncValues getValues(Map context, final AtomicReaderContext readerContext) throws IOException {
+      return new IntFuncValues(this) {
           private final int seed = getSeed(field, readerContext);
           @Override
           public int intVal(int doc) {

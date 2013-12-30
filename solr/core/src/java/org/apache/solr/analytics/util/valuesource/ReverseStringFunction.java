@@ -18,8 +18,8 @@
 package org.apache.solr.analytics.util.valuesource;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.analytics.util.AnalyticsParams;
 
 /**
@@ -36,7 +36,7 @@ public class ReverseStringFunction extends SingleStringFunction {
     return NAME;
   }
 
-  protected CharSequence func(int doc, FunctionValues vals) {
+  protected CharSequence func(int doc, FuncValues vals) {
     String val = vals.strVal(doc);
     return val != null ? StringUtils.reverse(val) : null;
   }

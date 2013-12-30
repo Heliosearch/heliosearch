@@ -19,8 +19,8 @@ package org.apache.solr.schema;
 
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.StorableField;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.EnumFieldSource;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.EnumFieldSource;
 import org.apache.lucene.search.*;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;

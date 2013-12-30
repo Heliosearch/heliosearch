@@ -23,8 +23,8 @@ import java.util.Map;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.search.QParser;
@@ -64,7 +64,7 @@ public class ValueSourceAugmenter extends DocTransformer
     try {
       IndexReader reader = qparser.getReq().getSearcher().getIndexReader();
       readerContexts = reader.leaves();
-      docValuesArr = new FunctionValues[readerContexts.size()];
+      docValuesArr = new FuncValues[readerContexts.size()];
 
       searcher = qparser.getReq().getSearcher();
       fcontext = ValueSource.newContext(searcher);
@@ -78,7 +78,7 @@ public class ValueSourceAugmenter extends DocTransformer
   Map fcontext;
   SolrIndexSearcher searcher;
   List<AtomicReaderContext> readerContexts;
-  FunctionValues docValuesArr[];
+  FuncValues docValuesArr[];
 
 
   @Override
@@ -90,7 +90,7 @@ public class ValueSourceAugmenter extends DocTransformer
       // TODO: calculate this stuff just once across diff functions
       int idx = ReaderUtil.subIndex(docid, readerContexts);
       AtomicReaderContext rcontext = readerContexts.get(idx);
-      FunctionValues values = docValuesArr[idx];
+      FuncValues values = docValuesArr[idx];
       if (values == null) {
         docValuesArr[idx] = values = valueSource.getValues(fcontext, rcontext);
       }

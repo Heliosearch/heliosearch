@@ -26,9 +26,9 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StorableField;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.VectorValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.VectorValueSource;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.ComplexExplanation;
@@ -374,8 +374,8 @@ class SpatialDistanceQuery extends ExtendedQueryBase implements PostFilter {
     final int maxDoc;
     final float qWeight;
     int doc=-1;
-    final FunctionValues latVals;
-    final FunctionValues lonVals;
+    final FuncValues latVals;
+    final FuncValues lonVals;
     final Bits acceptDocs;
 
 

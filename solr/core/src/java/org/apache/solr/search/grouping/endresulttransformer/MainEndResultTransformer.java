@@ -18,11 +18,11 @@ package org.apache.solr.search.grouping.endresulttransformer;
  */
 
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.grouping.GroupDocs;
-import org.apache.lucene.search.grouping.TopGroups;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.handler.component.ResponseBuilder;
+import org.apache.solr.search.grouping.GroupDocs;
+import org.apache.solr.search.grouping.TopGroups;
 
 import java.util.Map;
 

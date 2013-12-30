@@ -22,10 +22,10 @@ import java.util.Locale;
 import java.util.Set;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.FunctionValues.ValueFiller;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.util.mutable.MutableValue;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.FuncValues.ValueFiller;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.mutable.MutableValue;
 
 /**
  * <code>MinMaxStatsCollector</code> computes the min, max, number of values and number of missing values.
@@ -38,7 +38,7 @@ public class MinMaxStatsCollector implements StatsCollector{
   protected MutableValue value;
   protected final Set<String> statsList;
   protected final ValueSource source;
-  protected FunctionValues function;
+  protected FuncValues function;
   protected ValueFiller valueFiller;
   
   public MinMaxStatsCollector(ValueSource source, Set<String> statsList) {
@@ -99,7 +99,7 @@ public class MinMaxStatsCollector implements StatsCollector{
   }
   
   @Override 
-  public FunctionValues getFunction() {
+  public FuncValues getFunction() {
     return function;
   }
   

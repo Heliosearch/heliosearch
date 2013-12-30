@@ -22,12 +22,12 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.StrDocValues;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.StrFuncValues;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.mutable.MutableValue;
-import org.apache.lucene.util.mutable.MutableValueStr;
+import org.apache.solr.search.mutable.MutableValue;
+import org.apache.solr.search.mutable.MutableValueStr;
 
 /**
  * Abstract {@link ValueSource} implementation which wraps multiple ValueSources
@@ -41,7 +41,7 @@ public abstract class MultiStringFunction extends ValueSource {
   }
 
   abstract protected String name();
-  abstract protected CharSequence func(int doc, FunctionValues[] valsArr);
+  abstract protected CharSequence func(int doc, FuncValues[] valsArr);
 
   @Override
   public String description() {
@@ -61,13 +61,13 @@ public abstract class MultiStringFunction extends ValueSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues[] valsArr = new FunctionValues[sources.length];
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues[] valsArr = new FuncValues[sources.length];
     for (int i=0; i<sources.length; i++) {
       valsArr[i] = sources[i].getValues(context, readerContext);
     }
 
-    return new StrDocValues(this) {
+    return new StrFuncValues(this) {
       @Override
       public String strVal(int doc) {
         CharSequence cs = func(doc, valsArr);
@@ -77,7 +77,7 @@ public abstract class MultiStringFunction extends ValueSource {
       @Override
       public boolean exists(int doc) {
         boolean exists = true;
-        for (FunctionValues val : valsArr) {
+        for (FuncValues val : valsArr) {
           exists = exists & val.exists(doc);
         }
         return exists;
@@ -102,7 +102,7 @@ public abstract class MultiStringFunction extends ValueSource {
         StringBuilder sb = new StringBuilder();
         sb.append(name()).append('(');
         boolean firstTime=true;
-        for (FunctionValues vals : valsArr) {
+        for (FuncValues vals : valsArr) {
           if (firstTime) {
             firstTime=false;
           } else {

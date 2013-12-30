@@ -18,16 +18,14 @@
 package org.apache.solr.schema;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.GeneralField;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.StorableField;
-import org.apache.lucene.queries.function.docvalues.DocTermsIndexDocValues;
+import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermRangeQuery;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.FieldCacheSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.FieldCacheSource;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.UnicodeUtil;
@@ -476,8 +474,8 @@ class DateFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    return new DocTermsIndexDocValues(this, readerContext, field) {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    return new DocTermsIndexFuncValues(this, readerContext, field) {
       @Override
       protected String toTerm(String readableValue) {
         // needed for frange queries to work properly

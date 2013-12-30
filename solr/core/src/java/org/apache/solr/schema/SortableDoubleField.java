@@ -17,20 +17,18 @@
 
 package org.apache.solr.schema;
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.DocTermsIndexDocValues;
-import org.apache.lucene.queries.function.valuesource.FieldCacheSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
+import org.apache.solr.search.function.valuesource.FieldCacheSource;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.UnicodeUtil;
-import org.apache.lucene.util.mutable.MutableValue;
-import org.apache.lucene.util.mutable.MutableValueDouble;
+import org.apache.solr.search.mutable.MutableValue;
+import org.apache.solr.search.mutable.MutableValueDouble;
 import org.apache.solr.search.QParser;
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.GeneralField;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.StorableField;
 import org.apache.solr.util.NumberUtils;
 import org.apache.solr.response.TextResponseWriter;
@@ -141,10 +139,10 @@ class SortableDoubleFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
     final double def = defVal;
 
-    return new DocTermsIndexDocValues(this, readerContext, field) {
+    return new DocTermsIndexFuncValues(this, readerContext, field) {
       private final BytesRef spare = new BytesRef();
 
       @Override

@@ -19,8 +19,8 @@ package org.apache.solr.handler.component;
 
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.grouping.SearchGroup;
-import org.apache.lucene.search.grouping.TopGroups;
+import org.apache.solr.search.grouping.SearchGroup;
+import org.apache.solr.search.grouping.TopGroups;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;

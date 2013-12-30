@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
-import org.apache.lucene.queries.function.valuesource.ConstNumberSource;
-import org.apache.lucene.queries.function.valuesource.ConstValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
+import org.apache.solr.search.function.valuesource.ConstNumberSource;
+import org.apache.solr.search.function.valuesource.ConstValueSource;
 import org.apache.solr.analytics.util.AnalyticsParams;
 
 /**
@@ -48,8 +48,8 @@ public class ConstDoubleSource extends ConstNumberSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    return new DoubleDocValues(this) {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    return new DoubleFuncValues(this) {
       @Override
       public double doubleVal(int doc) {
         return constant;

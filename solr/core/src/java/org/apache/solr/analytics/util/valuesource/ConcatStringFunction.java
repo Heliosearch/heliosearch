@@ -17,8 +17,8 @@
 
 package org.apache.solr.analytics.util.valuesource;
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.analytics.util.AnalyticsParams;
 
 /**
@@ -37,9 +37,9 @@ public class ConcatStringFunction extends MultiStringFunction {
   }
 
   @Override
-  protected String func(int doc, FunctionValues[] valsArr) {
+  protected String func(int doc, FuncValues[] valsArr) {
     StringBuilder sb = new StringBuilder();
-    for (FunctionValues val : valsArr) {
+    for (FuncValues val : valsArr) {
       String v = val.strVal(doc);
       if(v == null){
         return null;

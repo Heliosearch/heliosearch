@@ -19,15 +19,18 @@ package org.apache.solr.search.grouping.distributed.command;
 
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.grouping.SearchGroup;
-import org.apache.lucene.search.grouping.term.TermAllGroupsCollector;
-import org.apache.lucene.search.grouping.term.TermFirstPassGroupingCollector;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.grouping.Command;
+import org.apache.solr.search.grouping.SearchGroup;
+import org.apache.solr.search.grouping.TermAllGroupsCollector;
+import org.apache.solr.search.grouping.TermFirstPassGroupingCollector;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Creates all the collectors needed for the first phase and how to handle the results.

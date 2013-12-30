@@ -22,9 +22,9 @@ import java.util.Date;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.util.mutable.MutableValue;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.mutable.MutableValue;
 import org.apache.solr.analytics.util.AnalyticsParams;
 import org.apache.solr.schema.TrieDateField;
 
@@ -57,9 +57,9 @@ public class FilterFieldSource extends ValueSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues vals =  source.getValues(context, readerContext);
-    return new FunctionValues() {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues vals =  source.getValues(context, readerContext);
+    return new FuncValues() {
 
       @Override
       public byte byteVal(int doc) {

@@ -16,10 +16,13 @@
  */
 package org.apache.solr.search.function;
 
-import org.apache.lucene.index.*;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.FloatDocValues;
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.DocsEnum;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexReaderContext;
+import org.apache.lucene.index.MultiFields;
+import org.apache.lucene.index.ReaderUtil;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
@@ -30,6 +33,7 @@ import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 import org.apache.solr.update.processor.UpdateRequestProcessor;
 import org.apache.solr.util.VersionedFile;
 import org.slf4j.Logger;
@@ -39,7 +43,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Obtains float field values from an external file.
@@ -59,10 +68,11 @@ public class FileFloatSource extends ValueSource {
 
   /**
    * Creates a new FileFloatSource
-   * @param field the source's SchemaField
+   *
+   * @param field    the source's SchemaField
    * @param keyField the field to use as a key
-   * @param defVal the default value to use if a field has no entry in the external file
-   * @param datadir the directory in which to look for the external file
+   * @param defVal   the default value to use if a field has no entry in the external file
+   * @param datadir  the directory in which to look for the external file
    */
   public FileFloatSource(SchemaField field, SchemaField keyField, float defVal, String datadir) {
     this.field = field;
@@ -77,12 +87,12 @@ public class FileFloatSource extends ValueSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
     final int off = readerContext.docBase;
     IndexReaderContext topLevelContext = ReaderUtil.getTopLevelContext(readerContext);
 
     final float[] arr = getCachedFloats(topLevelContext.reader());
-    return new FloatDocValues(this) {
+    return new FloatFuncValues(this) {
       @Override
       public float floatVal(int doc) {
         return arr[doc + off];
@@ -97,23 +107,25 @@ public class FileFloatSource extends ValueSource {
 
   @Override
   public boolean equals(Object o) {
-    if (o.getClass() !=  FileFloatSource.class) return false;
-    FileFloatSource other = (FileFloatSource)o;
+    if (o.getClass() != FileFloatSource.class) return false;
+    FileFloatSource other = (FileFloatSource) o;
     return this.field.getName().equals(other.field.getName())
-            && this.keyField.getName().equals(other.keyField.getName())
-            && this.defVal == other.defVal
-            && this.dataDir.equals(other.dataDir);
+        && this.keyField.getName().equals(other.keyField.getName())
+        && this.defVal == other.defVal
+        && this.dataDir.equals(other.dataDir);
   }
 
   @Override
   public int hashCode() {
     return FileFloatSource.class.hashCode() + field.getName().hashCode();
-  };
+  }
+
+  ;
 
   @Override
   public String toString() {
-    return "FileFloatSource(field="+field.getName()+",keyField="+keyField.getName()
-            + ",defVal="+defVal+",dataDir="+dataDir+")";
+    return "FileFloatSource(field=" + field.getName() + ",keyField=" + keyField.getName()
+        + ",defVal=" + defVal + ",dataDir=" + dataDir + ")";
 
   }
 
@@ -121,7 +133,7 @@ public class FileFloatSource extends ValueSource {
    * Remove all cached entries.  Values are lazily loaded next time getValues() is
    * called.
    */
-  public static void resetCache(){
+  public static void resetCache() {
     floatCache.resetCache();
   }
 
@@ -129,6 +141,7 @@ public class FileFloatSource extends ValueSource {
    * Refresh the cache for an IndexReader.  The new values are loaded in the background
    * and then swapped in, so queries against the cache should not block while the reload
    * is happening.
+   *
    * @param reader the IndexReader whose cache needs refreshing
    */
   public void refreshCache(IndexReader reader) {
@@ -138,17 +151,19 @@ public class FileFloatSource extends ValueSource {
   }
 
   private final float[] getCachedFloats(IndexReader reader) {
-    return (float[])floatCache.get(reader, new Entry(this));
+    return (float[]) floatCache.get(reader, new Entry(this));
   }
 
   static Cache floatCache = new Cache() {
     @Override
     protected Object createValue(IndexReader reader, Object key) {
-      return getFloats(((Entry)key).ffs, reader);
+      return getFloats(((Entry) key).ffs, reader);
     }
   };
 
-  /** Internal cache. (from lucene FieldCache) */
+  /**
+   * Internal cache. (from lucene FieldCache)
+   */
   abstract static class Cache {
     private final Map readerCache = new WeakHashMap();
 
@@ -199,9 +214,9 @@ public class FileFloatSource extends ValueSource {
 
       return value;
     }
-    
-    public void resetCache(){
-      synchronized(readerCache){
+
+    public void resetCache() {
+      synchronized (readerCache) {
         // Map.clear() is optional and can throw UnsipportedOperationException,
         // but readerCache is WeakHashMap and it supports clear().
         readerCache.clear();
@@ -215,9 +230,12 @@ public class FileFloatSource extends ValueSource {
     Object value;
   }
 
-    /** Expert: Every composite-key in the internal cache is of this type. */
+  /**
+   * Expert: Every composite-key in the internal cache is of this type.
+   */
   private static class Entry {
     final FileFloatSource ffs;
+
     public Entry(FileFloatSource ffs) {
       this.ffs = ffs;
     }
@@ -225,7 +243,7 @@ public class FileFloatSource extends ValueSource {
     @Override
     public boolean equals(Object o) {
       if (!(o instanceof Entry)) return false;
-      Entry other = (Entry)o;
+      Entry other = (Entry) o;
       return ffs.equals(other.ffs);
     }
 
@@ -234,7 +252,6 @@ public class FileFloatSource extends ValueSource {
       return ffs.hashCode();
     }
   }
-
 
 
   private static float[] getFloats(FileFloatSource ffs, IndexReader reader) {
@@ -248,7 +265,7 @@ public class FileFloatSource extends ValueSource {
       is = VersionedFile.getLatestFile(ffs.dataDir, fname);
     } catch (IOException e) {
       // log, use defaults
-      SolrCore.log.error("Error opening external value source file: " +e);
+      SolrCore.log.error("Error opening external value source file: " + e);
       return vals;
     }
 
@@ -262,10 +279,10 @@ public class FileFloatSource extends ValueSource {
     // trying to use skipTo()
 
     List<String> notFound = new ArrayList<String>();
-    int notFoundCount=0;
-    int otherErrors=0;
+    int notFoundCount = 0;
+    int otherErrors = 0;
 
-    char delimiter='=';
+    char delimiter = '=';
 
     BytesRef internalKey = new BytesRef();
 
@@ -276,29 +293,29 @@ public class FileFloatSource extends ValueSource {
       // removing deleted docs shouldn't matter
       // final Bits liveDocs = MultiFields.getLiveDocs(reader);
 
-      for (String line; (line=r.readLine())!=null;) {
+      for (String line; (line = r.readLine()) != null; ) {
         int delimIndex = line.lastIndexOf(delimiter);
         if (delimIndex < 0) continue;
 
         int endIndex = line.length();
         String key = line.substring(0, delimIndex);
-        String val = line.substring(delimIndex+1, endIndex);
+        String val = line.substring(delimIndex + 1, endIndex);
 
         float fval;
         try {
           idType.readableToIndexed(key, internalKey);
-          fval=Float.parseFloat(val);
+          fval = Float.parseFloat(val);
         } catch (Exception e) {
-          if (++otherErrors<=10) {
-            SolrCore.log.error( "Error loading external value source + fileName + " + e
-              + (otherErrors<10 ? "" : "\tSkipping future errors for this file.")
+          if (++otherErrors <= 10) {
+            SolrCore.log.error("Error loading external value source + fileName + " + e
+                + (otherErrors < 10 ? "" : "\tSkipping future errors for this file.")
             );
           }
           continue;  // go to next line in file.. leave values as default.
         }
 
         if (!termsEnum.seekExact(internalKey)) {
-          if (notFoundCount<10) {  // collect first 10 not found for logging
+          if (notFoundCount < 10) {  // collect first 10 not found for logging
             notFound.add(key);
           }
           notFoundCount++;
@@ -314,22 +331,25 @@ public class FileFloatSource extends ValueSource {
 
     } catch (IOException e) {
       // log, use defaults
-      SolrCore.log.error("Error loading external value source: " +e);
+      SolrCore.log.error("Error loading external value source: " + e);
     } finally {
       // swallow exceptions on close so we don't override any
       // exceptions that happened in the loop
-      try{r.close();}catch(Exception e){}
+      try {
+        r.close();
+      } catch (Exception e) {
+      }
     }
 
     SolrCore.log.info("Loaded external value source " + fname
-      + (notFoundCount==0 ? "" : " :"+notFoundCount+" missing keys "+notFound)
+        + (notFoundCount == 0 ? "" : " :" + notFoundCount + " missing keys " + notFound)
     );
 
     return vals;
   }
 
   public static class ReloadCacheRequestHandler extends RequestHandlerBase {
-    
+
     static final Logger log = LoggerFactory.getLogger(ReloadCacheRequestHandler.class);
 
     @Override
@@ -339,11 +359,10 @@ public class FileFloatSource extends ValueSource {
       log.debug("readerCache has been reset.");
 
       UpdateRequestProcessor processor =
-        req.getCore().getUpdateProcessingChain(null).createProcessor(req, rsp);
-      try{
+          req.getCore().getUpdateProcessingChain(null).createProcessor(req, rsp);
+      try {
         RequestHandlerUtils.handleCommit(req, processor, req.getParams(), true);
-      }
-      finally{
+      } finally {
         processor.finish();
       }
     }

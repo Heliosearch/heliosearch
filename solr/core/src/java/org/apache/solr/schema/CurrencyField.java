@@ -20,8 +20,8 @@ import org.apache.lucene.analysis.util.ResourceLoader;
 import org.apache.lucene.analysis.util.ResourceLoaderAware;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.StorableField;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.Filter;
@@ -379,15 +379,15 @@ public class CurrencyField extends FieldType implements SchemaAware, ResourceLoa
     }
 
     @Override
-    public FunctionValues getValues(Map context, AtomicReaderContext reader) 
+    public FuncValues getValues(Map context, AtomicReaderContext reader)
       throws IOException {
-      final FunctionValues amounts = source.getValues(context, reader);
+      final FuncValues amounts = source.getValues(context, reader);
       // the target digits & currency of our source, 
       // become the source digits & currency of ourselves
       final String sourceCurrencyCode = source.getTargetCurrency().getCurrencyCode();
       final int sourceFractionDigits = source.getTargetCurrency().getDefaultFractionDigits();
       final double divisor = Math.pow(10D, targetCurrency.getDefaultFractionDigits());
-      return new FunctionValues() {
+      return new FuncValues() {
         @Override
         public boolean exists(int doc) {
           return amounts.exists(doc);
@@ -492,11 +492,11 @@ public class CurrencyField extends FieldType implements SchemaAware, ResourceLoa
     public Currency getTargetCurrency() { return targetCurrency; }
 
     @Override
-    public FunctionValues getValues(Map context, AtomicReaderContext reader) throws IOException {
-      final FunctionValues amounts = amountValues.getValues(context, reader);
-      final FunctionValues currencies = currencyValues.getValues(context, reader);
+    public FuncValues getValues(Map context, AtomicReaderContext reader) throws IOException {
+      final FuncValues amounts = amountValues.getValues(context, reader);
+      final FuncValues currencies = currencyValues.getValues(context, reader);
 
-      return new FunctionValues() {
+      return new FuncValues() {
         private final int MAX_CURRENCIES_TO_CACHE = 256;
         private final int[] fractionDigitCache = new int[MAX_CURRENCIES_TO_CACHE];
         private final String[] currencyOrdToCurrencyCache = new String[MAX_CURRENCIES_TO_CACHE];

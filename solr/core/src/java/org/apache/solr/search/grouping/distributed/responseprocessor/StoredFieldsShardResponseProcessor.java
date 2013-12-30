@@ -39,7 +39,7 @@ public class StoredFieldsShardResponseProcessor implements ShardResponseProcesso
   public void process(ResponseBuilder rb, ShardRequest shardRequest) {
     boolean returnScores = (rb.getFieldFlags() & SolrIndexSearcher.GET_SCORES) != 0;
     ShardResponse srsp = shardRequest.responses.get(0);
-    SolrDocumentList docs = (SolrDocumentList)srsp.getSolrResponse().getResponse().get("response");
+    SolrDocumentList docs = (SolrDocumentList) srsp.getSolrResponse().getResponse().get("response");
     String uniqueIdFieldName = rb.req.getSchema().getUniqueKeyField().getName();
 
     for (SolrDocument doc : docs) {
@@ -48,7 +48,7 @@ public class StoredFieldsShardResponseProcessor implements ShardResponseProcesso
       FieldDoc fieldDoc = (FieldDoc) shardDoc;
       if (shardDoc != null) {
         if (returnScores && !Float.isNaN(fieldDoc.score)) {
-            doc.setField("score", fieldDoc.score);
+          doc.setField("score", fieldDoc.score);
         }
         rb.retrievedDocuments.put(id, doc);
       }

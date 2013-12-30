@@ -17,8 +17,8 @@
 
 package org.apache.solr.analytics.util.valuesource;
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.analytics.util.AnalyticsParams;
 
 /**
@@ -36,7 +36,7 @@ public class LogDoubleFunction extends DualDoubleFunction {
   }
 
   @Override
-  protected double func(int doc, FunctionValues aVals, FunctionValues bVals) {
+  protected double func(int doc, FuncValues aVals, FuncValues bVals) {
     return Math.log(aVals.doubleVal(doc))/Math.log(bVals.doubleVal(doc));
   }
 }

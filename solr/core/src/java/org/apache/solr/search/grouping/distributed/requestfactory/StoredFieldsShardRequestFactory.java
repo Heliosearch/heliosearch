@@ -18,8 +18,6 @@ package org.apache.solr.search.grouping.distributed.requestfactory;
  */
 
 import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.grouping.GroupDocs;
-import org.apache.lucene.search.grouping.TopGroups;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.GroupParams;
@@ -30,10 +28,17 @@ import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.ShardDoc;
 import org.apache.solr.handler.component.ShardRequest;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.grouping.GroupDocs;
+import org.apache.solr.search.grouping.TopGroups;
 import org.apache.solr.search.grouping.distributed.ShardRequestFactory;
 import org.apache.solr.search.grouping.distributed.command.QueryCommandResult;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -42,7 +47,7 @@ public class StoredFieldsShardRequestFactory implements ShardRequestFactory {
 
   @Override
   public ShardRequest[] constructRequest(ResponseBuilder rb) {
-    HashMap<String, Set<ShardDoc>> shardMap = new HashMap<String,Set<ShardDoc>>();
+    HashMap<String, Set<ShardDoc>> shardMap = new HashMap<String, Set<ShardDoc>>();
     for (TopGroups<BytesRef> topGroups : rb.mergedTopGroups.values()) {
       for (GroupDocs<BytesRef> group : topGroups.groups) {
         mapShardToDocs(shardMap, group.scoreDocs);
@@ -59,20 +64,20 @@ public class StoredFieldsShardRequestFactory implements ShardRequestFactory {
     for (Collection<ShardDoc> shardDocs : shardMap.values()) {
       ShardRequest sreq = new ShardRequest();
       sreq.purpose = ShardRequest.PURPOSE_GET_FIELDS;
-      sreq.shards = new String[] {shardDocs.iterator().next().shard};
+      sreq.shards = new String[]{shardDocs.iterator().next().shard};
       sreq.params = new ModifiableSolrParams();
-      sreq.params.add( rb.req.getParams());
+      sreq.params.add(rb.req.getParams());
       sreq.params.remove(GroupParams.GROUP);
       sreq.params.remove(CommonParams.SORT);
       sreq.params.remove(ResponseBuilder.FIELD_SORT_VALUES);
       String fl = sreq.params.get(CommonParams.FL);
       if (fl != null) {
-         fl = fl.trim();
+        fl = fl.trim();
         // currently, "score" is synonymous with "*,score" so
         // don't add "id" if the fl is empty or "score" or it would change the meaning.
-         if (fl.length()!=0 && !"score".equals(fl) && !"*".equals(fl)) {
-           sreq.params.set(CommonParams.FL, fl+','+uniqueField.getName());
-         }
+        if (fl.length() != 0 && !"score".equals(fl) && !"*".equals(fl)) {
+          sreq.params.set(CommonParams.FL, fl + ',' + uniqueField.getName());
+        }
       }
 
       List<String> ids = new ArrayList<String>(shardDocs.size());

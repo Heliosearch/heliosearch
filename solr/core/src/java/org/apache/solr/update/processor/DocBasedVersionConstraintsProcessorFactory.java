@@ -17,8 +17,8 @@
 
 package org.apache.solr.update.processor;
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrInputDocument;
@@ -278,7 +278,7 @@ public class DocBasedVersionConstraintsProcessorFactory extends UpdateRequestPro
             ValueSource vs = solrVersionField.getType().getValueSource(solrVersionField, null);
             Map context = ValueSource.newContext(searcher);
             vs.createWeight(context, searcher);
-            FunctionValues fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
+            FuncValues fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
             oldSolrVersion = fv.longVal((int)lookup);
 
             vs = userVersionField.getType().getValueSource(userVersionField, null);

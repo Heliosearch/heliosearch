@@ -18,7 +18,6 @@ package org.apache.solr.search.grouping.distributed.responseprocessor;
  */
 
 import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.grouping.SearchGroup;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrException;
@@ -29,6 +28,7 @@ import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.ShardRequest;
 import org.apache.solr.handler.component.ShardResponse;
 import org.apache.solr.search.SortSpec;
+import org.apache.solr.search.grouping.SearchGroup;
 import org.apache.solr.search.grouping.distributed.ShardResponseProcessor;
 import org.apache.solr.search.grouping.distributed.command.Pair;
 import org.apache.solr.search.grouping.distributed.shardresultserializer.SearchGroupsResultTransformer;
@@ -36,7 +36,13 @@ import org.apache.solr.search.grouping.distributed.shardresultserializer.SearchG
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Concrete implementation for merging {@link SearchGroup} instances from shard responses.

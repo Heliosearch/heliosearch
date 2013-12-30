@@ -16,10 +16,10 @@
  */
 package org.apache.solr.search;
 
-import org.apache.lucene.queries.function.BoostedQuery;
-import org.apache.lucene.queries.function.FunctionQuery;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.QueryValueSource;
+import org.apache.solr.search.function.BoostedQuery;
+import org.apache.solr.search.function.FunctionQuery;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.QueryValueSource;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
@@ -34,7 +34,7 @@ import org.apache.solr.request.SolrQueryRequest;
  *
  * <p>Example: <code>{!boost b=recip(ms(NOW,mydatefield),3.16e-11,1,1)}foo</code> creates a query "foo"
  * which is boosted by the date boosting function referenced in
- * {@link org.apache.lucene.queries.function.valuesource.ReciprocalFloatFunction}
+ * {@link org.apache.solr.search.function.valuesource.ReciprocalFloatFunction}
  */
 public class BoostQParserPlugin extends QParserPlugin {
   public static String NAME = "boost";

@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.util.mutable.MutableValue;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.mutable.MutableValue;
 
 /**
  * <code>AbstractDelegationStatsCollector</code> objects wrap other StatsCollectors.
@@ -33,7 +33,7 @@ public abstract class AbstractDelegatingStatsCollector implements StatsCollector
   protected final StatsCollector delegate;
   protected final Set<String> statsList;
   MutableValue value;
-  FunctionValues function;
+  FuncValues function;
   
   /**
    * @param delegate The delegate computing statistics on the same set of values.
@@ -61,7 +61,7 @@ public abstract class AbstractDelegatingStatsCollector implements StatsCollector
     return delegate.getValue();
   }
   
-  public FunctionValues getFunction() {
+  public FuncValues getFunction() {
     return delegate.getFunction();
   }
   

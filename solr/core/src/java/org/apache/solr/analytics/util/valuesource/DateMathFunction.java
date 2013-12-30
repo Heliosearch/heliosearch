@@ -20,9 +20,9 @@ package org.apache.solr.analytics.util.valuesource;
 import java.text.ParseException;
 import java.util.Date;
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.BytesRefFieldSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.BytesRefFieldSource;
 import org.apache.solr.analytics.util.AnalyticsParams;
 import org.apache.solr.util.DateMathParser;
 
@@ -51,7 +51,7 @@ public class DateMathFunction extends MultiDateFunction {
   }
 
   @Override
-  protected long func(int doc, FunctionValues[] valsArr) {
+  protected long func(int doc, FuncValues[] valsArr) {
     long time = 0;
     Date date = (Date)valsArr[0].objectVal(doc);
     try {

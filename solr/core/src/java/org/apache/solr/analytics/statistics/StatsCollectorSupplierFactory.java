@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.BytesRefFieldSource;
-import org.apache.lucene.queries.function.valuesource.DoubleFieldSource;
-import org.apache.lucene.queries.function.valuesource.FloatFieldSource;
-import org.apache.lucene.queries.function.valuesource.IntFieldSource;
-import org.apache.lucene.queries.function.valuesource.LongFieldSource;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.BytesRefFieldSource;
+import org.apache.solr.search.function.valuesource.DoubleFieldSource;
+import org.apache.solr.search.function.valuesource.FloatFieldSource;
+import org.apache.solr.search.function.valuesource.IntFieldSource;
+import org.apache.solr.search.function.valuesource.LongFieldSource;
 import org.apache.lucene.search.FieldCache;
 import org.apache.solr.analytics.expression.ExpressionFactory;
 import org.apache.solr.analytics.request.AnalyticsRequest;

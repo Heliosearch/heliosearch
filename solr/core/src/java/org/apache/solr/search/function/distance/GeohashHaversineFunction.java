@@ -23,25 +23,24 @@ import com.spatial4j.core.distance.GeodesicSphereDistCalc;
 import com.spatial4j.core.io.GeohashUtils;
 import com.spatial4j.core.shape.Point;
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 
 import java.io.IOException;
 import java.util.Map;
 
 
 /**
- *  Calculate the Haversine distance between two geo hash codes.
- *
+ * Calculate the Haversine distance between two geo hash codes.
+ * <p/>
  * <p/>
  * Ex: ghhsin(ValueSource, ValueSource, radius)
  * <p/>
  *
  * @see org.apache.solr.search.function.distance.HaversineFunction for more details on the implementation
- *
- **/
+ */
 public class GeohashHaversineFunction extends ValueSource {
 
   private final ValueSource geoHash1, geoHash2;
@@ -61,15 +60,16 @@ public class GeohashHaversineFunction extends ValueSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues gh1DV = geoHash1.getValues(context, readerContext);
-    final FunctionValues gh2DV = geoHash2.getValues(context, readerContext);
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues gh1DV = geoHash1.getValues(context, readerContext);
+    final FuncValues gh2DV = geoHash2.getValues(context, readerContext);
 
-    return new DoubleDocValues(this) {
+    return new DoubleFuncValues(this) {
       @Override
       public double doubleVal(int doc) {
         return distance(doc, gh1DV, gh2DV);
       }
+
       @Override
       public String toString(int doc) {
         StringBuilder sb = new StringBuilder();
@@ -81,17 +81,17 @@ public class GeohashHaversineFunction extends ValueSource {
     };
   }
 
-  protected double distance(int doc, FunctionValues gh1DV, FunctionValues gh2DV) {
+  protected double distance(int doc, FuncValues gh1DV, FuncValues gh2DV) {
     double result = 0;
     String h1 = gh1DV.strVal(doc);
     String h2 = gh2DV.strVal(doc);
-    if (h1 != null && h2 != null && h1.equals(h2) == false){
+    if (h1 != null && h2 != null && h1.equals(h2) == false) {
       //TODO: If one of the hashes is a literal value source, seems like we could cache it
       //and avoid decoding every time
-      Point p1 = GeohashUtils.decode(h1,ctx);
-      Point p2 = GeohashUtils.decode(h2,ctx);
+      Point p1 = GeohashUtils.decode(h1, ctx);
+      Point p2 = GeohashUtils.decode(h2, ctx);
       result = ctx.getDistCalc().distance(p1, p2) * degreesToDist;
-    } else if (h1 == null || h2 == null){
+    } else if (h1 == null || h2 == null) {
       result = Double.MAX_VALUE;
     }
     return result;
@@ -108,9 +108,9 @@ public class GeohashHaversineFunction extends ValueSource {
     if (this.getClass() != o.getClass()) return false;
     GeohashHaversineFunction other = (GeohashHaversineFunction) o;
     return this.name().equals(other.name())
-            && geoHash1.equals(other.geoHash1) &&
-            geoHash2.equals(other.geoHash2) &&
-            degreesToDist == other.degreesToDist;
+        && geoHash1.equals(other.geoHash1) &&
+        geoHash2.equals(other.geoHash2) &&
+        degreesToDist == other.degreesToDist;
   }
 
   @Override
@@ -119,7 +119,7 @@ public class GeohashHaversineFunction extends ValueSource {
     result = geoHash1.hashCode();
     result = 31 * result + geoHash2.hashCode();
     result = 31 * result + name().hashCode();
-    long temp =Double.doubleToRawLongBits(degreesToDist);
+    long temp = Double.doubleToRawLongBits(degreesToDist);
     result = 31 * result + (int) (temp ^ (temp >>> 32));
     return result;
   }

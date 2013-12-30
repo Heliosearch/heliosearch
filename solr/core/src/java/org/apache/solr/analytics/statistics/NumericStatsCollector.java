@@ -19,7 +19,7 @@ package org.apache.solr.analytics.statistics;
 
 import java.util.Set;
 
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.ValueSource;
 
 /**
  * <code>NumericStatsCollector</code> computes the sum, sum of squares, mean and standard deviation.

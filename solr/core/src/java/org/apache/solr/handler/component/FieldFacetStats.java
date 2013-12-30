@@ -26,8 +26,8 @@ import java.util.Map;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.schema.SchemaField;
@@ -58,7 +58,7 @@ public class FieldFacetStats {
   AtomicReaderContext leave;
   final ValueSource valueSource;
   AtomicReaderContext context;
-  FunctionValues values;
+  FuncValues values;
 
   SortedDocValues topLevelSortedValues = null;
 

@@ -18,8 +18,8 @@
 package org.apache.solr.schema;
 
 import org.apache.lucene.document.FieldType;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.VectorValueSource;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.VectorValueSource;
 import org.apache.lucene.index.StorableField;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;

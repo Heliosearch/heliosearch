@@ -20,8 +20,8 @@ import org.apache.lucene.index.LogDocMergePolicy;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReaderContext;
 import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.SchemaField;
@@ -60,7 +60,7 @@ public class TestIndexSearcher extends SolrTestCaseJ4 {
     List<AtomicReaderContext> leaves = topReaderContext.leaves();
     int idx = ReaderUtil.subIndex(doc, leaves);
     AtomicReaderContext leaf = leaves.get(idx);
-    FunctionValues vals = vs.getValues(context, leaf);
+    FuncValues vals = vs.getValues(context, leaf);
     return vals.strVal(doc-leaf.docBase);
   }
 

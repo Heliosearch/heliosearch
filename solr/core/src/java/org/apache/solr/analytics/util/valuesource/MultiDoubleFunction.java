@@ -22,9 +22,9 @@ import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 import org.apache.lucene.search.IndexSearcher;
 
 /**
@@ -39,7 +39,7 @@ public abstract class MultiDoubleFunction extends ValueSource {
   }
 
   abstract protected String name();
-  abstract protected double func(int doc, FunctionValues[] valsArr);
+  abstract protected double func(int doc, FuncValues[] valsArr);
 
   @Override
   public String description() {
@@ -59,13 +59,13 @@ public abstract class MultiDoubleFunction extends ValueSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues[] valsArr = new FunctionValues[sources.length];
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues[] valsArr = new FuncValues[sources.length];
     for (int i=0; i<sources.length; i++) {
       valsArr[i] = sources[i].getValues(context, readerContext);
     }
 
-    return new DoubleDocValues(this) {
+    return new DoubleFuncValues(this) {
       @Override
       public double doubleVal(int doc) {
         return func(doc, valsArr);
@@ -74,7 +74,7 @@ public abstract class MultiDoubleFunction extends ValueSource {
       @Override
       public boolean exists(int doc) {
         boolean exists = true;
-        for (FunctionValues val : valsArr) {
+        for (FuncValues val : valsArr) {
           exists = exists & val.exists(doc);
         }
         return exists;
@@ -85,7 +85,7 @@ public abstract class MultiDoubleFunction extends ValueSource {
         StringBuilder sb = new StringBuilder();
         sb.append(name()).append('(');
         boolean firstTime=true;
-        for (FunctionValues vals : valsArr) {
+        for (FuncValues vals : valsArr) {
           if (firstTime) {
             firstTime=false;
           } else {
