@@ -17,9 +17,6 @@
 
 package org.apache.solr.search;
 
-import org.apache.lucene.queries.function.FunctionQuery;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.request.LocalSolrQueryRequest;
@@ -46,6 +43,9 @@ import org.apache.solr.schema.SchemaField;
 import com.carrotsearch.hppc.FloatArrayList;
 import com.carrotsearch.hppc.IntOpenHashSet;
 import com.carrotsearch.hppc.cursors.IntCursor;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.FunctionQuery;
+import org.apache.solr.search.function.ValueSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -922,7 +922,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
     private FloatCompare comp;
     private float nullVal;
     private ValueSource valueSource;
-    private FunctionValues functionValues;
+    private FuncValues functionValues;
     private float[] ordVals;
     private Map rcontext = new HashMap();
     private CollapseScore collapseScore = new CollapseScore();
@@ -954,7 +954,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
 
       if(funcStr.indexOf("cscore()") != -1) {
         this.cscore = true;
-        this.rcontext.put("CSCORE",this.collapseScore);
+        this.rcontext.put("CSCORE", this.collapseScore);
       }
 
       if(this.needsScores) {

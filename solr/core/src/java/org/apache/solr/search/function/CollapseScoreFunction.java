@@ -17,8 +17,6 @@
 
 package org.apache.solr.search.function;
 
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.search.CollapsingQParserPlugin.CollapseScore;
 import java.util.Map;
@@ -42,11 +40,11 @@ public class CollapseScoreFunction extends ValueSource {
     return 1213241257;
   }
 
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
     return new CollapseScoreFunctionValues(context);
   }
 
-  public class CollapseScoreFunctionValues extends FunctionValues {
+  public class CollapseScoreFunctionValues extends FuncValues {
 
     private CollapseScore cscore;
 
