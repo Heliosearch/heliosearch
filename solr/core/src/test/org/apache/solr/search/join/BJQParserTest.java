@@ -225,47 +225,39 @@ public class BJQParserTest extends SolrTestCaseJ4 {
   @Test
   public void testCacheHit() throws IOException {
 
-    SolrCache parentFilterCache = (SolrCache) h.getCore().getInfoRegistry()
-        .get("perSegFilter");
-
     SolrCache filterCache = (SolrCache) h.getCore().getInfoRegistry()
         .get("filterCache");
 
-    NamedList parentsBefore = parentFilterCache.getStatistics();
-
     NamedList filtersBefore = filterCache.getStatistics();
-
     // it should be weird enough to be uniq
     String parentFilter = "parent_s:([a TO c] [d TO f])";
+    String childQ = "child_s:*";
 
     assertQ("search by parent filter",
-        req("q", "{!parent which=\"" + parentFilter + "\"}"),
+        req("q", "{!parent which=\"" + parentFilter + "\"}" + childQ),
         "//*[@numFound='6']");
 
     assertQ("filter by parent filter",
-        req("q", "*:*", "fq", "{!parent which=\"" + parentFilter + "\"}"),
+        req("q", "*:*", "fq", "{!parent which=\"" + parentFilter + "\"}" + childQ),
         "//*[@numFound='6']");
 
-    assertEquals("didn't hit fqCache yet ", 0L,
+    // should have had a hit on the parentFilter
+    assertEquals("didn't hit fqCache yet ", 1L,
         delta("hits", filterCache.getStatistics(), filtersBefore));
 
-    assertQ(
-        "filter by join",
-        req("q", "*:*", "fq", "{!parent which=\"" + parentFilter
-            + "\"}child_s:l"), "//*[@numFound='6']");
+    filtersBefore = filterCache.getStatistics();
 
-    assertEquals("in cache mode every request lookups", 3,
-        delta("lookups", parentFilterCache.getStatistics(), parentsBefore));
-    assertEquals("last two lookups causes hits", 2,
-        delta("hits", parentFilterCache.getStatistics(), parentsBefore));
-    assertEquals("the first lookup gets insert", 1,
-        delta("inserts", parentFilterCache.getStatistics(), parentsBefore));
+    // repeat the previous fq with a diff query - should cause a direct filter cache hit on the whole join query
+    assertQ("filter by parent filter",
+        req("q", "*:* foo_s:whatever", "fq", "{!parent which=\"" + parentFilter + "\"}" + childQ),
+        "//*[@numFound='6']");
 
-
+    // should have only been one additional lookup if there was a hit on the join query (as opposed to the parent filter)
     assertEquals("true join query is cached in fqCache", 1L,
         delta("lookups", filterCache.getStatistics(), filtersBefore));
   }
-  
+
+
   private long delta(String key, NamedList a, NamedList b) {
     return (Long) a.get(key) - (Long) b.get(key);
   }

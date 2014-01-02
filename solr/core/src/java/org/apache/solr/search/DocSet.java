@@ -22,6 +22,8 @@ import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.core.RefCount;
 
+import java.io.Closeable;
+
 /**
  * <code>DocSet</code> represents an unordered set of Lucene Document Ids.
  *
@@ -33,7 +35,7 @@ import org.apache.solr.core.RefCount;
  *
  * @since solr 0.9
  */
-public interface DocSet extends RefCount, Cloneable, AutoCloseable /* extends Collection<Integer> */ {
+public interface DocSet extends RefCount, Cloneable, Closeable /* extends Collection<Integer> */ {
   
   /**
    * Adds the specified document if it is not currently in the DocSet
@@ -151,9 +153,16 @@ public interface DocSet extends RefCount, Cloneable, AutoCloseable /* extends Co
    */
   public void setBitsOn(OpenBitSet target);
 
+  /**
+   * Takes the docs from this set and sets those bits on the target BitDocSetNative.
+   * The target should be sized large enough to accommodate all of the documents before calling this method.
+   */
+  public void setBitsOn(BitDocSetNative target);
+
   public DocSet clone();
 
   public void close();
 
   public static DocSet EMPTY = new SortedIntDocSet(new int[0], 0);
+
 }

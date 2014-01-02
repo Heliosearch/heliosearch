@@ -218,6 +218,13 @@ abstract class DocSetBase implements DocSet {
     }
   }
 
+  @Override
+  public void setBitsOn(BitDocSetNative target) {
+    DocIterator iter = iterator();
+    while (iter.hasNext()) {
+      target.fastSet(iter.nextDoc());
+    }
+  }
 
   @Override
   public abstract DocSet clone();

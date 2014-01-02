@@ -547,6 +547,11 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
   }
 
   @Override
+  public void setBitsOn(BitDocSetNative target) {
+    target.unionMe(this);
+  }
+
+  @Override
   public DocSet andNot(DocSet other) {
     BitDocSetNative newbits = clone();
      if (other instanceof BitDocSetNative) {

@@ -856,6 +856,24 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     return answer;
   }
 
+  /** internal only */
+  public BitDocSetNative getDocSetBits(Query q) throws IOException {
+    DocSet answer = getDocSet(q);
+    if (answer instanceof BitDocSetNative) {
+      return (BitDocSetNative)answer;
+    }
+
+    BitDocSetNative answerBits = new BitDocSetNative(maxDoc());
+    answer.setBitsOn(answerBits);
+    answer.decref();
+    if (filterCache != null) {
+      answerBits.incref();
+      filterCache.put(q, answerBits);
+    }
+    return answerBits;
+  }
+
+
   // only handle positive (non negative) queries
   // Caller is responsible for calling decref when done
   DocSet getPositiveDocSet(Query q) throws IOException {
@@ -2378,7 +2396,6 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       if (this.filter != null) {
         // overwriting filter...
         this.filter.decref();
-        throw new RuntimeException("TEMPORARY EXCEPTION JUST TO CHECK IF THIS HAPPENS!  REMOVE_ME");  // nocommit
       }
       this.filter = filter;
       return this;
@@ -2463,7 +2480,6 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         docListAndSet = new DocListAndSet();
       } else if (docListAndSet.docSet != null) {
         docListAndSet.docSet.decref();
-        throw new RuntimeException("TEMPORARY EXCEPTION JUST TO CHECK IF THIS HAPPENS!  REMOVE_ME");  // nocommit
       }
 
       docListAndSet.docSet = set;
