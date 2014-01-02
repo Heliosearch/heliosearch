@@ -176,12 +176,20 @@ public class SolrConfig extends Config {
     queryResultMaxDocsCached = getInt("query/queryResultMaxDocsCached", Integer.MAX_VALUE);
     enableLazyFieldLoading = getBool("query/enableLazyFieldLoading", false);
 
-    
-    filterCacheConfig = CacheConfig.getConfig(this, "query/filterCache");
-    if (filterCacheConfig != null) filterCacheConfig.clazz = FastLRUCache.class;  // HS - filterCache needs to be FastLRUCache
+    CacheConfig conf = CacheConfig.getConfig(this, "query/filterCache");
+    if (conf == null) {
+        Map<String,String> args = new HashMap<String,String>();
+        args.put("name","filterCache");
+        args.put("size","64");
+        conf = new CacheConfig(FastLRUCache.class, args, null);
+    } else {
+      conf.clazz = FastLRUCache.class;
+    }
+    filterCacheConfig = conf;
+
     queryResultCacheConfig = CacheConfig.getConfig(this, "query/queryResultCache");
     documentCacheConfig = CacheConfig.getConfig(this, "query/documentCache");
-    CacheConfig conf = CacheConfig.getConfig(this, "query/fieldValueCache");
+    conf = CacheConfig.getConfig(this, "query/fieldValueCache");
     if (conf == null) {
       Map<String,String> args = new HashMap<String,String>();
       args.put("name","fieldValueCache");
