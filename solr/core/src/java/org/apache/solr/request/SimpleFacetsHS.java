@@ -31,6 +31,8 @@ import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.util.Bits;
+import org.apache.solr.search.SortedIntDocSetNative;
 import org.apache.solr.search.grouping.AbstractAllGroupHeadsCollector;
 import org.apache.solr.search.grouping.TermAllGroupsCollector;
 import org.apache.solr.search.grouping.TermGroupFacetCollector;
@@ -811,15 +813,16 @@ public class SimpleFacetsHS {
     */
 
     // Minimum term docFreq in order to use the filterCache for that term.
-    int minDfFilterCache = params.getFieldInt(field, FacetParams.FACET_ENUM_CACHE_MINDF, 0);
+    int defaultMinDf = Math.min(32, Math.max(searcher.maxDoc()>>3,3));  // use a default between 3 and 32
+    int minDfFilterCache = params.getFieldInt(field, FacetParams.FACET_ENUM_CACHE_MINDF, defaultMinDf);
 
     // make sure we have a set that is fast for random access, if we will use it for that
     DocSet fastForRandomSet = docs;
-    if (minDfFilterCache>0 && docs instanceof SortedIntDocSet) {
-      SortedIntDocSet sset = (SortedIntDocSet)docs;
-      fastForRandomSet = new HashDocSet(sset.getDocs(), 0, sset.size());        // HS_TODO: pull out hash to separate class...
-    }
 
+    if (minDfFilterCache>0 && docs instanceof SortedIntDocSetNative) {
+      SortedIntDocSetNative sset = (SortedIntDocSetNative)docs;
+      fastForRandomSet = new HashDocSet(sset.getIntArrayPointer(), 0, sset.size(), HashDocSet.DEFAULT_INVERSE_LOAD_FACTOR);
+    }
 
     IndexSchema schema = searcher.getSchema();
     AtomicReader r = searcher.getAtomicReader();
