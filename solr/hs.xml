@@ -1,0 +1,99 @@
+<project name="solr" default="help" basedir=".">
+  <import file="build.xml"/>
+
+  <target name="help">
+    <echo message="Welcome to Heliosearch" />
+    <echo message="Create Example Server:  ant -f hds.xml example" />
+    <echo message="Create Distribution:  ant -f hds.xml package-hs -Dversion=hs_0.01" />
+  </target>
+  
+  <target name="package-hs"
+          description="Packages the Solr Binary Distribution">
+    <antcall inheritall="true">
+      <!-- <param name="called.from.create-package" value="true"/> -->
+      <target name="init-dist"/>
+      <target name="dist"/>
+      <target name="example"/>
+      <!-- <target name="documentation"/> -->
+    </antcall>
+    <mkdir dir="${dest}/${fullnamever}"/>
+    <delete includeemptydirs="true">
+      <fileset dir="${example}/solr-webapp" includes="**/*"/>
+      <fileset dir="${dest}/${fullnamever}" includes="**/*"/>
+    </delete>
+ 
+    <delete file="${package.dir}/${fullnamever}.tgz" failonerror="false" />
+    <delete file="${package.dir}/${fullnamever}.zip" failonerror="false" />
+ 
+    <mkdir dir="${dest}/contrib-lucene-libs-to-package"/>
+    <delete dir="${dest}/contrib-lucene-libs-to-package" includes="**/*"/>
+    <contrib-crawl target="add-lucene-libs-to-package"/>
+ 
+    <tar destfile="${package.dir}/${fullnamever}.tgz" compression="gzip" longfile="gnu">
+      <tarfileset dir="."
+                  prefix="${fullnamever}"
+                  includes="LICENSE.txt NOTICE.txt CHANGES.txt README.txt SYSTEM_REQUIREMENTS.txt
+                            example/** contrib/**/lib/** contrib/**/README.txt 
+                            licenses/**"
+                  excludes="licenses/README.committers.txt **/data/ **/logs/* 
+                            **/classes/ **/*.sh **/ivy.xml **/build.xml
+                            **/bin/ **/*.iml **/*.ipr **/*.iws **/pom.xml 
+                            **/*pom.xml.template" />
+      <tarfileset dir="${dest}/contrib-lucene-libs-to-package"
+                  prefix="${fullnamever}"
+                  includes="**" />
+      <tarfileset dir="."
+                  filemode="755"
+                  prefix="${fullnamever}"
+                  includes="example/**/*.sh example/**/bin/" />
+      <tarfileset dir="."
+                  prefix="${fullnamever}"
+                  includes="dist/*.jar
+                            dist/solrj-lib/*
+                            dist/test-framework/**"
+                  excludes="**/*.tgz **/*.zip **/*.md5 **/*src*.jar **/*docs*.jar **/*.sha1" />
+                <!--
+      <tarfileset dir="${javadoc.dir}"
+                  prefix="${fullnamever}/docs" />
+                  -->
+    </tar>
+    <make-checksums file="${package.dir}/${fullnamever}.tgz"/>
+ 
+    <untar compression="gzip" src="${package.dir}/${fullnamever}.tgz" dest="${dest}"/>
+ 
+    <!--
+        This is a list of text file patterns to convert to CRLF line-ending style.
+        Shell scripts and files included in shell scripts should not be converted.
+        NB: The line-ending conversion process will mangle non-UTF8-encoded files.
+       -->
+    <fixcrlf srcdir="${dest}/${fullnamever}"
+             encoding="UTF-8"
+             eol="crlf"
+             includes="**/*.alg **/*.cfg **/*.cgi **/*.cpp **/*.css **/*.csv **/*.dtd
+                        **/*.erb **/*.fcgi **/.htaccess **/*.htm **/*.html **/*.incl
+                        **/*.java **/*.javacc **/*.jflex **/*.jflex-macro **/*.jj
+                        **/*.js **/*.json **/*.jsp **/*LICENSE **/package-list **/*.pl
+                        **/*.pom **/*pom.xml.template **/*.properties **/*.py
+                        **/*.rake **/Rakefile **/*.rb **/*.rbbi **/README* **/*.rhtml
+                        **/*.rslp **/*.rxml **/*.script **/*.svg **/*.tsv **/*.txt
+                        **/UPGRADING **/USAGE **/*.uxf **/*.vm **/*.xcat **/*.xml
+                        **/*.xsl **/*.xslt **/*.yml"
+             excludes="**/stopwordsWrongEncoding.txt **/gb18030-example.xml"
+        />
+ 
+    <zip destfile="${package.dir}/${fullnamever}.zip">
+      <zipfileset dir="${dest}/${fullnamever}"
+                  prefix="${fullnamever}"
+                  excludes="**/*.sh **/bin/ src/scripts/" />
+      <zipfileset dir="${dest}/${fullnamever}"
+                  prefix="${fullnamever}"
+                  includes="**/*.sh **/bin/ src/scripts/"
+                  filemode="755" />
+    </zip>
+    <make-checksums file="${package.dir}/${fullnamever}.zip"/>
+  </target>
+
+
+
+</project> 
+
