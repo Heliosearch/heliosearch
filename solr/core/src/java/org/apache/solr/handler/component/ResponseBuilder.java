@@ -18,18 +18,19 @@
 package org.apache.solr.handler.component;
 
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.solr.search.grouping.SearchGroup;
-import org.apache.solr.search.grouping.TopGroups;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.util.NamedList;
+import org.apache.solr.search.grouping.SearchGroup;
+import org.apache.solr.search.grouping.TopGroups;
+import org.apache.solr.search.grouping.distributed.command.QueryCommand;
 import org.apache.solr.util.RTimer;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.search.CursorMark;
 import org.apache.solr.search.DocListAndSet;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.SolrIndexSearcher;
@@ -70,9 +71,8 @@ public class ResponseBuilder
   private List<Query> filters = null;
   private SortSpec sortSpec = null;
   private GroupingSpecification groupingSpec;
-  //used for handling deep paging
-  private ScoreDoc scoreDoc;
-
+  private CursorMark cursorMark;
+  private CursorMark nextCursorMark;
 
   private DocListAndSet results = null;
   private NamedList<Object> debugInfo = null;
@@ -395,7 +395,7 @@ public class ResponseBuilder
             .setLen(getSortSpec().getCount())
             .setFlags(getFieldFlags())
             .setNeedDocSet(isNeedDocSet())
-            .setScoreDoc(getScoreDoc()); //Issue 1726
+            .setCursorMark(getCursorMark());
     return cmd;
   }
 
@@ -407,6 +407,10 @@ public class ResponseBuilder
     if (result.isPartialResults()) {
       rsp.getResponseHeader().add("partialResults", Boolean.TRUE);
     }
+    if (null != cursorMark) {
+      assert null != result.getNextCursorMark() : "using cursor but no next cursor set";
+      this.setNextCursorMark(result.getNextCursorMark());
+    }
   }
   
   public long getNumberDocumentsFound() {
@@ -416,16 +420,19 @@ public class ResponseBuilder
     return _responseDocs.getNumFound();
   }
 
-  public ScoreDoc getScoreDoc()
-  {
-    return scoreDoc;
+  public CursorMark getCursorMark() {
+    return cursorMark;
   }
-  
-  public void setScoreDoc(ScoreDoc scoreDoc)
-  {
-    this.scoreDoc = scoreDoc;
+  public void setCursorMark(CursorMark cursorMark) {
+    this.cursorMark = cursorMark;
   }
 
+  public CursorMark getNextCursorMark() {
+    return nextCursorMark;
+  }
+  public void setNextCursorMark(CursorMark nextCursorMark) {
+    this.nextCursorMark = nextCursorMark;
+  }
 
 
   public void close() {
