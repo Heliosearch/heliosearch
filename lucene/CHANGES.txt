@@ -148,6 +148,9 @@ Bug fixes
 
 * LUCENE-5361: Fixed handling of query boosts in FastVectorHighlighter.
   (Nik Everett via Adrien Grand)
+  
+* LUCENE-5344: Flexible StandardQueryParser behaves differently than 
+  ClassicQueryParser. (Adriano Crestani)
 
 * LUCENE-5391: UAX29URLEmailTokenizer should not tokenize no-scheme
   domain-only URLs that are followed by an alphanumeric character.
@@ -155,6 +158,10 @@ Bug fixes
 
 * LUCENE-5394: Fix TokenSources.getTokenStream to return payloads if
   they were indexed with the term vectors. (Mike McCandless)
+
+* LUCENE-5375: ToChildBlockJoinQuery works harder to detect mis-use,
+  when the parent query incorrectly returns child documents, and throw
+  a clear exception saying so. (Dr. Oleg Savrasov via Mike McCandless)
 
 API Changes
 
@@ -166,6 +173,9 @@ Optimizations
 
 * LUCENE-5372: Replace StringBuffer by StringBuilder, where possible.
   (Joshua Hartman via Uwe Schindler, Dawid Weiss, Mike McCandless)
+
+* LUCENE-5271: A slightly more accurate SloppyMath distance.
+  (Gilad Barkai via Ryan Ernst)
 
 Changes in Runtime Behavior
 

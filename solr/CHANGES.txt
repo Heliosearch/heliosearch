@@ -47,11 +47,6 @@ Detailed Change List
 New Features
 ----------------------
 
-* SOLR-1301: Add a Solr contrib that allows for building Solr indexes via 
-  Hadoop's MapReduce. (Matt Revelle, Alexander Kanarsky, Steve Rowe, 
-  Mark Miller, Greg Bowyer, Jason Rutherglen, Kris Jirapinyo, Jason Venner ,
-  Andrzej Bialecki, Patrick Hunt, Wolfgang Hoschek, Roman Shaposhnik, 
-  Eric Wong)
 
 Other Changes
 ----------------------
@@ -145,6 +140,17 @@ New Features
 * SOLR-5529: Add support for queries to use multiple suggesters.
   (Areek Zillur, Erick Erickson, via Robert Muir)
 
+* SOLR-5631: Add support for Lucene's FreeTextSuggester.
+  (Areek Zillur via Robert Muir)
+
+* SOLR-1301: Add a Solr contrib that allows for building Solr indexes via 
+  Hadoop's MapReduce. (Matt Revelle, Alexander Kanarsky, Steve Rowe, 
+  Mark Miller, Greg Bowyer, Jason Rutherglen, Kris Jirapinyo, Jason Venner ,
+  Andrzej Bialecki, Patrick Hunt, Wolfgang Hoschek, Roman Shaposhnik, 
+  Eric Wong)
+
+* SOLR-5476: Overseer Role for nodes (Noble Paul)
+
 Bug Fixes
 ----------------------
 
@@ -199,6 +205,9 @@ Bug Fixes
 
 * SOLR-4992: Solr eats OutOfMemoryError exceptions in many cases.
   (Mark Miller, Daniel Collins)  
+
+* SOLR-5636: SolrRequestParsers does some xpath lookups on every request, which
+  can cause concurrency issues. (Mark Miller)
 
 Optimizations
 ----------------------
@@ -265,6 +274,9 @@ Other Changes
 
 * SOLR-2794: change the default of hl.phraseLimit to 5000.
   (Michael Della Bitta via Robert Muir, Koji, zarni - pull request #11)
+
+* SOLR-5632: Improve response message for reloading a non-existent core.
+  (Anshum Gupta via Mark Miller)
 
 ==================  4.6.1  ==================
 

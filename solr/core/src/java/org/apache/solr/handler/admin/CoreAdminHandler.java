@@ -218,6 +218,13 @@ public class CoreAdminHandler extends RequestHandlerBase {
           this.handleRequestBufferUpdatesAction(req, rsp);
           break;
         }
+        case REJOINOVERSEERELECTION:{
+          ZkController zkController = coreContainer.getZkController();
+          if(zkController != null){
+            zkController.rejoinOverseerElection();
+          }
+          break;
+        }
         default: {
           this.handleCustomAction(req, rsp);
           break;
@@ -725,6 +732,11 @@ public class CoreAdminHandler extends RequestHandlerBase {
   protected void handleReloadAction(SolrQueryRequest req, SolrQueryResponse rsp) {
     SolrParams params = req.getParams();
     String cname = params.get(CoreAdminParams.CORE);
+
+    if(!coreContainer.getCoreNames().contains(cname)) {
+      throw new SolrException(ErrorCode.BAD_REQUEST, "Core with core name [" + cname + "] does not exist.");
+    }
+
     try {
       coreContainer.reload(cname);
     } catch (Exception ex) {
@@ -775,7 +787,7 @@ public class CoreAdminHandler extends RequestHandlerBase {
             
             core.getUpdateHandler().getSolrCoreState().doRecovery(coreContainer, core.getCoreDescriptor());
           } else {
-            SolrException.log(log, "Cound not find core to call recovery:" + cname);
+            SolrException.log(log, "Could not find core to call recovery:" + cname);
           }
         } finally {
           // no recoveryStrat close for now
