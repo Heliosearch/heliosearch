@@ -165,7 +165,7 @@ public class TestSolrQueryParser extends SolrTestCaseJ4 {
 
   @Test
   public void testManyClauses() throws Exception {
-    String a="1 a 2 b 3 c 10 d 11 12 ";         // 10 terms
+    String a="1 a 2 b 3 c 10 d 11 12 ";         // 10 terms, 6 matches on id
     StringBuilder sb = new StringBuilder("id:(");
     for (int i=0; i<1024; i++) {       // historically, the max number of boolean clauses defaulted to 1024
       sb.append('z').append(i).append(' ');

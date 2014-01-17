@@ -1500,6 +1500,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
           DocSet old = out.docSet;
           out.docSet = out.docSet.intersection(bigFilt);
           old.decref();
+          bigFilt.decref();
         }
       }
       // todo: there could be a sortDocSet that could take a list of
@@ -2158,6 +2159,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
     // bit of a hack to tell if a set is sorted - do it better in the future.
     boolean inOrder = set instanceof BitDocSet || set instanceof SortedIntDocSet || set instanceof BitDocSetNative || set instanceof SortedIntDocSetNative;
+    assert inOrder;
 
     TopDocsCollector topCollector = buildTopDocsCollector(nDocs, cmd);
 
