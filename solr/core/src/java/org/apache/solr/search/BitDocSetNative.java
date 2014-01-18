@@ -238,9 +238,19 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
     int wordNum = index >> 6;      // div 64
     int bit = index & 0x3f;     // mod 64
     long bitmask = 1L << bit;
-    boolean val = (HS.getLong(array,wordNum) & bitmask) != 0;
-    HS.setLong(array,wordNum, HS.getLong(array,wordNum) | bitmask);
+    long word = HS.getLong(array,wordNum) ;
+    boolean val = (word & bitmask) != 0;
+    HS.setLong(array,wordNum, word | bitmask);
     return val;
+  }
+
+  public int getAndSetBit(int index) {
+    int wordNum = index >> 6;      // div 64
+    int bit = index & 0x3f;     // mod 64
+    long bitmask = 1L << bit;
+    long word = HS.getLong(array,wordNum) ;
+    HS.setLong(array,wordNum, word | bitmask);
+    return ((int)(word >>> bit)) & 0x01;
   }
 
   public void fastFlip(int index) {
