@@ -25,7 +25,6 @@ import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 /**
@@ -51,15 +50,6 @@ public class IfFunction extends BoolFunction {
     final FuncValues falseVals = falseSource.getValues(context, readerContext);
 
     return new FuncValues() {
-      @Override
-      public byte byteVal(int doc) {
-        return ifVals.boolVal(doc) ? trueVals.byteVal(doc) : falseVals.byteVal(doc);
-      }
-
-      @Override
-      public short shortVal(int doc) {
-        return ifVals.boolVal(doc) ? trueVals.shortVal(doc) : falseVals.shortVal(doc);
-      }
 
       @Override
       public float floatVal(int doc) {

@@ -31,7 +31,6 @@ import org.apache.solr.search.mutable.MutableValueDouble;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Map;
 
 
 public class ValueSourceAdapter extends ValueSource {
@@ -70,16 +69,6 @@ class FunctionValuesAdapter extends FuncValues {
 
   FunctionValuesAdapter(FunctionValues luceneValues) {
     this.luceneValues = luceneValues;
-  }
-
-  @Override
-  public byte byteVal(int doc) {
-    return luceneValues.byteVal(doc);
-  }
-
-  @Override
-  public short shortVal(int doc) {
-    return luceneValues.shortVal(doc);
   }
 
   @Override
@@ -155,16 +144,6 @@ class FunctionValuesAdapter extends FuncValues {
         mval.exists = luceneValues.exists(doc);
       }
     };
-  }
-
-  @Override
-  public void byteVal(int doc, byte[] vals) {
-    luceneValues.byteVal(doc, vals);
-  }
-
-  @Override
-  public void shortVal(int doc, short[] vals) {
-    luceneValues.shortVal(doc, vals);
   }
 
   @Override

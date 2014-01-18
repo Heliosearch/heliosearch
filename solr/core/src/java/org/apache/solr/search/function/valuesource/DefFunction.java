@@ -24,7 +24,6 @@ import org.apache.solr.search.function.ValueSource;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * {@link ValueSource} implementation which only returns the values from the provided
@@ -58,16 +57,6 @@ public class DefFunction extends MultiFunction {
           }
         }
         return valsArr[upto];
-      }
-
-      @Override
-      public byte byteVal(int doc) {
-        return get(doc).byteVal(doc);
-      }
-
-      @Override
-      public short shortVal(int doc) {
-        return get(doc).shortVal(doc);
       }
 
       @Override

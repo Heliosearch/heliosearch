@@ -36,16 +36,6 @@ public abstract class LongDocValues extends FuncValues {
   }
 
   @Override
-  public byte byteVal(int doc) {
-    return (byte) longVal(doc);
-  }
-
-  @Override
-  public short shortVal(int doc) {
-    return (short) longVal(doc);
-  }
-
-  @Override
   public float floatVal(int doc) {
     return (float) longVal(doc);
   }

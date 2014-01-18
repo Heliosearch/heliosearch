@@ -36,14 +36,6 @@ import org.apache.solr.search.mutable.MutableValueFloat;
 //   want the Query carrying around big objects
 public abstract class FuncValues {
 
-  public byte byteVal(int doc) {
-    throw new UnsupportedOperationException();
-  }
-
-  public short shortVal(int doc) {
-    throw new UnsupportedOperationException();
-  }
-
   public float floatVal(int doc) {
     throw new UnsupportedOperationException();
   }
@@ -152,15 +144,6 @@ public abstract class FuncValues {
         mval.value = floatVal(doc);
       }
     };
-  }
-
-  //For Functions that can work with multiple values from the same document.  This does not apply to all functions
-  public void byteVal(int doc, byte[] vals) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void shortVal(int doc, short[] vals) {
-    throw new UnsupportedOperationException();
   }
 
   public void floatVal(int doc, float[] vals) {

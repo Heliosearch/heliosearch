@@ -36,16 +36,6 @@ public abstract class IntFuncValues extends FuncValues {
   }
 
   @Override
-  public byte byteVal(int doc) {
-    return (byte) intVal(doc);
-  }
-
-  @Override
-  public short shortVal(int doc) {
-    return (short) intVal(doc);
-  }
-
-  @Override
   public float floatVal(int doc) {
     return (float) intVal(doc);
   }

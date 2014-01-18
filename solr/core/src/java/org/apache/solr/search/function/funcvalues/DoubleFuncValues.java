@@ -36,16 +36,6 @@ public abstract class DoubleFuncValues extends FuncValues {
   }
 
   @Override
-  public byte byteVal(int doc) {
-    return (byte) doubleVal(doc);
-  }
-
-  @Override
-  public short shortVal(int doc) {
-    return (short) doubleVal(doc);
-  }
-
-  @Override
   public float floatVal(int doc) {
     return (float) doubleVal(doc);
   }

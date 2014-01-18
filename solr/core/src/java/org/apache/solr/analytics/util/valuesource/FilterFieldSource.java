@@ -19,7 +19,6 @@ package org.apache.solr.analytics.util.valuesource;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.search.QueryContext;
@@ -61,16 +60,6 @@ public class FilterFieldSource extends ValueSource {
   public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues vals =  source.getValues(context, readerContext);
     return new FuncValues() {
-
-      @Override
-      public byte byteVal(int doc) {
-        return vals.byteVal(doc);
-      }
-
-      @Override
-      public short shortVal(int doc) {
-        return vals.shortVal(doc);
-      }
 
       @Override
       public float floatVal(int doc) {

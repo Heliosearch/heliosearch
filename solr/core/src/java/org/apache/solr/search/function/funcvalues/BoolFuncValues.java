@@ -37,16 +37,6 @@ public abstract class BoolFuncValues extends FuncValues {
   public abstract boolean boolVal(int doc);
 
   @Override
-  public byte byteVal(int doc) {
-    return boolVal(doc) ? (byte) 1 : (byte) 0;
-  }
-
-  @Override
-  public short shortVal(int doc) {
-    return boolVal(doc) ? (short) 1 : (short) 0;
-  }
-
-  @Override
   public float floatVal(int doc) {
     return boolVal(doc) ? (float) 1 : (float) 0;
   }

@@ -24,7 +24,6 @@ import org.apache.solr.search.function.ValueSource;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -62,17 +61,6 @@ public class VectorValueSource extends MultiValueSource {
       final FuncValues x = sources.get(0).getValues(context, readerContext);
       final FuncValues y = sources.get(1).getValues(context, readerContext);
       return new FuncValues() {
-        @Override
-        public void byteVal(int doc, byte[] vals) {
-          vals[0] = x.byteVal(doc);
-          vals[1] = y.byteVal(doc);
-        }
-
-        @Override
-        public void shortVal(int doc, short[] vals) {
-          vals[0] = x.shortVal(doc);
-          vals[1] = y.shortVal(doc);
-        }
 
         @Override
         public void intVal(int doc, int[] vals) {
@@ -118,19 +106,6 @@ public class VectorValueSource extends MultiValueSource {
     }
 
     return new FuncValues() {
-      @Override
-      public void byteVal(int doc, byte[] vals) {
-        for (int i = 0; i < valsArr.length; i++) {
-          vals[i] = valsArr[i].byteVal(doc);
-        }
-      }
-
-      @Override
-      public void shortVal(int doc, short[] vals) {
-        for (int i = 0; i < valsArr.length; i++) {
-          vals[i] = valsArr[i].shortVal(doc);
-        }
-      }
 
       @Override
       public void floatVal(int doc, float[] vals) {
