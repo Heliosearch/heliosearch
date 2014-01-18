@@ -24,6 +24,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.StorableField;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.IntFuncValues;
@@ -169,7 +170,7 @@ public class RandomSortField extends FieldType {
     }
 
     @Override
-    public FuncValues getValues(Map context, final AtomicReaderContext readerContext) throws IOException {
+    public FuncValues getValues(QueryContext context, final AtomicReaderContext readerContext) throws IOException {
       return new IntFuncValues(this) {
           private final int seed = getSeed(field, readerContext);
           @Override

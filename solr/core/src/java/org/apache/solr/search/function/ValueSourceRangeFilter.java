@@ -23,6 +23,7 @@ import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.Bits;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrFilter;
 
 import java.io.IOException;
@@ -73,7 +74,7 @@ public class ValueSourceRangeFilter extends SolrFilter {
 
 
   @Override
-  public DocIdSet getDocIdSet(final Map context, final AtomicReaderContext readerContext, Bits acceptDocs) throws IOException {
+  public DocIdSet getDocIdSet(final QueryContext context, final AtomicReaderContext readerContext, Bits acceptDocs) throws IOException {
     return BitsFilteredDocIdSet.wrap(new DocIdSet() {
       @Override
       public DocIdSetIterator iterator() throws IOException {
@@ -88,7 +89,7 @@ public class ValueSourceRangeFilter extends SolrFilter {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     valueSource.createWeight(context, searcher);
   }
 

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
@@ -45,7 +46,7 @@ public abstract class SingleDoubleFunction extends ValueSource {
   abstract double func(int doc, FuncValues vals);
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues vals =  source.getValues(context, readerContext);
     return new DoubleFuncValues(this) {
       @Override

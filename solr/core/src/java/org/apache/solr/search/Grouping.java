@@ -896,7 +896,7 @@ public class Grouping {
   public class CommandFunc extends Command<MutableValue> {
 
     public ValueSource groupBy;
-    Map context;
+    QueryContext context;
 
     FunctionFirstPassGroupingCollector firstPass;
     FunctionSecondPassGroupingCollector secondPass;
@@ -910,7 +910,7 @@ public class Grouping {
      */
     @Override
     protected void prepare() throws IOException {
-      Map context = ValueSource.newContext(searcher);
+      QueryContext context = QueryContext.newContext(searcher);
       groupBy.createWeight(context, searcher);
       actualGroupsToFind = getMax(offset, numGroups, maxDoc);
     }

@@ -19,6 +19,7 @@ package org.apache.solr.search.function.distance;
 import com.spatial4j.core.distance.DistanceUtils;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
@@ -57,7 +58,7 @@ public class HaversineConstFunction extends ValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues latVals = latSource.getValues(context, readerContext);
     final FuncValues lonVals = lonSource.getValues(context, readerContext);
     final double latCenterRad = this.latCenter * DEGREES_TO_RADIANS;
@@ -86,7 +87,7 @@ public class HaversineConstFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     latSource.createWeight(context, searcher);
     lonSource.createWeight(context, searcher);
   }

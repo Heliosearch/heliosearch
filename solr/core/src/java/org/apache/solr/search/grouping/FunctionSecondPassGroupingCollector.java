@@ -19,6 +19,7 @@ package org.apache.solr.search.grouping;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Sort;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValue;
@@ -36,7 +37,7 @@ import java.util.Map;
 public class FunctionSecondPassGroupingCollector extends AbstractSecondPassGroupingCollector<MutableValue> {
 
   private final ValueSource groupByVS;
-  private final Map<?, ?> vsContext;
+  private final QueryContext vsContext;
 
   private FuncValues.ValueFiller filler;
   private MutableValue mval;
@@ -55,7 +56,7 @@ public class FunctionSecondPassGroupingCollector extends AbstractSecondPassGroup
    * @param vsContext       The value source context
    * @throws IOException IOException When I/O related errors occur
    */
-  public FunctionSecondPassGroupingCollector(Collection<SearchGroup<MutableValue>> searchGroups, Sort groupSort, Sort withinGroupSort, int maxDocsPerGroup, boolean getScores, boolean getMaxScores, boolean fillSortFields, ValueSource groupByVS, Map<?, ?> vsContext) throws IOException {
+  public FunctionSecondPassGroupingCollector(Collection<SearchGroup<MutableValue>> searchGroups, Sort groupSort, Sort withinGroupSort, int maxDocsPerGroup, boolean getScores, boolean getMaxScores, boolean fillSortFields, ValueSource groupByVS, QueryContext vsContext) throws IOException {
     super(searchGroups, groupSort, withinGroupSort, maxDocsPerGroup, getScores, getMaxScores, fillSortFields);
     this.groupByVS = groupByVS;
     this.vsContext = vsContext;

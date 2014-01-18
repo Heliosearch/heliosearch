@@ -16,6 +16,7 @@ package org.apache.solr.core;
  * limitations under the License.
  */
 
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
@@ -73,7 +74,7 @@ public class CountUsageValueSourceParser extends ValueSourceParser {
       this.counter = counter;
     }
     @Override
-    public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
       return new DoubleFuncValues(this) {
         @Override
         public double doubleVal(int doc) {

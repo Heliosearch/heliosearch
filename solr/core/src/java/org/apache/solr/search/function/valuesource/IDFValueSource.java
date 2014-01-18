@@ -24,6 +24,7 @@ import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper;
 import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.search.similarities.TFIDFSimilarity;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 
 import java.io.IOException;
@@ -49,15 +50,20 @@ public class IDFValueSource extends DocFreqValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    IndexSearcher searcher = (IndexSearcher) context.get("searcher");
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     TFIDFSimilarity sim = asTFIDF(searcher.getSimilarity(), field);
     if (sim == null) {
       throw new UnsupportedOperationException("requires a TFIDFSimilarity (such as DefaultSimilarity)");
     }
     int docfreq = searcher.getIndexReader().docFreq(new Term(indexedField, indexedBytes));
     float idf = sim.idf(docfreq, searcher.getIndexReader().maxDoc());
-    return new ConstDoubleDocValues(idf, this);
+    FuncValues result = new ConstDoubleDocValues(idf, this);
+    context.put(this, result);
+  }
+
+  @Override
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
+    return (FuncValues) context.get(this);
   }
 
   // tries extra hard to cast the sim to TFIDFSimilarity

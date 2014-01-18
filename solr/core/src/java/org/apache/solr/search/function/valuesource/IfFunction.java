@@ -20,6 +20,7 @@ package org.apache.solr.search.function.valuesource;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 
@@ -44,7 +45,7 @@ public class IfFunction extends BoolFunction {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues ifVals = ifSource.getValues(context, readerContext);
     final FuncValues trueVals = trueSource.getValues(context, readerContext);
     final FuncValues falseVals = falseSource.getValues(context, readerContext);
@@ -143,7 +144,7 @@ public class IfFunction extends BoolFunction {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     ifSource.createWeight(context, searcher);
     trueSource.createWeight(context, searcher);
     falseSource.createWeight(context, searcher);

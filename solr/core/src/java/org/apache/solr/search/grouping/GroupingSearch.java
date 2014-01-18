@@ -28,6 +28,7 @@ import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValue;
 
@@ -47,7 +48,7 @@ public class GroupingSearch {
 
   private final String groupField;
   private final ValueSource groupFunction;
-  private final Map<?, ?> valueSourceContext;
+  private final QueryContext valueSourceContext;
   private final Filter groupEndDocs;
 
   private Sort groupSort = Sort.RELEVANCE;
@@ -86,7 +87,7 @@ public class GroupingSearch {
    * @param groupFunction      The function to group by specified as {@link ValueSource}
    * @param valueSourceContext The context of the specified groupFunction
    */
-  public GroupingSearch(ValueSource groupFunction, Map<?, ?> valueSourceContext) {
+  public GroupingSearch(ValueSource groupFunction, QueryContext valueSourceContext) {
     this(null, groupFunction, valueSourceContext, null);
   }
 
@@ -100,7 +101,7 @@ public class GroupingSearch {
     this(null, null, null, groupEndDocs);
   }
 
-  private GroupingSearch(String groupField, ValueSource groupFunction, Map<?, ?> valueSourceContext, Filter groupEndDocs) {
+  private GroupingSearch(String groupField, ValueSource groupFunction, QueryContext valueSourceContext, Filter groupEndDocs) {
     this.groupField = groupField;
     this.groupFunction = groupFunction;
     this.valueSourceContext = valueSourceContext;

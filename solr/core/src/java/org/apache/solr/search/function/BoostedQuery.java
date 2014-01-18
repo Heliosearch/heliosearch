@@ -28,11 +28,11 @@ import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.ToStringUtils;
+import org.apache.solr.search.QueryContext;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -79,12 +79,12 @@ public class BoostedQuery extends Query {
   private class BoostedWeight extends Weight {
     final IndexSearcher searcher;
     Weight qWeight;
-    Map fcontext;
+    QueryContext fcontext;
 
     public BoostedWeight(IndexSearcher searcher) throws IOException {
       this.searcher = searcher;
       this.qWeight = q.createWeight(searcher);
-      this.fcontext = ValueSource.newContext(searcher);
+      this.fcontext = QueryContext.newContext(searcher);
       boostVal.createWeight(fcontext, searcher);
     }
 

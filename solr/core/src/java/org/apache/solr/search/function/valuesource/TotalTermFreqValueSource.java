@@ -21,6 +21,7 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.LongDocValues;
@@ -59,12 +60,12 @@ public class TotalTermFreqValueSource extends ValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     return (FuncValues) context.get(this);
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     long totalTermFreq = 0;
     for (AtomicReaderContext readerContext : searcher.getTopReaderContext().leaves()) {
       long val = readerContext.reader().totalTermFreq(new Term(indexedField, indexedBytes));

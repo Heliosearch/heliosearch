@@ -19,6 +19,7 @@ package org.apache.solr.schema;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.StorableField;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
@@ -474,7 +475,7 @@ class DateFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     return new DocTermsIndexFuncValues(this, readerContext, field) {
       @Override
       protected String toTerm(String readableValue) {

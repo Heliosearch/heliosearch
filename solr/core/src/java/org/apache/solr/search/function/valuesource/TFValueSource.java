@@ -26,6 +26,7 @@ import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.similarities.TFIDFSimilarity;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 
@@ -52,10 +53,10 @@ public class TFValueSource extends TermFreqValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     Fields fields = readerContext.reader().fields();
     final Terms terms = fields.terms(indexedField);
-    IndexSearcher searcher = (IndexSearcher) context.get("searcher");
+    IndexSearcher searcher = context.indexSearcher();
     final TFIDFSimilarity similarity = IDFValueSource.asTFIDF(searcher.getSimilarity(), indexedField);
     if (similarity == null) {
       throw new UnsupportedOperationException("requires a TFIDFSimilarity (such as DefaultSimilarity)");

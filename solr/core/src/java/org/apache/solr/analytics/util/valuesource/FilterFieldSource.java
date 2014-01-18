@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValue;
@@ -57,7 +58,7 @@ public class FilterFieldSource extends ValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues vals =  source.getValues(context, readerContext);
     return new FuncValues() {
 

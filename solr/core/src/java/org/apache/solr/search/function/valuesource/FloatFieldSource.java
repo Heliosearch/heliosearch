@@ -20,6 +20,7 @@ package org.apache.solr.search.function.valuesource;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.Bits;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 import org.apache.solr.search.mutable.MutableValue;
@@ -51,7 +52,7 @@ public class FloatFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FieldCache.Floats arr = cache.getFloats(readerContext.reader(), field, parser, true);
     final Bits valid = cache.getDocsWithField(readerContext.reader(), field);
 

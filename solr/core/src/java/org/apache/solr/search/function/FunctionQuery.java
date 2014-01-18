@@ -27,9 +27,9 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.Bits;
+import org.apache.solr.search.QueryContext;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Set;
 
 
@@ -69,11 +69,11 @@ public class FunctionQuery extends Query {
     protected final IndexSearcher searcher;
     protected float queryNorm;
     protected float queryWeight;
-    protected final Map context;
+    protected final QueryContext context;
 
     public FunctionWeight(IndexSearcher searcher) throws IOException {
       this.searcher = searcher;
-      this.context = ValueSource.newContext(searcher);
+      this.context = QueryContext.newContext(searcher);
       func.createWeight(context, searcher);
     }
 

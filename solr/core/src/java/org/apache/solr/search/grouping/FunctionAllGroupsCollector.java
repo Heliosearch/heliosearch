@@ -18,6 +18,7 @@ package org.apache.solr.search.grouping;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValue;
@@ -42,7 +43,7 @@ import java.util.TreeSet;
  */
 public class FunctionAllGroupsCollector extends AbstractAllGroupsCollector<MutableValue> {
 
-  private final Map<?, ?> vsContext;
+  private final QueryContext vsContext;
   private final ValueSource groupBy;
   private final SortedSet<MutableValue> groups = new TreeSet<MutableValue>();
 
@@ -55,7 +56,7 @@ public class FunctionAllGroupsCollector extends AbstractAllGroupsCollector<Mutab
    * @param groupBy   The {@link ValueSource} to group by
    * @param vsContext The ValueSource context
    */
-  public FunctionAllGroupsCollector(ValueSource groupBy, Map<?, ?> vsContext) {
+  public FunctionAllGroupsCollector(ValueSource groupBy, QueryContext vsContext) {
     this.vsContext = vsContext;
     this.groupBy = groupBy;
   }

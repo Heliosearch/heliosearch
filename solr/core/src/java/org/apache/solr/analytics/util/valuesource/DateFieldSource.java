@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.LongDocValues;
 import org.apache.solr.search.function.valuesource.LongFieldSource;
@@ -61,7 +62,7 @@ public class DateFieldSource extends LongFieldSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FieldCache.Longs arr = cache.getLongs(readerContext.reader(), field, parser, true);
     final Bits valid = cache.getDocsWithField(readerContext.reader(), field);
     return new LongDocValues(this) {

@@ -168,6 +168,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   private final boolean reserveDirectory;
   private final boolean createdDirectory;
   private final int smallSetSize;
+
   private static DirectoryReader getReader(SolrCore core, SolrIndexConfig config, DirectoryFactory directoryFactory, String path) throws IOException {
     DirectoryReader reader = null;
     Directory dir = directoryFactory.get(path, DirContext.DEFAULT, config.lockType);

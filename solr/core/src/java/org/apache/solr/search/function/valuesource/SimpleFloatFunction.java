@@ -18,6 +18,7 @@
 package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
@@ -36,7 +37,7 @@ public abstract class SimpleFloatFunction extends SingleFunction {
   protected abstract float func(int doc, FuncValues vals);
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues vals = source.getValues(context, readerContext);
     return new FloatFuncValues(this) {
       @Override

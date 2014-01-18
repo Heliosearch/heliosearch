@@ -24,6 +24,7 @@ import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.SlowCompositeReaderWrapper;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.search.FieldCache;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.IntFuncValues;
@@ -65,7 +66,7 @@ public class OrdFieldSource extends ValueSource {
 
   // TODO: this is trappy? perhaps this query instead should make you pass a slow reader yourself?
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final int off = readerContext.docBase;
     final IndexReader topReader = ReaderUtil.getTopLevelContext(readerContext).reader();
     final AtomicReader r = SlowCompositeReaderWrapper.wrap(topReader);

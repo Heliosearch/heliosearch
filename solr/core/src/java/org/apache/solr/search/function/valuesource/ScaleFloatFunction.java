@@ -20,6 +20,7 @@ package org.apache.solr.search.function.valuesource;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
@@ -60,7 +61,7 @@ public class ScaleFloatFunction extends ValueSource {
     float maxVal;
   }
 
-  private ScaleInfo createScaleInfo(Map context, AtomicReaderContext readerContext) throws IOException {
+  private ScaleInfo createScaleInfo(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final List<AtomicReaderContext> leaves = ReaderUtil.getTopLevelContext(readerContext).leaves();
 
     float minVal = Float.POSITIVE_INFINITY;
@@ -99,7 +100,7 @@ public class ScaleFloatFunction extends ValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
 
     ScaleInfo scaleInfo = (ScaleInfo) context.get(ScaleFloatFunction.this);
     if (scaleInfo == null) {
@@ -129,7 +130,7 @@ public class ScaleFloatFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     source.createWeight(context, searcher);
   }
 

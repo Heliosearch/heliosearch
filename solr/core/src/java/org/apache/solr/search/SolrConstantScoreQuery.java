@@ -1,6 +1,5 @@
 package org.apache.solr.search;
 
-import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.*;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.index.IndexReader;
@@ -9,7 +8,6 @@ import org.apache.solr.common.SolrException;
 
 import java.io.IOException;
 import java.util.Set;
-import java.util.Map;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -93,10 +91,10 @@ public class SolrConstantScoreQuery extends ConstantScoreQuery implements Extend
   protected class ConstantWeight extends Weight {
     private float queryNorm;
     private float queryWeight;
-    private Map context;
+    private QueryContext context;
 
     public ConstantWeight(IndexSearcher searcher) throws IOException {
-      this.context = ValueSource.newContext(searcher);
+      this.context = QueryContext.newContext(searcher);
       if (filter instanceof SolrFilter)
         ((SolrFilter)filter).createWeight(context, searcher);
     }

@@ -19,6 +19,7 @@ package org.apache.solr.search.function.valuesource;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 
@@ -41,13 +42,13 @@ public class MaxDocValueSource extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     context.put("searcher", searcher);
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    IndexSearcher searcher = (IndexSearcher) context.get("searcher");
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
+    IndexSearcher searcher = context.indexSearcher();
     return new ConstIntDocValues(searcher.getIndexReader().maxDoc(), this);
   }
 

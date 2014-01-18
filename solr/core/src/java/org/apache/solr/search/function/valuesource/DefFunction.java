@@ -18,6 +18,7 @@ package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 
@@ -43,7 +44,7 @@ public class DefFunction extends MultiFunction {
 
 
   @Override
-  public FuncValues getValues(Map fcontext, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext fcontext, AtomicReaderContext readerContext) throws IOException {
 
 
     return new Values(valsArr(sources, fcontext, readerContext)) {

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.*;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.util.BytesRef;
@@ -215,7 +216,7 @@ abstract class AbstractStatsValues<T> implements StatsValues {
     if (valueSource == null) {
       valueSource = ft.getValueSource(sf, null);
     }
-    values = valueSource.getValues(Collections.emptyMap(), ctx);
+    values = valueSource.getValues(new QueryContext(null), ctx); // TODO: FIXME: get real context
   }
 
   /**

@@ -999,7 +999,7 @@ class LongConstValueSource extends ConstNumberSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     return new LongDocValues(this) {
       @Override
       public float floatVal(int doc) {
@@ -1106,7 +1106,7 @@ abstract class DoubleParser extends NamedParser {
     }
 
     @Override
-    public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
       final FuncValues vals =  source.getValues(context, readerContext);
       return new DoubleFuncValues(this) {
         @Override
@@ -1154,7 +1154,7 @@ abstract class Double2Parser extends NamedParser {
     }
 
     @Override
-    public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+    public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
       final FuncValues aVals =  a.getValues(context, readerContext);
       final FuncValues bVals =  b.getValues(context, readerContext);
       return new DoubleFuncValues(this) {
@@ -1170,7 +1170,7 @@ abstract class Double2Parser extends NamedParser {
     }
 
     @Override
-    public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+    public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     }
 
     @Override
@@ -1208,7 +1208,7 @@ class BoolConstValueSource extends ConstNumberSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     return new BoolFuncValues(this) {
       @Override
       public boolean boolVal(int doc) {
@@ -1269,7 +1269,7 @@ class TestValueSource extends ValueSource {
   }
   
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     if (context.get(this) == null) {
       SolrRequestInfo requestInfo = SolrRequestInfo.getRequestInfo();
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "testfunc: unweighted value source detected.  delegate="+source + " request=" + (requestInfo==null ? "null" : requestInfo.getReq()));
@@ -1293,7 +1293,7 @@ class TestValueSource extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     context.put(this, this);
   }
 

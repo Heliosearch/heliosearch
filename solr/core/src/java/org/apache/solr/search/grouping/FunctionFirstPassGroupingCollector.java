@@ -19,6 +19,7 @@ package org.apache.solr.search.grouping;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Sort;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValue;
@@ -35,7 +36,7 @@ import java.util.Map;
 public class FunctionFirstPassGroupingCollector extends AbstractFirstPassGroupingCollector<MutableValue> {
 
   private final ValueSource groupByVS;
-  private final Map<?, ?> vsContext;
+  private final QueryContext vsContext;
 
   private FuncValues.ValueFiller filler;
   private MutableValue mval;
@@ -54,7 +55,7 @@ public class FunctionFirstPassGroupingCollector extends AbstractFirstPassGroupin
    * @param topNGroups How many top groups to keep.
    * @throws IOException When I/O related errors occur
    */
-  public FunctionFirstPassGroupingCollector(ValueSource groupByVS, Map<?, ?> vsContext, Sort groupSort, int topNGroups) throws IOException {
+  public FunctionFirstPassGroupingCollector(ValueSource groupByVS, QueryContext vsContext, Sort groupSort, int topNGroups) throws IOException {
     super(groupSort, topNGroups);
     this.groupByVS = groupByVS;
     this.vsContext = vsContext;

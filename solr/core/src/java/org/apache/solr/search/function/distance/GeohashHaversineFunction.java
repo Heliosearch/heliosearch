@@ -24,6 +24,7 @@ import com.spatial4j.core.io.GeohashUtils;
 import com.spatial4j.core.shape.Point;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
@@ -60,7 +61,7 @@ public class GeohashHaversineFunction extends ValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues gh1DV = geoHash1.getValues(context, readerContext);
     final FuncValues gh2DV = geoHash2.getValues(context, readerContext);
 
@@ -98,7 +99,7 @@ public class GeohashHaversineFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     geoHash1.createWeight(context, searcher);
     geoHash2.createWeight(context, searcher);
   }

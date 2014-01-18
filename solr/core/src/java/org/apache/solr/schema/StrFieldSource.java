@@ -18,6 +18,7 @@
 package org.apache.solr.schema;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
 import org.apache.solr.search.function.valuesource.FieldCacheSource;
@@ -37,7 +38,7 @@ public class StrFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     return new DocTermsIndexFuncValues(this, readerContext, field) {
 
       @Override

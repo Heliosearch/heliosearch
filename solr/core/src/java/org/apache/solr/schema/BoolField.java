@@ -27,6 +27,7 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.StorableField;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.BoolFuncValues;
@@ -167,7 +168,7 @@ class BoolFieldSource extends ValueSource {
 
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final SortedDocValues sindex = FieldCache.DEFAULT.getTermsIndex(readerContext.reader(), field);
 
     // figure out what ord maps to true

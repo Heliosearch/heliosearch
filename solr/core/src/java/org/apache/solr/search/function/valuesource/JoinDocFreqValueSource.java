@@ -26,6 +26,7 @@ import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.packed.PackedInts;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.IntFuncValues;
 
@@ -54,7 +55,7 @@ public class JoinDocFreqValueSource extends FieldCacheSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final BinaryDocValues terms = cache.getTerms(readerContext.reader(), field, false, PackedInts.FAST);
     final IndexReader top = ReaderUtil.getTopLevelContext(readerContext).reader();
     Terms t = MultiFields.getTerms(top, qfield);

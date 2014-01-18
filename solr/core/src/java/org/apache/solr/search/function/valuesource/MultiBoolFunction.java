@@ -19,6 +19,7 @@ package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.BoolFuncValues;
@@ -43,7 +44,7 @@ public abstract class MultiBoolFunction extends BoolFunction {
   protected abstract boolean func(int doc, FuncValues[] vals);
 
   @Override
-  public BoolFuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public BoolFuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues[] vals = new FuncValues[sources.size()];
     int i = 0;
     for (ValueSource source : sources) {
@@ -103,7 +104,7 @@ public abstract class MultiBoolFunction extends BoolFunction {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     for (ValueSource source : sources) {
       source.createWeight(context, searcher);
     }

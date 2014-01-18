@@ -18,6 +18,7 @@ package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 
@@ -59,7 +60,7 @@ public abstract class MultiFunction extends ValueSource {
     return sb.toString();
   }
 
-  public static FuncValues[] valsArr(List<ValueSource> sources, Map fcontext, AtomicReaderContext readerContext) throws IOException {
+  public static FuncValues[] valsArr(List<ValueSource> sources, QueryContext fcontext, AtomicReaderContext readerContext) throws IOException {
     final FuncValues[] valsArr = new FuncValues[sources.size()];
     int i = 0;
     for (ValueSource source : sources) {
@@ -105,7 +106,7 @@ public abstract class MultiFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     for (ValueSource source : sources)
       source.createWeight(context, searcher);
   }

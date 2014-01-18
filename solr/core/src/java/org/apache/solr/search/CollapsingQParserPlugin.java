@@ -924,7 +924,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
     private ValueSource valueSource;
     private FuncValues functionValues;
     private float[] ordVals;
-    private Map rcontext = new HashMap();  // TODO: get a real context
+    private QueryContext rcontext = new QueryContext(null);  // TODO: FIXME: get a real context!!!
     private CollapseScore collapseScore = new CollapseScore();
     private float score;
     private boolean cscore;

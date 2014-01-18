@@ -18,6 +18,7 @@ package org.apache.solr.search.grouping;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValue;
@@ -36,7 +37,7 @@ import java.util.Map;
  */
 public class FunctionDistinctValuesCollector extends AbstractDistinctValuesCollector<FunctionDistinctValuesCollector.GroupCount> {
 
-  private final Map<?, ?> vsContext;
+  private final QueryContext vsContext;
   private final ValueSource groupSource;
   private final ValueSource countSource;
   private final Map<MutableValue, GroupCount> groupMap;
@@ -46,7 +47,7 @@ public class FunctionDistinctValuesCollector extends AbstractDistinctValuesColle
   private MutableValue groupMval;
   private MutableValue countMval;
 
-  public FunctionDistinctValuesCollector(Map<?, ?> vsContext, ValueSource groupSource, ValueSource countSource, Collection<SearchGroup<MutableValue>> groups) {
+  public FunctionDistinctValuesCollector(QueryContext vsContext, ValueSource groupSource, ValueSource countSource, Collection<SearchGroup<MutableValue>> groups) {
     this.vsContext = vsContext;
     this.groupSource = groupSource;
     this.countSource = countSource;

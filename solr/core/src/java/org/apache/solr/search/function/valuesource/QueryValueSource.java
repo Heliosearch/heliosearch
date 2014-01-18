@@ -24,6 +24,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.Bits;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
@@ -59,7 +60,7 @@ public class QueryValueSource extends ValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map fcontext, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext fcontext, AtomicReaderContext readerContext) throws IOException {
     return new QueryFuncValues(this, readerContext, fcontext);
   }
 
@@ -76,7 +77,7 @@ public class QueryValueSource extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     Weight w = searcher.createNormalizedWeight(q);
     context.put(this, w);
   }
@@ -88,7 +89,7 @@ class QueryFuncValues extends FloatFuncValues {
   final Bits acceptDocs;
   final Weight weight;
   final float defVal;
-  final Map fcontext;
+  final QueryContext fcontext;
   final Query q;
 
   Scorer scorer;
@@ -100,7 +101,7 @@ class QueryFuncValues extends FloatFuncValues {
   int lastDocRequested = Integer.MAX_VALUE;
 
 
-  public QueryFuncValues(QueryValueSource vs, AtomicReaderContext readerContext, Map fcontext) throws IOException {
+  public QueryFuncValues(QueryValueSource vs, AtomicReaderContext readerContext, QueryContext fcontext) throws IOException {
     super(vs);
 
     this.readerContext = readerContext;
@@ -115,7 +116,7 @@ class QueryFuncValues extends FloatFuncValues {
       if (fcontext == null) {
         weightSearcher = new IndexSearcher(ReaderUtil.getTopLevelContext(readerContext));
       } else {
-        weightSearcher = (IndexSearcher) fcontext.get("searcher");
+        weightSearcher = fcontext.indexSearcher();
         if (weightSearcher == null) {
           weightSearcher = new IndexSearcher(ReaderUtil.getTopLevelContext(readerContext));
         }

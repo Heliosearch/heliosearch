@@ -26,6 +26,7 @@ import org.apache.lucene.document.FieldType;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.StorableField;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.valuesource.VectorValueSource;
@@ -328,15 +329,13 @@ class SpatialDistanceQuery extends ExtendedQueryBase implements PostFilter {
     protected IndexSearcher searcher;
     protected float queryNorm;
     protected float queryWeight;
-    protected Map latContext;
-    protected Map lonContext;
+    protected QueryContext context;
 
     public SpatialWeight(IndexSearcher searcher) throws IOException {
       this.searcher = searcher;
-      this.latContext = ValueSource.newContext(searcher);
-      this.lonContext = ValueSource.newContext(searcher);
-      latSource.createWeight(latContext, searcher);
-      lonSource.createWeight(lonContext, searcher);
+      this.context = QueryContext.newContext(searcher);
+      latSource.createWeight(context, searcher);
+      lonSource.createWeight(context, searcher);
     }
 
     @Override
@@ -399,8 +398,8 @@ class SpatialDistanceQuery extends ExtendedQueryBase implements PostFilter {
       this.reader = readerContext.reader();
       this.maxDoc = reader.maxDoc();
       this.acceptDocs = acceptDocs;
-      latVals = latSource.getValues(weight.latContext, readerContext);
-      lonVals = lonSource.getValues(weight.lonContext, readerContext);
+      latVals = latSource.getValues(weight.context, readerContext);
+      lonVals = lonSource.getValues(weight.context, readerContext);
 
       this.lonMin = SpatialDistanceQuery.this.lonMin;
       this.lonMax = SpatialDistanceQuery.this.lonMax;

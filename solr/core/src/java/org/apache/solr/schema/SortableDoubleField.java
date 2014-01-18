@@ -17,6 +17,7 @@
 
 package org.apache.solr.schema;
 
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
@@ -139,7 +140,7 @@ class SortableDoubleFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final double def = defVal;
 
     return new DocTermsIndexFuncValues(this, readerContext, field) {

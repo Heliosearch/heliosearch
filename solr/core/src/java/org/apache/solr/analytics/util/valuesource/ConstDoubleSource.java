@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 import org.apache.solr.search.function.valuesource.ConstNumberSource;
@@ -48,7 +49,7 @@ public class ConstDoubleSource extends ConstNumberSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     return new DoubleFuncValues(this) {
       @Override
       public double doubleVal(int doc) {

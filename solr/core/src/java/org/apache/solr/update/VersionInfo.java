@@ -18,10 +18,10 @@
 package org.apache.solr.update;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.util.BitUtil;
@@ -194,7 +194,7 @@ public class VersionInfo {
       if (lookup < 0) return null;
 
       ValueSource vs = versionField.getType().getValueSource(versionField, null);
-      Map context = ValueSource.newContext(searcher);
+      QueryContext context = QueryContext.newContext(searcher);
       vs.createWeight(context, searcher);
       FuncValues fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
       long ver = fv.longVal((int)lookup);

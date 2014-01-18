@@ -20,6 +20,7 @@ import com.spatial4j.core.distance.DistanceUtils;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
@@ -94,7 +95,7 @@ public class HaversineFunction extends ValueSource {
 
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FuncValues vals1 = p1.getValues(context, readerContext);
 
     final FuncValues vals2 = p2.getValues(context, readerContext);
@@ -116,7 +117,7 @@ public class HaversineFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
     p1.createWeight(context, searcher);
     p2.createWeight(context, searcher);
 

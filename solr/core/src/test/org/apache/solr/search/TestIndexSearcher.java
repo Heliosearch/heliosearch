@@ -28,7 +28,6 @@ import org.apache.solr.schema.SchemaField;
 import org.junit.BeforeClass;
 
 import java.util.List;
-import java.util.Map;
 import java.io.IOException;
 
 public class TestIndexSearcher extends SolrTestCaseJ4 {
@@ -54,7 +53,7 @@ public class TestIndexSearcher extends SolrTestCaseJ4 {
   private String getStringVal(SolrQueryRequest sqr, String field, int doc) throws IOException {
     SchemaField sf = sqr.getSchema().getField(field);
     ValueSource vs = sf.getType().getValueSource(sf, null);
-    Map context = ValueSource.newContext(sqr.getSearcher());
+    QueryContext context = QueryContext.newContext(sqr.getSearcher());
     vs.createWeight(context, sqr.getSearcher());
     IndexReaderContext topReaderContext = sqr.getSearcher().getTopReaderContext();
     List<AtomicReaderContext> leaves = topReaderContext.leaves();

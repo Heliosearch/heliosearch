@@ -22,10 +22,10 @@ import org.apache.lucene.search.FieldComparator;
 import org.apache.lucene.search.FieldComparatorSource;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.SortField;
+import org.apache.solr.search.QueryContext;
 
 import java.io.IOException;
-import java.util.IdentityHashMap;
-import java.util.Map;
+
 
 /**
  * Instantiates {@link FuncValues} for a particular reader.
@@ -38,7 +38,7 @@ public abstract class ValueSource {
    * Gets the values for this reader and the context that was previously
    * passed to createWeight()
    */
-  public abstract FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException;
+  public abstract FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException;
 
   @Override
   public abstract boolean equals(Object o);
@@ -62,16 +62,7 @@ public abstract class ValueSource {
    * weight info in the context. The context object will be passed to getValues()
    * where this info can be retrieved.
    */
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
-  }
-
-  /**
-   * Returns a new non-threadsafe context map.
-   */
-  public static Map newContext(IndexSearcher searcher) {
-    Map context = new IdentityHashMap();
-    context.put("searcher", searcher);
-    return context;
+  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
   }
 
 
@@ -82,7 +73,7 @@ public abstract class ValueSource {
   /**
    * EXPERIMENTAL: This method is subject to change.
    * <p/>
-   * Get the SortField for this ValueSource.  Uses the {@link #getValues(java.util.Map, AtomicReaderContext)}
+   * Get the SortField for this ValueSource.  Uses the {@link #getValues(org.apache.solr.search.QueryContext, org.apache.lucene.index.AtomicReaderContext)}
    * to populate the SortField.
    *
    * @param reverse true if this is a reverse sort.
@@ -99,16 +90,16 @@ public abstract class ValueSource {
 
     @Override
     public SortField rewrite(IndexSearcher searcher) throws IOException {
-      Map context = newContext(searcher);
+      QueryContext context = QueryContext.newContext(searcher);
       createWeight(context, searcher);
       return new SortField(getField(), new ValueSourceComparatorSource(context), getReverse());
     }
   }
 
   class ValueSourceComparatorSource extends FieldComparatorSource {
-    private final Map context;
+    private final QueryContext context;
 
-    public ValueSourceComparatorSource(Map context) {
+    public ValueSourceComparatorSource(QueryContext context) {
       this.context = context;
     }
 
@@ -128,10 +119,10 @@ public abstract class ValueSource {
     private final double[] values;
     private FuncValues docVals;
     private double bottom;
-    private final Map fcontext;
+    private final QueryContext fcontext;
     private double topValue;
 
-    ValueSourceComparator(Map fcontext, int numHits) {
+    ValueSourceComparator(QueryContext fcontext, int numHits) {
       this.fcontext = fcontext;
       values = new double[numHits];
     }

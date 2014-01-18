@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.FieldCache;
@@ -154,7 +155,7 @@ public class FieldFacetStats {
 
   public void setNextReader(AtomicReaderContext ctx) throws IOException {
     this.context = ctx;
-    values = valueSource.getValues(Collections.emptyMap(), ctx);
+    values = valueSource.getValues(new QueryContext(null), ctx); // TODO: FIXME: get a real context
     for (StatsValues stats : facetStatsValues.values()) {
       stats.setNextReader(ctx);
     }

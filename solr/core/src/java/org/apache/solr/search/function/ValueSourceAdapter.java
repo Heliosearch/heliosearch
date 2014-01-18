@@ -25,6 +25,7 @@ import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.AttributeSource;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.mutable.MutableValue;
 import org.apache.solr.search.mutable.MutableValueDouble;
 
@@ -41,8 +42,8 @@ public class ValueSourceAdapter extends ValueSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    org.apache.lucene.queries.function.FunctionValues luceneValues = luceneSource.getValues(context, readerContext);
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
+    org.apache.lucene.queries.function.FunctionValues luceneValues = luceneSource.getValues(null, readerContext);
     return new FunctionValuesAdapter(luceneValues);
   }
 

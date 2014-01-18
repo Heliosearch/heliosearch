@@ -24,6 +24,7 @@ import org.apache.lucene.index.FieldInfo.DocValuesType;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
 
@@ -40,7 +41,7 @@ public class BytesRefFieldSource extends FieldCacheSource {
   }
 
   @Override
-  public FuncValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final FieldInfo fieldInfo = readerContext.reader().getFieldInfos().fieldInfo(field);
     // To be sorted or not to be sorted, that is the question
     // TODO: do it cleaner?
