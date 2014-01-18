@@ -171,10 +171,6 @@ public abstract class FuncValues {
     return new Explanation(floatVal(doc), toString(doc));
   }
 
-  public ValueSourceScorer getScorer(IndexReader reader) {
-    return new ValueSourceScorer(reader, this);
-  }
-
   // A RangeValueSource can't easily be a ValueSource that takes another ValueSource
   // because it needs different behavior depending on the type of fields.  There is also
   // a setup cost - parsing and normalizing params, and doing a binary search on the StringIndex.

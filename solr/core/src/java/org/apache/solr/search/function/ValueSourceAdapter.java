@@ -177,11 +177,6 @@ class FunctionValuesAdapter extends FuncValues {
   }
 
   @Override
-  public ValueSourceScorer getScorer(IndexReader reader) {
-    return new ValueSourceScorerAdapter(reader, this, luceneValues.getScorer(reader));
-  }
-
-  @Override
   public ValueSourceScorer getRangeScorer(IndexReader reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper) {
     return new ValueSourceScorerAdapter(reader, this, luceneValues.getRangeScorer(reader, lowerVal, upperVal, includeLower, includeUpper));
   }
