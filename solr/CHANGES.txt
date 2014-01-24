@@ -151,6 +151,9 @@ New Features
 
 * SOLR-5476: Overseer Role for nodes (Noble Paul)
 
+* SOLR-5594: Allow FieldTypes to specify custom PrefixQuery behavior
+  (Anshum Gupta via hossman)
+
 Bug Fixes
 ----------------------
 
@@ -206,12 +209,18 @@ Bug Fixes
 * SOLR-4992: Solr eats OutOfMemoryError exceptions in many cases.
   (Mark Miller, Daniel Collins)  
 
-* SOLR-5636: SolrRequestParsers does some xpath lookups on every request, which
-  can cause concurrency issues. (Mark Miller)
-
 * LUCENE-5399, SOLR-5354 sort wouldn't work correctly with
   distributed searching for some field types such as legacy numeric
   types (Rob Muir, Mike McCandless)
+
+* SOLR-5643: ConcurrentUpdateSolrServer will sometimes not spawn a new Runner
+  thread even though there are updates in the queue. (Mark Miller)
+
+* SOLR-5650: When a replica becomes a leader, only peer sync with other replicas
+  that last published an ACTIVE state. (Mark Miller)
+
+* SOLR-5657: When a SolrCore starts on HDFS, it should gracefully handle HDFS
+  being in safe mode. (Mark Miller)
 
 Optimizations
 ----------------------
@@ -281,6 +290,9 @@ Other Changes
 
 * SOLR-5632: Improve response message for reloading a non-existent core.
   (Anshum Gupta via Mark Miller)
+
+* SOLR-5633: HttpShardHandlerFactory should make its http client available to subclasses.
+  (Ryan Ernst)
 
 ==================  4.6.1  ==================
 
@@ -355,7 +367,7 @@ Bug Fixes
   necessary. (Mark Miller)
   
 * SOLR-4709: The core reload after replication if config files have changed
-  can fail due to a race condition. (Mark Miller, Hossman))
+  can fail due to a race condition. (Mark Miller, Hossman)
 
 * SOLR-5503: Retry 'forward to leader' requests less aggressively - rather 
   than on IOException and status 500, ConnectException. (Mark Miller)
@@ -382,6 +394,16 @@ Bug Fixes
   all previously added updates have finished. This could cause distributed
   updates meant for replicas to be lost. (Markus Jelsma, Timothy Potter,
   Joel Bernstein, Mark Miller)
+
+* SOLR-5645: A SolrCore reload via the CoreContainer will try and register in
+  zk again with the new SolrCore. (Mark Miller)
+
+* SOLR-5636: SolrRequestParsers does some xpath lookups on every request, which
+  can cause concurrency issues. (Mark Miller)
+
+* SOLR-5658: commitWithin and overwrite are not being distributed to replicas
+  now that SolrCloud uses javabin to distribute updates.
+  (Mark Miller, Varun Thacker, Elodie Sannier, shalin)
 
 Optimizations
 ----------------------  

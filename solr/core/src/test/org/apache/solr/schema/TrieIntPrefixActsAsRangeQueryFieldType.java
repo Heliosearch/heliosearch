@@ -1,4 +1,4 @@
-package org.apache.lucene.codecs.lucene40;
+package org.apache.solr.schema;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,30 +17,17 @@ package org.apache.lucene.codecs.lucene40;
  * limitations under the License.
  */
 
-import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.index.BaseDocValuesFormatTestCase;
-import org.junit.BeforeClass;
+import org.apache.lucene.search.Query;
+import org.apache.solr.search.QParser;
 
 /**
- * Tests Lucene40DocValuesFormat
+ * Custom field type that overrides the prefix query behavior to map "X*" to [X TO Integer.MAX_VALUE].
+ * * This is used for testing overridded prefix query for custom fields in TestOverriddenPrefixQueryForCustomFieldType
  */
-public class TestLucene40DocValuesFormat extends BaseDocValuesFormatTestCase {
-  private final Codec codec = new Lucene40RWCodec();
-  
-  @BeforeClass
-  public static void beforeClass() {
-    OLD_FORMAT_IMPERSONATION_IS_ACTIVE = true; // explicitly instantiates ancient codec
-  }
+public class TrieIntPrefixActsAsRangeQueryFieldType extends TrieIntField {
 
-  @Override
-  protected Codec getCodec() {
-    return codec;
-  }
-
-  // LUCENE-4583: This codec should throw IAE on huge binary values:
-  @Override
-  protected boolean codecAcceptsHugeBinaryValues(String field) {
-    return false;
+  public Query getPrefixQuery(QParser parser, SchemaField sf, String termStr) {
+    return getRangeQuery(parser, sf, termStr, new String(Integer.MAX_VALUE + ""), true, false);
   }
 
 }
