@@ -3,8 +3,8 @@
 
   <target name="help">
     <echo message="Welcome to Heliosearch" />
-    <echo message="Create Example Server:  ant -f hds.xml example" />
-    <echo message="Create Distribution:  ant -f hds.xml package-hs -Dversion=hs_0.01" />
+    <echo message="Create Example Server:  ant -f hs.xml example" />
+    <echo message="Create Distribution:  ant -f hs.xml package-hs -Dversion=hs_0.01" />
   </target>
   
   <target name="package-hs"
