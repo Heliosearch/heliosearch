@@ -147,6 +147,11 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
   }
 
   @Override
+  public V check(K key) {
+    return get(key);
+  }
+
+  @Override
   public void clear() {
     cache.clear();
   }

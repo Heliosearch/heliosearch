@@ -142,6 +142,11 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
+  public V check(K key) {
+    return get(key);
+  }
+
+  @Override
   public void clear() {
     synchronized(map) {
       map.clear();

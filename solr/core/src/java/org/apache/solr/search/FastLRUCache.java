@@ -134,6 +134,11 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
+  public V check(K key) {
+    return cache.check(key);
+  }
+
+  @Override
   public void clear() {
     cache.clear();
   }
@@ -251,9 +256,15 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
         Object k = e.getKey();
         Object v = e.getValue();
 
-        String ks = "item_" + k;
-        String vs = v.toString();
-        lst.add(ks,vs);
+        try {
+          String ks = "item_" + k;
+          String vs = v.toString();
+          lst.add(ks,vs);
+        } finally {
+          if (v instanceof RefCount) {
+            ((RefCount)v).decref();
+          }
+        }
       }
       
     }

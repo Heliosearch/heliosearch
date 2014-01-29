@@ -102,6 +102,20 @@ public class ConcurrentLRUCache<K,V> {
     return e.value;
   }
 
+  /** Like get, but does not update stats */
+  public V check(K key) {
+    CacheEntry<K,V> e = map.get(key);
+    if (e == null) {
+      return null;
+    }
+    if (e.value instanceof RefCount) {
+      if ( ((RefCount)e.value).tryIncref() == false) {
+        return null;   // a concurrent decref() beat us to the punch
+      }
+    }
+    return e.value;
+  }
+
   public V remove(K key) {
     CacheEntry<K,V> cacheEntry = map.remove(key);
     if (cacheEntry != null) {
