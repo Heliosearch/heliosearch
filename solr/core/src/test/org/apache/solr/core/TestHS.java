@@ -103,6 +103,42 @@ public class TestHS extends LuceneTestCase {
     HS.freeArray(arr2);
   }
 
+  public void testShortArray() {
+    long arr = HS.allocArray(5, 2, false);
+
+    assertEquals(10, HS.arraySizeBytes(arr));
+
+    short c1 = (short)0x1234;
+    short c2 = (short)0x8765;
+
+    HS.setShort(arr, 0, c1);
+    HS.setShort(arr, 4, c2);
+
+    assertEquals(c1, HS.getShort(arr, 0));
+    assertEquals(c2, HS.getShort(arr, 4));
+
+    HS.freeArray(arr);
+  }
+
+  public void testByteArray() {
+    long arr = HS.allocArray(5, 1, false);
+
+    assertEquals(5, HS.arraySizeBytes(arr));
+
+    byte c1 = (byte)0x12;
+    byte c2 = (byte)0x87;
+
+    HS.setByte(arr, 0, c1);
+    HS.setByte(arr, 4, c2);
+
+    assertEquals(c1, HS.getByte(arr, 0));
+    assertEquals(c2, HS.getByte(arr, 4));
+
+    HS.freeArray(arr);
+  }
+
+
+
   public void testAsserts() {
     log.warn("CHECKPOINT 1");
     long arr = HS.allocArray(5, 8, false);

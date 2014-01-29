@@ -159,6 +159,26 @@ public class HS
     return sz;
   }
 
+  public static byte getByte(long ptr, int index) {
+    assert (index>=0) && ((((long)index+1))) <= arraySizeBytes(ptr);
+    return unsafe.getByte(ptr + (((long) index)));
+  }
+
+  public static void setByte(long ptr, int index, byte val) {
+    assert (index>=0) && ((((long)index+1))) <= arraySizeBytes(ptr);
+    unsafe.putByte(ptr + (((long)index)), val);
+  }
+
+  public static int getShort(long ptr, int index) {
+    assert (index>=0) && ((((long)index+1)<<1)) <= arraySizeBytes(ptr);
+    return unsafe.getShort(ptr + (((long)index)<<1));
+  }
+
+  public static void setShort(long ptr, int index, short val) {
+    assert (index>=0) && ((((long)index+1)<<1)) <= arraySizeBytes(ptr);
+    unsafe.putInt(ptr + (((long)index)<<1), val);
+  }
+
   public static int getInt(long ptr, int index) {
     assert (index>=0) && ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
     return unsafe.getInt(ptr + (((long)index)<<2));
