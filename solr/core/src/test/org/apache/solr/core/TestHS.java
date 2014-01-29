@@ -178,6 +178,44 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 3a");
+    failed=false;
+    try {
+      HS.setShort(arr, 20, (short) 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 4a");
+    failed=false;
+    try {
+      HS.getShort(arr, 20);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 3b");
+    failed=false;
+    try {
+      HS.setByte(arr, 40, (byte) 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 4b");
+    failed=false;
+    try {
+      HS.getByte(arr, 40);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+
+
     //
     // negative indexes
     //
@@ -218,6 +256,44 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 7a");
+    failed=false;
+    try {
+      HS.setShort(arr, -1, (short) 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 8a");
+    failed=false;
+    try {
+      HS.getShort(arr, -1);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 7b");
+    failed=false;
+    try {
+      HS.setByte(arr, -1, (byte) 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 8b");
+    failed=false;
+    try {
+      HS.getByte(arr, -1);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+
+
     //
     // zero arrays
     //
@@ -252,6 +328,42 @@ public class TestHS extends LuceneTestCase {
     failed=false;
     try {
       HS.getInt(0, 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 11a");
+    failed=false;
+    try {
+      HS.setShort(0, 0, (short)0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+
+    log.warn("CHECKPOINT 12a");
+    assertTrue(failed);
+    failed=false;
+    try {
+      HS.getShort(0, 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 11b");
+    failed=false;
+    try {
+      HS.setByte(0, 0, (byte)0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+
+    log.warn("CHECKPOINT 12b");
+    assertTrue(failed);
+    failed=false;
+    try {
+      HS.getByte(0, 0);
     } catch (Throwable e) {
       failed = true;
     }
