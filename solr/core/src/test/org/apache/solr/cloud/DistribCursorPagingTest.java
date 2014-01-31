@@ -29,6 +29,7 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
+import org.apache.solr.common.SolrInputField;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.params.CommonParams;
@@ -148,7 +149,10 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     String cursorMark = CURSOR_MARK_START;
     SolrParams params = null;
     QueryResponse rsp = null;
-    
+
+    final String intsort = "int" + (random().nextBoolean() ? "" : "_dv");
+    final String intmissingsort = defaultCodecSupportsMissingDocValues() ? intsort : "int";
+
     // trivial base case: ensure cursorMark against an empty index doesn't blow up
     cursorMark = CURSOR_MARK_START;
     params = params("q", "*:*", 
@@ -172,7 +176,7 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     indexDoc(sdoc("id", "6", "str", "a", "float", "64.5", "int", "7"));
     indexDoc(sdoc("id", "1", "str", "a", "float", "64.5", "int", "7"));
     indexDoc(sdoc("id", "4", "str", "a", "float", "11.1", "int", "6"));
-    indexDoc(sdoc("id", "3", "str", "a", "float", "11.1", "int", "3"));
+    indexDoc(sdoc("id", "3", "str", "a", "float", "11.1")); // int is missing
     commit();
 
     // base case: ensure cursorMark that matches no docs doesn't blow up
@@ -247,7 +251,7 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
                     "facet", "true", "facet.limit","100",
                     "facet.field", "str",
                     "json.nl", "map",
-                    "sort", "int asc, id asc");
+                    "sort", intsort + " asc, id asc");
     rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
     assertNumFound(8, rsp);
     assertStartsAt(0, rsp);
@@ -281,6 +285,70 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     assertEquals("no more docs, but cursorMark has changed", 
                  cursorMark, assertHashNextCursorMark(rsp));
   
+    // int missing first sort with dups, id tie breaker
+    cursorMark = CURSOR_MARK_START;
+    params = params("q", "-int:2001 -int:4055", 
+                    "rows","3",
+                    "fl", "id",
+                    "json.nl", "map",
+                    "sort", intmissingsort + "_first  asc, id asc");
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp, 3, 7, 0);
+    cursorMark = assertHashNextCursorMark(rsp);
+    //
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp, 4, 1, 6);
+    cursorMark = assertHashNextCursorMark(rsp);
+    //
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp, 9, 2);
+    cursorMark = assertHashNextCursorMark(rsp);
+    //
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp);
+    assertEquals("no more docs, but cursorMark has changed", 
+                 cursorMark, assertHashNextCursorMark(rsp));
+
+    // int missing last sort with dups, id tie breaker
+    cursorMark = CURSOR_MARK_START;
+    params = params("q", "-int:2001 -int:4055", 
+                    "rows","3",
+                    "fl", "id",
+                    "json.nl", "map",
+                    "sort", intmissingsort + "_last asc, id asc");
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp, 7, 0, 4);
+    cursorMark = assertHashNextCursorMark(rsp);
+    //
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp, 1, 6, 9);
+    cursorMark = assertHashNextCursorMark(rsp);
+    //
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp, 2, 3);
+    cursorMark = assertHashNextCursorMark(rsp);
+    //
+    rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
+    assertNumFound(8, rsp);
+    assertStartsAt(0, rsp);
+    assertDocList(rsp);
+    assertEquals("no more docs, but cursorMark has changed", 
+                 cursorMark, assertHashNextCursorMark(rsp));
+
     // string sort with dups, id tie breaker
     cursorMark = CURSOR_MARK_START;
     params = params("q", "*:*", 
@@ -311,7 +379,7 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     params = params("q", "*:*", 
                     "rows","2",
                     "fl", "id",
-                    "sort", "float asc, int desc, id desc");
+                    "sort", "float asc, "+intsort+" desc, id desc");
     rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
     assertNumFound(10, rsp);
     assertStartsAt(0, rsp);
@@ -355,7 +423,7 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     params = params("q", "id:3 id:7", 
                     "rows","111",
                     "fl", "id",
-                    "sort", "int asc, id asc");
+                    "sort", intsort + " asc, id asc");
     rsp = query(p(params, CURSOR_MARK_PARAM, cursorMark));
     assertNumFound(2, rsp);
     assertStartsAt(0, rsp);
@@ -448,16 +516,18 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
   /** randomized testing of a non-trivial number of docs using assertFullWalkNoDups 
    */
   public void doRandomSortsOnLargeIndex() throws Exception {
-    final Collection<String> allFieldNames = getAllFieldNames();
+    final Collection<String> allFieldNames = getAllSortFieldNames();
 
-    final int initialDocs = _TestUtil.nextInt(random(),100,200);
+    final int numInitialDocs = _TestUtil.nextInt(random(),100,200);
     final int totalDocs = atLeast(5000);
 
     // start with a smallish number of documents, and test that we can do a full walk using a 
     // sort on *every* field in the schema...
 
-    for (int i = 1; i <= initialDocs; i++) {
+    List<SolrInputDocument> initialDocs = new ArrayList<SolrInputDocument>();
+    for (int i = 1; i <= numInitialDocs; i++) {
       SolrInputDocument doc = CursorPagingTest.buildRandomDocument(i);
+      initialDocs.add(doc);
       indexDoc(doc);
     }
     commit();
@@ -470,19 +540,43 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
         String sort = f + order + ("id".equals(f) ? "" : ", id" + order);
         String rows = "" + _TestUtil.nextInt(random(),13,50);
         SentinelIntSet ids = assertFullWalkNoDups(SOLR_5652,
-                                                  initialDocs, 
+                                                  numInitialDocs,
                                                   params("q", "*:*",
                                                          "fl","id,"+f,
                                                          "rows",rows,
                                                          "sort",sort));
-        assertEquals(initialDocs, ids.size());
+        if (numInitialDocs != ids.size()) {
+          StringBuilder message = new StringBuilder
+              ("Expected " + numInitialDocs + " docs but got " + ids.size() + ". ");
+          message.append("sort=");
+          message.append(sort);
+          message.append(". ");
+          if (ids.size() < numInitialDocs) {
+            message.append("Missing doc(s): ");
+            for (SolrInputDocument doc : initialDocs) {
+              int id = ((Integer)doc.get("id").getValue()).intValue();
+              if ( ! ids.exists(id)) {
+                QueryResponse rsp = cloudClient.query(params("q", "id:" + id,
+                                                             "rows", "1"));
+                if (0 == rsp.getResults().size()) {
+                  message.append("<NOT RETRIEVABLE>:");
+                  message.append(doc.values());
+                } else {
+                  message.append(rsp.getResults().get(0).getFieldValueMap().toString());
+                }
+                message.append("; ");
+              }
+            }
+          }
+          fail(message.toString());
+        }
       }
     }
 
     log.info("SOLR-5652: Ending Loop over smallish num of docs");
 
     // now add a lot more docs, and test a handful of randomized multi-level sorts
-    for (int i = initialDocs+1; i <= totalDocs; i++) {
+    for (int i = numInitialDocs+1; i <= totalDocs; i++) {
       SolrInputDocument doc = CursorPagingTest.buildRandomDocument(i);
       indexDoc(doc);
     }
@@ -496,7 +590,7 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
       final boolean matchAll = random().nextBoolean();
       final String q = matchAll ? "*:*" : CursorPagingTest.buildRandomQuery();
 
-      SentinelIntSet ids = assertFullWalkNoDups(totalDocs, 
+      SentinelIntSet ids = assertFullWalkNoDups(totalDocs,
                                                 params("q", q,
                                                        "fl",fl,
                                                        "rows",rows,
@@ -511,24 +605,20 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
   
   /**
    * Asks the LukeRequestHandler on the control client for a list of the fields in the 
-   * schema (excluding _version_) and then returns the field names in a deterministically 
-   * random order.
+   * schema and then prunes that list down to just the fields that can be used for sorting,
+   * and returns them as an immutable list in a deterministically random order.
    */
-  private List<String> getAllFieldNames() throws SolrServerException, IOException {
+  private List<String> getAllSortFieldNames() throws SolrServerException, IOException {
     LukeRequest req = new LukeRequest("/admin/luke");
     req.setShowSchema(true); 
     NamedList<Object> rsp = controlClient.request(req);
     NamedList<Object> fields = (NamedList) ((NamedList)rsp.get("schema")).get("fields");
     ArrayList<String> names = new ArrayList<String>(fields.size());
     for (Map.Entry<String,Object> item : fields) {
-      String f = item.getKey();
-      if (! f.equals("_version_")) {
-        names.add(item.getKey());
-      }
+      names.add(item.getKey());
     }
-    Collections.sort(names);
-    Collections.shuffle(names,random());
-    return Collections.<String>unmodifiableList(names);
+    
+    return CursorPagingTest.pruneAndDeterministicallySort(names);
   }
 
   /**
