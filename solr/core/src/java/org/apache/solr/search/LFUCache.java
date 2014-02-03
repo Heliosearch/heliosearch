@@ -168,10 +168,12 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
   }
 
   @Override
-  public void warm(SolrIndexSearcher searcher, SolrCache old) {
+  public void warm(SolrIndexSearcher.WarmContext warmContext) {
     if (regenerator == null) return;
+    warmContext.cache = this;
+
     long warmingStartTime = System.currentTimeMillis();
-    LFUCache other = (LFUCache) old;
+    LFUCache other = (LFUCache) warmContext.oldCache;
     // warm entries
     if (autowarmCount != 0) {
       int sz = other.size();
@@ -184,8 +186,7 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
       }
       for (int i = itemsArr.length - 1; i >= 0; i--) {
         try {
-          boolean continueRegen = regenerator.regenerateItem(searcher,
-              this, old, itemsArr[i].getKey(), itemsArr[i].getValue());
+          boolean continueRegen = regenerator.regenerateItem(warmContext, itemsArr[i].getKey(), itemsArr[i].getValue());
           if (!continueRegen) break;
         } catch (Exception e) {
           SolrException.log(log, "Error during auto-warming of key:" + itemsArr[i].getKey(), e);

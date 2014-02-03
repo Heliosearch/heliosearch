@@ -336,7 +336,7 @@ public class TestHS extends LuceneTestCase {
     log.warn("CHECKPOINT 11a");
     failed=false;
     try {
-      HS.setShort(0, 0, (short)0);
+      HS.setShort(0, 0, (short) 0);
     } catch (Throwable e) {
       failed = true;
     }
@@ -354,7 +354,7 @@ public class TestHS extends LuceneTestCase {
     log.warn("CHECKPOINT 11b");
     failed=false;
     try {
-      HS.setByte(0, 0, (byte)0);
+      HS.setByte(0, 0, (byte) 0);
     } catch (Throwable e) {
       failed = true;
     }
@@ -370,8 +370,33 @@ public class TestHS extends LuceneTestCase {
     assertTrue(failed);
 
 
+
+
     HS.freeArray(arr);
     log.warn("CHECKPOINT 13");
+
+
+
+    failed=false;
+    try {
+      HS.freeArray(arr);  // double free... this is not guaranteed to pass since memory could be reused!!!  If this fails once in a while, simply re-run.
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+    log.warn("CHECKPOINT 24");
+
+
+    failed=false;
+    try {
+      HS.freeArray(0);  // null pointer free
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+    log.warn("CHECKPOINT 25");
+
+
 
   }
 

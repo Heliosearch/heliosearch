@@ -118,7 +118,7 @@ public interface SolrCache<K,V> extends SolrInfoMBean {
    * Warm this cache associated with <code>searcher</code> using the <code>old</code>
    * cache object.  <code>this</code> and <code>old</code> will have the same concrete type.
    */
-  void warm(SolrIndexSearcher searcher, SolrCache<K,V> old);
+  void warm(SolrIndexSearcher.WarmContext warmContext);
   // Q: an alternative to passing the searcher here would be to pass it in
   // init and have the cache implementation save it.
 

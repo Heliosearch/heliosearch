@@ -522,7 +522,7 @@ public class Grouping {
      *
      * @throws IOException If I/O related errors occur
      */
-    protected abstract void prepare() throws IOException;
+    public abstract void prepare() throws IOException;
 
     /**
      * Returns one or more {@link Collector} instances that are needed to perform the first pass search.
@@ -693,7 +693,7 @@ public class Grouping {
      * {@inheritDoc}
      */
     @Override
-    protected void prepare() throws IOException {
+    public void prepare() throws IOException {
       actualGroupsToFind = getMax(offset, numGroups, maxDoc);
     }
 
@@ -845,7 +845,7 @@ public class Grouping {
      * {@inheritDoc}
      */
     @Override
-    protected void prepare() throws IOException {
+    public void prepare() throws IOException {
       actualGroupsToFind = getMax(offset, numGroups, maxDoc);
     }
 
@@ -917,8 +917,8 @@ public class Grouping {
      * {@inheritDoc}
      */
     @Override
-    protected void prepare() throws IOException {
-      QueryContext context = QueryContext.newContext(searcher);
+    public void prepare() throws IOException {
+      context = QueryContext.newContext(searcher);
       groupBy.createWeight(context, searcher);
       actualGroupsToFind = getMax(offset, numGroups, maxDoc);
     }

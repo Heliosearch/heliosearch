@@ -27,6 +27,7 @@ import org.apache.solr.util.TimeZoneUtils;
 
 import java.io.Closeable;
 import java.util.Date;
+import java.util.Deque;
 import java.util.TimeZone;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,7 +41,7 @@ public class SolrRequestInfo {
   protected Date now;
   protected TimeZone tz;
   protected ResponseBuilder rb;
-  protected List<Closeable> closeHooks;
+  protected Deque<Closeable> closeHooks;
 
 
   public static SolrRequestInfo getRequestInfo() {
@@ -152,7 +153,8 @@ public class SolrRequestInfo {
       if (closeHooks == null) {
         closeHooks = new LinkedList<Closeable>();
       }
-      closeHooks.add(hook);
+      // addFirst so we will close in reverse order
+      closeHooks.addFirst(hook);
     }
   }
 }

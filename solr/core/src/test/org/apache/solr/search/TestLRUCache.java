@@ -47,7 +47,11 @@ public class TestLRUCache extends LuceneTestCase {
     assertEquals(null, lruCache.get(1));  // first item put in should be the first out
     LRUCache<Object, Object> lruCacheNew = new LRUCache<Object, Object>();
     lruCacheNew.init(params, o, cr);
-    lruCacheNew.warm(null, lruCache);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = lruCache;
+
+    lruCacheNew.warm(warmContext);
     lruCacheNew.setState(SolrCache.State.LIVE);
     lruCache.close();
     lruCacheNew.put(103, "103");
@@ -78,7 +82,11 @@ public class TestLRUCache extends LuceneTestCase {
 
     LRUCache<Object, Object> lruCacheNew = new LRUCache<Object, Object>();
     lruCacheNew.init(params, o, cr);
-    lruCacheNew.warm(null, lruCache);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = lruCache;
+
+    lruCacheNew.warm(warmContext);
     lruCacheNew.setState(SolrCache.State.LIVE);
     lruCache.close();
       
@@ -113,7 +121,11 @@ public class TestLRUCache extends LuceneTestCase {
     assertEquals(null, lruCache.get(1));  // first item put in should be the first out
     LRUCache<Object, Object> lruCacheNew = new LRUCache<Object, Object>();
     lruCacheNew.init(params, o, cr);
-    lruCacheNew.warm(null, lruCache);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = lruCache;
+
+    lruCacheNew.warm(warmContext);
     lruCacheNew.setState(SolrCache.State.LIVE);
     lruCache.close();
     lruCacheNew.put(103, "103");

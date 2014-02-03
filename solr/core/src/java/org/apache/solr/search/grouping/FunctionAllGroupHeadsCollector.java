@@ -59,6 +59,10 @@ public class FunctionAllGroupHeadsCollector extends AbstractAllGroupHeadsCollect
    */
   public FunctionAllGroupHeadsCollector(ValueSource groupBy, QueryContext vsContext, Sort sortWithinGroup) {
     super(sortWithinGroup.getSort().length);
+if (vsContext == null) {
+  throw new RuntimeException("nocommit");
+}
+
     groups = new HashMap<>();
     this.sortWithinGroup = sortWithinGroup;
     this.groupBy = groupBy;

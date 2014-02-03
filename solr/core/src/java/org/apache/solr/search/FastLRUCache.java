@@ -150,10 +150,12 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public void warm(SolrIndexSearcher searcher, SolrCache old) {
+  public void warm(SolrIndexSearcher.WarmContext warmContext) {
     if (regenerator == null) return;
+    warmContext.cache = this;
+
     long warmingStartTime = System.currentTimeMillis();
-    FastLRUCache other = (FastLRUCache) old;
+    FastLRUCache other = (FastLRUCache) warmContext.oldCache;
     // warm entries
     if (isAutowarmingOn()) {
       int sz = autowarm.getWarmCount(other.size());
@@ -166,8 +168,7 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
         }
         for (int i = itemsArr.length - 1; i >= 0; i--) {
           try {
-            boolean continueRegen = regenerator.regenerateItem(searcher,
-                this, old, itemsArr[i].getKey(), itemsArr[i].getValue());
+            boolean continueRegen = regenerator.regenerateItem(warmContext, itemsArr[i].getKey(), itemsArr[i].getValue());
             if (!continueRegen) break;
           }
           catch (Exception e) {

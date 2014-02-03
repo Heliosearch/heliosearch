@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -87,7 +88,6 @@ import org.apache.lucene.search.Weight;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.common.params.ModifiableSolrParams;
@@ -105,7 +105,7 @@ import org.apache.solr.request.UnInvertedField;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
-import org.apache.solr.spelling.QueryConverter;
+import org.apache.solr.search.field.TopValues;
 import org.apache.solr.update.SolrIndexConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,6 +148,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   private final SolrCache<QueryResultKey,DocList> queryResultCache;
   private final SolrCache<Integer,StoredDocument> documentCache;
   private final SolrCache<String,UnInvertedField> fieldValueCache;
+
+  private final SolrCache<String,TopValues> nCache;
 
   // map of generic caches - not synchronized since it's read-only after the constructor.
   private final HashMap<String, SolrCache> cacheMap;
@@ -226,6 +228,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     cachingEnabled=enableCache;
     if (cachingEnabled) {
       ArrayList<SolrCache> clist = new ArrayList<SolrCache>();
+      nCache = solrConfig.nCacheConfig ==null ? null : solrConfig.nCacheConfig.newInstance();
+      if (nCache !=null) clist.add(nCache);
       fieldValueCache = solrConfig.fieldValueCacheConfig==null ? null : solrConfig.fieldValueCacheConfig.newInstance();
       if (fieldValueCache!=null) clist.add(fieldValueCache);
       filterCache= solrConfig.filterCacheConfig==null ? null : solrConfig.filterCacheConfig.newInstance();
@@ -251,6 +255,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
       cacheList = clist.toArray(new SolrCache[clist.size()]);
     } else {
+      nCache = null;
       filterCache=null;
       queryResultCache=null;
       documentCache=null;
@@ -405,13 +410,17 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   // Set default regenerators on filter and query caches if they don't have any
   //
   public static void initRegenerators(SolrConfig solrConfig) {
+    if (solrConfig.nCacheConfig != null && solrConfig.nCacheConfig.getRegenerator() == null) {
+      solrConfig.nCacheConfig.setRegenerator(new TopValues.Regenerator());
+    }
+
     if (solrConfig.fieldValueCacheConfig != null && solrConfig.fieldValueCacheConfig.getRegenerator() == null) {
       solrConfig.fieldValueCacheConfig.setRegenerator(
           new CacheRegenerator() {
             @Override
-            public boolean regenerateItem(SolrIndexSearcher newSearcher, SolrCache newCache, SolrCache oldCache, Object oldKey, Object oldVal) throws IOException {
+            public boolean regenerateItem(WarmContext warmContext, Object oldKey, Object oldVal) throws IOException {
               if (oldVal instanceof UnInvertedField) {
-                UnInvertedField.getUnInvertedField((String)oldKey, newSearcher);
+                UnInvertedField.getUnInvertedField((String)oldKey, warmContext.searcher);
               }
               return true;
             }
@@ -423,8 +432,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       solrConfig.filterCacheConfig.setRegenerator(
           new CacheRegenerator() {
             @Override
-            public boolean regenerateItem(SolrIndexSearcher newSearcher, SolrCache newCache, SolrCache oldCache, Object oldKey, Object oldVal) throws IOException {
-              newSearcher.cacheDocSet((Query)oldKey, null, false);
+            public boolean regenerateItem(WarmContext warmContext, Object oldKey, Object oldVal) throws IOException {
+              warmContext.searcher.cacheDocSet((Query)oldKey, null, false);
               return true;
             }
           }
@@ -436,7 +445,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       solrConfig.queryResultCacheConfig.setRegenerator(
           new CacheRegenerator() {
             @Override
-            public boolean regenerateItem(SolrIndexSearcher newSearcher, SolrCache newCache, SolrCache oldCache, Object oldKey, Object oldVal) throws IOException {
+            public boolean regenerateItem(WarmContext warmContext, Object oldKey, Object oldVal) throws IOException {
               QueryResultKey key = (QueryResultKey)oldKey;
               int nDocs=1;
               // request 1 doc and let caching round up to the next window size...
@@ -461,7 +470,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
                   .setSupersetMaxDoc(nDocs)
                   .setFlags(flags);
               QueryResult qr = new QueryResult();
-              newSearcher.getDocListC(qr,qc);
+              warmContext.searcher.getDocListC(qr,qc);
               DocSet set = qr.getDocSet();
               if (set != null) set.decref();
               return true;
@@ -652,23 +661,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     return d;
   }
 
-  /**
-   * Takes a list of docs (the doc ids actually), and reads them into an array 
-   * of Documents.
-   */
-  public void readDocs(StoredDocument[] docs, DocList ids) throws IOException {
-    readDocs(docs, ids, null);
-  }
-  /**
-   * Takes a list of docs (the doc ids actually) and a set of fields to load,
-   * and reads them into an array of Documents.
-   */
-  public void readDocs(StoredDocument[] docs, DocList ids, Set<String> fields) throws IOException {
-    DocIterator iter = ids.iterator();
-    for (int i=0; i<docs.length; i++) {
-      docs[i] = doc(iter.nextDoc(), fields);
-    }
-  }
+
 
   /* ********************** end document retrieval *************************/
 
@@ -679,6 +672,11 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   /** expert: internal API, subject to change */
   public SolrCache<String,UnInvertedField> getFieldValueCache() {
     return fieldValueCache;
+  }
+
+  /** expert: internal API, subject to change */
+  public SolrCache<String,TopValues> getnCache() {
+    return nCache;
   }
 
   /** Returns a weighted sort according to this searcher */
@@ -2284,18 +2282,53 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   }
 
 
+  public static class WarmContext {
+    public SolrIndexSearcher searcher;
+    public SolrIndexSearcher oldSearcher;
+    public SolrCache cache;
+    public SolrCache oldCache;
+    public int[] oldToNewOrd;
+    public int segmentsShared;
+  }
 
   /**
    * Warm this searcher based on an old one (primarily for auto-cache warming).
    */
   public void warm(SolrIndexSearcher old) throws IOException {
-    // Make sure this is first!  filters can help queryResults execute!
+    WarmContext warmContext = new WarmContext();
+    warmContext.searcher = this;
+    warmContext.oldSearcher = old;
+
+
+    List<AtomicReaderContext> leaves = getTopReaderContext().leaves();
+    Map<Object, AtomicReaderContext> coreKeyToNewContext = new HashMap<>(leaves.size());
+    for (AtomicReaderContext leaf : leaves) {
+      coreKeyToNewContext.put( leaf.reader().getCoreCacheKey(), leaf );
+    }
+
+    List<AtomicReaderContext> oldLeaves = old.getTopReaderContext().leaves();
+    warmContext.oldToNewOrd = new int[oldLeaves.size()];
+    for (int i=0; i<warmContext.oldToNewOrd.length; i++) {
+      warmContext.oldToNewOrd[i] = -1;
+    }
+
+    for (AtomicReaderContext oldLeaf : oldLeaves) {
+      AtomicReaderContext newLeaf = coreKeyToNewContext.get(oldLeaf.reader().getCoreCacheKey());
+      if (newLeaf != null) {
+        warmContext.oldToNewOrd[oldLeaf.ord] = newLeaf.ord;
+        warmContext.segmentsShared++;
+      }
+    }
+
+    // Make sure nCache is first, followed by filters... then filters can help queryResults execute!
     long warmingStartTime = System.currentTimeMillis();
     // warm the caches in order...
     ModifiableSolrParams params = new ModifiableSolrParams();
     params.add("warming","true");
     for (int i=0; i<cacheList.length; i++) {
-      if (debug) log.debug("autowarming " + this + " from " + old + "\n\t" + old.cacheList[i]);
+      if (debug) {
+        log.debug("autowarming " + this + " from " + old + "\n\t" + old.cacheList[i]);
+      }
 
 
       SolrQueryRequest req = new LocalSolrQueryRequest(core,params) {
@@ -2306,7 +2339,9 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       SolrQueryResponse rsp = new SolrQueryResponse();
       SolrRequestInfo.setRequestInfo(new SolrRequestInfo(req, rsp));
       try {
-        this.cacheList[i].warm(this, old.cacheList[i]);
+        warmContext.oldCache = old.cacheList[i];
+        warmContext.cache = this.cacheList[i];
+        warmContext.cache.warm(warmContext);
       } finally {
         try {
           req.close();
@@ -2378,6 +2413,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     lst.add("caching", cachingEnabled);
     lst.add("numDocs", reader.numDocs());
     lst.add("maxDoc", reader.maxDoc());
+    lst.add("numSegments", getTopReaderContext().leaves().size());
     lst.add("deletedDocs", reader.maxDoc() - reader.numDocs());
     lst.add("reader", reader.toString());
     lst.add("readerDir", reader.directory());

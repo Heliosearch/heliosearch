@@ -527,6 +527,19 @@
                         showItems="32" />
       -->
 
+    <!-- nCache, the native off-heap FieldCache
+         used for quickly accessing field values by document id
+         that have been un-inverted from indexed fields
+         for sorting, faceting, function queries, etc.
+      -->
+    <!--
+       <nCache class="solr.FastLRUCache"
+                        size="64"
+                        autowarmCount="100%"
+                        showItems="-1" />
+      -->
+
+
     <!-- Custom Cache
 
          Example of a generic cache.  These caches may be accessed by

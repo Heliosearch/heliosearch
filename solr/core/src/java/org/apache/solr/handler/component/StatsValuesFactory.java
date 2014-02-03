@@ -42,7 +42,7 @@ public class StatsValuesFactory {
    * @param sf SchemaField for the field whose statistics will be created by the resulting StatsValues
    * @return Instance of StatsValues that will create statistics from values from a field of the given type
    */
-  public static StatsValues createStatsValues(SchemaField sf, boolean calcDistinct) {
+  public static StatsValues createStatsValues(QueryContext qcontext, SchemaField sf, boolean calcDistinct) {
     // TODO: allow for custom field types
     FieldType fieldType = sf.getType();
     if (DoubleField.class.isInstance(fieldType) ||
@@ -54,13 +54,13 @@ public class StatsValuesFactory {
         SortableIntField.class.isInstance(fieldType) ||
         SortableLongField.class.isInstance(fieldType) ||
         SortableFloatField.class.isInstance(fieldType)) {
-      return new NumericStatsValues(sf, calcDistinct);
+      return new NumericStatsValues(qcontext, sf, calcDistinct);
     } else if (DateField.class.isInstance(fieldType)) {
-      return new DateStatsValues(sf, calcDistinct);
+      return new DateStatsValues(qcontext, sf, calcDistinct);
     } else if (StrField.class.isInstance(fieldType)) {
-      return new StringStatsValues(sf, calcDistinct);
+      return new StringStatsValues(qcontext, sf, calcDistinct);
     } else if (sf.getType().getClass().equals(EnumField.class)) {
-      return new EnumStatsValues(sf, calcDistinct);
+      return new EnumStatsValues(qcontext, sf, calcDistinct);
     } else {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Field type " + fieldType + " is not currently supported");
     }
@@ -85,17 +85,20 @@ abstract class AbstractStatsValues<T> implements StatsValues {
   protected long countDistinct;
   protected Set<T> distinctValues;
   private ValueSource valueSource;
+  private final QueryContext qcontext;
   protected FuncValues values;
   protected boolean calcDistinct = false;
   
   // facetField   facetValue
   protected Map<String, Map<String, StatsValues>> facets = new HashMap<String, Map<String, StatsValues>>();
 
-  protected AbstractStatsValues(SchemaField sf, boolean calcDistinct) {
+  protected AbstractStatsValues(QueryContext qcontext, SchemaField sf, boolean calcDistinct) {
     this.sf = sf;
     this.ft = sf.getType();
     this.distinctValues = new TreeSet<T>();
     this.calcDistinct = calcDistinct;
+    // this.valueSource = ft.getValueSource(sf, null);  // FIXME - throws exception for multi-valued fields.... why doesn't it later on?  setNextReader must never be called?
+    this.qcontext = qcontext;
   }
 
   /**
@@ -130,7 +133,7 @@ abstract class AbstractStatsValues<T> implements StatsValues {
         String val = vals.getName(j);
         StatsValues vvals = addTo.get(val);
         if (vvals == null) {
-          vvals = StatsValuesFactory.createStatsValues(sf, calcDistinct);
+          vvals = StatsValuesFactory.createStatsValues(qcontext, sf, calcDistinct);
           addTo.put(val, vvals);
         }
         vvals.accumulate((NamedList) vals.getVal(j));
@@ -216,7 +219,7 @@ abstract class AbstractStatsValues<T> implements StatsValues {
     if (valueSource == null) {
       valueSource = ft.getValueSource(sf, null);
     }
-    values = valueSource.getValues(new QueryContext(null), ctx); // TODO: FIXME: get real context
+    values = valueSource.getValues(qcontext, ctx);
   }
 
   /**
@@ -258,8 +261,8 @@ class NumericStatsValues extends AbstractStatsValues<Number> {
   double sum;
   double sumOfSquares;
 
-  public NumericStatsValues(SchemaField sf, boolean calcDistinct) {
-    super(sf, calcDistinct);
+  public NumericStatsValues(QueryContext qcontext, SchemaField sf, boolean calcDistinct) {
+    super(qcontext, sf, calcDistinct);
     min = Double.POSITIVE_INFINITY;
     max = Double.NEGATIVE_INFINITY;
   }
@@ -333,8 +336,8 @@ class NumericStatsValues extends AbstractStatsValues<Number> {
  */
 class EnumStatsValues extends AbstractStatsValues<EnumFieldValue> {
 
-  public EnumStatsValues(SchemaField sf, boolean calcDistinct) {
-    super(sf, calcDistinct);
+  public EnumStatsValues(QueryContext qcontext, SchemaField sf, boolean calcDistinct) {
+    super(qcontext, sf, calcDistinct);
   }
 
   /**
@@ -402,8 +405,8 @@ class DateStatsValues extends AbstractStatsValues<Date> {
   private long sum = -1;
   double sumOfSquares = 0;
 
-  public DateStatsValues(SchemaField sf, boolean calcDistinct) {
-    super(sf, calcDistinct);
+  public DateStatsValues(QueryContext qcontext, SchemaField sf, boolean calcDistinct) {
+    super(qcontext, sf, calcDistinct);
   }
 
   @Override
@@ -488,8 +491,8 @@ class DateStatsValues extends AbstractStatsValues<Date> {
  */
 class StringStatsValues extends AbstractStatsValues<String> {
 
-  public StringStatsValues(SchemaField sf, boolean calcDistinct) {
-    super(sf, calcDistinct);
+  public StringStatsValues(QueryContext qcontext, SchemaField sf, boolean calcDistinct) {
+    super(qcontext, sf, calcDistinct);
   }
 
   @Override

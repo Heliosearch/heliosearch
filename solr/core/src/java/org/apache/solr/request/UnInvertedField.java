@@ -499,7 +499,8 @@ public class UnInvertedField extends DocTermOrds {
     SchemaField sf = searcher.getSchema().getField(field);
    // FieldType ft = sf.getType();
 
-    StatsValues allstats = StatsValuesFactory.createStatsValues(sf, calcDistinct);
+    QueryContext qcontext = QueryContext.newContext(searcher);
+    StatsValues allstats = StatsValuesFactory.createStatsValues(qcontext, sf, calcDistinct);
 
 
     DocSet docs = baseDocs;

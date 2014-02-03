@@ -58,7 +58,11 @@ public class TestFastLRUCache extends LuceneTestCase {
     assertEquals(null, fastCache.get(1));  // first item put in should be the first out
     FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<Object, Object>();
     fastCacheNew.init(params, o, cr);
-    fastCacheNew.warm(null, fastCache);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = fastCache;
+
+    fastCacheNew.warm(warmContext);
     fastCacheNew.setState(SolrCache.State.LIVE);
     fastCache.close();
     fastCacheNew.put(103, "103");
@@ -98,7 +102,11 @@ public class TestFastLRUCache extends LuceneTestCase {
 
     FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<Object, Object>();
     fastCacheNew.init(params, o, cr);
-    fastCacheNew.warm(null, fastCache);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = fastCache;
+
+    fastCacheNew.warm(warmContext);
     fastCacheNew.setState(SolrCache.State.LIVE);
     fastCache.close();
       
@@ -135,7 +143,11 @@ public class TestFastLRUCache extends LuceneTestCase {
     assertEquals(null, fastCache.get(1));  // first item put in should be the first out
     FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<Object, Object>();
     fastCacheNew.init(params, o, cr);
-    fastCacheNew.warm(null, fastCache);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = fastCache;
+
+    fastCacheNew.warm(warmContext);
     fastCacheNew.setState(SolrCache.State.LIVE);
     fastCache.close();
     fastCacheNew.put(103, "103");
@@ -164,7 +176,11 @@ public class TestFastLRUCache extends LuceneTestCase {
 
     FastLRUCache<Object, Object> cacheNew = new FastLRUCache<Object, Object>();
     cacheNew.init(params, o, cr);
-    cacheNew.warm(null, cache);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = cache;
+
+    cacheNew.warm(warmContext);
     cacheNew.setState(SolrCache.State.LIVE);
     cache.close();
     cacheNew.put(103, "103");
@@ -198,7 +214,11 @@ public class TestFastLRUCache extends LuceneTestCase {
 
     FastLRUCache scNew = new FastLRUCache();
     scNew.init(l, o, cr);
-    scNew.warm(null, sc);
+
+    SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+    warmContext.oldCache = sc;
+
+    scNew.warm(warmContext);
     scNew.setState(SolrCache.State.LIVE);
     sc.close();
     scNew.put(103, "103");

@@ -234,6 +234,7 @@ public class SimpleFacetsHS {
           this.docs = searcher.getDocSet(qlist);
           return;
         }
+        grouping.getCommands().get(0).prepare();
         AbstractAllGroupHeadsCollector allGroupHeadsCollector = grouping.getCommands().get(0).createAllGroupCollector();
         try (DocSet base = searcher.getDocSet(qlist)) {
           searcher.search(new MatchAllDocsQuery(), base.getTopFilter(), allGroupHeadsCollector);

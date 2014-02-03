@@ -65,6 +65,13 @@ public class FunctionQuery extends Query {
   public void extractTerms(Set<Term> terms) {
   }
 
+
+  @Override
+  public Weight createWeight(IndexSearcher searcher) throws IOException {
+    return new FunctionQuery.FunctionWeight(searcher);
+  }
+
+
   protected class FunctionWeight extends Weight {
     protected final IndexSearcher searcher;
     protected float queryNorm;
@@ -184,12 +191,6 @@ public class FunctionQuery extends Query {
       result.addDetail(new Explanation(weight.queryNorm, "queryNorm"));
       return result;
     }
-  }
-
-
-  @Override
-  public Weight createWeight(IndexSearcher searcher) throws IOException {
-    return new FunctionQuery.FunctionWeight(searcher);
   }
 
 

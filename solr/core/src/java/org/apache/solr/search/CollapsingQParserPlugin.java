@@ -20,6 +20,7 @@ package org.apache.solr.search;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.request.LocalSolrQueryRequest;
+import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.schema.TrieFloatField;
 import org.apache.solr.schema.TrieIntField;
 import org.apache.solr.schema.TrieLongField;
@@ -52,7 +53,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Iterator;
 
@@ -924,7 +924,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
     private ValueSource valueSource;
     private FuncValues functionValues;
     private float[] ordVals;
-    private QueryContext rcontext = new QueryContext(null);  // TODO: FIXME: get a real context!!!
+    private QueryContext qcontext = new QueryContext(SolrRequestInfo.getRequestInfo().getReq().getSearcher());  // TODO: FIXME: this is a hack
     private CollapseScore collapseScore = new CollapseScore();
     private float score;
     private boolean cscore;
@@ -954,7 +954,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
 
       if(funcStr.indexOf("cscore()") != -1) {
         this.cscore = true;
-        this.rcontext.put("CSCORE", this.collapseScore);
+        this.qcontext.put("CSCORE", this.collapseScore);
       }
 
       if(this.needsScores) {
@@ -966,7 +966,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
     }
 
     public void setNextReader(AtomicReaderContext context) throws IOException {
-      functionValues = this.valueSource.getValues(rcontext, context);
+      functionValues = this.valueSource.getValues(qcontext, context);
     }
 
     public void collapse(int ord, int contextDoc, int globalDoc) throws IOException {

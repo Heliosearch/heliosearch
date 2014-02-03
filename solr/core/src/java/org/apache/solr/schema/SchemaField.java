@@ -139,6 +139,18 @@ public final class SchemaField extends FieldProperties {
       + "}";
   }
 
+  public void addInfo(Map<String,Object> map) {
+    map.put("name", name);
+    map.put("type", type.getTypeName());
+    if (defaultValue != null) {
+      map.put("defaultValue", defaultValue);
+    }
+    map.put("properties", propertiesToString(properties));
+    if (required) {
+      map.put("required", required);
+    }
+  }
+
   public void write(TextResponseWriter writer, String name, StorableField val) throws IOException {
     // name is passed in because it may be null if name should not be used.
     type.write(writer,name,val);

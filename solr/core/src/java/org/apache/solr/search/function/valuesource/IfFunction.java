@@ -44,7 +44,7 @@ public class IfFunction extends BoolFunction {
   }
 
   @Override
-  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(final QueryContext context, final AtomicReaderContext readerContext) throws IOException {
     final FuncValues ifVals = ifSource.getValues(context, readerContext);
     final FuncValues trueVals = trueSource.getValues(context, readerContext);
     final FuncValues falseVals = falseSource.getValues(context, readerContext);
@@ -88,6 +88,15 @@ public class IfFunction extends BoolFunction {
 
       @Override
       public Object objectVal(int doc) {
+if (ifVals == null) {
+  System.out.println("WHAT?");  // nocomit
+  try {
+  final FuncValues ifVals = ifSource.getValues(context, readerContext);
+  } catch (IOException e) {
+    System.out.println("ERROR " + e);
+
+  }
+}
         return ifVals.boolVal(doc) ? trueVals.objectVal(doc) : falseVals.objectVal(doc);
       }
 

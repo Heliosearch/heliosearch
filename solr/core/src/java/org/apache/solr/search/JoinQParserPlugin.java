@@ -281,6 +281,7 @@ class JoinQuery extends Query {
       // use a smaller size than normal since we will need to sort and dedup the results
       int maxSortedIntSize = Math.max(10, toSearcher.maxDoc() >> 10);
 
+      // TODO: set new SolrRequestInfo???
       DocSet fromSet = fromSearcher.getDocSet(q);
       fromSetSize = fromSet.size();
 

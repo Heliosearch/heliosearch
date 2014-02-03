@@ -51,6 +51,7 @@ public class HS
     }
 
     public void freeArray(long ptr) {
+      assert arraySizeBytes(ptr) >= 0;
       numFree.incrementAndGet();
       unsafe.putLong(ptr - SIZE_OFFSET, -123456789L);  // put negative length to trip asserts
       unsafe.freeMemory(ptr - HEADER_SIZE);
@@ -176,7 +177,7 @@ public class HS
 
   public static void setShort(long ptr, int index, short val) {
     assert (index>=0) && ((((long)index+1)<<1)) <= arraySizeBytes(ptr);
-    unsafe.putInt(ptr + (((long)index)<<1), val);
+    unsafe.putShort(ptr + (((long)index)<<1), val);
   }
 
   public static int getInt(long ptr, int index) {

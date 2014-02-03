@@ -38,6 +38,7 @@ import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocSet;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 
 /**
@@ -178,7 +179,8 @@ class StatsInfo {
       for (String field : statsFs) {
         boolean calcDistinct = params.getFieldBool(field, StatsParams.STATS_CALC_DISTINCT, false);
         SchemaField sf = rb.req.getSchema().getField(field);
-        statsFields.put(field, StatsValuesFactory.createStatsValues(sf, calcDistinct));
+        QueryContext qcontext = QueryContext.newContext(rb.req.getSearcher());
+        statsFields.put(field, StatsValuesFactory.createStatsValues(qcontext, sf, calcDistinct));
       }
     }
   }
@@ -247,7 +249,8 @@ class SimpleStats {
     IndexSchema schema = searcher.getSchema();
     final SchemaField sf = schema.getField(fieldName);
 
-    final StatsValues allstats = StatsValuesFactory.createStatsValues(sf, calcDistinct);
+    QueryContext qcontext = QueryContext.newContext(searcher);
+    final StatsValues allstats = StatsValuesFactory.createStatsValues(qcontext, sf, calcDistinct);
 
     List<FieldFacetStats> facetStats = new ArrayList<FieldFacetStats>();
     for( String facetField : facet ) {

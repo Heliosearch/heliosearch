@@ -154,10 +154,12 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public void warm(SolrIndexSearcher searcher, SolrCache<K,V> old) {
+  public void warm(SolrIndexSearcher.WarmContext warmContext) {
     if (regenerator==null) return;
+    warmContext.cache = this;
+
     long warmingStartTime = System.currentTimeMillis();
-    LRUCache<K,V> other = (LRUCache<K,V>)old;
+    LRUCache<K,V> other = (LRUCache<K,V>)warmContext.oldCache;
 
     // warm entries
     if (isAutowarmingOn()) {
@@ -190,7 +192,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
       // correct in the new cache.
       for (int i=0; i<keys.length; i++) {
         try {
-          boolean continueRegen = regenerator.regenerateItem(searcher, this, old, keys[i], vals[i]);
+          boolean continueRegen = regenerator.regenerateItem(warmContext, keys[i], vals[i]);
           if (!continueRegen) break;
         }
         catch (Exception e) {
