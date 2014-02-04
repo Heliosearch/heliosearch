@@ -33,7 +33,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 
-public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
+public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable  {
   final long array;
   protected final int wlen; // number of words in the array
   protected int size = -1;  // number of docs in the set (cached for perf)
@@ -69,6 +69,11 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
   }
 
   public int capacity() {
+    return wlen<<6;
+  }
+
+  @Override
+  public int length() {
     return wlen<<6;
   }
 
@@ -190,6 +195,17 @@ public class BitDocSetNative extends DocSetBaseNative implements Cloneable  {
     this.size = size;
   }
 
+  /** Returns true or false for the specified bit index.
+   * The index should be less than the OpenBitSet size
+   */
+  public boolean get(int index) {
+    int i = index >> 6;               // div 64
+    // signed shift will keep a negative index and force an
+    // array-index-out-of-bounds-exception, removing the need for an explicit check.
+    int bit = index & 0x3f;           // mod 64
+    long bitmask = 1L << bit;
+    return (HS.getLong(array, i) & bitmask) != 0;
+  }
 
   /** Returns true or false for the specified bit index.
    * The index should be less than the OpenBitSet size
