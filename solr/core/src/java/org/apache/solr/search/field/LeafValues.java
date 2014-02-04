@@ -28,6 +28,7 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.core.RefCount;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.BitDocSetNative;
 import org.apache.solr.search.function.FuncValues;
 
 import java.io.Closeable;
@@ -55,7 +56,7 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
 
   public static abstract class Uninvert implements Closeable {
     int maxDoc;
-    public Bits docsWithField;
+    public BitDocSetNative docsWithField;
     public AtomicReaderContext readerContext;
     public SchemaField field;
 
@@ -68,24 +69,22 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
     public void uninvert() throws IOException {
       AtomicReader reader = readerContext.reader();
 
-      boolean setDocsWithField = true;
       final int maxDoc = reader.maxDoc();
       Terms terms = reader.terms(field.getName());
       if (terms != null) {
-        if (setDocsWithField) {
-          final int termsDocCount = terms.getDocCount();
-          assert termsDocCount <= maxDoc;
-          if (termsDocCount == maxDoc) {
-            // Fast case: all docs have this field:
-            docsWithField = new Bits.MatchAllBits(maxDoc);
-            setDocsWithField = false;
-          }
+
+        final int termsDocCount = terms.getDocCount();
+        assert termsDocCount <= maxDoc;
+        if (termsDocCount == maxDoc) {
+          // Fast case: all docs have this field:
+          docsWithField = null;
+        } else {
+          docsWithField = new BitDocSetNative(maxDoc);
         }
 
         final TermsEnum termsEnum = termsEnum(terms);
 
         DocsEnum docs = null;
-        FixedBitSet docsWithField = null;
         while(true) {
           final BytesRef term = termsEnum.next();
           if (term == null) {
@@ -99,14 +98,11 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
               break;
             }
             visitDoc(docID);
-            if (setDocsWithField) {
-              if (docsWithField == null) {
-                // Lazy init
-                this.docsWithField = docsWithField = new FixedBitSet(maxDoc);
-              }
-              docsWithField.set(docID);
+            if (docsWithField != null) {
+              docsWithField.fastSet(docID);
             }
           }
+
         }
       }
     }
@@ -114,6 +110,14 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
     protected abstract TermsEnum termsEnum(Terms terms) throws IOException;
     protected abstract void visitTerm(BytesRef term);
     protected abstract void visitDoc(int docID);
+
+    @Override
+    public void close() throws IOException {
+      if (docsWithField != null) {
+        docsWithField.decref();
+      }
+    }
+
   }
 
 

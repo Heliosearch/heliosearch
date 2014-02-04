@@ -26,6 +26,7 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.core.HS;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.BitDocSetNative;
 import org.apache.solr.search.SolrIndexSearcher;
 
 import java.io.IOException;
@@ -81,6 +82,7 @@ public class IntTopValues extends TopValues {
         HS.freeArray(arr);
         arr = 0;
       }
+      super.close();
     }
   }
 
@@ -95,15 +97,11 @@ public class IntTopValues extends TopValues {
       // creating the wrong size array in the first place...
 
       long arr = u.arr;  // TODO: change to getters?
-      Bits docsWithField = u.docsWithField;
+      BitDocSetNative docsWithField = u.docsWithField;
       u.docsWithField = null;
 
       if (arr == 0) {
         return new Int0LeafValues(fieldValues);
-      }
-
-      if (docsWithField == null) {
-        docsWithField = new OpenBitSet(readerContext.reader().maxDoc());
       }
 
       int minValue = u.minValue;
@@ -145,10 +143,6 @@ public class IntTopValues extends TopValues {
       } else {
         // steal the array
         u.arr = 0;
-        if (arr == 0) {
-          assert range==0;
-          arr = HS.allocArray(u.maxDoc, 4, true);
-        }
         return new Int32LeafValues(fieldValues, arr, docsWithField, minValue, maxValue);
       }
     }

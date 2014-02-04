@@ -18,8 +18,8 @@ package org.apache.solr.search.field;
  */
 
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.util.Bits;
 import org.apache.solr.core.HS;
+import org.apache.solr.search.BitDocSetNative;
 import org.apache.solr.search.function.ValueSourceScorer;
 import org.apache.solr.search.mutable.MutableValue;
 import org.apache.solr.search.mutable.MutableValueInt;
@@ -130,9 +130,9 @@ public abstract class IntLeafValues extends LeafValues {
 
 class Int32LeafValues extends IntLeafValues {
   long arr;
-  final Bits valid;
+  final BitDocSetNative valid;
 
-  public Int32LeafValues(FieldValues fieldValues, long intPointer, Bits valid, int minValue, int maxValue) {
+  public Int32LeafValues(FieldValues fieldValues, long intPointer, BitDocSetNative valid, int minValue, int maxValue) {
     super(fieldValues, minValue, maxValue);
     this.arr = intPointer;
     this.valid = valid;
@@ -145,28 +145,31 @@ class Int32LeafValues extends IntLeafValues {
 
   @Override
   public boolean exists(int doc) {
-    return valid==null || valid.get(doc);
+    return valid==null || valid.fastGet(doc);
   }
 
   @Override
   public long getSizeInBytes() {
-    return HS.arraySizeBytes(arr) + (valid.length()>>3);  // TODO: this isn't correct for some bit sets...
+    return HS.arraySizeBytes(arr) + (valid==null ? 0 : valid.memSize());
   }
 
   @Override
   protected void free() {
     HS.freeArray(arr);
     arr = 0;
+    if (valid != null) {
+      valid.decref();
+    }
   }
 }
 
 // TODO: use these for long field values also?
 class Int8LeafValues extends IntLeafValues {
   long arr;
-  int valueOffset;
-  final Bits valid;
+  final int valueOffset;
+  final BitDocSetNative valid;
 
-  public Int8LeafValues(FieldValues fieldValues, long bytePointer, int valueOffset, Bits valid, int minValue, int maxValue) {
+  public Int8LeafValues(FieldValues fieldValues, long bytePointer, int valueOffset, BitDocSetNative valid, int minValue, int maxValue) {
     super(fieldValues, minValue, maxValue);
     this.arr = bytePointer;
     this.valueOffset = valueOffset;
@@ -180,27 +183,30 @@ class Int8LeafValues extends IntLeafValues {
 
   @Override
   public boolean exists(int doc) {
-    return valid == null || valid.get(doc);
+    return valid == null || valid.fastGet(doc);
   }
 
   @Override
   public long getSizeInBytes() {
-    return HS.arraySizeBytes(arr) + (valid.length()>>3);  // TODO: this isn't correct for some bit sets...
+    return HS.arraySizeBytes(arr) + (valid==null ? 0 : valid.memSize());
   }
 
   @Override
   protected void free() {
     HS.freeArray(arr);
     arr = 0;
+    if (valid != null) {
+      valid.decref();
+    }
   }
 }
 
 class Int16LeafValues extends IntLeafValues {
   long arr;
-  int valueOffset;
-  final Bits valid;
+  final int valueOffset;
+  final BitDocSetNative valid;
 
-  public Int16LeafValues(FieldValues fieldValues, long shortPointer, int valueOffset, Bits valid, int minValue, int maxValue) {
+  public Int16LeafValues(FieldValues fieldValues, long shortPointer, int valueOffset, BitDocSetNative valid, int minValue, int maxValue) {
     super(fieldValues, minValue, maxValue);
     this.arr = shortPointer;
     this.valueOffset = valueOffset;
@@ -214,18 +220,21 @@ class Int16LeafValues extends IntLeafValues {
 
   @Override
   public boolean exists(int doc) {
-    return valid == null || valid.get(doc);
+    return valid == null || valid.fastGet(doc);
   }
 
   @Override
   public long getSizeInBytes() {
-    return HS.arraySizeBytes(arr) + (valid.length()>>3);  // TODO: this isn't correct for some bit sets...
+    return HS.arraySizeBytes(arr) + (valid==null ? 0 : valid.memSize());
   }
 
   @Override
   protected void free() {
     HS.freeArray(arr);
     arr = 0;
+    if (valid != null) {
+      valid.decref();
+    }
   }
 }
 
