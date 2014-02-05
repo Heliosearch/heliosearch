@@ -46,7 +46,8 @@ public class IntTopValues extends TopValues {
 
   protected static class IntUninvert extends LeafValues.Uninvert {
     private boolean first = true;
-    int minValue;
+    IntFieldStats stats = new IntFieldStats();
+
     int currentValue;
     private final FieldCache.IntParser parser = FieldCache.NUMERIC_UTILS_INT_PARSER;
 
@@ -61,7 +62,7 @@ public class IntTopValues extends TopValues {
       currentValue = parser.parseInt(term);
       if (first) {
         first = false;
-        minValue = currentValue;
+        stats.firstValue = currentValue;
         arr = HS.allocArray(maxDoc, 4, true);
       }
     }
@@ -74,6 +75,12 @@ public class IntTopValues extends TopValues {
     @Override
     protected TermsEnum termsEnum(Terms terms) throws IOException {
       return parser.termsEnum(terms);
+    }
+
+    protected void done() {
+      stats.lastValue = currentValue;
+      stats.numUniqueValues = super.termNum;
+      stats.numDocsWithField = super.termsDocCount;
     }
 
     @Override
@@ -104,11 +111,9 @@ public class IntTopValues extends TopValues {
         return new Int0LeafValues(fieldValues);
       }
 
-      int minValue = u.minValue;
-      int maxValue = u.currentValue;
-
+      int minValue = u.stats.getFirst();
+      int maxValue = u.stats.getLast();
       int minNeeded = Math.min(minValue, 0);  // TODO: we currently need to encode 0 for "missing"... would be better to encode it as minValue-1 to create a contiguous space...
-
       long range = (long)maxValue - minNeeded;
 
 
@@ -126,7 +131,7 @@ public class IntTopValues extends TopValues {
           HS.setByte(arr2, i, v);
           // assert HS.getInt(arr,i) == offset + HS.getByte(arr2, i);
         }
-        return new Int8LeafValues(fieldValues, arr2, offset, docsWithField, minValue, maxValue);
+        return new Int8LeafValues(fieldValues, arr2, offset, docsWithField, u.stats);
       } else if (range < 65536) {
         int offset = 32768 + minNeeded;
         // future: use 0 offset if possible
@@ -139,11 +144,11 @@ public class IntTopValues extends TopValues {
           HS.setShort(arr2, i, v);
           // assert HS.getInt(arr,i) == offset + HS.getShort(arr2, i);
         }
-        return new Int16LeafValues(fieldValues, arr2, offset, docsWithField, minValue, maxValue);
+        return new Int16LeafValues(fieldValues, arr2, offset, docsWithField, u.stats);
       } else {
         // steal the array
         u.arr = 0;
-        return new Int32LeafValues(fieldValues, arr, docsWithField, minValue, maxValue);
+        return new Int32LeafValues(fieldValues, arr, docsWithField, u.stats);
       }
     }
 

@@ -25,20 +25,15 @@ import org.apache.solr.search.mutable.MutableValue;
 import org.apache.solr.search.mutable.MutableValueInt;
 
 public abstract class IntLeafValues extends LeafValues {
-  private int minValue;
-  private int maxValue;
+  protected IntFieldStats stats;
 
-
-  public IntLeafValues(FieldValues fieldValues, int minValue, int maxValue) {
+  public IntLeafValues(FieldValues fieldValues, IntFieldStats stats) {
     super(fieldValues);
   }
 
-  public int minValue() {
-    return minValue;
-  }
-
-  public int maxValue() {
-    return maxValue;
+  @Override
+  public IntFieldStats getFieldStats() {
+    return stats;
   }
 
   @Override
@@ -132,8 +127,8 @@ class Int32LeafValues extends IntLeafValues {
   long arr;
   final BitDocSetNative valid;
 
-  public Int32LeafValues(FieldValues fieldValues, long intPointer, BitDocSetNative valid, int minValue, int maxValue) {
-    super(fieldValues, minValue, maxValue);
+  public Int32LeafValues(FieldValues fieldValues, long intPointer, BitDocSetNative valid, IntFieldStats stats) {
+    super(fieldValues, stats);
     this.arr = intPointer;
     this.valid = valid;
   }
@@ -169,8 +164,8 @@ class Int8LeafValues extends IntLeafValues {
   final int valueOffset;
   final BitDocSetNative valid;
 
-  public Int8LeafValues(FieldValues fieldValues, long bytePointer, int valueOffset, BitDocSetNative valid, int minValue, int maxValue) {
-    super(fieldValues, minValue, maxValue);
+  public Int8LeafValues(FieldValues fieldValues, long bytePointer, int valueOffset, BitDocSetNative valid, IntFieldStats stats) {
+    super(fieldValues, stats);
     this.arr = bytePointer;
     this.valueOffset = valueOffset;
     this.valid = valid;
@@ -206,8 +201,8 @@ class Int16LeafValues extends IntLeafValues {
   final int valueOffset;
   final BitDocSetNative valid;
 
-  public Int16LeafValues(FieldValues fieldValues, long shortPointer, int valueOffset, BitDocSetNative valid, int minValue, int maxValue) {
-    super(fieldValues, minValue, maxValue);
+  public Int16LeafValues(FieldValues fieldValues, long shortPointer, int valueOffset, BitDocSetNative valid, IntFieldStats stats) {
+    super(fieldValues, stats);
     this.arr = shortPointer;
     this.valueOffset = valueOffset;
     this.valid = valid;
@@ -240,9 +235,10 @@ class Int16LeafValues extends IntLeafValues {
 
 
 class Int0LeafValues extends IntLeafValues {
+  private static IntFieldStats noStats = new IntFieldStats();
 
   public Int0LeafValues(FieldValues fieldValues) {
-    super(fieldValues, 0, 0);
+    super(fieldValues, noStats);
   }
 
   @Override

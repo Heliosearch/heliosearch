@@ -52,10 +52,14 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
     return fieldValues.description() + '=' + strVal(doc);
   }
 
+  public abstract FieldStats getFieldStats();
 
 
   public static abstract class Uninvert implements Closeable {
-    int maxDoc;
+    public int maxDoc;
+    public int termsDocCount;
+    public long termNum;
+
     public BitDocSetNative docsWithField;
     public AtomicReaderContext readerContext;
     public SchemaField field;
@@ -69,11 +73,10 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
     public void uninvert() throws IOException {
       AtomicReader reader = readerContext.reader();
 
-      final int maxDoc = reader.maxDoc();
       Terms terms = reader.terms(field.getName());
       if (terms != null) {
 
-        final int termsDocCount = terms.getDocCount();
+        termsDocCount = terms.getDocCount();
         assert termsDocCount <= maxDoc;
         if (termsDocCount == maxDoc) {
           // Fast case: all docs have this field:
@@ -92,24 +95,30 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
           }
           visitTerm(term);
           docs = termsEnum.docs(null, docs, DocsEnum.FLAG_NONE);
+
           while (true) {
-            final int docID = docs.nextDoc();
-            if (docID == DocIdSetIterator.NO_MORE_DOCS) {
+            final int id = docs.nextDoc();
+            if (id == DocIdSetIterator.NO_MORE_DOCS) {
               break;
             }
-            visitDoc(docID);
+            visitDoc(id);
             if (docsWithField != null) {
-              docsWithField.fastSet(docID);
+              docsWithField.fastSet(id);
             }
+            termNum++;
           }
 
         }
+
+        done();
+
       }
     }
 
     protected abstract TermsEnum termsEnum(Terms terms) throws IOException;
     protected abstract void visitTerm(BytesRef term);
     protected abstract void visitDoc(int docID);
+    protected abstract void done();
 
     @Override
     public void close() throws IOException {
@@ -202,3 +211,4 @@ public abstract class LeafValues extends FuncValues implements RefCount, Closeab
   }
 
 }
+

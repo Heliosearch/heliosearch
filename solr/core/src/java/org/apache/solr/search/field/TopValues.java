@@ -59,7 +59,7 @@ public abstract class TopValues extends RefCountBase {
     LeafValues leaf;
     synchronized (this) {
       if (leafValues == null) {
-        leafValues = new LeafValues[readerContext.parent.leaves().size()];  // TODO: a better way to do this?
+        leafValues = new LeafValues[readerContext.parent.leaves().size()];
       }
 
       leaf = leafValues[readerOrd];
@@ -160,6 +160,11 @@ public abstract class TopValues extends RefCountBase {
     @Override
     public long getSizeInBytes() {
       return 0;
+    }
+
+    @Override
+    public FieldStats getFieldStats() {
+      return null;
     }
 
     @Override
