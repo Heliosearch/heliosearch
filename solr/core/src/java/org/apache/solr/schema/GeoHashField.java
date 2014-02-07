@@ -56,7 +56,7 @@ public class GeoHashField extends FieldType implements SpatialQueryable {
     String geohash = toInternal(options.pointStr);
     //TODO: optimize this
     return new SolrConstantScoreQuery(new ValueSourceRangeFilter(new GeohashHaversineFunction(getValueSource(options.field, parser),
-            new LiteralValueSource(geohash), options.radius), "0", String.valueOf(options.distance), true, true));
+            new LiteralValueSource(geohash), options.radius), "0", String.valueOf(options.distance), true, true, false));
   }
 
   @Override

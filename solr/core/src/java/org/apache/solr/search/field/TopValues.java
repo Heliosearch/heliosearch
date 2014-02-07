@@ -210,7 +210,7 @@ public abstract class TopValues extends RefCountBase {
   }
 
   // called on the old TopValues
-  public abstract IntTopValues create(SolrIndexSearcher.WarmContext warmContext);
+  public abstract TopValues create(SolrIndexSearcher.WarmContext warmContext);
 
   // called on a newly created TopValues
   public void create(SolrIndexSearcher.WarmContext warmContext, TopValues oldTopValues) {

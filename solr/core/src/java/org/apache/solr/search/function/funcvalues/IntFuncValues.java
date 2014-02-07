@@ -17,7 +17,7 @@ package org.apache.solr.search.function.funcvalues;
  * limitations under the License.
  */
 
-import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.ValueSourceScorer;
@@ -69,37 +69,8 @@ public abstract class IntFuncValues extends FuncValues {
   }
 
   @Override
-  public ValueSourceScorer getRangeScorer(IndexReader reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper) {
-    int lower, upper;
-
-    // instead of using separate comparison functions, adjust the endpoints.
-
-    if (lowerVal == null) {
-      lower = Integer.MIN_VALUE;
-    } else {
-      lower = Integer.parseInt(lowerVal);
-      if (!includeLower && lower < Integer.MAX_VALUE) lower++;
-    }
-
-    if (upperVal == null) {
-      upper = Integer.MAX_VALUE;
-    } else {
-      upper = Integer.parseInt(upperVal);
-      if (!includeUpper && upper > Integer.MIN_VALUE) upper--;
-    }
-
-    final int ll = lower;
-    final int uu = upper;
-
-    return new ValueSourceScorer(reader, this) {
-      @Override
-      public boolean matchesValue(int doc) {
-        int val = intVal(doc);
-        // only check for deleted if it's the default value
-        // if (val==0 && reader.isDeleted(doc)) return false;
-        return val >= ll && val <= uu;
-      }
-    };
+  public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+    return getIntRangeScorer(this, readerContext, lowerVal, upperVal, includeLower, includeUpper, matchMissing);
   }
 
   @Override

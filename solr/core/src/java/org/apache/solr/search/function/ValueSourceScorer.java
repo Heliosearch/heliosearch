@@ -17,6 +17,7 @@ package org.apache.solr.search.function;
  * limitations under the License.
  */
 
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.search.Scorer;
@@ -29,28 +30,24 @@ import java.io.IOException;
  * the score for a document.
  */
 public class ValueSourceScorer extends Scorer {
-  protected final IndexReader reader;
+  protected final AtomicReaderContext readerContext;
   private int doc = -1;
   protected final int maxDoc;
   protected final FuncValues values;
   protected boolean checkDeletes;
   private final Bits liveDocs;
 
-  protected ValueSourceScorer(IndexReader reader, FuncValues values) {
+  protected ValueSourceScorer(AtomicReaderContext readerContext, FuncValues values) {
     super(null);
-    this.reader = reader;
-    this.maxDoc = reader.maxDoc();
+    this.readerContext = readerContext;
+    this.maxDoc = readerContext.reader().maxDoc();
     this.values = values;
     setCheckDeletes(true);
-    this.liveDocs = MultiFields.getLiveDocs(reader);
-  }
-
-  public IndexReader getReader() {
-    return reader;
+    this.liveDocs = MultiFields.getLiveDocs(readerContext.reader());
   }
 
   public void setCheckDeletes(boolean checkDeletes) {
-    this.checkDeletes = checkDeletes && reader.hasDeletions();
+    this.checkDeletes = checkDeletes && readerContext.reader().hasDeletions();
   }
 
   public boolean matches(int doc) {

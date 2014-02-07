@@ -21,6 +21,8 @@ package org.apache.solr.search.field;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.FieldCache;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.schema.TrieIntField;
+import org.apache.solr.schema.TrieLongField;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrCache;
@@ -28,11 +30,12 @@ import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.valuesource.IntFieldSource;
+import org.apache.solr.search.function.valuesource.LongFieldSource;
 
 import java.io.IOException;
 
 public abstract class FieldValues extends ValueSource {
-  protected SchemaField field;  // hang on to SchemaField instead?
+  protected SchemaField field;
 
   public FieldValues(SchemaField field, QParser qparser) {
     this.field = field;
@@ -42,11 +45,10 @@ public abstract class FieldValues extends ValueSource {
     return field;
   }
 
+  public String getFieldName() { return field.getName(); }
+
   public TopValues getTopValues(QueryContext context) {
     assert context != null;
-    if (context == null) {
-      System.out.println("ERROR: CONTEXT IS NULL!!!!!"); throw new RuntimeException();  // nocommit
-    }
 
     // TODO: return null for no values indexed???
     // prevent memory filling up by misspelled fields?
@@ -86,11 +88,14 @@ public abstract class FieldValues extends ValueSource {
   @Override
   public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
 
-    if (context.searcher()==null) {
-      // backup for delete-by-query..
-      // TODO: prevent this being constructed if in a deleteByQuery context instead?  via parser (getValueSource is passed this)
-      // Subclass of SolrQueryParser used for delete-by-query???
-      new IntFieldSource(field.getName(), FieldCache.NUMERIC_UTILS_INT_PARSER).getValues(context, readerContext);
+    if (context.searcher()==null || context.searcher().getnCache() == null) {
+      // backup for delete-by-query or realtime searchers
+      if (field.getType() instanceof TrieIntField) {
+        return new IntFieldSource(field.getName(), FieldCache.NUMERIC_UTILS_INT_PARSER).getValues(context, readerContext);
+      } else if (field.getType() instanceof TrieLongField) {
+        return new LongFieldSource(field.getName(), FieldCache.NUMERIC_UTILS_LONG_PARSER).getValues(context, readerContext);
+      }
+
     }
 
 
@@ -105,12 +110,12 @@ public abstract class FieldValues extends ValueSource {
 
   @Override
   public int hashCode() {
-    return 0;
+    return field.hashCode() + getClass().hashCode();
   }
 
   @Override
   public String description() {
-    return "field(" + field.getName() + ")";
+    return "field(" + getFieldName() + ")";
   }
 
   // use for field stats also (i.e. leave uninverted values blank?)

@@ -17,66 +17,70 @@ package org.apache.solr.search.field;
  * limitations under the License.
  */
 
+
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.core.HS;
 import org.apache.solr.search.BitDocSetNative;
 import org.apache.solr.search.function.ValueSourceScorer;
 import org.apache.solr.search.mutable.MutableValue;
-import org.apache.solr.search.mutable.MutableValueInt;
+import org.apache.solr.search.mutable.MutableValueLong;
 
+// TODO: somehow unify with int better?
+public abstract class LongLeafValues extends LeafValues {
+  protected LongFieldStats stats;
 
-public abstract class IntLeafValues extends LeafValues {
-  protected IntFieldStats stats;
-
-  public IntLeafValues(FieldValues fieldValues, IntFieldStats stats) {
+  public LongLeafValues(FieldValues fieldValues, LongFieldStats stats) {
     super(fieldValues);
     this.stats = stats;
   }
 
   @Override
-  public IntFieldStats getFieldStats() {
+  public LongFieldStats getFieldStats() {
     return stats;
   }
 
   @Override
   public float floatVal(int doc) {
-    return (float) intVal(doc);
+    return (float) longVal(doc);
   }
 
   @Override
-  public abstract int intVal(int doc);
+  public int intVal(int doc) {
+    return (int) longVal(doc);
+  }
 
   @Override
-  public long longVal(int doc) {
-    return (long) intVal(doc);
-  }
+  public abstract long longVal(int doc);
 
   @Override
   public double doubleVal(int doc) {
-    return (double) intVal(doc);
+    return (double) longVal(doc);
   }
 
   @Override
   public String strVal(int doc) {
-    return Integer.toString(intVal(doc));
+    return Long.toString(longVal(doc));
   }
 
   @Override
   public Object objectVal(int doc) {
-    return exists(doc) ? intVal(doc) : null;
+    return exists(doc) ? longVal(doc) : null;
   }
 
-
+  @Override
+  public boolean boolVal(int doc) {
+    return longVal(doc) != 0;
+  }
 
   @Override
   public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
-    return getIntRangeScorer(this, readerContext, lowerVal, upperVal, includeLower, includeUpper, matchMissing);
+    return getLongRangeScorer(this, readerContext, lowerVal, upperVal, includeLower, includeUpper, matchMissing);
   }
 
   @Override
   public ValueFiller getValueFiller() {
     return new ValueFiller() {
-      private final MutableValueInt mval = new MutableValueInt();
+      private final MutableValueLong mval = new MutableValueLong();
 
       @Override
       public MutableValue getValue() {
@@ -85,7 +89,7 @@ public abstract class IntLeafValues extends LeafValues {
 
       @Override
       public void fillValue(int doc) {
-        mval.value = intVal(doc);
+        mval.value = longVal(doc);
         mval.exists = mval.value != 0 || exists(doc);
       }
     };
@@ -94,21 +98,20 @@ public abstract class IntLeafValues extends LeafValues {
 }
 
 
-// TODO: make a ValueStats class with things like minValue, maxValue, docsWithValue, etc...
 
-class Int32LeafValues extends IntLeafValues {
+class Long64LeafValues extends LongLeafValues {
   private long arr;
   private final BitDocSetNative valid;
 
-  public Int32LeafValues(FieldValues fieldValues, long intPointer, BitDocSetNative valid, IntFieldStats stats) {
+  public Long64LeafValues(FieldValues fieldValues, long longPointer, BitDocSetNative valid, LongFieldStats stats) {
     super(fieldValues, stats);
-    this.arr = intPointer;
+    this.arr = longPointer;
     this.valid = valid;
   }
 
   @Override
-  public int intVal(int doc) {
-    return HS.getInt(arr, doc);
+  public long longVal(int doc) {
+    return HS.getLong(arr, doc);
   }
 
   @Override
@@ -131,13 +134,12 @@ class Int32LeafValues extends IntLeafValues {
   }
 }
 
-// TODO: use these for long field values also?
-class Int8LeafValues extends IntLeafValues {
+class Long8LeafValues extends LongLeafValues {
   private long arr;
-  private final int valueOffset;
+  private final long valueOffset;
   private final BitDocSetNative valid;
 
-  public Int8LeafValues(FieldValues fieldValues, long bytePointer, int valueOffset, BitDocSetNative valid, IntFieldStats stats) {
+  public Long8LeafValues(FieldValues fieldValues, long bytePointer, long valueOffset, BitDocSetNative valid, LongFieldStats stats) {
     super(fieldValues, stats);
     this.arr = bytePointer;
     this.valueOffset = valueOffset;
@@ -145,7 +147,7 @@ class Int8LeafValues extends IntLeafValues {
   }
 
   @Override
-  public int intVal(int doc) {
+  public long longVal(int doc) {
     return valueOffset + HS.getByte(arr, doc);
   }
 
@@ -169,12 +171,13 @@ class Int8LeafValues extends IntLeafValues {
   }
 }
 
-class Int16LeafValues extends IntLeafValues {
+
+class Long16LeafValues extends LongLeafValues {
   private long arr;
-  private final int valueOffset;
+  private final long valueOffset;
   private final BitDocSetNative valid;
 
-  public Int16LeafValues(FieldValues fieldValues, long shortPointer, int valueOffset, BitDocSetNative valid, IntFieldStats stats) {
+  public Long16LeafValues(FieldValues fieldValues, long shortPointer, long valueOffset, BitDocSetNative valid, LongFieldStats stats) {
     super(fieldValues, stats);
     this.arr = shortPointer;
     this.valueOffset = valueOffset;
@@ -182,7 +185,7 @@ class Int16LeafValues extends IntLeafValues {
   }
 
   @Override
-  public int intVal(int doc) {
+  public long longVal(int doc) {
     return valueOffset + HS.getShort(arr, doc);
   }
 
@@ -207,16 +210,54 @@ class Int16LeafValues extends IntLeafValues {
 }
 
 
-class Int0LeafValues extends IntLeafValues {
-  private static IntFieldStats noStats = new IntFieldStats();
+class Long32LeafValues extends LongLeafValues {
+  private long arr;
+  private final long valueOffset;
+  private final BitDocSetNative valid;
 
-  public Int0LeafValues(FieldValues fieldValues) {
+  public Long32LeafValues(FieldValues fieldValues, long intPointer, long valueOffset, BitDocSetNative valid, LongFieldStats stats) {
+    super(fieldValues, stats);
+    this.arr = intPointer;
+    this.valueOffset = valueOffset;
+    this.valid = valid;
+  }
+
+  @Override
+  public long longVal(int doc) {
+    return valueOffset + HS.getInt(arr, doc);
+  }
+
+  @Override
+  public boolean exists(int doc) {
+    return valid == null || valid.fastGet(doc);
+  }
+
+  @Override
+  public long getSizeInBytes() {
+    return HS.arraySizeBytes(arr) + (valid==null ? 0 : valid.memSize());
+  }
+
+  @Override
+  protected void free() {
+    HS.freeArray(arr);
+    arr = 0;
+    if (valid != null) {
+      valid.decref();
+    }
+  }
+}
+
+
+class Long0LeafValues extends LongLeafValues {
+  private static LongFieldStats noStats = new LongFieldStats();
+
+  public Long0LeafValues(FieldValues fieldValues) {
     super(fieldValues, noStats);
   }
 
   @Override
-  public int intVal(int doc) {
-    return 0;
+  public long longVal(int doc) {
+    return 0L;
   }
 
   @Override

@@ -53,3 +53,26 @@ class IntFieldStats extends FieldStats {
     return lastValue;
   }
 }
+
+class LongFieldStats extends FieldStats {
+  long firstValue;
+  long lastValue;
+
+  @Override
+  public Object getFirstValue() {
+    return firstValue;
+  }
+
+  @Override
+  public Object getLastValue() {
+    return lastValue;
+  }
+
+  public long getFirst() {
+    return firstValue;
+  }
+
+  public long getLast() {
+    return lastValue;
+  }
+}

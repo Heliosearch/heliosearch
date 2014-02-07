@@ -325,18 +325,14 @@ public class CurrencyField extends FieldType implements SchemaAware, ResourceLoa
     String currencyCode = (p1 != null) ? p1.getCurrencyCode() :
                           (p2 != null) ? p2.getCurrencyCode() : defaultCurrency;
 
-    // ValueSourceRangeFilter doesn't check exists(), so we have to
-    final Filter docsWithValues = new FieldValueFilter(getAmountField(field).getName());
+
     final Filter vsRangeFilter = new ValueSourceRangeFilter
       (new RawCurrencyValueSource(field, currencyCode, parser),
        p1 == null ? null : p1.getAmount() + "", 
        p2 == null ? null : p2.getAmount() + "",
-       minInclusive, maxInclusive);
-    final Filter docsInRange = new ChainedFilter
-      (new Filter [] { docsWithValues, vsRangeFilter }, ChainedFilter.AND);
+       minInclusive, maxInclusive, false);
 
-    return new SolrConstantScoreQuery(docsInRange);
-    
+    return new SolrConstantScoreQuery(vsRangeFilter);
   }
 
   @Override

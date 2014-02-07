@@ -18,7 +18,6 @@
 package org.apache.solr.search.function.funcvalues;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.BytesRef;
@@ -95,7 +94,7 @@ public abstract class DocTermsIndexFuncValues extends FuncValues {
   public abstract Object objectVal(int doc);  // force subclasses to override
 
   @Override
-  public ValueSourceScorer getRangeScorer(IndexReader reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper) {
+  public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
     // TODO: are lowerVal and upperVal in indexed form or not?
     lowerVal = lowerVal == null ? null : toTerm(lowerVal);
     upperVal = upperVal == null ? null : toTerm(upperVal);
@@ -123,7 +122,7 @@ public abstract class DocTermsIndexFuncValues extends FuncValues {
     final int ll = lower;
     final int uu = upper;
 
-    return new ValueSourceScorer(reader, this) {
+    return new ValueSourceScorer(readerContext, this) {
       @Override
       public boolean matchesValue(int doc) {
         int ord = termsIndex.getOrd(doc);

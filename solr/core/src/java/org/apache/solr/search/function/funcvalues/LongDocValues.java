@@ -17,7 +17,7 @@ package org.apache.solr.search.function.funcvalues;
  * limitations under the License.
  */
 
-import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.ValueSourceScorer;
@@ -78,7 +78,13 @@ public abstract class LongDocValues extends FuncValues {
   }
 
   @Override
-  public ValueSourceScorer getRangeScorer(IndexReader reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper) {
+  public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+
+    // TODO: can't use this because of externalToLong...
+    // return getLongRangeScorer(this, readerContext, lowerVal, upperVal, includeLower, includeUpper);
+
+    final LongDocValues vals = this;
+
     long lower, upper;
 
     // instead of using separate comparison functions, adjust the endpoints.
@@ -100,15 +106,29 @@ public abstract class LongDocValues extends FuncValues {
     final long ll = lower;
     final long uu = upper;
 
-    return new ValueSourceScorer(reader, this) {
-      @Override
-      public boolean matchesValue(int doc) {
-        long val = longVal(doc);
-        // only check for deleted if it's the default value
-        // if (val==0 && reader.isDeleted(doc)) return false;
-        return val >= ll && val <= uu;
-      }
-    };
+    final long def = 0;
+    boolean checkExists = matchMissing==false && (ll <= def && uu >= def);
+
+    if (!checkExists) {
+      return new ValueSourceScorer(readerContext, vals) {
+        @Override
+        public boolean matchesValue(int doc) {
+          long val = vals.longVal(doc);
+          return val >= ll && val <= uu;
+        }
+      };
+    } else {
+      return new ValueSourceScorer(readerContext, vals) {
+        @Override
+        public boolean matchesValue(int doc) {
+          long val = vals.longVal(doc);
+          return val >= ll && val <= uu && (val != def || vals.exists(doc));
+        }
+      };
+
+    }
+
+
   }
 
   @Override

@@ -30,30 +30,30 @@ import org.apache.solr.search.SolrIndexSearcher;
 
 import java.io.IOException;
 
-public class IntFieldValues extends FieldValues {
+public class LongFieldValues extends FieldValues {
 
-  public IntFieldValues(SchemaField field, QParser qparser) {
+  public LongFieldValues(SchemaField field, QParser qparser) {
     super(field, qparser);
   }
 
   @Override
   public boolean equals(Object o) {
-    return o instanceof IntFieldValues && this.field.equals(((IntFieldValues)o).field);
+    return o instanceof LongFieldValues && this.field.equals(((LongFieldValues)o).field);
   }
 
   @Override
   public int hashCode() {
-    return field.hashCode() + 0xc729ac54;
+    return field.hashCode() + 0xfcc8bc1f;
   }
 
   @Override
   public String description() {
-    return "int(" + getFieldName() + ')';
+    return "long(" + getFieldName() + ')';
   }
 
   @Override
   public TopValues createTopValues(SolrIndexSearcher searcher) {
-    return new IntTopValues(this);
+    return new LongTopValues(this);
   }
 
   @Override
@@ -63,16 +63,16 @@ public class IntFieldValues extends FieldValues {
 
   // @Override TODO
   public SortField getSortField(final boolean top, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
-    return new IntSortField(top, sortMissingFirst, sortMissingLast, missVal);
+    return new LongSortField(top, sortMissingFirst, sortMissingLast, missVal);
   }
 
   // TODO: move to ValueSource?
-  class IntSortField extends SortField {
+  class LongSortField extends SortField {
     public boolean sortMissingFirst;
     public boolean sortMissingLast;
 
-    public IntSortField(boolean reverse, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
-      super(IntFieldValues.this.getField().getName(), SortField.Type.REWRITEABLE, reverse);
+    public LongSortField(boolean reverse, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
+      super(LongFieldValues.this.getField().getName(), Type.REWRITEABLE, reverse);
       // distrib cursor paging expects the name to match...
       this.sortMissingFirst = sortMissingFirst;
       this.sortMissingLast = sortMissingLast;
@@ -84,67 +84,67 @@ public class IntFieldValues extends FieldValues {
       if (missingValue == null) {
         boolean top = getReverse();
         if ( sortMissingLast ) {
-          missingValue = top ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+          missingValue = top ? Long.MIN_VALUE : Long.MAX_VALUE;
         } else if ( sortMissingFirst ) {
-          missingValue = top ? Integer.MAX_VALUE : Integer.MIN_VALUE;
+          missingValue = top ? Long.MAX_VALUE : Long.MIN_VALUE;
         }
       }
 
-      if (!(searcher instanceof SolrIndexSearcher) || IntFieldValues.this.getField().hasDocValues()) {
-        SortField sf = new SortField( IntFieldValues.this.getField().getName(), FieldCache.NUMERIC_UTILS_INT_PARSER, getReverse());
+      if (!(searcher instanceof SolrIndexSearcher) || LongFieldValues.this.getField().hasDocValues()) {
+        SortField sf = new SortField( LongFieldValues.this.getField().getName(), FieldCache.NUMERIC_UTILS_LONG_PARSER, getReverse());
         sf.setMissingValue(this.missingValue);
         return sf;
       }
 
       QueryContext context = QueryContext.newContext(searcher);
       createWeight(context, searcher);
-      return new SortField(getField(), new IntComparatorSource(context, (Integer)this.missingValue), getReverse());
+      return new SortField(getField(), new LongComparatorSource(context, (Long)this.missingValue), getReverse());
     }
   }
 
-  class IntComparatorSource extends FieldComparatorSource {
+  class LongComparatorSource extends FieldComparatorSource {
     private final QueryContext context;
-    Integer missVal;
+    Long missVal;
 
-    public IntComparatorSource(QueryContext context, Integer missVal) {
+    public LongComparatorSource(QueryContext context, Long missVal) {
       this.context = context;
       this.missVal = missVal;
     }
 
     @Override
-    public FieldComparator<Integer> newComparator(String fieldname, int numHits,
+    public FieldComparator<Long> newComparator(String fieldname, int numHits,
                                                  int sortPos, boolean reversed) throws IOException {
-      return new IntComparator(context, numHits, missVal);
+      return new LongComparator(context, numHits, missVal);
     }
   }
 
 
   /** Parses field's values as int (using {@link
-   *  FieldCache#getInts} and sorts by ascending value */
-  class IntComparator extends FieldComparator<Integer> {
-    private IntLeafValues currentReaderValues;
-    private IntTopValues topValues;
-    private final int[] values;
-    private int bottom;                           // Value of bottom of queue
-    private int topValue;
+   *  org.apache.lucene.search.FieldCache#getInts} and sorts by ascending value */
+  class LongComparator extends FieldComparator<Long> {
+    private LongLeafValues currentReaderValues;
+    private LongTopValues topValues;
+    private final long[] values;
+    private long bottom;                           // Value of bottom of queue
+    private long topValue;
     private final QueryContext qcontext;
-    private final int missingValue;
+    private final long missingValue;
 
-    IntComparator(QueryContext qcontext, int numHits, Integer missVal) {
+    LongComparator(QueryContext qcontext, int numHits, Long missVal) {
       this.qcontext = qcontext;
-      values = new int[numHits];
+      values = new long[numHits];
       this.missingValue = missVal == null ? 0 : missVal;
-      this.topValues = (IntTopValues) getTopValues(qcontext);
+      this.topValues = (LongTopValues) getTopValues(qcontext);
     }
 
     @Override
     public int compare(int slot1, int slot2) {
-      return Integer.compare(values[slot1], values[slot2]);
+      return Long.compare(values[slot1], values[slot2]);
     }
 
     @Override
     public int compareBottom(int doc) {
-      int v2 = currentReaderValues.intVal(doc);
+      long v2 = currentReaderValues.longVal(doc);
       // Test for v2 == 0 to save Bits.get method call for
       // the common case (doc has value and value is non-zero):
 
@@ -153,12 +153,12 @@ public class IntFieldValues extends FieldValues {
         v2 = missingValue;
       }
 
-      return Integer.compare(bottom, v2);
+      return Long.compare(bottom, v2);
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int v2 = currentReaderValues.intVal(doc);
+      long v2 = currentReaderValues.longVal(doc);
       // Test for v2 == 0 to save Bits.get method call for
       // the common case (doc has value and value is non-zero):
       if (v2 == 0 && !currentReaderValues.exists(doc)) {
@@ -169,8 +169,8 @@ public class IntFieldValues extends FieldValues {
     }
 
     @Override
-    public FieldComparator<Integer> setNextReader(AtomicReaderContext readerContext) throws IOException {
-      currentReaderValues = (IntLeafValues)topValues.getLeafValues(qcontext, readerContext);
+    public FieldComparator<Long> setNextReader(AtomicReaderContext readerContext) throws IOException {
+      currentReaderValues = (LongLeafValues)topValues.getLeafValues(qcontext, readerContext);
       return this;
     }
 
@@ -180,25 +180,25 @@ public class IntFieldValues extends FieldValues {
     }
 
     @Override
-    public void setTopValue(Integer value) {
+    public void setTopValue(Long value) {
       topValue = value;
     }
 
     @Override
-    public Integer value(int slot) {
+    public Long value(int slot) {
       // TODO: return null if missing?
-      return Integer.valueOf(values[slot]);
+      return Long.valueOf(values[slot]);
     }
 
     @Override
     public int compareTop(int doc) {
-      int docValue = currentReaderValues.intVal(doc);
+      long docValue = currentReaderValues.longVal(doc);
       // Test for docValue == 0 to save Bits.get method call for
       // the common case (doc has value and value is non-zero):
       if (docValue == 0 && !currentReaderValues.exists(doc)) {
         docValue = missingValue;
       }
-      return Integer.compare(topValue, docValue);
+      return Long.compare(topValue, docValue);
     }
   }
 }

@@ -60,7 +60,7 @@ public class FunctionRangeQuery extends SolrConstantScoreQuery implements PostFi
     public void setNextReader(AtomicReaderContext context) throws IOException {
       maxdoc = context.reader().maxDoc();
       FuncValues dv = rangeFilt.getValueSource().getValues(fcontext, context);
-      scorer = dv.getRangeScorer(context.reader(), rangeFilt.getLowerVal(), rangeFilt.getUpperVal(), rangeFilt.isIncludeLower(), rangeFilt.isIncludeUpper());
+      scorer = dv.getRangeScorer(context, rangeFilt.getLowerVal(), rangeFilt.getUpperVal(), rangeFilt.isIncludeLower(), rangeFilt.isIncludeUpper(), rangeFilt.isMatchMissing());
       super.setNextReader(context);
     }
   }

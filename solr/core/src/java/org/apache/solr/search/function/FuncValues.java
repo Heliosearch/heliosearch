@@ -17,6 +17,7 @@ package org.apache.solr.search.function;
  * limitations under the License.
  */
 
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.Explanation;
 import org.apache.lucene.util.BytesRef;
@@ -174,8 +175,12 @@ public abstract class FuncValues {
   // A RangeValueSource can't easily be a ValueSource that takes another ValueSource
   // because it needs different behavior depending on the type of fields.  There is also
   // a setup cost - parsing and normalizing params, and doing a binary search on the StringIndex.
-  // TODO: change "reader" to AtomicReaderContext
-  public ValueSourceScorer getRangeScorer(IndexReader reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper) {
+  public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+    return getFloatRangeScorer(this, readerContext, lowerVal, upperVal, includeLower, includeUpper, matchMissing);
+  }
+
+
+  public static ValueSourceScorer getFloatRangeScorer(final FuncValues vals, AtomicReaderContext reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
     float lower;
     float upper;
 
@@ -193,41 +198,274 @@ public abstract class FuncValues {
     final float l = lower;
     final float u = upper;
 
-    if (includeLower && includeUpper) {
-      return new ValueSourceScorer(reader, this) {
+    final float def = 0.0f;
+    boolean checkExists = matchMissing==false && (l <= def && u >= def);
+
+    if (!checkExists) {
+      if (includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal >= l && docVal <= u;
+          }
+        };
+      } else if (includeLower && !includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal >= l && docVal < u;
+          }
+        };
+      } else if (!includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal > l && docVal <= u;
+          }
+        };
+      } else {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal > l && docVal < u;
+          }
+        };
+      }
+    }
+
+    else {
+      if (includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal >= l && docVal <= u && (docVal != def || vals.exists(doc));
+          }
+        };
+      } else if (includeLower && !includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal >= l && docVal < u && (docVal != def || vals.exists(doc));
+          }
+        };
+      } else if (!includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal > l && docVal <= u && (docVal != def || vals.exists(doc));
+          }
+        };
+      } else {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            float docVal = vals.floatVal(doc);
+            return docVal > l && docVal < u && (docVal != def || vals.exists(doc));
+          }
+        };
+      }
+    }
+  }
+
+
+
+  public static ValueSourceScorer getDoubleRangeScorer(final FuncValues vals, AtomicReaderContext reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+    double lower, upper;
+
+    if (lowerVal == null) {
+      lower = Double.NEGATIVE_INFINITY;
+    } else {
+      lower = Double.parseDouble(lowerVal);
+    }
+
+    if (upperVal == null) {
+      upper = Double.POSITIVE_INFINITY;
+    } else {
+      upper = Double.parseDouble(upperVal);
+    }
+
+    final double l = lower;
+    final double u = upper;
+
+    final double def=0.0;
+    boolean checkExists = matchMissing==false && (l <= def && u >= def);
+
+    if (!checkExists) {
+      if (includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            return docVal >= l && docVal <= u;
+          }
+        };
+      } else if (includeLower && !includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            return docVal >= l && docVal < u;
+          }
+        };
+      } else if (!includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            return docVal > l && docVal <= u;
+          }
+        };
+      } else {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            return docVal > l && docVal < u;
+          }
+        };
+      }
+    } else {
+
+      if (includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            if (docVal == def && !vals.exists(doc)) return false;
+            return docVal >= l && docVal <= u && (docVal != def || vals.exists(doc));
+          }
+        };
+      } else if (includeLower && !includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            if (docVal == def && !vals.exists(doc)) return false;
+            return docVal >= l && docVal < u && (docVal != def || vals.exists(doc));
+          }
+        };
+      } else if (!includeLower && includeUpper) {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            if (docVal == def && !vals.exists(doc)) return false;
+            return docVal > l && docVal <= u && (docVal != def || vals.exists(doc));
+          }
+        };
+      } else {
+        return new ValueSourceScorer(reader, vals) {
+          @Override
+          public boolean matchesValue(int doc) {
+            double docVal = vals.doubleVal(doc);
+            if (docVal == def && !vals.exists(doc)) return false;
+            return docVal > l && docVal < u && (docVal != def || vals.exists(doc));
+          }
+        };
+      }
+    }
+  }
+
+
+  public static ValueSourceScorer getLongRangeScorer(final FuncValues vals, AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+    long lower, upper;
+
+    // instead of using separate comparison functions, adjust the endpoints.
+
+    if (lowerVal == null) {
+      lower = Long.MIN_VALUE;
+    } else {
+      lower = Long.parseLong(lowerVal);
+      if (!includeLower && lower < Long.MAX_VALUE) lower++;
+    }
+
+    if (upperVal == null) {
+      upper = Long.MAX_VALUE;
+    } else {
+      upper = Long.parseLong(upperVal);
+      if (!includeUpper && upper > Long.MIN_VALUE) upper--;
+    }
+
+    final long ll = lower;
+    final long uu = upper;
+
+    final long def = 0;
+    boolean checkExists = matchMissing==false && (ll <= def && uu >= def);
+
+    if (!checkExists) {
+      return new ValueSourceScorer(readerContext, vals) {
         @Override
         public boolean matchesValue(int doc) {
-          float docVal = floatVal(doc);
-          return docVal >= l && docVal <= u;
-        }
-      };
-    } else if (includeLower && !includeUpper) {
-      return new ValueSourceScorer(reader, this) {
-        @Override
-        public boolean matchesValue(int doc) {
-          float docVal = floatVal(doc);
-          return docVal >= l && docVal < u;
-        }
-      };
-    } else if (!includeLower && includeUpper) {
-      return new ValueSourceScorer(reader, this) {
-        @Override
-        public boolean matchesValue(int doc) {
-          float docVal = floatVal(doc);
-          return docVal > l && docVal <= u;
+          long val = vals.longVal(doc);
+          return val >= ll && val <= uu;
         }
       };
     } else {
-      return new ValueSourceScorer(reader, this) {
+      return new ValueSourceScorer(readerContext, vals) {
         @Override
         public boolean matchesValue(int doc) {
-          float docVal = floatVal(doc);
-          return docVal > l && docVal < u;
+          long val = vals.longVal(doc);
+          return val >= ll && val <= uu && (val != def || vals.exists(doc));
+        }
+      };
+
+    }
+
+  }
+
+
+
+  public static ValueSourceScorer getIntRangeScorer(final FuncValues vals, AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+    int lower, upper;
+
+    // instead of using separate comparison functions, adjust the endpoints.
+
+    if (lowerVal == null) {
+      lower = Integer.MIN_VALUE;
+    } else {
+      lower = Integer.parseInt(lowerVal);
+      if (!includeLower && lower < Integer.MAX_VALUE) lower++;
+    }
+
+    if (upperVal == null) {
+      upper = Integer.MAX_VALUE;
+    } else {
+      upper = Integer.parseInt(upperVal);
+      if (!includeUpper && upper > Integer.MIN_VALUE) upper--;
+    }
+
+    final int ll = lower;
+    final int uu = upper;
+
+    final int def = 0;
+    boolean checkExists = matchMissing==false && (ll <= def && uu >= def);
+
+    if (!checkExists) {
+      return new ValueSourceScorer(readerContext, vals) {
+        @Override
+        public boolean matchesValue(int doc) {
+          int val = vals.intVal(doc);
+          return val >= ll && val <= uu;
+        }
+      };
+    } else {
+      return new ValueSourceScorer(readerContext, vals) {
+        @Override
+        public boolean matchesValue(int doc) {
+          int val = vals.intVal(doc);
+          return val >= ll && val <= uu && (val != def || vals.exists(doc));
         }
       };
     }
   }
-}
 
+}
 
 

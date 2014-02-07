@@ -39,17 +39,20 @@ public class ValueSourceRangeFilter extends SolrFilter {
   private final String upperVal;
   private final boolean includeLower;
   private final boolean includeUpper;
+  private final boolean matchMissing;
 
   public ValueSourceRangeFilter(ValueSource valueSource,
                                 String lowerVal,
                                 String upperVal,
                                 boolean includeLower,
-                                boolean includeUpper) {
+                                boolean includeUpper,
+                                boolean matchMissing) {
     this.valueSource = valueSource;
     this.lowerVal = lowerVal;
     this.upperVal = upperVal;
     this.includeLower = lowerVal != null && includeLower;
     this.includeUpper = upperVal != null && includeUpper;
+    this.matchMissing = matchMissing;
   }
 
   public ValueSource getValueSource() {
@@ -72,13 +75,16 @@ public class ValueSourceRangeFilter extends SolrFilter {
     return includeUpper;
   }
 
+  public boolean isMatchMissing() {
+    return matchMissing;
+  }
 
   @Override
   public DocIdSet getDocIdSet(final QueryContext context, final AtomicReaderContext readerContext, Bits acceptDocs) throws IOException {
     return BitsFilteredDocIdSet.wrap(new DocIdSet() {
       @Override
       public DocIdSetIterator iterator() throws IOException {
-        return valueSource.getValues(context, readerContext).getRangeScorer(readerContext.reader(), lowerVal, upperVal, includeLower, includeUpper);
+        return valueSource.getValues(context, readerContext).getRangeScorer(readerContext, lowerVal, upperVal, includeLower, includeUpper, matchMissing);
       }
 
       @Override
@@ -98,6 +104,7 @@ public class ValueSourceRangeFilter extends SolrFilter {
     StringBuilder sb = new StringBuilder();
     sb.append("frange(");
     sb.append(valueSource);
+    if (matchMissing) sb.append(", matchMissing=true");
     sb.append("):");
     sb.append(includeLower ? '[' : '{');
     sb.append(lowerVal == null ? "*" : lowerVal);

@@ -337,7 +337,7 @@ public class DirectUpdateHandler2 extends UpdateHandler implements SolrCoreState
         bq.add(q, Occur.MUST);
         SchemaField sf = ulog.getVersionInfo().getVersionField();
         ValueSource vs = sf.getType().getValueSource(sf, null);
-        ValueSourceRangeFilter filt = new ValueSourceRangeFilter(vs, null, Long.toString(Math.abs(cmd.getVersion())), true, true);
+        ValueSourceRangeFilter filt = new ValueSourceRangeFilter(vs, null, Long.toString(Math.abs(cmd.getVersion())), true, true, true);
         FunctionRangeQuery range = new FunctionRangeQuery(filt);
         bq.add(range, Occur.MUST);
         q = bq;

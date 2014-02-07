@@ -18,7 +18,6 @@ package org.apache.solr.search.function.valuesource;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.Bits;
 import org.apache.solr.search.QueryContext;
@@ -147,8 +146,8 @@ public class EnumFieldSource extends FieldCacheSource {
 
 
       @Override
-      public ValueSourceScorer getRangeScorer(IndexReader reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper) {
-        Integer lower = stringValueToIntValue(lowerVal);
+      public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+        Integer lower = stringValueToIntValue(lowerVal);  // TODO: share this with getIntRangeScorer???
         Integer upper = stringValueToIntValue(upperVal);
 
         // instead of using separate comparison functions, adjust the endpoints.
@@ -165,18 +164,31 @@ public class EnumFieldSource extends FieldCacheSource {
           if (!includeUpper && upper > Integer.MIN_VALUE) upper--;
         }
 
+        final FuncValues vals = this;
         final int ll = lower;
         final int uu = upper;
 
-        return new ValueSourceScorer(reader, this) {
-          @Override
-          public boolean matchesValue(int doc) {
-            int val = arr.get(doc);
-            // only check for deleted if it's the default value
-            // if (val==0 && reader.isDeleted(doc)) return false;
-            return val >= ll && val <= uu;
-          }
-        };
+        final int def = 0;
+        boolean checkExists = matchMissing==false && (ll <= def && uu >= def);
+
+        if (!checkExists) {
+          return new ValueSourceScorer(readerContext, vals) {
+            @Override
+            public boolean matchesValue(int doc) {
+              int val = vals.intVal(doc);
+              return val >= ll && val <= uu;
+            }
+          };
+        } else {
+          return new ValueSourceScorer(readerContext, vals) {
+            @Override
+            public boolean matchesValue(int doc) {
+              int val = vals.intVal(doc);
+              return val >= ll && val <= uu && (val != def || vals.exists(doc));
+            }
+          };
+        }
+
       }
 
       @Override

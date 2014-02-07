@@ -18,7 +18,6 @@ package org.apache.solr.search.function;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Explanation;
@@ -177,8 +176,8 @@ class FunctionValuesAdapter extends FuncValues {
   }
 
   @Override
-  public ValueSourceScorer getRangeScorer(IndexReader reader, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper) {
-    return new ValueSourceScorerAdapter(reader, this, luceneValues.getRangeScorer(reader, lowerVal, upperVal, includeLower, includeUpper));
+  public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+    return new ValueSourceScorerAdapter(readerContext, this, luceneValues.getRangeScorer(readerContext.reader(), lowerVal, upperVal, includeLower, includeUpper));
   }
 
   @Override
@@ -191,14 +190,9 @@ class FunctionValuesAdapter extends FuncValues {
 class ValueSourceScorerAdapter extends ValueSourceScorer {
   protected final org.apache.lucene.queries.function.ValueSourceScorer luceneScorer;
 
-  public ValueSourceScorerAdapter(IndexReader reader, FuncValues values, org.apache.lucene.queries.function.ValueSourceScorer luceneScorer) {
-    super(reader, values);
+  public ValueSourceScorerAdapter(AtomicReaderContext readerContext, FuncValues values, org.apache.lucene.queries.function.ValueSourceScorer luceneScorer) {
+    super(readerContext, values);
     this.luceneScorer = luceneScorer;
-  }
-
-  @Override
-  public IndexReader getReader() {
-    return luceneScorer.getReader();
   }
 
   @Override

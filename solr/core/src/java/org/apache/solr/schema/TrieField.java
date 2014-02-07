@@ -354,12 +354,10 @@ public class TrieField extends PrimitiveFieldType {
     }
   }
 
-  @Deprecated
   static int toInt(byte[] arr, int offset) {
     return (arr[offset]<<24) | ((arr[offset+1]&0xff)<<16) | ((arr[offset+2]&0xff)<<8) | (arr[offset+3]&0xff);
   }
   
-  @Deprecated
   static long toLong(byte[] arr, int offset) {
     int high = (arr[offset]<<24) | ((arr[offset+1]&0xff)<<16) | ((arr[offset+2]&0xff)<<8) | (arr[offset+3]&0xff);
     int low = (arr[offset+4]<<24) | ((arr[offset+5]&0xff)<<16) | ((arr[offset+6]&0xff)<<8) | (arr[offset+7]&0xff);
