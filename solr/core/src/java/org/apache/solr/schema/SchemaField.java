@@ -232,7 +232,12 @@ public final class SchemaField extends FieldProperties {
   }
 
   static int calcProps(String name, FieldType ft, Map<String,?> props) {
-    int trueProps = parseProperties(props,true,true);
+    int trueProps = 0;
+    if ("_version_".equals(name)) {
+      trueProps = LUCENE_FIELDCACHE;
+    }
+
+    trueProps |= parseProperties(props,true,true);
     int falseProps = parseProperties(props,false,true);
 
     int p = ft.properties;
