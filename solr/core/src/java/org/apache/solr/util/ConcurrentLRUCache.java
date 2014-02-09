@@ -461,11 +461,12 @@ public class ConcurrentLRUCache<K,V> {
 
   public Map<K,V> getLatestAccessedItems(int n) {
     Map<K,V> result = new LinkedHashMap<K,V>();
-    if (n <= 0)
+    if (n <= 0 || closed)
       return result;
     TreeSet<CacheEntry<K,V>> tree = new TreeSet<CacheEntry<K,V>>();
     // we need to grab the lock since we are changing lastAccessedCopy
     markAndSweepLock.lock();
+    if (closed) return result;  // JMX Monitored Map seems to like to get stats after things are closed!
     try {
       for (Map.Entry<Object, CacheEntry<K,V>> entry : map.entrySet()) {
         CacheEntry<K,V> ce = entry.getValue();
@@ -547,12 +548,17 @@ public class ConcurrentLRUCache<K,V> {
     }
   }
 
-  private boolean isDestroyed =  false;
+  private volatile boolean closed =  false;
   public void destroy() {
+    closed = true;
+
     try {
       if(cleanupThread != null){
         cleanupThread.stopThread();
       }
+
+      markAndSweepLock.lock();
+
     } finally {
 
       for (CacheEntry<K,V> ce : map.values()) {
@@ -561,7 +567,9 @@ public class ConcurrentLRUCache<K,V> {
         }
       }
 
-      isDestroyed = true;
+      map.clear();
+
+      markAndSweepLock.unlock();
     }
   }
 
@@ -662,7 +670,7 @@ public class ConcurrentLRUCache<K,V> {
   @Override
   protected void finalize() throws Throwable {
     try {
-      if(!isDestroyed){
+      if(!closed){
         log.error("ConcurrentLRUCache was not destroyed prior to finalize(), indicates a bug -- POSSIBLE RESOURCE LEAK!!!");
         destroy();
       }
