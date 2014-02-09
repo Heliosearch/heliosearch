@@ -52,8 +52,8 @@ public class TrieIntField extends TrieField implements IntValueFieldType {
 
   @Override
   public ValueSource getValueSource(SchemaField field, QParser qparser) {
-    return super.getValueSource(field, qparser);
-/***
+    // return super.getValueSource(field, qparser);
+
     field.checkFieldCacheSource(qparser);
 
     if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
@@ -61,17 +61,16 @@ public class TrieIntField extends TrieField implements IntValueFieldType {
     } else {
       return new IntFieldValues(field, qparser);
     }
-***/
   }
 
   @Override
   public SortField getSortField(SchemaField field, boolean top) {
-    return super.getSortField(field, top);
-/***
+    // return super.getSortField(field, top);
+
     field.checkSortability();
 
     return new IntFieldValues(field, null).getSortField(top, field.sortMissingFirst(), field.sortMissingLast(), null);
-***/
+
   }
 
 

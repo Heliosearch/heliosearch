@@ -41,8 +41,8 @@ public class TrieLongField extends TrieField implements LongValueFieldType {
 
   @Override
   public ValueSource getValueSource(SchemaField field, QParser qparser) {
-    return super.getValueSource(field, qparser);
-/**
+    // return super.getValueSource(field, qparser);
+
     field.checkFieldCacheSource(qparser);
 
     if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
@@ -50,16 +50,16 @@ public class TrieLongField extends TrieField implements LongValueFieldType {
     } else {
       return new LongFieldValues(field, qparser);
     }
- **/
+
   }
 
   @Override
   public SortField getSortField(SchemaField field, boolean top) {
-    return super.getSortField(field, top);
-/**
+    // return super.getSortField(field, top);
+
     field.checkSortability();
 
     return new LongFieldValues(field, null).getSortField(top, field.sortMissingFirst(), field.sortMissingLast(), null);
-**/
+
   }
 }

@@ -1171,6 +1171,10 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
     public abstract int getInt();
   }
 
+  public abstract static class LVals extends Vals {
+    public abstract long getLong();
+  }
+
   public static class IRange extends IVals {
     final int min;
     final int max;
@@ -1389,7 +1393,11 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
 
       // commit 10% of the time
       if (random().nextInt(commitOneOutOf)==0) {
-        assertU(commit());
+        if (random().nextInt(10) == 0) {
+          assertU(commit());
+        } else {
+          assertU(commit("softCommit","true"));
+        }
       }
 
       // duplicate 10% of the docs
