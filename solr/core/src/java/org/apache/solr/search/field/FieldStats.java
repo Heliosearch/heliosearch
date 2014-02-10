@@ -76,3 +76,49 @@ class LongFieldStats extends FieldStats {
     return lastValue;
   }
 }
+
+class FloatFieldStats extends FieldStats {
+  float firstValue;
+  float lastValue;
+
+  @Override
+  public Object getFirstValue() {
+    return firstValue;
+  }
+
+  @Override
+  public Object getLastValue() {
+    return lastValue;
+  }
+
+  public float getFirst() {
+    return firstValue;
+  }
+
+  public float getLast() {
+    return lastValue;
+  }
+}
+
+class DoubleFieldStats extends FieldStats {
+  double firstValue;
+  double lastValue;
+
+  @Override
+  public Object getFirstValue() {
+    return firstValue;
+  }
+
+  @Override
+  public Object getLastValue() {
+    return lastValue;
+  }
+
+  public double getFirst() {
+    return firstValue;
+  }
+
+  public double getLast() {
+    return lastValue;
+  }
+}
