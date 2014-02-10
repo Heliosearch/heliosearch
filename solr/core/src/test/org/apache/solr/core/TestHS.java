@@ -72,6 +72,62 @@ public class TestHS extends LuceneTestCase {
     assertEquals( HS.getNumAllocations() , HS.getNumFrees() );
   }
 
+  public void testDoubleArray() {
+    long arr = HS.allocArray(5, 8, true);
+
+    // make sure array is zeroed
+    assertEquals(HS.getDouble(arr, 0), 0.0, 0);
+    assertEquals(HS.getDouble(arr, 4), 0.0, 0);
+
+
+    assertEquals(40, HS.arraySizeBytes(arr));
+
+    double c1 = Math.E;
+    double c2 = Math.PI;
+
+    HS.setDouble(arr, 0, c1);
+    HS.setDouble(arr, 1, c1);
+    HS.setDouble(arr, 4, c2);
+
+    assertEquals(c1, HS.getDouble(arr, 0), 0);
+    assertEquals(c1, HS.getDouble(arr, 1), 0);
+    assertEquals(c2, HS.getDouble(arr, 4), 0);
+
+    assertTrue( HS.getNumAllocations() > HS.getNumFrees() );
+
+    HS.freeArray(arr);
+
+    assertEquals( HS.getNumAllocations() , HS.getNumFrees() );
+  }
+
+  public void testFloatArray() {
+    long arr = HS.allocArray(5, 4, true);
+
+    // make sure array is zeroed
+    assertEquals(HS.getFloat(arr, 0), 0.0f, 0);
+    assertEquals(HS.getFloat(arr, 4), 0.0f, 0);
+
+
+    assertEquals(20, HS.arraySizeBytes(arr));
+
+    float c1 = (float)Math.E;
+    float c2 = (float)Math.PI;
+
+    HS.setFloat(arr, 0, c1);
+    HS.setFloat(arr, 1, c1 + c2);
+    HS.setFloat(arr, 4, c2);
+
+    assertEquals(c1, HS.getFloat(arr, 0), 0);
+    assertEquals(c1+c2, HS.getFloat(arr, 1), 0);
+    assertEquals(c2, HS.getFloat(arr, 4), 0);
+
+    assertTrue( HS.getNumAllocations() > HS.getNumFrees() );
+
+    HS.freeArray(arr);
+
+    assertEquals( HS.getNumAllocations() , HS.getNumFrees() );
+  }
+
   public void testIntArray() {
     long arr = HS.allocArray(5, 4, false);
 
@@ -151,6 +207,15 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 1a");
+    failed=false;
+    try {
+      HS.setDouble(arr, 5, 0.0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
     log.warn("CHECKPOINT 2");
     failed=false;
     try {
@@ -159,6 +224,16 @@ public class TestHS extends LuceneTestCase {
       failed = true;
     }
     assertTrue(failed);
+
+    log.warn("CHECKPOINT 2a");
+    failed=false;
+    try {
+      HS.getDouble(arr, 5);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
 
     log.warn("CHECKPOINT 3");
     failed=false;
@@ -169,6 +244,16 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 3f");
+    failed=false;
+    try {
+      HS.setFloat(arr, 10, 0.0f);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+
     log.warn("CHECKPOINT 4");
     failed=false;
     try {
@@ -177,6 +262,16 @@ public class TestHS extends LuceneTestCase {
       failed = true;
     }
     assertTrue(failed);
+
+    log.warn("CHECKPOINT 4f");
+    failed=false;
+    try {
+      HS.getFloat(arr, 10);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
 
     log.warn("CHECKPOINT 3a");
     failed=false;
@@ -229,6 +324,16 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 5d");
+    failed=false;
+    try {
+      HS.setDouble(arr, -1, 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+
     log.warn("CHECKPOINT 6");
     failed=false;
     try {
@@ -237,6 +342,16 @@ public class TestHS extends LuceneTestCase {
       failed = true;
     }
     assertTrue(failed);
+
+    log.warn("CHECKPOINT 6d");
+    failed=false;
+    try {
+      HS.getDouble(arr, -1);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
 
     log.warn("CHECKPOINT 7");
     failed=false;
@@ -247,10 +362,28 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 7f");
+    failed=false;
+    try {
+      HS.setFloat(arr, -1, 0.0f);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
     log.warn("CHECKPOINT 8");
     failed=false;
     try {
       HS.getInt(arr, -1);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 8");
+    failed=false;
+    try {
+      HS.getFloat(arr, -1);
     } catch (Throwable e) {
       failed = true;
     }
@@ -306,10 +439,28 @@ public class TestHS extends LuceneTestCase {
     }
     assertTrue(failed);
 
+    log.warn("CHECKPOINT 9d");
+    failed=false;
+    try {
+      HS.setDouble(0, 0, 0.0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
     log.warn("CHECKPOINT 10");
     failed=false;
     try {
       HS.getLong(0, 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 10d");
+    failed=false;
+    try {
+      HS.getDouble(0, 0);
     } catch (Throwable e) {
       failed = true;
     }
@@ -322,12 +473,32 @@ public class TestHS extends LuceneTestCase {
     } catch (Throwable e) {
       failed = true;
     }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 11f");
+    failed=false;
+    try {
+      HS.setFloat(0, 0, 0.0f);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
 
     log.warn("CHECKPOINT 12");
     assertTrue(failed);
     failed=false;
     try {
       HS.getInt(0, 0);
+    } catch (Throwable e) {
+      failed = true;
+    }
+    assertTrue(failed);
+
+    log.warn("CHECKPOINT 12f");
+    assertTrue(failed);
+    failed=false;
+    try {
+      HS.getFloat(0, 0);
     } catch (Throwable e) {
       failed = true;
     }

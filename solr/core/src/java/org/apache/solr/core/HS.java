@@ -190,6 +190,16 @@ public class HS
     unsafe.putInt(ptr + (((long)index)<<2), val);
   }
 
+  public static float getFloat(long ptr, int index) {
+    assert (index>=0) && ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
+    return unsafe.getFloat(ptr + (((long) index) << 2));
+  }
+
+  public static void setFloat(long ptr, int index, float val) {
+    assert (index>=0) && ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
+    unsafe.putFloat(ptr + (((long) index) << 2), val);
+  }
+
   public static long getLong(long ptr, int index) {
     assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
     return unsafe.getLong(ptr + (((long) index) << 3));
@@ -198,6 +208,16 @@ public class HS
   public static void setLong(long ptr, int index, long val) {
     assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
     unsafe.putLong(ptr + (((long) index) << 3), val);
+  }
+
+  public static double getDouble(long ptr, int index) {
+    assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
+    return unsafe.getDouble(ptr + (((long) index) << 3));
+  }
+
+  public static void setDouble(long ptr, int index, double val) {
+    assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
+    unsafe.putDouble(ptr + (((long) index) << 3), val);
   }
 
   public static void copyInts(int[] srcArray, int srcOff, long targetPointer, long targetOff,  int numElements) {
