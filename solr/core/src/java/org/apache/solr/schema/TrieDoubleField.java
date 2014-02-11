@@ -17,8 +17,15 @@
 
 package org.apache.solr.schema;
 
+import org.apache.lucene.search.FieldCache;
+import org.apache.lucene.search.SortField;
+import org.apache.solr.search.QParser;
+import org.apache.solr.search.field.DoubleFieldValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.DoubleFieldSource;
+
 /**
- * A numeric field that can contain double-precision 64-bit IEEE 754 floating 
+ * A numeric field that can contain double-precision 64-bit IEEE 754 doubleing 
  * point values.
  *
  * <ul>
@@ -36,5 +43,29 @@ package org.apache.solr.schema;
 public class TrieDoubleField extends TrieField implements DoubleValueFieldType {
   {
     type=TrieTypes.DOUBLE;
+  }
+
+  @Override
+  public ValueSource getValueSource(SchemaField field, QParser qparser) {
+    // return super.getValueSource(field, qparser);
+
+    field.checkFieldCacheSource(qparser);
+
+    if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
+      return new DoubleFieldSource( field.getName(), FieldCache.NUMERIC_UTILS_DOUBLE_PARSER );
+    } else {
+      return new DoubleFieldValues(field, qparser);
+    }
+
+  }
+
+  @Override
+  public SortField getSortField(SchemaField field, boolean top) {
+    // return super.getSortField(field, top);
+
+    field.checkSortability();
+
+    return new DoubleFieldValues(field, null).getSortField(top, field.sortMissingFirst(), field.sortMissingLast(), null);
+
   }
 }

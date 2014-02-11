@@ -235,6 +235,7 @@ public class TestNCache extends SolrTestCaseJ4 {
       types.add(new FldType("id",ONE_ONE, new SVal('A','Z',4,4)));
       types.add(new FldType("score_f",ONE_ONE, new FVal(1,100)));  // field used to score
       types.add(new FldType("sparse_f",ZERO_ONE, new FVal(-100,100)));  // field used to score
+      types.add(new FldType("sparse_d",ZERO_ONE, new DVal(-1000,1000)));  // field used to score
 
       StringBuilder sb = new StringBuilder();
       for (int i=0; i<nLongFields; i++) {
@@ -289,6 +290,7 @@ public class TestNCache extends SolrTestCaseJ4 {
             ,"rows",""+rows
             ,"fl","id, score_f:field(score_f)"
             ,"fl","sparse_f:field(sparse_f)"
+            ,"fl","sparse_d:field(sparse_d)"
             ,"fl",flArg
             ,"fl",flArg2
         );

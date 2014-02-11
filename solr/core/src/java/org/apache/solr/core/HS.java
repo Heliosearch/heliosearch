@@ -13,6 +13,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class HS
 {
+  public static int BYTE_SIZE   = 1;
+  public static int SHORT_SIZE  = 2;
+  public static int INT_SIZE    = 4;
+  public static int LONG_SIZE   = 8;
+  public static int FLOAT_SIZE  = 4;
+  public static int DOUBLE_SIZE = 8;
+
+
   private static Logger log = LoggerFactory.getLogger(HS.class);
 
   public static final Unsafe unsafe;

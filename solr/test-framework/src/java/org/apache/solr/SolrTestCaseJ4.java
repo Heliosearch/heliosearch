@@ -1237,7 +1237,27 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
     public Comparable get() {
       return getFloat();
     }
-  }  
+  }
+
+  public static class DVal extends Vals {
+    final double min;
+    final double max;
+    public DVal(double min, double max) {
+      this.min = min;
+      this.max = max;
+    }
+
+    public double getDouble() {
+      if (min >= max) return min;
+      return min + random().nextDouble() *  (max - min);
+    }
+
+    @Override
+    public Comparable get() {
+      return getDouble();
+    }
+  }
+
 
   public static class SVal extends Vals {
     char start;
