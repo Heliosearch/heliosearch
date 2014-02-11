@@ -27,10 +27,13 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.mutable.MutableValueDate;
+import org.apache.solr.search.mutable.MutableValueLong;
 
 import java.io.IOException;
+import java.util.Date;
 
-public class LongFieldValues extends FieldValues {
+public class LongFieldValues extends FieldValues implements LongConverter {
 
   public LongFieldValues(SchemaField field, QParser qparser) {
     super(field, qparser);
@@ -50,6 +53,33 @@ public class LongFieldValues extends FieldValues {
   public String description() {
     return "long(" + getFieldName() + ')';
   }
+
+
+  //
+  // LongConverter methods
+  //
+  @Override
+  public MutableValueLong newMutableValue() {
+    return new MutableValueLong();
+  }
+
+  @Override
+  public Object longToObject(long val) {
+    return Long.valueOf(val);
+  }
+
+  @Override
+  public String longToString(long val) {
+    return Long.toString(val);
+  }
+
+  @Override
+  public long externalToLong(String extVal) {
+    return Long.parseLong(extVal);
+  }
+
+
+
 
   @Override
   public TopValues createTopValues(SolrIndexSearcher searcher) {
@@ -119,9 +149,7 @@ public class LongFieldValues extends FieldValues {
   }
 
 
-  /** Parses field's values as int (using {@link
-   *  org.apache.lucene.search.FieldCache#getInts} and sorts by ascending value */
-  class LongComparator extends FieldComparator<Long> {
+  class LongComparator extends FieldComparator {
     private LongLeafValues currentReaderValues;
     private LongTopValues topValues;
     private final long[] values;
@@ -180,14 +208,14 @@ public class LongFieldValues extends FieldValues {
     }
 
     @Override
-    public void setTopValue(Long value) {
-      topValue = value;
+    public void setTopValue(Object value) {
+      topValue = (Long)value;
     }
 
     @Override
-    public Long value(int slot) {
-      // TODO: return null if missing?
-      return Long.valueOf(values[slot]);
+    public Object value(int slot) {
+      return new Long( values[slot] );
+      // return longToObject(values[slot]);  // fsv=true returns longs for the sort values...
     }
 
     @Override

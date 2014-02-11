@@ -21,6 +21,7 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.Explanation;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.search.field.LongConverter;
 import org.apache.solr.search.mutable.MutableValue;
 import org.apache.solr.search.mutable.MutableValueFloat;
 
@@ -374,7 +375,7 @@ public abstract class FuncValues {
   }
 
 
-  public static ValueSourceScorer getLongRangeScorer(final FuncValues vals, AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
+  public static ValueSourceScorer getLongRangeScorer(LongConverter converter, final FuncValues vals, AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
     long lower, upper;
 
     // instead of using separate comparison functions, adjust the endpoints.
@@ -382,14 +383,14 @@ public abstract class FuncValues {
     if (lowerVal == null) {
       lower = Long.MIN_VALUE;
     } else {
-      lower = Long.parseLong(lowerVal);
+      lower = converter.externalToLong(lowerVal);
       if (!includeLower && lower < Long.MAX_VALUE) lower++;
     }
 
     if (upperVal == null) {
       upper = Long.MAX_VALUE;
     } else {
-      upper = Long.parseLong(upperVal);
+      upper = converter.externalToLong(upperVal);
       if (!includeUpper && upper > Long.MIN_VALUE) upper--;
     }
 

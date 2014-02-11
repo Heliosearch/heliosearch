@@ -59,12 +59,12 @@ public abstract class LongLeafValues extends LeafValues {
 
   @Override
   public String strVal(int doc) {
-    return Long.toString(longVal(doc));
+    return exists(doc) ? ((LongConverter)fieldValues).longToString( longVal(doc) ) : null;
   }
 
   @Override
   public Object objectVal(int doc) {
-    return exists(doc) ? longVal(doc) : null;
+    return exists(doc) ? ((LongConverter)fieldValues).longToObject( longVal(doc) ) : null;
   }
 
   @Override
@@ -74,13 +74,14 @@ public abstract class LongLeafValues extends LeafValues {
 
   @Override
   public ValueSourceScorer getRangeScorer(AtomicReaderContext readerContext, String lowerVal, String upperVal, boolean includeLower, boolean includeUpper, boolean matchMissing) {
-    return getLongRangeScorer(this, readerContext, lowerVal, upperVal, includeLower, includeUpper, matchMissing);
+    return getLongRangeScorer((LongConverter)this.fieldValues, this, readerContext, lowerVal, upperVal, includeLower, includeUpper, matchMissing);
   }
 
   @Override
   public ValueFiller getValueFiller() {
+    final LongConverter longConverter = ((LongConverter)this.fieldValues);
     return new ValueFiller() {
-      private final MutableValueLong mval = new MutableValueLong();
+      private final MutableValueLong mval = longConverter.newMutableValue();
 
       @Override
       public MutableValue getValue() {
