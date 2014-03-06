@@ -157,7 +157,7 @@ public class FieldFacetStats {
 
   public void setNextReader(AtomicReaderContext ctx) throws IOException {
     this.context = ctx;
-    values = valueSource.getValues(new QueryContext(null), ctx); // TODO: FIXME: get a real context
+    values = valueSource.getValues(qcontext, ctx);
     for (StatsValues stats : facetStatsValues.values()) {
       stats.setNextReader(ctx);
     }
