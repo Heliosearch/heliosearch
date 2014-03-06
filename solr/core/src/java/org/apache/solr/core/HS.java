@@ -1,5 +1,6 @@
 package org.apache.solr.core;
 
+import org.apache.lucene.util.BytesRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
@@ -172,11 +173,22 @@ public class HS
     assert (index>=0) && ((((long)index+1))) <= arraySizeBytes(ptr);
     return unsafe.getByte(ptr + (((long) index)));
   }
+  public static byte getByte(long ptr, long index) {
+    assert (index>=0) && ((((long)index+1))) <= arraySizeBytes(ptr);
+    return unsafe.getByte(ptr + (((long) index)));
+  }
+
 
   public static void setByte(long ptr, int index, byte val) {
     assert (index>=0) && ((((long)index+1))) <= arraySizeBytes(ptr);
     unsafe.putByte(ptr + (((long)index)), val);
   }
+  public static void setByte(long ptr, long index, byte val) {
+    assert (index>=0) && ((((long)index+1))) <= arraySizeBytes(ptr);
+    unsafe.putByte(ptr + (((long)index)), val);
+  }
+
+
 
   public static int getShort(long ptr, int index) {
     assert (index>=0) && ((((long)index+1)<<1)) <= arraySizeBytes(ptr);
@@ -228,6 +240,97 @@ public class HS
     unsafe.putDouble(ptr + (((long) index) << 3), val);
   }
 
+  public static void copyLengthPrefixBytes(long bytesArr, long offset, BytesRef target) {
+    assert bytesArr>=0 && offset>=0 && offset+2 <= arraySizeBytes(bytesArr);
+    copyLengthPrefixBytes(bytesArr + offset, target);
+  }
+
+  /* WARNING: this method can't verify the pointer */
+  public static void copyLengthPrefixBytes(long pointer, BytesRef target) {
+    int len = unsafe.getByte(pointer++);
+    if (len < 0) {
+      len = ((len & 0x7f) << 8) | (unsafe.getByte(pointer++) & 0xff);
+    }
+    if (target.offset + len >= target.bytes.length) {
+      target.bytes = new byte[len];
+      target.offset = 0;
+    }
+    target.length = len;
+    unsafe.copyMemory(null, pointer,  target.bytes, Unsafe.ARRAY_BYTE_BASE_OFFSET + target.offset, len);
+
+  }
+
+  /* WARNING: this method can't verify the pointer2 */
+  public static int compareLengthPrefixBytes(long pointer1, long pointer2) {
+    int len = unsafe.getByte(pointer1++);
+    if (len < 0) {
+      len = ((len & 0x7f) << 8) | (unsafe.getByte(pointer1++) & 0xff);
+    }
+    return compareLengthPrefixBytes(len, pointer1, pointer2);
+  }
+
+  /* termPointerBytes points directly to the start of the bytes of the first term (and len1 contains
+   * the length of that term.  termPointer2 points to a normal length prefixed term.  This avoids
+   * decoding the length of the first term multiple times when doing a binary search for example.
+   * WARNING: this method can't verify the pointers.
+   */
+  public static int compareLengthPrefixBytes(int len1, long termPointerBytes, long termPointer2) {
+    assert len1 >= 0 && len1 < 0x7fff && termPointerBytes > 0 && termPointer2 > 0;
+    int len2 = unsafe.getByte(termPointer2++);
+    if (len2 < 0) {
+      len2 = ((len2 & 0x7f) << 8) | (unsafe.getByte(termPointer2++) & 0xff);
+    }
+
+    int upTo = len1 < len2 ? len1 : len2;
+    for (int i=0; i<upTo; i++) {
+      int diff = (unsafe.getByte(termPointerBytes + i) & 0xff) - (unsafe.getByte(termPointer2 + i) & 0xff);  // compare unsigned
+      if (diff != 0) return diff;
+    }
+
+    return len1 - len2;
+  }
+
+
+  public static int compareLengthPrefixBytes(long termPointer, BytesRef termPointer2) {
+    assert termPointer >= 0;
+    int len = unsafe.getByte(termPointer++);
+    if (len < 0) {
+      len = ((len & 0x7f) << 8) | (unsafe.getByte(termPointer++) & 0xff);
+    }
+
+    byte[] arr2 = termPointer2.bytes;
+    int offset2 = termPointer2.offset;
+    int len2 = termPointer2.length;
+
+    int upTo = len < len2 ? len : len2;
+    for (int i=0; i<upTo; i++) {
+      int diff = (unsafe.getByte(termPointer + i) & 0xff) - (arr2[offset2+i] & 0xff);  // compare unsigned
+      if (diff != 0) return diff;
+    }
+
+    return len - len2;
+  }
+
+  public static int getTermLength(long termPointer) {
+    int len = unsafe.getByte(termPointer);
+    if (len < 0) {
+      len = ((len & 0x7f) << 8) | (unsafe.getByte(termPointer + 1) & 0xff);
+    }
+    return len;
+  }
+
+
+  public static void copyBytes(byte[] srcArray, int srcOff, long targetPointer, long targetOff,  int numElements) {
+    long nbytes = ((long)numElements);
+    assert srcOff>=0 && targetOff>=0 && (targetOff + nbytes) <= arraySizeBytes(targetPointer);
+    unsafe.copyMemory(srcArray, Unsafe.ARRAY_BYTE_BASE_OFFSET + (((long)srcOff)), null, targetPointer+targetOff, nbytes);
+  }
+
+  public static void copyBytes(long srcPointer, long srcOff, long targetPointer, long targetOff,  long numBytes) {
+    assert srcOff>=0 && targetOff>=0 && (targetOff + numBytes) <= arraySizeBytes(targetPointer) && (srcOff + numBytes) <= arraySizeBytes(srcPointer);
+    unsafe.copyMemory(srcPointer + srcOff, targetPointer + targetOff, numBytes);
+  }
+
   public static void copyInts(int[] srcArray, int srcOff, long targetPointer, long targetOff,  int numElements) {
     long targetOffBytes = targetOff<<2;
     long nbytes = ((long)numElements) << 2;
@@ -273,6 +376,24 @@ public class HS
   }
 
 
+
+  public static String hex(long arr, long offset) {
+    StringBuilder sb = new StringBuilder();
+    long len = HS.arraySizeBytes(arr);
+    sb.append("arr=" + arr + " sizeInBytes=" + len + " offset=" + offset);
+    int nBytes = (int)Math.min(16, len - offset);
+    return sb.toString() + hexBytes(arr+offset, nBytes);
+  }
+
+  public static String hexBytes(long mem, int nBytes) {
+    StringBuilder sb = new StringBuilder();
+    for (int i=0; i<nBytes; i++) {
+      byte b = unsafe.getByte(mem + i);
+      if ((i & 0x03)==0) sb.append(' ');
+      sb.append(Integer.toHexString(b&0xff));
+    }
+    return sb.toString();
+  }
 
   // TODO: introduce the concept of a reference list to ease deallocation?  (just an auto-expanding long[])
 
