@@ -17,6 +17,8 @@ package org.apache.solr.search.field;
  * limitations under the License.
  */
 
+import org.apache.lucene.util.BytesRef;
+
 public abstract class FieldStats {
   int numDocsWithField;
   long numUniqueValues;
@@ -119,6 +121,29 @@ class DoubleFieldStats extends FieldStats {
   }
 
   public double getLast() {
+    return lastValue;
+  }
+}
+
+class StrFieldStats extends FieldStats {
+  BytesRef firstValue;  // TODO: only store ords?
+  BytesRef lastValue;
+
+  @Override
+  public Object getFirstValue() {
+    return firstValue;
+  }
+
+  @Override
+  public Object getLastValue() {
+    return lastValue;
+  }
+
+  public BytesRef getFirst() {
+    return firstValue;
+  }
+
+  public BytesRef getLast() {
     return lastValue;
   }
 }
