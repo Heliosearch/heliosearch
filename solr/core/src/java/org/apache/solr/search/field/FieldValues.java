@@ -21,6 +21,9 @@ package org.apache.solr.search.field;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.FieldCache;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.schema.StrFieldSource;
+import org.apache.solr.schema.TrieDoubleField;
+import org.apache.solr.schema.TrieFloatField;
 import org.apache.solr.schema.TrieIntField;
 import org.apache.solr.schema.TrieLongField;
 import org.apache.solr.search.QParser;
@@ -29,6 +32,8 @@ import org.apache.solr.search.SolrCache;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.DoubleFieldSource;
+import org.apache.solr.search.function.valuesource.FloatFieldSource;
 import org.apache.solr.search.function.valuesource.IntFieldSource;
 import org.apache.solr.search.function.valuesource.LongFieldSource;
 
@@ -94,8 +99,13 @@ public abstract class FieldValues extends ValueSource {
         return new IntFieldSource(field.getName(), FieldCache.NUMERIC_UTILS_INT_PARSER).getValues(context, readerContext);
       } else if (field.getType() instanceof TrieLongField) {
         return new LongFieldSource(field.getName(), FieldCache.NUMERIC_UTILS_LONG_PARSER).getValues(context, readerContext);
+      } else if (field.getType() instanceof TrieFloatField) {
+        return new FloatFieldSource( field.getName(), FieldCache.NUMERIC_UTILS_FLOAT_PARSER ).getValues(context, readerContext);
+      } else if (field.getType() instanceof TrieDoubleField) {
+        return new DoubleFieldSource( field.getName(), FieldCache.NUMERIC_UTILS_DOUBLE_PARSER ).getValues(context, readerContext);
+      } else {
+        return new StrFieldSource(field.getName()).getValues(context, readerContext);
       }
-
     }
 
 

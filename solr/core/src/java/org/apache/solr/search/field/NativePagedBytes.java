@@ -50,8 +50,8 @@ public final class NativePagedBytes implements Closeable {
   }
 
   public void copyUsingLengthPrefix(BytesRef bytes) {
-    if (bytes.length >= 32768) {
-      throw new IllegalArgumentException("max length is 32767 (got " + bytes.length + ")");
+    if (bytes.length >= blockSize) {
+      throw new IllegalArgumentException("max length is " + blockSize + " (got " + bytes.length + ")");
     }
 
     if (upto + bytes.length + 2 > blockSize) {
@@ -93,6 +93,9 @@ public final class NativePagedBytes implements Closeable {
       HS.copyBytes(block, 0, arr, pos, used);
       pos += used;
     }
+    HS.copyBytes(currentBlock, 0, arr, pos, upto);
+    pos += upto;
+    assert pos == sz;
     return arr;
   }
 
@@ -100,6 +103,23 @@ public final class NativePagedBytes implements Closeable {
   public void close() throws IOException {
     for (Long block : blocks) {
       HS.freeArray(block);
+    }
+    blocks.clear();
+    if (currentBlock != 0) {
+      HS.freeArray(currentBlock);
+    }
+  }
+
+
+  // gets the size of the entry, *including* then length
+  public static int getEntrySize(long arr, long offset) {
+    int b = HS.getByte(arr, offset);
+    if (b >= 0) {
+      return b + 1;
+    } else {
+      int b2 = HS.getByte(arr, offset+1) & 0xff;
+      int len = ((b & 0x7f) << 8) | b2;
+      return len + 2;
     }
   }
 

@@ -96,11 +96,11 @@ public abstract class DoubleLeafValues extends LeafValues {
 
 
 
-class Double32LeafValues extends DoubleLeafValues {
+class Double64LeafValues extends DoubleLeafValues {
   private long arr;
   private final BitDocSetNative valid;
 
-  public Double32LeafValues(FieldValues fieldValues, long longPointer, BitDocSetNative valid, DoubleFieldStats stats) {
+  public Double64LeafValues(FieldValues fieldValues, long longPointer, BitDocSetNative valid, DoubleFieldStats stats) {
     super(fieldValues, stats);
     this.arr = longPointer;
     this.valid = valid;

@@ -17,9 +17,17 @@ package org.apache.solr.search.field;
  * limitations under the License.
  */
 
+import org.apache.lucene.index.IndexWriter;
 import org.apache.solr.JSONTestUtil;
 import org.apache.solr.SolrTestCaseJ4;
+import org.apache.solr.request.LocalSolrQueryRequest;
 import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.request.SolrRequestInfo;
+import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.junit.BeforeClass;
 import org.noggit.JSONUtil;
 import org.noggit.ObjectBuilder;
@@ -27,6 +35,7 @@ import org.noggit.ObjectBuilder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
@@ -36,6 +45,121 @@ public class TestNCache extends SolrTestCaseJ4 {
   public static void beforeTests() throws Exception {
     initCore("solrconfig.xml","schema15.xml");
   }
+
+
+  String big;
+  private void addDoc(int num) {
+    String id = Integer.toString(num);
+    if (num <=0) {
+      assertU(adoc("id", id));
+    } else {
+      assertU(adoc("id", id, "val_i", id, "val_s1", id, "big_s1", big + id));
+    }
+  }
+
+  public void testBasicSort() throws Exception {
+    // test large values...
+    int sz = IndexWriter.MAX_TERM_LENGTH;  // currently 32768-2
+    StringBuilder sb = new StringBuilder(sz);
+    for (int i=0; i<sz-1; i++) {
+      sb.append("Z");
+    }
+    big = sb.toString();
+
+    clearIndex();
+    addDoc(5);
+    addDoc(1);
+    assertU(commit());
+    addDoc(-1);    // empty segment for fiedcache
+    addDoc(-2);
+    assertU(commit());
+    addDoc(-3);
+    addDoc(3);
+    assertU(commit());
+
+    assertJQ(req("q", "{!frange l=1 u=2}val_s1", "sort", "val_s1 desc", "fl", "id")
+        ,  "/response/docs==[{'id':'1'}]"
+    );
+
+    String desc = "/response/docs==[{'id':'5'},{'id':'3'},{'id':'1'},{'id':'-1'},{'id':'-2'},{'id':'-3'}]";
+
+
+    // assertQ(req("q","*:*", "facet","true", "facet.field","val_i1"));
+    assertJQ(req("q", "*:*", "sort", "val_i desc", "fl", "id")
+        , desc
+    );
+
+    assertJQ(req("q","*:*", "sort","val_s1 desc", "fl","id")
+        , desc
+    );
+
+    assertJQ(req("q", "*:*", "sort", "big_s1 desc", "fl", "id")
+        , desc
+    );
+
+
+    // make sure deleteByQuery works OK
+    assertU(delQ("{!frange l=1 u=2}val_s1"));
+    assertU(commit());
+    assertJQ(req("q", "{!frange l=1 u=2}val_s1", "sort", "val_s1 desc", "fl", "id")
+        ,  "/response/docs==[]"
+    );
+
+
+  }
+
+  public void testSize() throws Exception {
+    clearIndex();
+    String s = "12345678901234567890";
+    int nSets = 10;
+
+    int docsPerSet = 2;
+    int termSize = 0;
+    for (int i=0; i<nSets; i++) {
+      String id = String.format(Locale.ROOT, "%08d", i);
+      assertU(adoc("id", id,     "val_s1", id));
+      termSize += 1 + id.length();
+      assertU(adoc("id", id+"a", "val_s1", id+s));
+      int sz = id.length() + s.length();
+      termSize += ((sz <= 0x7f) ? 1 : 2);
+      termSize += sz;
+    }
+
+    int nDocs = docsPerSet * nSets;
+    int nTerms = nDocs;
+
+    assertU(optimize());
+
+    SolrQueryRequest req = req();
+    SolrRequestInfo.setRequestInfo(new SolrRequestInfo(req, new SolrQueryResponse()));
+
+    SchemaField sf = req.getSchema().getField("val_s1");
+    ValueSource vs = sf.getType().getValueSource(sf, null);
+    QueryContext qcontext = QueryContext.newContext(req.getSearcher());
+    vs.createWeight(qcontext, req.getSearcher());
+
+    FuncValues funcValues = vs.getValues(qcontext, req.getSearcher().getTopReaderContext().leaves().get(0));
+    assertTrue(funcValues instanceof StrArrLeafValues);
+
+    StrArrLeafValues vals = (StrArrLeafValues)funcValues;
+
+    assertTrue(vals._getDocToOrdArray() instanceof LongArray8);
+    assertTrue(vals._getOrdToOffsetArray().memSize() == nTerms*1);
+
+    long estSize =
+        (nDocs * 1) // docToOrd array
+       +(nTerms * 1) // ordToOffset array
+       +(termSize);  // term bytes
+
+    long reportedSize = vals.getSizeInBytes();
+
+    assertTrue(estSize >= reportedSize);
+
+    req.close();
+    SolrRequestInfo.clearRequestInfo();
+  }
+
+
 
   public static class LongSpecial extends LVals {
     static long x = 0x8000000000000000L;
@@ -220,13 +344,12 @@ public class TestNCache extends SolrTestCaseJ4 {
   public void testCache() throws Exception {
     Random r = random();
 
-    int indexIter=10;
+    int indexIter=20;
     int updateIter=10;
-    int queryIter=50;
 
 
-    long nLongFields = 20;
-    long nIntFields = 20;
+    long nLongFields = 10;
+    long nIntFields = 10;
 
     Map<Comparable, Doc> model = null;
 
@@ -236,6 +359,11 @@ public class TestNCache extends SolrTestCaseJ4 {
       types.add(new FldType("score_f",ONE_ONE, new FVal(1,100)));  // field used to score
       types.add(new FldType("sparse_f",ZERO_ONE, new FVal(-100,100)));  // field used to score
       types.add(new FldType("sparse_d",ZERO_ONE, new DVal(-1000,1000)));  // field used to score
+      types.add(new FldType("small_s1",ZERO_ONE, new SVal('a','z',1,1)));
+      types.add(new FldType("big_s1",ZERO_ONE, new SVal('A','z',1,30000)));
+      types.add(new FldType("bigb_s1",ZERO_ONE, new SVal('A','z',1,2)));
+      types.add(new FldType("bigc_s1",ZERO_ONE, new SVal('A','z',1,3)));
+      types.add(new FldType("bigd_s1",ZERO_ONE, new SVal('A','z',1,4)));
 
       StringBuilder sb = new StringBuilder();
       for (int i=0; i<nLongFields; i++) {
@@ -256,18 +384,17 @@ public class TestNCache extends SolrTestCaseJ4 {
       String flArg2 = sb.toString();
 
 
-
-
       clearIndex();
       model = null;
 
       for (int upIter=0; upIter<updateIter; upIter++) {
-        int indexSize = random().nextInt(20);
+        int indexSize = random().nextInt(50) + 1;  // something big enough to get us over 128 / 256 (on later iterations) to exercize more ords than that...
         model = indexDocs(types, model, indexSize);
 
         // System.out.println("MODEL=" + model);
 
-        int rows=1000000;
+        int rows=model.size();
+
 
         //
         // create model response
@@ -288,9 +415,14 @@ public class TestNCache extends SolrTestCaseJ4 {
         SolrQueryRequest req = req("wt","json","indent","true", "echoParams","all"
             ,"q","*:*"
             ,"rows",""+rows
-            ,"fl","id, score_f:field(score_f)"
+            ,"fl","id:field(id), score_f:field(score_f)"
             ,"fl","sparse_f:field(sparse_f)"
             ,"fl","sparse_d:field(sparse_d)"
+            ,"fl","small_s1:field(small_s1)"
+            ,"fl","big_s1:field(big_s1)"
+            ,"fl","bigb_s1:field(bigb_s1)"
+            ,"fl","bigc_s1:field(bigc_s1)"
+            ,"fl","bigd_s1:field(bigd_s1)"
             ,"fl",flArg
             ,"fl",flArg2
         );

@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.lucene.document.SortedDocValuesField;
 import org.apache.lucene.document.SortedSetDocValuesField;
 import org.apache.lucene.index.StorableField;
+import org.apache.solr.search.field.StrFieldValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
@@ -60,8 +61,12 @@ public class StrField extends PrimitiveFieldType {
   }
 
   @Override
-  public SortField getSortField(SchemaField field,boolean reverse) {
-    return getStringSort(field,reverse);
+  public SortField getSortField(SchemaField field, boolean reverse) {
+    field.checkFieldCacheSource(null);
+
+    return new StrFieldValues(field, null).getSortField(reverse, field.sortMissingFirst(), field.sortMissingLast(), null);
+
+    // return getStringSort(field,reverse);
   }
 
   @Override
@@ -70,9 +75,14 @@ public class StrField extends PrimitiveFieldType {
   }
 
   @Override
-  public ValueSource getValueSource(SchemaField field, QParser parser) {
-    field.checkFieldCacheSource(parser);
-    return new StrFieldSource(field.getName());
+  public ValueSource getValueSource(SchemaField field, QParser qparser) {
+    field.checkFieldCacheSource(qparser);
+
+    if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
+      return new StrFieldSource(field.getName());
+    } else {
+      return new StrFieldValues(field, qparser);
+    }
   }
 
   @Override

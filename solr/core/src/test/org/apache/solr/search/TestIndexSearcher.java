@@ -20,6 +20,8 @@ import org.apache.lucene.index.LogDocMergePolicy;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReaderContext;
 import org.apache.lucene.index.ReaderUtil;
+import org.apache.solr.request.SolrRequestInfo;
+import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.SolrTestCaseJ4;
@@ -70,10 +72,12 @@ public class TestIndexSearcher extends SolrTestCaseJ4 {
     assertU(commit());
 
     SolrQueryRequest sr1 = req("q","foo");
+    SolrRequestInfo.setRequestInfo(new SolrRequestInfo(sr1, new SolrQueryResponse()));
     IndexReaderContext rCtx1 = sr1.getSearcher().getTopReaderContext();
 
     String sval1 = getStringVal(sr1, "v_s1",0);
     assertEquals("string1", sval1);
+    SolrRequestInfo.clearRequestInfo();
 
     assertU(adoc("id","3", "v_s1","{!literal}"));
     assertU(adoc("id","4", "v_s1","other stuff"));

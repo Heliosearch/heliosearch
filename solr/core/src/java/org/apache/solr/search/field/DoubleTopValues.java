@@ -101,7 +101,7 @@ public class DoubleTopValues extends TopValues {
 
       // steal the array
       u.arr = 0;
-      return new Double32LeafValues(fieldValues, arr, docsWithField, u.stats);
+      return new Double64LeafValues(fieldValues, arr, docsWithField, u.stats);
     }
 
   }

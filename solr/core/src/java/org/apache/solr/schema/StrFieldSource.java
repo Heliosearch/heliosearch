@@ -52,11 +52,6 @@ public class StrFieldSource extends FieldCacheSource {
       }
 
       @Override
-      public int numOrd() {
-        return termsIndex.getValueCount();
-      }
-
-      @Override
       public Object objectVal(int doc) {
         return strVal(doc);
       }
