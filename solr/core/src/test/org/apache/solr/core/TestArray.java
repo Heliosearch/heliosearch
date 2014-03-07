@@ -25,6 +25,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Random;
+
 
 public class TestArray extends LuceneTestCase {
   private static Logger log = LoggerFactory.getLogger(TestArray.class);
@@ -79,6 +81,51 @@ public class TestArray extends LuceneTestCase {
 
     arr.close();
   }
+
+  @Test
+  public void testRandomMonotonicArray() throws Exception {
+    Random r = new Random();
+    for (int i=0; i<10000; i++) {
+      int sz = r.nextInt(100000) + 1;
+      long maxDelta = 1L << r.nextInt(16);
+      doRandomMonotonicArray(sz, maxDelta);
+    }
+  }
+
+
+  public void doRandomMonotonicArray(int sz, long maxDelta) throws Exception {
+    Random r = random();
+    long[] deltas = new long[sz];
+    long totalSize = 0;
+    for (int i=0; i<sz; i++) {
+      deltas[i] = (r.nextLong()>>>1) % maxDelta;
+      totalSize += deltas[i];
+    }
+
+    MonotonicLongArray.Tracker tracker = new MonotonicLongArray.Tracker(sz, totalSize);
+    long tot = 0;
+    for (int i=0; i<sz; i++) {
+      tracker.add(i, tot);
+      tot += deltas[i];
+    }
+    LongArray arr = tracker.createArray();
+
+    tot = 0;
+    for (int i=0; i<sz; i++) {
+      arr.setLong(i, tot);
+      long answer = arr.getLong(i);
+      if (answer != tot) {
+        System.out.println("tot=" + tot + " answer="+answer);
+        arr.setLong(i, tot);  // set breakpoint here
+        answer = arr.getLong(i);
+      }
+      assertEquals(tot, arr.getLong(i));
+      tot += deltas[i];
+    }
+
+    arr.close();
+  }
+
 
 
 }

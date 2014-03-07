@@ -32,6 +32,7 @@ public abstract class LongArray implements Closeable {
   public abstract long memSize();
 
 
+  /** 8 bits needed means storing signed -128 to 127 */
   public static LongArray create(long size, int bitsNeeded) {
     if (bitsNeeded <= 8) {
       return new LongArray8( HS.allocArray(size, 1, true) );
