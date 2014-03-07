@@ -34,9 +34,9 @@ public abstract class LongArray implements Closeable {
 
   public static LongArray create(long size, int bitsNeeded) {
     if (bitsNeeded <= 8) {
-      return new LongArray32( HS.allocArray(size, 4, true) );
+      return new LongArray8( HS.allocArray(size, 1, true) );
     } else if (bitsNeeded <= 16) {
-      return new LongArray32( HS.allocArray(size, 4, true) );
+      return new LongArray16( HS.allocArray(size, 2, true) );
     } else if (bitsNeeded <= 32) {
       return new LongArray32( HS.allocArray(size, 4, true) );
     } else {
@@ -127,3 +127,80 @@ class LongArray32 extends LongArray {
   }
 }
 
+// A long array backed by a native array of shorts (16 bits per value)
+class LongArray16 extends LongArray {
+  final long arr;
+
+  public LongArray16(long ptr) {
+    arr = ptr;
+  }
+
+  @Override
+  public long getSize() {
+    return HS.arraySizeBytes(arr)>>1;
+  }
+
+  @Override
+  public long getLong(int idx) {
+    return HS.getShort(arr, idx);
+  }
+
+  @Override
+  public int getInt(int idx) {
+    return HS.getShort(arr, idx);
+  }
+
+  @Override
+  public void setLong(int idx, long value) {
+    HS.setShort(arr, idx, (short) value);
+  }
+
+  @Override
+  public long memSize() {
+    return HS.arraySizeBytes(arr);
+  }
+
+  @Override
+  public void close() throws IOException {
+    HS.freeArray(arr);
+  }
+}
+
+// A long array backed by a native array of bytes (8 bits per value)
+class LongArray8 extends LongArray {
+  final long arr;
+
+  public LongArray8(long ptr) {
+    arr = ptr;
+  }
+
+  @Override
+  public long getSize() {
+    return HS.arraySizeBytes(arr);
+  }
+
+  @Override
+  public long getLong(int idx) {
+    return HS.getByte(arr, idx);
+  }
+
+  @Override
+  public int getInt(int idx) {
+    return HS.getByte(arr, idx);
+  }
+
+  @Override
+  public void setLong(int idx, long value) {
+    HS.setByte(arr, idx, (byte) value);
+  }
+
+  @Override
+  public long memSize() {
+    return HS.arraySizeBytes(arr);
+  }
+
+  @Override
+  public void close() throws IOException {
+    HS.freeArray(arr);
+  }
+}

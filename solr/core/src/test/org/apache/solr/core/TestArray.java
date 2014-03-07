@@ -47,13 +47,15 @@ public class TestArray extends LuceneTestCase {
   public void testMonotonicArray() throws Exception {
     double averageLength = 3.2;
     long scaled_average_length = MonotonicLongArray.scaleLength(averageLength);
-    int offset = -1000;   // 1000 is the lowest value we are storing
+    int offset = 1000;   // 1000 is the lowest value we are storing
 
     LongArray adjustments = LongArray.create(20, 8);
 
     LongArray arr = new MonotonicLongArray(adjustments, scaled_average_length, offset);
 
-    int i = 0;
+    int i;
+
+    i = 0;
     arr.setLong(i++, 1000);
     arr.setLong(i++, 1004);
     arr.setLong(i++, 1005);
