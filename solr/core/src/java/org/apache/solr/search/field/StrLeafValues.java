@@ -59,6 +59,11 @@ public abstract class StrLeafValues extends LeafValues {
 
   public abstract void ordToTerm(long ord, BytesRef target);
 
+  // TODO: can all subclasses support this?
+  public abstract long ordToTermPointer(long ord);
+  public abstract int termPointerToOrd(long termPointer);
+
+
   @Override
   public abstract boolean bytesVal(int doc, BytesRef target);
 
@@ -261,6 +266,16 @@ class Str0Values extends StrLeafValues {
   @Override
   public void ordToTerm(long ord, BytesRef target) {
     // is this defined for "missing"?
+  }
+
+  @Override
+  public long ordToTermPointer(long ord) {
+    return 0;  // should never be called?
+  }
+
+  @Override
+  public int termPointerToOrd(long termPointer) {
+    return -1;
   }
 
   @Override
