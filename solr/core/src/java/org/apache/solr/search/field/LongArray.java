@@ -47,13 +47,33 @@ public abstract class LongArray implements Closeable {
 
 }
 
+abstract class LongArrayBasicNative extends LongArray {
+  protected final long arr;
+
+  public LongArrayBasicNative(long arr) {
+    this.arr = arr;
+  }
+
+  public long getNativeArray() {
+    return arr;
+  }
+
+  @Override
+  public long memSize() {
+    return HS.arraySizeBytes(arr);
+  }
+
+  @Override
+  public void close() throws IOException {
+    HS.freeArray(arr);
+  }
+
+}
 
 // A long array backed by a native array of longs (64 bits per value)
-class LongArray64 extends LongArray {
-  final long arr;
-
+class LongArray64 extends LongArrayBasicNative {
   public LongArray64(long ptr) {
-    arr = ptr;
+   super(ptr);
   }
 
   @Override
@@ -75,26 +95,12 @@ class LongArray64 extends LongArray {
   public void setLong(int idx, long value) {
     HS.setLong(arr, idx,value);
   }
-
-  @Override
-  public long memSize() {
-    return HS.arraySizeBytes(arr);
-  }
-
-  @Override
-  public void close() throws IOException {
-    HS.freeArray(arr);
-  }
-
-
 }
 
 // A long array backed by a native array of ints (32 bits per value)
-class LongArray32 extends LongArray {
-  final long arr;
-
+class LongArray32 extends LongArrayBasicNative {
   public LongArray32(long ptr) {
-    arr = ptr;
+    super(ptr);
   }
 
   @Override
@@ -116,24 +122,12 @@ class LongArray32 extends LongArray {
   public void setLong(int idx, long value) {
     HS.setInt(arr, idx, (int) value);
   }
-
-  @Override
-  public long memSize() {
-    return HS.arraySizeBytes(arr);
-  }
-
-  @Override
-  public void close() throws IOException {
-    HS.freeArray(arr);
-  }
 }
 
 // A long array backed by a native array of shorts (16 bits per value)
-class LongArray16 extends LongArray {
-  final long arr;
-
+class LongArray16 extends LongArrayBasicNative {
   public LongArray16(long ptr) {
-    arr = ptr;
+    super(ptr);
   }
 
   @Override
@@ -156,23 +150,12 @@ class LongArray16 extends LongArray {
     HS.setShort(arr, idx, (short) value);
   }
 
-  @Override
-  public long memSize() {
-    return HS.arraySizeBytes(arr);
-  }
-
-  @Override
-  public void close() throws IOException {
-    HS.freeArray(arr);
-  }
 }
 
 // A long array backed by a native array of bytes (8 bits per value)
-class LongArray8 extends LongArray {
-  final long arr;
-
+class LongArray8 extends LongArrayBasicNative {
   public LongArray8(long ptr) {
-    arr = ptr;
+    super(ptr);
   }
 
   @Override
@@ -193,15 +176,5 @@ class LongArray8 extends LongArray {
   @Override
   public void setLong(int idx, long value) {
     HS.setByte(arr, idx, (byte) value);
-  }
-
-  @Override
-  public long memSize() {
-    return HS.arraySizeBytes(arr);
-  }
-
-  @Override
-  public void close() throws IOException {
-    HS.freeArray(arr);
   }
 }
