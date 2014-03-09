@@ -17,14 +17,12 @@ package org.apache.solr.search.field;
  * limitations under the License.
  */
 
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.FieldCache;
+
 import org.apache.lucene.search.FieldComparator;
 import org.apache.lucene.search.FieldComparatorSource;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
-import org.apache.solr.core.HS;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
@@ -112,7 +110,7 @@ public class StrFieldValues extends FieldValues {
     @Override
     public FieldComparator<BytesRef> newComparator(String fieldname, int numHits,
                                                  int sortPos, boolean reversed) throws IOException {
-         return new StrComparator(StrFieldValues.this, context, numHits, missingLast);
+         return new StrComparatorNative(StrFieldValues.this, context, numHits, missingLast);
     }
   }
 

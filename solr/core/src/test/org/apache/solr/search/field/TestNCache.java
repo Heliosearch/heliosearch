@@ -446,6 +446,15 @@ public class TestNCache extends SolrTestCaseJ4 {
           fail(err);
         }
 
+
+
+
+        ///////////////////
+        //now test sorting
+
+
+
+
       }
 
     }
