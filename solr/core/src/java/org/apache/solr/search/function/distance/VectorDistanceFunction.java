@@ -16,9 +16,7 @@ package org.apache.solr.search.function.distance;
  * limitations under the License.
  */
 
-import com.spatial4j.core.distance.DistanceUtils;
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
@@ -27,7 +25,6 @@ import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 import org.apache.solr.search.function.valuesource.MultiValueSource;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 /**
@@ -180,9 +177,9 @@ public class VectorDistanceFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    source1.createWeight(context, searcher);
-    source2.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    source1.createWeight(context);
+    source2.createWeight(context);
   }
 
   @Override

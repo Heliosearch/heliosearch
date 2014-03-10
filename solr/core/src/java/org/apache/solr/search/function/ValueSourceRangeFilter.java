@@ -27,7 +27,6 @@ import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrFilter;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 /**
@@ -96,7 +95,7 @@ public class ValueSourceRangeFilter extends SolrFilter {
 
   @Override
   public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    valueSource.createWeight(context, searcher);
+    valueSource.createWeight(context);
   }
 
   @Override

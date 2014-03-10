@@ -97,7 +97,7 @@ public class DoubleFieldValues extends FieldValues {
       }
 
       QueryContext context = QueryContext.newContext(searcher);
-      createWeight(context, searcher);
+      createWeight(context);
       return new SortField(getField(), new DoubleComparatorSource(context, (Double)this.missingValue), getReverse());
     }
   }

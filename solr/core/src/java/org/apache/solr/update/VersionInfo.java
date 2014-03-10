@@ -195,7 +195,7 @@ public class VersionInfo {
 
       ValueSource vs = versionField.getType().getValueSource(versionField, null);
       QueryContext context = QueryContext.newContext(searcher);
-      vs.createWeight(context, searcher);
+      vs.createWeight(context);
       FuncValues fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
       long ver = fv.longVal((int)lookup);
       return ver;

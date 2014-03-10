@@ -23,14 +23,12 @@ import com.spatial4j.core.distance.GeodesicSphereDistCalc;
 import com.spatial4j.core.io.GeohashUtils;
 import com.spatial4j.core.shape.Point;
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 /**
@@ -99,9 +97,9 @@ public class GeohashHaversineFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    geoHash1.createWeight(context, searcher);
-    geoHash2.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    geoHash1.createWeight(context);
+    geoHash2.createWeight(context);
   }
 
   @Override

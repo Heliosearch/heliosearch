@@ -19,7 +19,6 @@ package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
@@ -27,7 +26,6 @@ import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Scales values to be between min and max.
@@ -130,8 +128,8 @@ public class ScaleFloatFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    source.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    source.createWeight(context);
   }
 
   @Override

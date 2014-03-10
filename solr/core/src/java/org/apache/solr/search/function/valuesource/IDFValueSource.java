@@ -28,7 +28,6 @@ import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Function that returns {@link TFIDFSimilarity #idf(long, long)}
@@ -50,7 +49,8 @@ public class IDFValueSource extends DocFreqValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context) throws IOException {
+    IndexSearcher searcher = context.indexSearcher();
     TFIDFSimilarity sim = asTFIDF(searcher.getSimilarity(), field);
     if (sim == null) {
       throw new UnsupportedOperationException("requires a TFIDFSimilarity (such as DefaultSimilarity)");

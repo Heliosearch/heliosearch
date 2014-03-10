@@ -68,7 +68,7 @@ public class ValueSourceAugmenter extends DocTransformer
 
       searcher = qparser.getReq().getSearcher();
       fcontext = QueryContext.newContext(searcher);
-      this.valueSource.createWeight(fcontext, searcher);
+      this.valueSource.createWeight(fcontext);
     } catch (IOException e) {
       throw new SolrException(SolrException.ErrorCode.SERVER_ERROR, e);
     }

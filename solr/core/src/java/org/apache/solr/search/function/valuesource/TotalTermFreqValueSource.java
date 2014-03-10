@@ -19,7 +19,6 @@ package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
@@ -27,7 +26,6 @@ import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.LongDocValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * <code>TotalTermFreqValueSource</code> returns the total term freq
@@ -65,9 +63,9 @@ public class TotalTermFreqValueSource extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context) throws IOException {
     long totalTermFreq = 0;
-    for (AtomicReaderContext readerContext : searcher.getTopReaderContext().leaves()) {
+    for (AtomicReaderContext readerContext : context.indexSearcher().getTopReaderContext().leaves()) {
       long val = readerContext.reader().totalTermFreq(new Term(indexedField, indexedBytes));
       if (val == -1) {
         totalTermFreq = -1;

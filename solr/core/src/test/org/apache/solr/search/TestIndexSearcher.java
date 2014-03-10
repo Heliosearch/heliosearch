@@ -56,7 +56,7 @@ public class TestIndexSearcher extends SolrTestCaseJ4 {
     SchemaField sf = sqr.getSchema().getField(field);
     ValueSource vs = sf.getType().getValueSource(sf, null);
     QueryContext context = QueryContext.newContext(sqr.getSearcher());
-    vs.createWeight(context, sqr.getSearcher());
+    vs.createWeight(context);
     IndexReaderContext topReaderContext = sqr.getSearcher().getTopReaderContext();
     List<AtomicReaderContext> leaves = topReaderContext.leaves();
     int idx = ReaderUtil.subIndex(doc, leaves);

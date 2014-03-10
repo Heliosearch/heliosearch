@@ -27,11 +27,9 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
-import org.apache.solr.search.mutable.MutableValueDate;
 import org.apache.solr.search.mutable.MutableValueLong;
 
 import java.io.IOException;
-import java.util.Date;
 
 public class LongFieldValues extends FieldValues implements LongConverter {
 
@@ -127,7 +125,7 @@ public class LongFieldValues extends FieldValues implements LongConverter {
       }
 
       QueryContext context = QueryContext.newContext(searcher);
-      createWeight(context, searcher);
+      createWeight(context);
       return new SortField(getField(), new LongComparatorSource(context, (Long)this.missingValue), getReverse());
     }
   }

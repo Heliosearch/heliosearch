@@ -18,14 +18,12 @@
 package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.BoolFuncValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * {@link BoolFunction} implementation which applies an extendible boolean
@@ -79,7 +77,7 @@ public abstract class SimpleBoolFunction extends BoolFunction {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    source.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    source.createWeight(context);
   }
 }

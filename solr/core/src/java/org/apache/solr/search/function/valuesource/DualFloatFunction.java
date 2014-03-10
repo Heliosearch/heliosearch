@@ -18,14 +18,12 @@
 package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Abstract {@link ValueSource} implementation which wraps two ValueSources
@@ -71,9 +69,9 @@ public abstract class DualFloatFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    a.createWeight(context, searcher);
-    b.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    a.createWeight(context);
+    b.createWeight(context);
   }
 
   @Override

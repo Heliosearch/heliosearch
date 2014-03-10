@@ -17,12 +17,10 @@
 
 package org.apache.solr.search.function.valuesource;
 
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.ValueSource;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * A function with a single argument
@@ -55,7 +53,7 @@ public abstract class SingleFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    source.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    source.createWeight(context);
   }
 }

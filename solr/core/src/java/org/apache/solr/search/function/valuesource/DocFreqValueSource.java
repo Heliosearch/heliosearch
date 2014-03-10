@@ -28,7 +28,6 @@ import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 import org.apache.solr.search.function.funcvalues.IntFuncValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 class ConstIntDocValues extends IntFuncValues {
@@ -162,11 +161,6 @@ public class DocFreqValueSource extends ValueSource {
     IndexSearcher searcher = context.indexSearcher();
     int docfreq = searcher.getIndexReader().docFreq(new Term(indexedField, indexedBytes));
     return new ConstIntDocValues(docfreq, this);
-  }
-
-  @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    context.put("searcher", searcher);
   }
 
   @Override

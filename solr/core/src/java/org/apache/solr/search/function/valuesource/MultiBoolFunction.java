@@ -18,7 +18,6 @@
 package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
@@ -26,7 +25,6 @@ import org.apache.solr.search.function.funcvalues.BoolFuncValues;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Abstract {@link ValueSource} implementation which wraps multiple ValueSources
@@ -104,9 +102,9 @@ public abstract class MultiBoolFunction extends BoolFunction {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context) throws IOException {
     for (ValueSource source : sources) {
-      source.createWeight(context, searcher);
+      source.createWeight(context);
     }
   }
 }

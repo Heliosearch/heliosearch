@@ -20,7 +20,6 @@ package org.apache.solr.search.field;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.solr.JSONTestUtil;
 import org.apache.solr.SolrTestCaseJ4;
-import org.apache.solr.request.LocalSolrQueryRequest;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.response.SolrQueryResponse;
@@ -136,7 +135,7 @@ public class TestNCache extends SolrTestCaseJ4 {
     SchemaField sf = req.getSchema().getField("val_s1");
     ValueSource vs = sf.getType().getValueSource(sf, null);
     QueryContext qcontext = QueryContext.newContext(req.getSearcher());
-    vs.createWeight(qcontext, req.getSearcher());
+    vs.createWeight(qcontext);
 
     FuncValues funcValues = vs.getValues(qcontext, req.getSearcher().getTopReaderContext().leaves().get(0));
     assertTrue(funcValues instanceof StrArrLeafValues);

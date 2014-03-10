@@ -18,7 +18,6 @@ package org.apache.solr.handler.component;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +74,7 @@ public class FieldFacetStats {
     topLevelReader = searcher.getAtomicReader();
     valueSource = facet_sf.getType().getValueSource(facet_sf, null);
     qcontext = QueryContext.newContext(searcher);
-    valueSource.createWeight(qcontext, searcher);
+    valueSource.createWeight(qcontext);
     facetStatsValues = new HashMap<String, StatsValues>();
     facetStatsTerms = new ArrayList<HashMap<String, Integer>>();
   }

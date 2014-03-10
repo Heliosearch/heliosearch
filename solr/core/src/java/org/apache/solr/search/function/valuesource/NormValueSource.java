@@ -27,7 +27,6 @@ import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Function that returns {@link TFIDFSimilarity#decodeNormValue(long)}
@@ -52,11 +51,6 @@ public class NormValueSource extends ValueSource {
   @Override
   public String description() {
     return name() + '(' + field + ')';
-  }
-
-  @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    context.put("searcher", searcher);
   }
 
   @Override

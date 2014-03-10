@@ -18,14 +18,12 @@
 package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.FloatFuncValues;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * <code>RangeMapFloatFunction</code> implements a map function over
@@ -77,8 +75,8 @@ public class RangeMapFloatFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    source.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    source.createWeight(context);
   }
 
   @Override

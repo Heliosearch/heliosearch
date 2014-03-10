@@ -97,7 +97,7 @@ public class FloatFieldValues extends FieldValues {
       }
 
       QueryContext context = QueryContext.newContext(searcher);
-      createWeight(context, searcher);
+      createWeight(context);
       return new SortField(getField(), new FloatComparatorSource(context, (Float)this.missingValue), getReverse());
     }
   }

@@ -93,7 +93,7 @@ public class StrFieldValues extends FieldValues {
       }
 
       QueryContext context = QueryContext.newContext(searcher);
-      createWeight(context, searcher);
+      createWeight(context);
       return new SortField(getField(), new StrComparatorSource(context, missingLast), getReverse() );
     }
   }

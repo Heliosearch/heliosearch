@@ -18,7 +18,6 @@
 package org.apache.solr.search.function.valuesource;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
@@ -134,9 +133,9 @@ public class IfFunction extends BoolFunction {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    ifSource.createWeight(context, searcher);
-    trueSource.createWeight(context, searcher);
-    falseSource.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    ifSource.createWeight(context);
+    trueSource.createWeight(context);
+    falseSource.createWeight(context);
   }
 }

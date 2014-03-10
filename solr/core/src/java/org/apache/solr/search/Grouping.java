@@ -919,7 +919,7 @@ public class Grouping {
     @Override
     public void prepare() throws IOException {
       context = QueryContext.newContext(searcher);
-      groupBy.createWeight(context, searcher);
+      groupBy.createWeight(context);
       actualGroupsToFind = getMax(offset, numGroups, maxDoc);
     }
 

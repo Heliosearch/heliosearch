@@ -277,13 +277,13 @@ public class DocBasedVersionConstraintsProcessorFactory extends UpdateRequestPro
 
             ValueSource vs = solrVersionField.getType().getValueSource(solrVersionField, null);
             QueryContext context = QueryContext.newContext(searcher);
-            vs.createWeight(context, searcher);
+            vs.createWeight(context);
             FuncValues fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
             oldSolrVersion = fv.longVal((int)lookup);
 
             vs = userVersionField.getType().getValueSource(userVersionField, null);
             context = QueryContext.newContext(searcher);
-            vs.createWeight(context, searcher);
+            vs.createWeight(context);
             fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
             oldUserVersion = fv.objectVal((int)lookup);
 

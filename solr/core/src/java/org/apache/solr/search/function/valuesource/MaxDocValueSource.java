@@ -24,7 +24,6 @@ import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Returns the value of {@link IndexReader#maxDoc()}
@@ -39,11 +38,6 @@ public class MaxDocValueSource extends ValueSource {
   @Override
   public String description() {
     return name() + "()";
-  }
-
-  @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    context.put("searcher", searcher);
   }
 
   @Override

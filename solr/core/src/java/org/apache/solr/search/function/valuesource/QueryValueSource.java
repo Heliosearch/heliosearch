@@ -32,7 +32,6 @@ import org.apache.solr.search.mutable.MutableValue;
 import org.apache.solr.search.mutable.MutableValueFloat;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * <code>QueryValueSource</code> returns the relevance score of the query
@@ -77,8 +76,8 @@ public class QueryValueSource extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    Weight w = searcher.createNormalizedWeight(q);
+  public void createWeight(QueryContext context) throws IOException {
+    Weight w = context.indexSearcher().createNormalizedWeight(q);
     context.put(this, w);
   }
 }
@@ -121,7 +120,7 @@ class QueryFuncValues extends FloatFuncValues {
           weightSearcher = new IndexSearcher(ReaderUtil.getTopLevelContext(readerContext));
         }
       }
-      vs.createWeight(fcontext, weightSearcher);
+      vs.createWeight(fcontext);
       w = (Weight) fcontext.get(vs);
     }
     weight = w;

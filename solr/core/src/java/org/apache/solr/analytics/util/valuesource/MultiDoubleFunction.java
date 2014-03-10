@@ -19,14 +19,12 @@ package org.apache.solr.analytics.util.valuesource;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
-import org.apache.lucene.search.IndexSearcher;
 
 /**
  * Abstract {@link ValueSource} implementation which wraps multiple ValueSources
@@ -101,9 +99,9 @@ public abstract class MultiDoubleFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context) throws IOException {
     for (ValueSource source : sources)
-      source.createWeight(context, searcher);
+      source.createWeight(context);
   }
 
   @Override

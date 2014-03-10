@@ -18,14 +18,12 @@
 package org.apache.solr.analytics.util.valuesource;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
-import org.apache.lucene.search.IndexSearcher;
 
 /**
  * Abstract {@link ValueSource} implementation which wraps two ValueSources
@@ -71,9 +69,9 @@ public abstract class DualDoubleFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
-    a.createWeight(context,searcher);
-    b.createWeight(context,searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    a.createWeight(context);
+    b.createWeight(context);
   }
 
   @Override

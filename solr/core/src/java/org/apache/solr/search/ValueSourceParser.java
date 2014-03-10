@@ -27,7 +27,6 @@ import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
 import org.apache.solr.search.function.funcvalues.LongDocValues;
 import org.apache.solr.search.function.valuesource.*;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.spell.JaroWinklerDistance;
@@ -1170,7 +1169,7 @@ abstract class Double2Parser extends NamedParser {
     }
 
     @Override
-    public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+    public void createWeight(QueryContext context) throws IOException {
     }
 
     @Override
@@ -1293,7 +1292,7 @@ class TestValueSource extends ValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context) throws IOException {
     context.put(this, this);
   }
 

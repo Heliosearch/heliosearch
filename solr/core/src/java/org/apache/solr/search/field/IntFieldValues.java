@@ -97,7 +97,7 @@ public class IntFieldValues extends FieldValues {
       }
 
       QueryContext context = QueryContext.newContext(searcher);
-      createWeight(context, searcher);
+      createWeight(context);
       return new SortField(getField(), new IntComparatorSource(context, (Integer)this.missingValue), getReverse());
     }
   }

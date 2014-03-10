@@ -85,7 +85,7 @@ public class BoostedQuery extends Query {
       this.searcher = searcher;
       this.qWeight = q.createWeight(searcher);
       this.fcontext = QueryContext.newContext(searcher);
-      boostVal.createWeight(fcontext, searcher);
+      boostVal.createWeight(fcontext);
     }
 
     @Override

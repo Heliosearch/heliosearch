@@ -17,7 +17,6 @@ package org.apache.solr.search.function.valuesource;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
@@ -162,9 +161,9 @@ public class VectorValueSource extends MultiValueSource {
   }
 
   @Override
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context) throws IOException {
     for (ValueSource source : sources)
-      source.createWeight(context, searcher);
+      source.createWeight(context);
   }
 
 

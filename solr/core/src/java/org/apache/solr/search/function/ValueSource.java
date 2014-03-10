@@ -62,7 +62,7 @@ public abstract class ValueSource {
    * weight info in the context. The context object will be passed to getValues()
    * where this info can be retrieved.
    */
-  public void createWeight(QueryContext context, IndexSearcher searcher) throws IOException {
+  public void createWeight(QueryContext context) throws IOException {
   }
 
 
@@ -91,7 +91,7 @@ public abstract class ValueSource {
     @Override
     public SortField rewrite(IndexSearcher searcher) throws IOException {
       QueryContext context = QueryContext.newContext(searcher);
-      createWeight(context, searcher);
+      createWeight(context);
       return new SortField(getField(), new ValueSourceComparatorSource(context), getReverse());
     }
   }
