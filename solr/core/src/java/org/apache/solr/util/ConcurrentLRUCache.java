@@ -492,7 +492,11 @@ public class ConcurrentLRUCache<K,V> {
       markAndSweepLock.unlock();
     }
     for (CacheEntry<K,V> e : tree) {
-      result.put(e.key, e.value);
+      V prev = result.put(e.key, e.value);
+      if (prev instanceof RefCount) {
+        // Can be hit with ant test -Dtest=TestFiltering -Dtests.seed=5112224A7DAF7DD46
+        ((RefCount)prev).decref();
+      }
     }
     return result;
   }
