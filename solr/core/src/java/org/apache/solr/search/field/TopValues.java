@@ -101,8 +101,9 @@ public abstract class TopValues extends RefCountBase {
 
   public void addInfo(Map<String,Object> map) {
     Map<String,Object> sfMap = new LinkedHashMap<String,Object>();
-    fieldValues.field.addInfo(sfMap);
-    map.put("field", sfMap);
+    // fieldValues.field.addInfo(sfMap);
+    // map.put("field", sfMap);
+    map.put("field", fieldValues.getFieldName());
     map.put("class", this.getClass().getSimpleName());
     map.put("refcount", getRefCount());
     map.put("numSegments", nSegs);
