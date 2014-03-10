@@ -18,7 +18,6 @@ package org.apache.solr.search.function;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.Explanation;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.search.field.LongConverter;
@@ -94,16 +93,9 @@ public abstract class FuncValues {
   /**
    * @param doc The doc to retrieve to sort ordinal for
    * @return the sort ordinal for the specified doc
-   * TODO: Maybe we can just use intVal for this...
+   * TODO: Maybe we can just use intVal for this?
    */
   public int ordVal(int doc) {
-    throw new UnsupportedOperationException();
-  }
-
-  /**
-   * @return the number of unique sort ordinals this instance has
-   */
-  public int numOrd() {
     throw new UnsupportedOperationException();
   }
 

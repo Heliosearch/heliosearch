@@ -65,11 +65,6 @@ public abstract class DocTermsIndexFuncValues extends FuncValues {
   }
 
   @Override
-  public int numOrd() {
-    return termsIndex.getValueCount();
-  }
-
-  @Override
   public boolean bytesVal(int doc, BytesRef target) {
     termsIndex.get(doc, target);
     return target.length > 0;

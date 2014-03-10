@@ -32,7 +32,6 @@ import org.apache.solr.search.mutable.MutableValue;
 import org.apache.solr.search.mutable.MutableValueInt;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Obtains the ordinal of the field value from the default Lucene {@link org.apache.lucene.search.FieldCache} using getStringIndex().
@@ -84,11 +83,6 @@ public class OrdFieldSource extends ValueSource {
       @Override
       public int ordVal(int doc) {
         return sindex.getOrd(doc + off);
-      }
-
-      @Override
-      public int numOrd() {
-        return sindex.getValueCount();
       }
 
       @Override

@@ -121,11 +121,6 @@ class FunctionValuesAdapter extends FuncValues {
   }
 
   @Override
-  public int numOrd() {
-    return luceneValues.numOrd();
-  }
-
-  @Override
   public ValueFiller getValueFiller() {
     // current other spatial value sources just use double, so implement directly
     // instead of wrapping.
