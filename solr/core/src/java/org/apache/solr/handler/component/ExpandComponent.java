@@ -161,7 +161,13 @@ public class ExpandComponent extends SearchComponent implements PluginInfoInitia
       }
     }
 
+    if (sort != null) {
+      sort = sort.rewrite(searcher);
+    }
+
     Collector collector = null;
+
+
     GroupExpandCollector groupExpandCollector = new GroupExpandCollector(values, groupBits, collapsedSet, limit, sort);
     SolrIndexSearcher.ProcessedFilter pfilter = searcher.getProcessedFilter(null, newFilters);
     if(pfilter.postFilter != null) {

@@ -20,15 +20,16 @@ import org.apache.lucene.index.LogDocMergePolicy;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReaderContext;
 import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.request.SolrRequestInfo;
+import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.SchemaField;
 import org.junit.BeforeClass;
 
 import java.util.List;
-import java.util.Map;
 import java.io.IOException;
 
 public class TestIndexSearcher extends SolrTestCaseJ4 {
@@ -54,13 +55,13 @@ public class TestIndexSearcher extends SolrTestCaseJ4 {
   private String getStringVal(SolrQueryRequest sqr, String field, int doc) throws IOException {
     SchemaField sf = sqr.getSchema().getField(field);
     ValueSource vs = sf.getType().getValueSource(sf, null);
-    Map context = ValueSource.newContext(sqr.getSearcher());
-    vs.createWeight(context, sqr.getSearcher());
+    QueryContext context = QueryContext.newContext(sqr.getSearcher());
+    vs.createWeight(context);
     IndexReaderContext topReaderContext = sqr.getSearcher().getTopReaderContext();
     List<AtomicReaderContext> leaves = topReaderContext.leaves();
     int idx = ReaderUtil.subIndex(doc, leaves);
     AtomicReaderContext leaf = leaves.get(idx);
-    FunctionValues vals = vs.getValues(context, leaf);
+    FuncValues vals = vs.getValues(context, leaf);
     return vals.strVal(doc-leaf.docBase);
   }
 
@@ -71,10 +72,12 @@ public class TestIndexSearcher extends SolrTestCaseJ4 {
     assertU(commit());
 
     SolrQueryRequest sr1 = req("q","foo");
+    SolrRequestInfo.setRequestInfo(new SolrRequestInfo(sr1, new SolrQueryResponse()));
     IndexReaderContext rCtx1 = sr1.getSearcher().getTopReaderContext();
 
     String sval1 = getStringVal(sr1, "v_s1",0);
     assertEquals("string1", sval1);
+    SolrRequestInfo.clearRequestInfo();
 
     assertU(adoc("id","3", "v_s1","{!literal}"));
     assertU(adoc("id","4", "v_s1","other stuff"));

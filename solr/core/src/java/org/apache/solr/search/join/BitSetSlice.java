@@ -17,30 +17,32 @@
 
 package org.apache.solr.search.join;
 
-import org.apache.lucene.util.FixedBitSet;
+import org.apache.solr.search.BitDocSetNative;
 
 class BitSetSlice {
-  private final FixedBitSet fbs;
+  private final BitDocSetNative bits;
   private final int off;
   private final int len;
 
-  BitSetSlice(FixedBitSet fbs, int off, int len) {
-    this.fbs = fbs;
+  BitSetSlice(BitDocSetNative bits, int off, int len) {
+    assert off+len <= bits.capacity();
+    this.bits = bits;
     this.off = off;
     this.len = len;
   }
 
   public boolean get(int pos) {
-    return fbs.get(pos + off);
+    return bits.fastGet(pos + off);
   }
 
   public int prevSetBit(int pos) {
-    int result = fbs.prevSetBit(pos + off) - off;
+    int result = bits.prevSetBit(pos + off) - off;
     return (result < 0) ? -1 : result;
   }
 
   public int nextSetBit(int pos) {
-    int result = fbs.nextSetBit(pos + off) - off;
+    int result = bits.nextSetBit(pos + off) - off;
     return (result < 0 || result >= len) ? -1 : result;
   }
 }
+

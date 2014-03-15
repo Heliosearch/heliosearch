@@ -17,6 +17,13 @@
 
 package org.apache.solr.schema;
 
+import org.apache.lucene.search.FieldCache;
+import org.apache.lucene.search.SortField;
+import org.apache.solr.search.QParser;
+import org.apache.solr.search.field.LongFieldValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.LongFieldSource;
+
 /**
  * A numeric field that can contain 64-bit signed two's complement integer values.
  *
@@ -30,5 +37,29 @@ package org.apache.solr.schema;
 public class TrieLongField extends TrieField implements LongValueFieldType {
   {
     type=TrieTypes.LONG;
+  }
+
+  @Override
+  public ValueSource getValueSource(SchemaField field, QParser qparser) {
+    // return super.getValueSource(field, qparser);
+
+    field.checkFieldCacheSource(qparser);
+
+    if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
+      return new LongFieldSource( field.getName(), FieldCache.NUMERIC_UTILS_LONG_PARSER );
+    } else {
+      return new LongFieldValues(field, qparser);
+    }
+
+  }
+
+  @Override
+  public SortField getSortField(SchemaField field, boolean top) {
+    // return super.getSortField(field, top);
+
+    field.checkSortability();
+
+    return new LongFieldValues(field, null).getSortField(top, field.sortMissingFirst(), field.sortMissingLast(), null);
+
   }
 }

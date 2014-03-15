@@ -17,10 +17,15 @@ package org.apache.solr.schema;
  * limitations under the License.
  */
 
+import org.apache.lucene.expressions.Bindings;
 import org.apache.lucene.expressions.Expression;
 import org.apache.lucene.expressions.SimpleBindings;
 import org.apache.lucene.expressions.js.JavascriptCompiler;
+import org.apache.lucene.queries.function.ValueSource;
+import org.apache.lucene.queries.function.valuesource.IntFieldSource;
+import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.SortField;
+import org.apache.solr.search.function.ValueSourceAdapter;
 
 /**
  * Custom field wrapping an int, to test sorting via a custom comparator.
@@ -39,8 +44,17 @@ public class WrappedIntField extends TrieIntField {
   @Override
   public SortField getSortField(final SchemaField field, final boolean reverse) {
     field.checkSortability();
+
+    // TODO: no support for rewritable sort fields!
+    /***
     SimpleBindings bindings = new SimpleBindings();
     bindings.add(super.getSortField(field, reverse));
+    SortField ret = expr.getSortField(bindings, reverse);
+    ***/
+
+    SimpleBindings bindings = new SimpleBindings();
+    bindings.add(new SortField(field.name, FieldCache.NUMERIC_UTILS_INT_PARSER));
     return expr.getSortField(bindings, reverse);
   }
+
 }

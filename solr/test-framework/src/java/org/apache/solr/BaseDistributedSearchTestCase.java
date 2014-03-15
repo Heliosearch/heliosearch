@@ -554,6 +554,9 @@ public abstract class BaseDistributedSearchTestCase extends SolrTestCaseJ4 {
 
     // TODO: look into why passing true causes fails
     params.set("distrib", "false");
+    if (params.get("facet") != null && params.get("facet.limit") == null) {
+      params.set("facet.limit","100");  // old default for tests
+    }
     final QueryResponse controlRsp = controlClient.query(params);
     validateControlData(controlRsp);
 

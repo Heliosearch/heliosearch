@@ -18,6 +18,7 @@
 package org.apache.solr.handler.component;
 
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.request.SimpleFacetsHS;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.DocSet;
@@ -46,7 +47,7 @@ import java.util.Map;
 /**
  * @since solr 4.0
  */
-public class PivotFacetHelper extends SimpleFacets
+public class PivotFacetHelper extends SimpleFacetsHS
 {
 
   protected int minMatch;
@@ -57,37 +58,45 @@ public class PivotFacetHelper extends SimpleFacets
   }
 
   public SimpleOrderedMap<List<NamedList<Object>>> process(String[] pivots) throws IOException {
-    if (!rb.doFacets || pivots == null) 
+    if (!rb.doFacets || pivots == null)
       return null;
 
-    SimpleOrderedMap<List<NamedList<Object>>> pivotResponse = new SimpleOrderedMap<>();
+    SimpleOrderedMap<List<NamedList<Object>>> pivotResponse = new SimpleOrderedMap<List<NamedList<Object>>>();
     for (String pivot : pivots) {
-      //ex: pivot == "features,cat" or even "{!ex=mytag}features,cat"
+
+      DocSet saveDocs = null;
       try {
-        this.parseParams(FacetParams.FACET_PIVOT, pivot);
-      } catch (SyntaxError e) {
-        throw new SolrException(ErrorCode.BAD_REQUEST, e);
+        //ex: pivot == "features,cat" or even "{!ex=mytag}features,cat"
+        try {
+          this.parseParams(FacetParams.FACET_PIVOT, pivot);
+          saveDocs = this.docs;
+        } catch (SyntaxError e) {
+          throw new SolrException(ErrorCode.BAD_REQUEST, e);
+        }
+        pivot = facetValue;//facetValue potentially modified from parseParams()
+
+        String[] fields = pivot.split(",");
+
+        if( fields.length < 2 ) {
+          throw new SolrException( ErrorCode.BAD_REQUEST,
+              "Pivot Facet needs at least two fields: "+pivot );
+        }
+
+        String field = fields[0];
+        String subField = fields[1];
+        Deque<String> fnames = new LinkedList<String>();
+        for( int i=fields.length-1; i>1; i-- ) {
+          fnames.push( fields[i] );
+        }
+
+        NamedList<Integer> superFacets = this.getTermCounts(field, this.docs);
+
+        //super.key usually == pivot unless local-param 'key' used
+        pivotResponse.add(key, doPivots(superFacets, field, subField, fnames, docs));
+      } finally {
+        this.docs = saveDocs;  // restore so cleanup will work
+        cleanup();
       }
-      pivot = facetValue;//facetValue potentially modified from parseParams()
-
-      String[] fields = pivot.split(",");
-
-      if( fields.length < 2 ) {
-        throw new SolrException( ErrorCode.BAD_REQUEST,
-            "Pivot Facet needs at least two fields: "+pivot );
-      }
-
-      String field = fields[0];
-      String subField = fields[1];
-      Deque<String> fnames = new LinkedList<>();
-      for( int i=fields.length-1; i>1; i-- ) {
-        fnames.push( fields[i] );
-      }
-
-      NamedList<Integer> superFacets = this.getTermCounts(field);
-
-      //super.key usually == pivot unless local-param 'key' used
-      pivotResponse.add(key, doPivots(superFacets, field, subField, fnames, docs));
     }
     return pivotResponse;
   }
@@ -106,7 +115,7 @@ public class PivotFacetHelper extends SimpleFacets
 
     String nextField = fnames.poll();
 
-    List<NamedList<Object>> values = new ArrayList<>( superFacets.size() );
+    List<NamedList<Object>> values = new ArrayList<NamedList<Object>>( superFacets.size() );
     for (Map.Entry<String, Integer> kv : superFacets) {
       // Only sub-facet if parent facet has positive count - still may not be any values for the sub-field though
       if (kv.getValue() >= minMatch) {
@@ -118,7 +127,7 @@ public class PivotFacetHelper extends SimpleFacets
         // constructing Term objects used in TermQueries that may be cached.
         BytesRef termval = null;
 
-        SimpleOrderedMap<Object> pivot = new SimpleOrderedMap<>();
+        SimpleOrderedMap<Object> pivot = new SimpleOrderedMap<Object>();
         pivot.add( "field", field );
         if (null == fieldValue) {
           pivot.add( "value", null );
@@ -138,16 +147,20 @@ public class PivotFacetHelper extends SimpleFacets
             DocSet hasVal = searcher.getDocSet
               (new TermRangeQuery(field, null, null, false, false));
             subset = docs.andNot(hasVal);
+            hasVal.decref();
           } else {
             Query query = new TermQuery(new Term(field, termval));
             subset = searcher.getDocSet(query, docs);
           }
-          super.docs = subset;//used by getTermCounts()
 
-          NamedList<Integer> nl = this.getTermCounts(subField);
-          if (nl.size() >= minMatch) {
-            pivot.add( "pivot", doPivots( nl, subField, nextField, fnames, subset) );
-            values.add( pivot ); // only add response if there are some counts
+          try {
+            NamedList<Integer> nl = this.getTermCounts(subField, subset);
+            if (nl.size() >= minMatch) {
+              pivot.add( "pivot", doPivots( nl, subField, nextField, fnames, subset) );
+              values.add( pivot ); // only add response if there are some counts
+            }
+          } finally {
+            subset.decref();
           }
         }
       }

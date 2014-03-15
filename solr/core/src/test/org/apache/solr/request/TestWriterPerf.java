@@ -92,6 +92,8 @@ public class TestWriterPerf extends AbstractSolrTestCase {
   /** make sure to close req after you are done using the response */
   public SolrQueryResponse getResponse(SolrQueryRequest req) throws Exception {
     SolrQueryResponse rsp = new SolrQueryResponse();
+    SolrRequestInfo.setRequestInfo(new SolrRequestInfo(req, rsp));
+
     h.getCore().execute(h.getCore().getRequestHandler(null),req,rsp);
     if (rsp.getException() != null) {
       throw rsp.getException();
@@ -149,10 +151,12 @@ public class TestWriterPerf extends AbstractSolrTestCase {
     log.info("writer "+writerName+", size="+out.size()+", encodeRate="+(encodeTime==1 ? "N/A":  ""+(encIter*1000L/encodeTime)) + ", decodeRate="+(decodeTime==1 ? "N/A":  ""+(decIter*1000L/decodeTime)) );
 
     req.close();
+    SolrRequestInfo.clearRequestInfo();
   }
 
   public void testPerf() throws Exception {
     makeIndex();
+
 
     SolrQueryRequest req = req("q", "id:[* TO *] all country"
                     ,"start","0"
@@ -171,6 +175,7 @@ public class TestWriterPerf extends AbstractSolrTestCase {
                     ,"hl","true"
                     ,"hl.fl","t1"
             );
+
 
 
     // just for testing

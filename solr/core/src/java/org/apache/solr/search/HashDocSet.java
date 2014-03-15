@@ -18,6 +18,7 @@
 package org.apache.solr.search;
 
 import org.apache.lucene.util.BitUtil;
+import org.apache.solr.core.HS;
 
 
 /**
@@ -34,7 +35,7 @@ public final class HashDocSet extends DocSetBase {
    *  since multiplication is so much faster than division.  The default
    *  is 1.0f / 0.75f
    */
-  static float DEFAULT_INVERSE_LOAD_FACTOR = 1.0f /0.75f;
+  public static float DEFAULT_INVERSE_LOAD_FACTOR = 1.0f /0.75f;
 
   // public final static int MAX_SIZE = SolrConfig.config.getInt("//HashDocSet/@maxSize",-1);
 
@@ -80,6 +81,29 @@ public final class HashDocSet extends DocSetBase {
 
     size = len;
   }
+
+  /** Create a HashDocSet from a list of *unique* ids */
+  public HashDocSet(long intArrayPtr, int offset, int len, float inverseLoadFactor) {
+    int tsize = Math.max(BitUtil.nextHighestPowerOfTwo(len), 1);
+    if (tsize < len * inverseLoadFactor) {
+      tsize <<= 1;
+    }
+
+    mask=tsize-1;
+
+    table = new int[tsize];
+    // (for now) better then: Arrays.fill(table, EMPTY);
+    // https://issues.apache.org/jira/browse/SOLR-390
+    for (int i=tsize-1; i>=0; i--) table[i]=EMPTY;
+
+    int end = offset + len;
+    for (int i=offset; i<end; i++) {
+      put( HS.getInt(intArrayPtr, i) );
+    }
+
+    size = len;
+  }
+
 
   void put(int doc) {
     int s = doc & mask;
@@ -290,7 +314,7 @@ public final class HashDocSet extends DocSetBase {
   }
 
   @Override
-  protected HashDocSet clone() {
+  public HashDocSet clone() {
     return new HashDocSet(this);
   }
 

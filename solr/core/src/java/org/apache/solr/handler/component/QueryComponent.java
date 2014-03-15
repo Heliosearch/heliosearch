@@ -44,9 +44,9 @@ import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.Weight;
-import org.apache.lucene.search.grouping.GroupDocs;
-import org.apache.lucene.search.grouping.SearchGroup;
-import org.apache.lucene.search.grouping.TopGroups;
+import org.apache.solr.search.grouping.GroupDocs;
+import org.apache.solr.search.grouping.SearchGroup;
+import org.apache.solr.search.grouping.TopGroups;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.InPlaceMergeSorter;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -386,11 +386,15 @@ public class QueryComponent extends SearchComponent
           }
 
           CommandHandler commandHandler = secondPhaseBuilder.build();
-          commandHandler.execute();
-          TopGroupsResultTransformer serializer = new TopGroupsResultTransformer(rb);
-          rsp.add("secondPhase", commandHandler.processResult(result, serializer));
-          rb.setResult(result);
-          return;
+          try {
+            commandHandler.execute();
+            TopGroupsResultTransformer serializer = new TopGroupsResultTransformer(rb);
+            rsp.add("secondPhase", commandHandler.processResult(result, serializer));
+            rb.setResult(result);
+            return;
+          } finally {
+            commandHandler.close();
+          }
         }
 
         int maxDocsPercentageToCache = params.getInt(GroupParams.GROUP_CACHE_PERCENTAGE, 0);

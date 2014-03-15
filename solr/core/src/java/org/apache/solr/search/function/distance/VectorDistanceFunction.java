@@ -17,15 +17,14 @@ package org.apache.solr.search.function.distance;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
-import org.apache.lucene.queries.function.valuesource.MultiValueSource;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
+import org.apache.solr.search.function.valuesource.MultiValueSource;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 /**
@@ -68,7 +67,7 @@ public class VectorDistanceFunction extends ValueSource {
    * @param dv2 The values from the second MultiValueSource
    * @return The distance
    */
-  protected double distance(int doc, FunctionValues dv1, FunctionValues dv2) {
+  protected double distance(int doc, FuncValues dv1, FuncValues dv2) {
     //Handle some special cases:
     double[] vals1 = new double[source1.dimension()];
     double[] vals2 = new double[source1.dimension()];
@@ -150,14 +149,14 @@ public class VectorDistanceFunction extends ValueSource {
   }
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
 
-    final FunctionValues vals1 = source1.getValues(context, readerContext);
+    final FuncValues vals1 = source1.getValues(context, readerContext);
 
-    final FunctionValues vals2 = source2.getValues(context, readerContext);
+    final FuncValues vals2 = source2.getValues(context, readerContext);
 
 
-    return new DoubleDocValues(this) {
+    return new DoubleFuncValues(this) {
 
       @Override
       public double doubleVal(int doc) {
@@ -178,9 +177,9 @@ public class VectorDistanceFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
-    source1.createWeight(context, searcher);
-    source2.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    source1.createWeight(context);
+    source2.createWeight(context);
   }
 
   @Override

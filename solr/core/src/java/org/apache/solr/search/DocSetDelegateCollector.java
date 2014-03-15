@@ -17,12 +17,13 @@ package org.apache.solr.search;
  * limitations under the License.
  */
 
-import java.io.IOException;
-
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Collector;
 import org.apache.lucene.search.Scorer;
-import org.apache.lucene.util.FixedBitSet;
+import org.apache.lucene.util.OpenBitSet;
+
+import java.io.IOException;
 
 /**
  *
@@ -52,8 +53,8 @@ public class DocSetDelegateCollector extends DocSetCollector {
     } else {
       // this conditional could be removed if BitSet was preallocated, but that
       // would take up more memory, and add more GC time...
-      if (bits==null) bits = new FixedBitSet(maxDoc);
-      bits.set(doc);
+      if (bits==null) bits = new BitDocSetNative(maxDoc);
+      bits.fastSet(doc);
     }
 
     pos++;
@@ -63,11 +64,14 @@ public class DocSetDelegateCollector extends DocSetCollector {
   public DocSet getDocSet() {
     if (pos<=scratch.length) {
       // assumes docs were collected in sorted order!
-      return new SortedIntDocSet(scratch, pos);
+      return new SortedIntDocSetNative(scratch, pos);
     } else {
       // set the bits for ids that were collected in the array
-      for (int i=0; i<scratch.length; i++) bits.set(scratch[i]);
-      return new BitDocSet(bits,pos);
+      for (int i=0; i<scratch.length; i++) bits.fastSet(scratch[i]);
+      bits.setSize(pos);
+      DocSet answer = bits;
+      bits = null; // null out so we know we don't need to free later
+      return answer;
     }
   }
 

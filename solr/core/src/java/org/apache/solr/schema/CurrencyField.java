@@ -16,29 +16,13 @@ package org.apache.solr.schema;
  * limitations under the License.
  */
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Currency;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-
 import org.apache.lucene.analysis.util.ResourceLoader;
 import org.apache.lucene.analysis.util.ResourceLoaderAware;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.Filter;
@@ -47,7 +31,6 @@ import org.apache.lucene.queries.ChainedFilter;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.response.TextResponseWriter;
-import org.apache.solr.response.XMLWriter;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.SolrConstantScoreQuery;
 import org.apache.solr.search.function.ValueSourceRangeFilter;
@@ -58,6 +41,22 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Currency;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Field type for support of monetary values.
@@ -326,28 +325,20 @@ public class CurrencyField extends FieldType implements SchemaAware, ResourceLoa
     String currencyCode = (p1 != null) ? p1.getCurrencyCode() :
                           (p2 != null) ? p2.getCurrencyCode() : defaultCurrency;
 
-    // ValueSourceRangeFilter doesn't check exists(), so we have to
-    final Filter docsWithValues = new FieldValueFilter(getAmountField(field).getName());
+
     final Filter vsRangeFilter = new ValueSourceRangeFilter
       (new RawCurrencyValueSource(field, currencyCode, parser),
        p1 == null ? null : p1.getAmount() + "", 
        p2 == null ? null : p2.getAmount() + "",
-       minInclusive, maxInclusive);
-    final Filter docsInRange = new ChainedFilter
-      (new Filter [] { docsWithValues, vsRangeFilter }, ChainedFilter.AND);
+       minInclusive, maxInclusive, false);
 
-    return new SolrConstantScoreQuery(docsInRange);
-    
+    return new SolrConstantScoreQuery(vsRangeFilter);
   }
 
   @Override
   public SortField getSortField(SchemaField field, boolean reverse) {
     // Convert all values to default currency for sorting.
     return (new RawCurrencyValueSource(field, defaultCurrency, null)).getSortField(reverse);
-  }
-
-  public void write(XMLWriter xmlWriter, String name, IndexableField field) throws IOException {
-    xmlWriter.writeStr(name, field.stringValue(), false);
   }
 
   @Override
@@ -385,15 +376,15 @@ public class CurrencyField extends FieldType implements SchemaAware, ResourceLoa
     }
 
     @Override
-    public FunctionValues getValues(Map context, AtomicReaderContext reader) 
+    public FuncValues getValues(QueryContext context, AtomicReaderContext reader)
       throws IOException {
-      final FunctionValues amounts = source.getValues(context, reader);
+      final FuncValues amounts = source.getValues(context, reader);
       // the target digits & currency of our source, 
       // become the source digits & currency of ourselves
       final String sourceCurrencyCode = source.getTargetCurrency().getCurrencyCode();
       final int sourceFractionDigits = source.getTargetCurrency().getDefaultFractionDigits();
       final double divisor = Math.pow(10D, targetCurrency.getDefaultFractionDigits());
-      return new FunctionValues() {
+      return new FuncValues() {
         @Override
         public boolean exists(int doc) {
           return amounts.exists(doc);
@@ -498,11 +489,11 @@ public class CurrencyField extends FieldType implements SchemaAware, ResourceLoa
     public Currency getTargetCurrency() { return targetCurrency; }
 
     @Override
-    public FunctionValues getValues(Map context, AtomicReaderContext reader) throws IOException {
-      final FunctionValues amounts = amountValues.getValues(context, reader);
-      final FunctionValues currencies = currencyValues.getValues(context, reader);
+    public FuncValues getValues(QueryContext context, AtomicReaderContext reader) throws IOException {
+      final FuncValues amounts = amountValues.getValues(context, reader);
+      final FuncValues currencies = currencyValues.getValues(context, reader);
 
-      return new FunctionValues() {
+      return new FuncValues() {
         private final int MAX_CURRENCIES_TO_CACHE = 256;
         private final int[] fractionDigitCache = new int[MAX_CURRENCIES_TO_CACHE];
         private final String[] currencyOrdToCurrencyCache = new String[MAX_CURRENCIES_TO_CACHE];

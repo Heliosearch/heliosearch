@@ -17,9 +17,9 @@
 package org.apache.solr.search;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.lucene.queries.function.FunctionQuery;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.QueryValueSource;
+import org.apache.solr.search.function.FunctionQuery;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.QueryValueSource;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.CommonParams;

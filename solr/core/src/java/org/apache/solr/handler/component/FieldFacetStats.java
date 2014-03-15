@@ -18,7 +18,6 @@ package org.apache.solr.handler.component;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +25,9 @@ import java.util.Map;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.schema.SchemaField;
@@ -57,14 +57,15 @@ public class FieldFacetStats {
   final AtomicReader topLevelReader;
   AtomicReaderContext leave;
   final ValueSource valueSource;
+  final QueryContext qcontext;
   AtomicReaderContext context;
-  FunctionValues values;
+  FuncValues values;
 
   SortedDocValues topLevelSortedValues = null;
 
   private final BytesRef tempBR = new BytesRef();
 
-  public FieldFacetStats(SolrIndexSearcher searcher, String name, SchemaField field_sf, SchemaField facet_sf, boolean calcDistinct) {
+  public FieldFacetStats(SolrIndexSearcher searcher, String name, SchemaField field_sf, SchemaField facet_sf, boolean calcDistinct) throws IOException {
     this.name = name;
     this.field_sf = field_sf;
     this.facet_sf = facet_sf;
@@ -72,15 +73,16 @@ public class FieldFacetStats {
 
     topLevelReader = searcher.getAtomicReader();
     valueSource = facet_sf.getType().getValueSource(facet_sf, null);
-
-    facetStatsValues = new HashMap<>();
-    facetStatsTerms = new ArrayList<>();
+    qcontext = QueryContext.newContext(searcher);
+    valueSource.createWeight(qcontext);
+    facetStatsValues = new HashMap<String, StatsValues>();
+    facetStatsTerms = new ArrayList<HashMap<String, Integer>>();
   }
 
   private StatsValues getStatsValues(String key) throws IOException {
     StatsValues stats = facetStatsValues.get(key);
     if (stats == null) {
-      stats = StatsValuesFactory.createStatsValues(field_sf, calcDistinct);
+      stats = StatsValuesFactory.createStatsValues(qcontext, field_sf, calcDistinct);
       facetStatsValues.put(key, stats);
       stats.setNextReader(context);
     }
@@ -141,7 +143,7 @@ public class FieldFacetStats {
       String key = (String) pairs.getKey();
       StatsValues facetStats = facetStatsValues.get(key);
       if (facetStats == null) {
-        facetStats = StatsValuesFactory.createStatsValues(field_sf, calcDistinct);
+        facetStats = StatsValuesFactory.createStatsValues(qcontext, field_sf, calcDistinct);
         facetStatsValues.put(key, facetStats);
       }
       Integer count = (Integer) pairs.getValue();
@@ -154,7 +156,7 @@ public class FieldFacetStats {
 
   public void setNextReader(AtomicReaderContext ctx) throws IOException {
     this.context = ctx;
-    values = valueSource.getValues(Collections.emptyMap(), ctx);
+    values = valueSource.getValues(qcontext, ctx);
     for (StatsValues stats : facetStatsValues.values()) {
       stats.setNextReader(ctx);
     }

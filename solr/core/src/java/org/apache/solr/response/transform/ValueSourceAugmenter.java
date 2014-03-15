@@ -18,13 +18,13 @@ package org.apache.solr.response.transform;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.ReaderUtil;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.search.QParser;
@@ -64,21 +64,21 @@ public class ValueSourceAugmenter extends DocTransformer
     try {
       IndexReader reader = qparser.getReq().getSearcher().getIndexReader();
       readerContexts = reader.leaves();
-      docValuesArr = new FunctionValues[readerContexts.size()];
+      docValuesArr = new FuncValues[readerContexts.size()];
 
       searcher = qparser.getReq().getSearcher();
-      fcontext = ValueSource.newContext(searcher);
-      this.valueSource.createWeight(fcontext, searcher);
+      fcontext = QueryContext.newContext(searcher);
+      this.valueSource.createWeight(fcontext);
     } catch (IOException e) {
       throw new SolrException(SolrException.ErrorCode.SERVER_ERROR, e);
     }
   }
 
 
-  Map fcontext;
+  QueryContext fcontext;
   SolrIndexSearcher searcher;
   List<AtomicReaderContext> readerContexts;
-  FunctionValues docValuesArr[];
+  FuncValues docValuesArr[];
 
 
   @Override
@@ -90,7 +90,7 @@ public class ValueSourceAugmenter extends DocTransformer
       // TODO: calculate this stuff just once across diff functions
       int idx = ReaderUtil.subIndex(docid, readerContexts);
       AtomicReaderContext rcontext = readerContexts.get(idx);
-      FunctionValues values = docValuesArr[idx];
+      FuncValues values = docValuesArr[idx];
       if (values == null) {
         docValuesArr[idx] = values = valueSource.getValues(fcontext, rcontext);
       }

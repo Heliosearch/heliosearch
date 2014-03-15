@@ -18,32 +18,18 @@
 package org.apache.solr.search;
 
 import org.apache.lucene.index.AtomicReader;
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.search.BitsFilteredDocIdSet;
-import org.apache.lucene.search.DocIdSet;
-import org.apache.lucene.search.DocIdSetIterator;
-import org.apache.lucene.search.Filter;
+import org.apache.solr.common.SolrException;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.FixedBitSet;
-import org.apache.solr.common.SolrException;
+import org.apache.lucene.search.DocIdSet;
+import org.apache.lucene.search.Filter;
+import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.search.BitsFilteredDocIdSet;
+import org.apache.lucene.index.AtomicReaderContext;
 
 /** A base class that may be usefull for implementing DocSets */
 abstract class DocSetBase implements DocSet {
 
-  public static FixedBitSet toBitSet(DocSet set) {
-    if (set instanceof DocSetBase) {
-      return ((DocSetBase) set).getBits();
-    } else {
-      FixedBitSet bits = new FixedBitSet(64);
-      for (DocIterator iter = set.iterator(); iter.hasNext();) {
-        int nextDoc = iter.nextDoc();
-        bits = FixedBitSet.ensureCapacity(bits, nextDoc);
-        bits.set(nextDoc);
-      }
-      return bits;
-    }
-  }
-  
   // Not implemented efficiently... for testing purposes only
   @Override
   public boolean equals(Object obj) {
@@ -63,7 +49,7 @@ abstract class DocSetBase implements DocSet {
     }
 
     // if (this.size() != other.size()) return false;
-    return this.getBits().equals(toBitSet(other));
+    return this.getBits().equals(other.getBits());
   }
 
   /**
@@ -83,12 +69,12 @@ abstract class DocSetBase implements DocSet {
   }
 
   /**
-   * Return a {@link FixedBitSet} with a bit set for every document in this
-   * {@link DocSet}. The default implementation iterates on all docs and sets
-   * the relevant bits. You should override if you can provide a more efficient
-   * implementation.
+   * Inefficient base implementation.
+   *
+   * @see BitDocSet#getBits
    */
-  protected FixedBitSet getBits() {
+  @Override
+  public FixedBitSet getBits() {
     FixedBitSet bits = new FixedBitSet(64);
     for (DocIterator iter = iterator(); iter.hasNext();) {
       int nextDoc = iter.nextDoc();
@@ -107,8 +93,8 @@ abstract class DocSetBase implements DocSet {
     }
 
     // Default... handle with bitsets.
-    FixedBitSet newbits = getBits().clone();
-    newbits.and(toBitSet(other));
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
+    newbits.and(other.getBits());
     return new BitDocSet(newbits);
   }
 
@@ -123,11 +109,16 @@ abstract class DocSetBase implements DocSet {
     return intersectionSize(other) > 0;
   }
 
+
   @Override
   public DocSet union(DocSet other) {
-    FixedBitSet otherBits = toBitSet(other);
-    FixedBitSet newbits = FixedBitSet.ensureCapacity(getBits().clone(), otherBits.length());
-    newbits.or(otherBits);
+    if (other instanceof BitDocSet) {
+      return other.union(this);
+    }
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
+    FixedBitSet otherbits = other.getBits();
+    newbits = FixedBitSet.ensureCapacity(newbits, otherbits.length());
+    newbits.or(otherbits);
     return new BitDocSet(newbits);
   }
 
@@ -149,8 +140,8 @@ abstract class DocSetBase implements DocSet {
 
   @Override
   public DocSet andNot(DocSet other) {
-    FixedBitSet newbits = getBits().clone();
-    newbits.andNot(toBitSet(other));
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
+    newbits.andNot(other.getBits());
     return new BitDocSet(newbits);
   }
 
@@ -227,6 +218,22 @@ abstract class DocSetBase implements DocSet {
   }
 
   @Override
+  public void setBitsOn(FixedBitSet target) {
+    DocIterator iter = iterator();
+    while (iter.hasNext()) {
+      target.set(iter.nextDoc());
+    }
+  }
+
+  @Override
+  public void setBitsOn(BitDocSetNative target) {
+    DocIterator iter = iterator();
+    while (iter.hasNext()) {
+      target.fastSet(iter.nextDoc());
+    }
+  }
+
+  @Override
   public void addAllTo(DocSet target) {
     DocIterator iter = iterator();
     while (iter.hasNext()) {
@@ -234,4 +241,36 @@ abstract class DocSetBase implements DocSet {
     }
   }
 
+  @Override
+  public abstract DocSet clone();
+
+  // Default RefCount methods that do nothing
+  @Override
+  public int getRefCount() {
+    return 1;
+  }
+
+  @Override
+  public int incref() {
+    return 1;
+  }
+
+  @Override
+  public int decref() {
+    return 1;
+  }
+
+  @Override
+  public boolean tryIncref() {
+    return true;
+  }
+
+  @Override
+  public boolean tryDecref() {
+    return true;
+  }
+
+  @Override // for AutoCloseable
+  public void close() {
+  }
 }

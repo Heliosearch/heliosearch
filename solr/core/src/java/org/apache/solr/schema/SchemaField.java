@@ -17,8 +17,8 @@
 
 package org.apache.solr.schema;
 
-import org.apache.solr.common.SolrException;
 import org.apache.lucene.index.IndexableField;
+import org.apache.solr.common.SolrException;
 import org.apache.lucene.search.SortField;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.search.QParser;
@@ -139,6 +139,18 @@ public final class SchemaField extends FieldProperties {
       + "}";
   }
 
+  public void addInfo(Map<String,Object> map) {
+    map.put("name", name);
+    map.put("type", type.getTypeName());
+    if (defaultValue != null) {
+      map.put("defaultValue", defaultValue);
+    }
+    map.put("properties", propertiesToString(properties));
+    if (required) {
+      map.put("required", required);
+    }
+  }
+
   public void write(TextResponseWriter writer, String name, IndexableField val) throws IOException {
     // name is passed in because it may be null if name should not be used.
     type.write(writer,name,val);
@@ -220,7 +232,12 @@ public final class SchemaField extends FieldProperties {
   }
 
   static int calcProps(String name, FieldType ft, Map<String,?> props) {
-    int trueProps = parseProperties(props,true,true);
+    int trueProps = 0;
+    if ("_version_".equals(name)) {
+      trueProps = LUCENE_FIELDCACHE;
+    }
+
+    trueProps |= parseProperties(props,true,true);
     int falseProps = parseProperties(props,false,true);
 
     int p = ft.properties;

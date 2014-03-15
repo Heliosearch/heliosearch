@@ -224,7 +224,7 @@ public class DocValuesFacets {
   static NamedList<Integer> finalize(NamedList<Integer> res, SolrIndexSearcher searcher, SchemaField schemaField, DocSet docs, int missingCount, boolean missing) throws IOException {
     if (missing) {
       if (missingCount < 0) {
-        missingCount = SimpleFacets.getFieldMissingCount(searcher,docs,schemaField.getName());
+        missingCount = SimpleFacetsHS.getFieldMissingCount(searcher,docs,schemaField.getName());
       }
       res.add(null, missingCount);
     }

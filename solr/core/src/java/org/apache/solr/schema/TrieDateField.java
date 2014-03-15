@@ -17,22 +17,28 @@
 
 package org.apache.solr.schema;
 
-import java.io.IOException;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.search.FieldCache;
+import org.apache.solr.search.QParser;
+import org.apache.solr.response.TextResponseWriter;
+import org.apache.solr.search.field.LongFieldValues;
+import org.apache.solr.search.function.valuesource.LongFieldSource;
+import org.apache.solr.search.mutable.MutableValueDate;
+import org.apache.solr.search.mutable.MutableValueLong;
+import org.apache.solr.update.processor.TimestampUpdateProcessorFactory; //jdoc
 import org.apache.lucene.document.FieldType.NumericType;
 import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.search.NumericRangeQuery;
-import org.apache.lucene.search.Query;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.SortField;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
-import org.apache.solr.response.TextResponseWriter;
-import org.apache.solr.search.QParser;
-import org.apache.solr.update.processor.TimestampUpdateProcessorFactory; //jdoc
+
+import java.util.List;
+import java.util.Map;
+import java.util.Date;
+import java.io.IOException;
 
 /**
  * <p>
@@ -73,16 +79,6 @@ public class TrieDateField extends DateField implements DateValueFieldType {
   @Override
   public Object toObject(SchemaField sf, BytesRef term) {
     return wrappedField.toObject(sf, term);
-  }
-
-  @Override
-  public SortField getSortField(SchemaField field, boolean top) {
-    return wrappedField.getSortField(field, top);
-  }
-
-  @Override
-  public ValueSource getValueSource(SchemaField field, QParser parser) {
-    return wrappedField.getValueSource(field, parser);
   }
 
   /**
@@ -173,6 +169,68 @@ public class TrieDateField extends DateField implements DateValueFieldType {
   @Override
   public void checkSchemaField(SchemaField field) {
     wrappedField.checkSchemaField(field);
+  }
+
+
+
+  @Override
+  public ValueSource getValueSource(SchemaField field, QParser qparser) {
+    if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
+      return new TrieDateFieldSource( field.getName(), FieldCache.NUMERIC_UTILS_LONG_PARSER );
+    } else {
+      return new DateFieldValues(field, qparser);
+    }
+
+  }
+
+  @Override
+  public SortField getSortField(SchemaField field, boolean top) {
+    // return super.getSortField(field, top);
+
+    field.checkSortability();
+
+    return new DateFieldValues(field, null).getSortField(top, field.sortMissingFirst(), field.sortMissingLast(), null);
+
+  }
+
+
+  // TODO: remove extension of DateField...
+
+}
+
+
+class DateFieldValues extends LongFieldValues {
+
+  public DateFieldValues(SchemaField sf, QParser qParser) {
+    super(sf, qParser);
+  }
+
+  @Override
+  public String description() {
+    return "date(" + field + ')';
+  }
+
+  //
+  // LongConverter methods
+  //
+  @Override
+  public MutableValueLong newMutableValue() {
+    return new MutableValueDate();
+  }
+
+  @Override
+  public Date longToObject(long val) {
+    return new Date(val);
+  }
+
+  @Override
+  public String longToString(long val) {
+    return TrieField.dateField.toExternal(longToObject(val));
+  }
+
+  @Override
+  public long externalToLong(String extVal) {
+    return TrieField.dateField.parseMath(null, extVal).getTime();
   }
 
 }

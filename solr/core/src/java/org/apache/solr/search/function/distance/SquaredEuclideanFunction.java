@@ -16,8 +16,9 @@ package org.apache.solr.search.function.distance;
  * limitations under the License.
  */
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.valuesource.MultiValueSource;
+import com.spatial4j.core.distance.DistanceUtils;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.valuesource.MultiValueSource;
 
 /**
  * While not strictly a distance, the Sq. Euclidean Distance is often all that is needed in many applications
@@ -41,14 +42,14 @@ public class SquaredEuclideanFunction extends VectorDistanceFunction {
    * @param doc The doc to score
    */
   @Override
-  protected double distance(int doc, FunctionValues dv1, FunctionValues dv2) {
+  protected double distance(int doc, FuncValues dv1, FuncValues dv2) {
 
     double[] vals1 = new double[source1.dimension()];
     double[] vals2 = new double[source1.dimension()];
     dv1.doubleVal(doc, vals1);
     dv2.doubleVal(doc, vals2);
 
-    return distSquaredCartesian(vals1, vals2);
+    return DistanceUtils.distSquaredCartesian(vals1, vals2);
   }
 
   @Override

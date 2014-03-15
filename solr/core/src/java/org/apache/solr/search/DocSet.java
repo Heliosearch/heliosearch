@@ -18,7 +18,12 @@
 package org.apache.solr.search;
 
 import org.apache.lucene.search.Filter;
+import org.apache.lucene.util.FixedBitSet;
+import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.core.RefCount;
+
+import java.io.Closeable;
 
 /**
  * <code>DocSet</code> represents an unordered set of Lucene Document Ids.
@@ -28,9 +33,10 @@ import org.apache.solr.common.SolrException;
  * a cache and could be shared.
  * </p>
  *
+ *
  * @since solr 0.9
  */
-public interface DocSet /* extends Collection<Integer> */ {
+public interface DocSet extends RefCount, Cloneable, Closeable /* extends Collection<Integer> */ {
   
   /**
    * Adds the specified document if it is not currently in the DocSet
@@ -74,6 +80,16 @@ public interface DocSet /* extends Collection<Integer> */ {
    * </p>
    */
   public DocIterator iterator();
+
+  /**
+   * Returns a BitSet view of the DocSet.  Any changes to this BitSet <b>may</b>
+   * be reflected in the DocSet, hence if the DocSet is shared or was returned from
+   * a SolrIndexSearcher method, it's not safe to modify the BitSet.
+   *
+   * @return
+   * An OpenBitSet with the bit number of every docid set in the set.
+   */
+  public FixedBitSet getBits();
 
   /**
    * Returns the approximate amount of memory taken by this DocSet.
@@ -133,11 +149,24 @@ public interface DocSet /* extends Collection<Integer> */ {
   public Filter getTopFilter();
 
   /**
-   * Adds all the docs from this set to the target set. The target should be
-   * sized large enough to accommodate all of the documents before calling this
-   * method.
+   * Takes the docs from this set and sets those bits on the target OpenBitSet.
+   * The target should be sized large enough to accommodate all of the documents before calling this method.
+   * @param target
    */
+  public void setBitsOn(FixedBitSet target);
+
+  /**
+   * Takes the docs from this set and sets those bits on the target BitDocSetNative.
+   * The target should be sized large enough to accommodate all of the documents before calling this method.
+   */
+  public void setBitsOn(BitDocSetNative target);
+
   public void addAllTo(DocSet target);
 
+  public DocSet clone();
+
+  public void close();
+
   public static DocSet EMPTY = new SortedIntDocSet(new int[0], 0);
+
 }

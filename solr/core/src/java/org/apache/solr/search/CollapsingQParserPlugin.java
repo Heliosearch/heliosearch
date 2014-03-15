@@ -17,23 +17,22 @@
 
 package org.apache.solr.search;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import org.apache.lucene.util.BytesRef;
+import org.apache.solr.common.params.ModifiableSolrParams;
+import org.apache.solr.request.LocalSolrQueryRequest;
+import org.apache.solr.request.SolrRequestInfo;
+import org.apache.solr.schema.TrieFloatField;
+import org.apache.solr.schema.TrieIntField;
+import org.apache.solr.schema.TrieLongField;
+import org.apache.solr.schema.FieldType;
+import org.apache.solr.handler.component.QueryElevationComponent;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.queries.function.FunctionQuery;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.IndexSearcher;
@@ -59,6 +58,18 @@ import org.apache.solr.schema.TrieLongField;
 import com.carrotsearch.hppc.FloatArrayList;
 import com.carrotsearch.hppc.IntOpenHashSet;
 import com.carrotsearch.hppc.cursors.IntCursor;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.FunctionQuery;
+import org.apache.solr.search.function.ValueSource;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Iterator;
 
 /**
 
@@ -964,9 +975,9 @@ public class CollapsingQParserPlugin extends QParserPlugin {
     private FloatCompare comp;
     private float nullVal;
     private ValueSource valueSource;
-    private FunctionValues functionValues;
+    private FuncValues functionValues;
     private float[] ordVals;
-    private Map rcontext;
+    private QueryContext qcontext;
     private CollapseScore collapseScore = new CollapseScore();
     private float score;
     private boolean cscore;
@@ -981,7 +992,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
                                FunctionQuery funcQuery, IndexSearcher searcher) throws IOException {
       super(maxDoc, null, nullPolicy, max, needsScores, boostDocs);
       this.valueSource = funcQuery.getValueSource();
-      this.rcontext = ValueSource.newContext(searcher);
+      this.qcontext = QueryContext.newContext(searcher);
       this.ords = ords;
       this.ordVals = new float[ords.length];
       Arrays.fill(ords, -1);
@@ -997,7 +1008,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
 
       if(funcStr.indexOf("cscore()") != -1) {
         this.cscore = true;
-        this.rcontext.put("CSCORE",this.collapseScore);
+        this.qcontext.put("CSCORE", this.collapseScore);
       }
 
       if(this.needsScores) {
@@ -1009,7 +1020,7 @@ public class CollapsingQParserPlugin extends QParserPlugin {
     }
 
     public void setNextReader(AtomicReaderContext context) throws IOException {
-      functionValues = this.valueSource.getValues(rcontext, context);
+      functionValues = this.valueSource.getValues(qcontext, context);
     }
 
     public void collapse(int ord, int contextDoc, int globalDoc) throws IOException {

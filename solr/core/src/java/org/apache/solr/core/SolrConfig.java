@@ -22,6 +22,7 @@ import static org.apache.solr.core.SolrConfig.PluginOpts.*;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.schema.IndexSchemaFactory;
+import org.apache.solr.search.field.TopValues;
 import org.apache.solr.util.DOMUtil;
 import org.apache.solr.util.FileUtils;
 import org.apache.solr.util.RegexFileFilter;
@@ -38,7 +39,6 @@ import org.apache.solr.update.SolrIndexConfig;
 import org.apache.solr.update.UpdateLog;
 import org.apache.solr.update.processor.UpdateRequestProcessorChain;
 import org.apache.solr.spelling.QueryConverter;
-import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.index.IndexDeletionPolicy;
 import org.apache.lucene.util.Version;
 import org.slf4j.Logger;
@@ -167,7 +167,7 @@ public class SolrConfig extends Config {
     // Parse indexConfig section, using mainIndex as backup in case old config is used
     indexConfig = new SolrIndexConfig(this, "indexConfig", mainIndexConfig);
    
-    booleanQueryMaxClauseCount = getInt("query/maxBooleanClauses", BooleanQuery.getMaxClauseCount());
+
     log.info("Using Lucene MatchVersion: " + luceneMatchVersion);
 
     // Warn about deprecated / discontinued parameters
@@ -177,21 +177,40 @@ public class SolrConfig extends Config {
     if(get("query/HashDocSet", null) != null)
       log.warn("solrconfig.xml: <HashDocSet> is deprecated and no longer recommended used.");
 
-// TODO: Old code - in case somebody wants to re-enable. Also see SolrIndexSearcher#search()
-//    filtOptEnabled = getBool("query/boolTofilterOptimizer/@enabled", false);
-//    filtOptCacheSize = getInt("query/boolTofilterOptimizer/@cacheSize",32);
-//    filtOptThreshold = getFloat("query/boolTofilterOptimizer/@threshold",.05f);
-    
+
     useFilterForSortedQuery = getBool("query/useFilterForSortedQuery", false);
     queryResultWindowSize = Math.max(1, getInt("query/queryResultWindowSize", 1));
     queryResultMaxDocsCached = getInt("query/queryResultMaxDocsCached", Integer.MAX_VALUE);
     enableLazyFieldLoading = getBool("query/enableLazyFieldLoading", false);
 
-    
-    filterCacheConfig = CacheConfig.getConfig(this, "query/filterCache");
+    CacheConfig conf = CacheConfig.getConfig(this, "query/filterCache");
+    if (conf == null) {
+        Map<String,String> args = new HashMap<String,String>();
+        args.put("name","filterCache");
+        args.put("size","64");
+        conf = new CacheConfig(FastLRUCache.class, args, null);
+    } else {
+      conf.clazz = FastLRUCache.class;
+    }
+    filterCacheConfig = conf;
+
+    conf = CacheConfig.getConfig(this, "query/nCache");
+    if (conf == null) {
+      Map<String,String> args = new HashMap<String,String>();
+      args.put("name","nCache");
+      args.put("size","64");
+      args.put("autowarmCount","100%");
+      args.put("showItems","-1");
+      conf = new CacheConfig(FastLRUCache.class, args, new TopValues.Regenerator());
+    } else {
+      conf.clazz = FastLRUCache.class;
+    }
+    nCacheConfig = conf;
+
+
     queryResultCacheConfig = CacheConfig.getConfig(this, "query/queryResultCache");
     documentCacheConfig = CacheConfig.getConfig(this, "query/documentCache");
-    CacheConfig conf = CacheConfig.getConfig(this, "query/fieldValueCache");
+    conf = CacheConfig.getConfig(this, "query/fieldValueCache");
     if (conf == null) {
       Map<String,String> args = new HashMap<>();
       args.put("name","fieldValueCache");
@@ -267,7 +286,6 @@ public class SolrConfig extends Config {
      loadPluginInfo(UpdateLog.class,"updateHandler/updateLog");
      loadPluginInfo(IndexSchemaFactory.class,"schemaFactory", 
                     REQUIRE_CLASS);
-
      updateHandlerInfo = loadUpdatehandlerInfo();
      
      multipartUploadLimitKB = getInt( 
@@ -332,7 +350,6 @@ public class SolrConfig extends Config {
   }
 
   /* The set of materialized parameters: */
-  public final int booleanQueryMaxClauseCount;
 // SolrIndexSearcher - nutch optimizer -- Disabled since 3.1
 //  public final boolean filtOptEnabled;
 //  public final int filtOptCacheSize;
@@ -342,6 +359,7 @@ public class SolrConfig extends Config {
   public final CacheConfig queryResultCacheConfig;
   public final CacheConfig documentCacheConfig;
   public final CacheConfig fieldValueCacheConfig;
+  public final CacheConfig nCacheConfig;
   public final CacheConfig[] userCacheConfigs;
   // SolrIndexSearcher - more...
   public final boolean useFilterForSortedQuery;

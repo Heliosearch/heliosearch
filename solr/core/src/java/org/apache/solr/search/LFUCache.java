@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 
 /**
  * SolrCache based on ConcurrentLFUCache implementation.
@@ -109,7 +108,7 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
     }
     description += ')';
 
-    cache = new ConcurrentLFUCache<>(limit, minLimit, acceptableSize, initialSize, newThread, false, null, timeDecay);
+    cache = new ConcurrentLFUCache<K, V>(limit, minLimit, acceptableSize, initialSize, newThread, false, null, timeDecay);
     cache.setAlive(false);
 
     statsList = (List<ConcurrentLFUCache.Stats>) persistence;
@@ -117,7 +116,7 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
       // must be the first time a cache of this type is being created
       // Use a CopyOnWriteArrayList since puts are very rare and iteration may be a frequent operation
       // because it is used in getStatistics()
-      statsList = new CopyOnWriteArrayList<>();
+      statsList = new CopyOnWriteArrayList<ConcurrentLFUCache.Stats>();
 
       // the first entry will be for cumulative stats of caches that have been closed.
       statsList.add(new ConcurrentLFUCache.Stats());
@@ -138,13 +137,18 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
   }
 
   @Override
-  public V put(K key, V value) {
-    return cache.put(key, value);
+  public void put(K key, V value) {
+    cache.put(key, value);
   }
 
   @Override
   public V get(K key) {
     return cache.get(key);
+  }
+
+  @Override
+  public V check(K key) {
+    return get(key);
   }
 
   @Override
@@ -164,10 +168,12 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
   }
 
   @Override
-  public void warm(SolrIndexSearcher searcher, SolrCache old) {
+  public void warm(SolrIndexSearcher.WarmContext warmContext) {
     if (regenerator == null) return;
-    long warmingStartTime = System.nanoTime();
-    LFUCache other = (LFUCache) old;
+    warmContext.cache = this;
+
+    long warmingStartTime = System.currentTimeMillis();
+    LFUCache other = (LFUCache) warmContext.oldCache;
     // warm entries
     if (autowarmCount != 0) {
       int sz = other.size();
@@ -180,15 +186,14 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
       }
       for (int i = itemsArr.length - 1; i >= 0; i--) {
         try {
-          boolean continueRegen = regenerator.regenerateItem(searcher,
-              this, old, itemsArr[i].getKey(), itemsArr[i].getValue());
+          boolean continueRegen = regenerator.regenerateItem(warmContext, itemsArr[i].getKey(), itemsArr[i].getValue());
           if (!continueRegen) break;
         } catch (Exception e) {
           SolrException.log(log, "Error during auto-warming of key:" + itemsArr[i].getKey(), e);
         }
       }
     }
-    warmupTime = TimeUnit.MILLISECONDS.convert(System.nanoTime() - warmingStartTime, TimeUnit.NANOSECONDS);
+    warmupTime = System.currentTimeMillis() - warmingStartTime;
   }
 
 
@@ -242,7 +247,7 @@ public class LFUCache<K, V> implements SolrCache<K, V> {
 
   @Override
   public NamedList getStatistics() {
-    NamedList<Serializable> lst = new SimpleOrderedMap<>();
+    NamedList<Serializable> lst = new SimpleOrderedMap<Serializable>();
     if (cache == null) return lst;
     ConcurrentLFUCache.Stats stats = cache.getStats();
     long lookups = stats.getCumulativeLookups();

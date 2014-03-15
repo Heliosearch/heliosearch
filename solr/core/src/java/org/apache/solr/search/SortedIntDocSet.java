@@ -777,7 +777,7 @@ public class SortedIntDocSet extends DocSetBase {
   }
 
   @Override
-  protected SortedIntDocSet clone() {
+  public SortedIntDocSet clone() {
     return new SortedIntDocSet(docs.clone());
   }
 }

@@ -18,7 +18,6 @@ package org.apache.solr.search.grouping.distributed.requestfactory;
  */
 
 import org.apache.lucene.analysis.reverse.ReverseStringFilter;
-import org.apache.lucene.search.grouping.SearchGroup;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.GroupParams;
@@ -30,6 +29,7 @@ import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.search.Grouping;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.grouping.SearchGroup;
 import org.apache.solr.search.grouping.distributed.ShardRequestFactory;
 
 import java.util.Collection;
@@ -82,8 +82,7 @@ public class TopGroupsShardRequestFactory implements ShardRequestFactory {
     return createRequest(rb, ShardRequest.ALL_SHARDS);
   }
 
-  private ShardRequest[] createRequest(ResponseBuilder rb, String[] shards)
-  {
+  private ShardRequest[] createRequest(ResponseBuilder rb, String[] shards) {
     ShardRequest sreq = new ShardRequest();
     sreq.shards = shards;
     sreq.purpose = ShardRequest.PURPOSE_GET_TOP_IDS;
@@ -133,13 +132,13 @@ public class TopGroupsShardRequestFactory implements ShardRequestFactory {
     } else {
       sreq.params.set(CommonParams.FL, schema.getUniqueKeyField().getName());
     }
-    
+
     int origTimeAllowed = sreq.params.getInt(CommonParams.TIME_ALLOWED, -1);
     if (origTimeAllowed > 0) {
-      sreq.params.set(CommonParams.TIME_ALLOWED, Math.max(1,origTimeAllowed - rb.firstPhaseElapsedTime));
+      sreq.params.set(CommonParams.TIME_ALLOWED, Math.max(1, origTimeAllowed - rb.firstPhaseElapsedTime));
     }
 
-    return new ShardRequest[] {sreq};
+    return new ShardRequest[]{sreq};
   }
 
 }

@@ -148,7 +148,9 @@ public class TestLFUCache extends SolrTestCaseJ4 {
 
       // Test autowarming
       newLFUCache.init(params, initObj, regenerator);
-      newLFUCache.warm(null, lfuCache);
+      SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
+      warmContext.oldCache = lfuCache;
+      newLFUCache.warm(warmContext);
       newLFUCache.setState(SolrCache.State.LIVE);
 
       newLFUCache.put(103, "103");
@@ -170,7 +172,9 @@ public class TestLFUCache extends SolrTestCaseJ4 {
 
       params.put("autowarmCount", "0");
       noWarmLFUCache.init(params, initObj, regenerator);
-      noWarmLFUCache.warm(null, lfuCache);
+      warmContext = new SolrIndexSearcher.WarmContext();
+      warmContext.oldCache = lfuCache;
+      noWarmLFUCache.warm(warmContext);
       noWarmLFUCache.setState(SolrCache.State.LIVE);
 
       noWarmLFUCache.put(103, "103");

@@ -31,8 +31,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
@@ -48,6 +48,7 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.util.StrUtils;
+import org.apache.solr.core.RefCount;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.component.HighlightComponent;
 import org.apache.solr.handler.component.ResponseBuilder;
@@ -867,14 +868,14 @@ public class SolrPluginUtils {
    */
   public static class IdentityRegenerator implements CacheRegenerator {
     @Override
-    public boolean regenerateItem(SolrIndexSearcher newSearcher,
-                                  SolrCache newCache,
-                                  SolrCache oldCache,
+    public boolean regenerateItem(SolrIndexSearcher.WarmContext warmContext,
                                   Object oldKey,
                                   Object oldVal)
       throws IOException {
-
-      newCache.put(oldKey,oldVal);
+      if (oldKey instanceof RefCount) {
+        ((RefCount) oldKey).incref();
+      }
+      warmContext.cache.put(oldKey,oldVal);
       return true;
     }
   }

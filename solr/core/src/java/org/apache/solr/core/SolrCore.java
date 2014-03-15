@@ -17,9 +17,43 @@
 
 package org.apache.solr.core;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Writer;
+import java.lang.reflect.Constructor;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.StringTokenizer;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexDeletionPolicy;
 import org.apache.lucene.index.IndexWriter;
@@ -41,6 +75,7 @@ import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.DirectoryFactory.DirContext;
 import org.apache.solr.handler.SnapPuller;
 import org.apache.solr.handler.admin.ShowFileRequestHandler;
+import org.apache.solr.handler.component.AnalyticsComponent;
 import org.apache.solr.handler.component.DebugComponent;
 import org.apache.solr.handler.component.FacetComponent;
 import org.apache.solr.handler.component.HighlightComponent;
@@ -95,41 +130,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.ParserConfigurationException;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Writer;
-import java.lang.reflect.Constructor;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
-
 
 /**
  *
@@ -144,6 +144,11 @@ public final class SolrCore implements SolrInfoMBean {
 
   
   public static Logger log = LoggerFactory.getLogger(SolrCore.class);
+
+  static {
+    // effectively disable max clauses on boolean query
+    BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
+  }
 
   private String name;
   private String logid; // used to show what name is set
@@ -167,25 +172,11 @@ public final class SolrCore implements SolrInfoMBean {
   private DirectoryFactory directoryFactory;
   private IndexReaderFactory indexReaderFactory;
   private final Codec codec;
-
+  
   private final ReentrantLock ruleExpiryLock;
-
+  
   public long getStartTime() { return startTime; }
 
-  static int boolean_query_max_clause_count = Integer.MIN_VALUE;
-  // only change the BooleanQuery maxClauseCount once for ALL cores...
-  void booleanQueryMaxClauseCount()  {
-    synchronized(SolrCore.class) {
-      if (boolean_query_max_clause_count == Integer.MIN_VALUE) {
-        boolean_query_max_clause_count = solrConfig.booleanQueryMaxClauseCount;
-        BooleanQuery.setMaxClauseCount(boolean_query_max_clause_count);
-      } else if (boolean_query_max_clause_count != solrConfig.booleanQueryMaxClauseCount ) {
-        log.debug("BooleanQuery.maxClauseCount= " +boolean_query_max_clause_count+ ", ignoring " +solrConfig.booleanQueryMaxClauseCount);
-      }
-    }
-  }
-
-  
   /**
    * The SolrResourceLoader used to load all resources for this core.
    * @since solr 1.3
@@ -735,8 +726,7 @@ public final class SolrCore implements SolrInfoMBean {
     this.startTime = System.currentTimeMillis();
     this.maxWarmingSearchers = config.maxWarmingSearchers;
 
-    booleanQueryMaxClauseCount();
-  
+
     final CountDownLatch latch = new CountDownLatch(1);
 
     try {
@@ -830,7 +820,7 @@ public final class SolrCore implements SolrInfoMBean {
         newReaderCreator = null;
         if (iwRef != null) iwRef.decref();
       }
-      
+
       // Finally tell anyone who wants to know
       resourceLoader.inform(resourceLoader);
       resourceLoader.inform(this); // last call before the latch is released.
@@ -1237,6 +1227,7 @@ public final class SolrCore implements SolrInfoMBean {
     addIfNotPresent(components,StatsComponent.COMPONENT_NAME,StatsComponent.class);
     addIfNotPresent(components,DebugComponent.COMPONENT_NAME,DebugComponent.class);
     addIfNotPresent(components,RealTimeGetComponent.COMPONENT_NAME,RealTimeGetComponent.class);
+    addIfNotPresent(components,AnalyticsComponent.COMPONENT_NAME,AnalyticsComponent.class);
     addIfNotPresent(components,ExpandComponent.COMPONENT_NAME,ExpandComponent.class);
 
     return components;
@@ -2291,7 +2282,7 @@ public final class SolrCore implements SolrInfoMBean {
           "solrconfig.xml uses deprecated <bool name='facet.sort'>. Please "+
           "update your config to use <string name='facet.sort'>.");
     }
-  } 
+  }
 
   public CoreDescriptor getCoreDescriptor() {
     return coreDescriptor;

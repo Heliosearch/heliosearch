@@ -304,7 +304,7 @@ public class TestHarness extends BaseTestHarness {
       QueryResponseWriter responseWriter = core.getQueryResponseWriter(req);
       responseWriter.write(sw,req,rsp);
 
-      req.close();
+      // req.close();
 
       return sw.toString();
     } finally {

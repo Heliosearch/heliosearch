@@ -33,8 +33,8 @@ public interface EndResultTransformer {
   /**
    * Transforms the specified result into its final form and puts it into the specified response.
    *
-   * @param result The map containing the grouping result (for grouping by field and query)
-   * @param rb The response builder containing the response used to render the result and the grouping specification
+   * @param result             The map containing the grouping result (for grouping by field and query)
+   * @param rb                 The response builder containing the response used to render the result and the grouping specification
    * @param solrDocumentSource The source of {@link SolrDocument} instances
    */
   void transform(Map<String, ?> result, ResponseBuilder rb, SolrDocumentSource solrDocumentSource);

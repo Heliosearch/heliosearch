@@ -31,13 +31,13 @@ import org.apache.lucene.document.FloatField;
 import org.apache.lucene.document.IntField;
 import org.apache.lucene.document.LongField;
 import org.apache.lucene.document.NumericDocValuesField;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.document.SortedSetDocValuesField;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.DoubleFieldSource;
-import org.apache.lucene.queries.function.valuesource.FloatFieldSource;
-import org.apache.lucene.queries.function.valuesource.IntFieldSource;
-import org.apache.lucene.queries.function.valuesource.LongFieldSource;
+import org.apache.lucene.index.IndexableField;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.DoubleFieldSource;
+import org.apache.solr.search.function.valuesource.FloatFieldSource;
+import org.apache.solr.search.function.valuesource.IntFieldSource;
+import org.apache.solr.search.function.valuesource.LongFieldSource;
 import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.FieldCacheRangeFilter;
@@ -47,8 +47,8 @@ import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.NumericUtils;
-import org.apache.lucene.util.mutable.MutableValueDate;
-import org.apache.lucene.util.mutable.MutableValueLong;
+import org.apache.solr.search.mutable.MutableValueDate;
+import org.apache.solr.search.mutable.MutableValueLong;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.response.TextResponseWriter;
 import org.apache.solr.search.QParser;
@@ -354,12 +354,10 @@ public class TrieField extends PrimitiveFieldType {
     }
   }
 
-  @Deprecated
   static int toInt(byte[] arr, int offset) {
     return (arr[offset]<<24) | ((arr[offset+1]&0xff)<<16) | ((arr[offset+2]&0xff)<<8) | (arr[offset+3]&0xff);
   }
   
-  @Deprecated
   static long toLong(byte[] arr, int offset) {
     int high = (arr[offset]<<24) | ((arr[offset+1]&0xff)<<16) | ((arr[offset+2]&0xff)<<8) | (arr[offset+3]&0xff);
     int low = (arr[offset+4]<<24) | ((arr[offset+5]&0xff)<<16) | ((arr[offset+6]&0xff)<<8) | (arr[offset+7]&0xff);

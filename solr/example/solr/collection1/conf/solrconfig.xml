@@ -273,11 +273,6 @@
     <!--
     <unlockOnStartup>false</unlockOnStartup>
       -->
-    
-    <!-- Expert: Controls how often Lucene loads terms into memory
-         Default is 128 and is likely good for most everyone.
-      -->
-    <!-- <termIndexInterval>128</termIndexInterval> -->
 
     <!-- If true, IndexReaders will be opened/reopened from the IndexWriter
          instead of from the Directory. Hosts in a master/slave setup
@@ -459,35 +454,11 @@
     <str name="someArg">Some Value</str>
   </indexReaderFactory >
   -->
-  <!-- By explicitly declaring the Factory, the termIndexDivisor can
-       be specified.
-    -->
-  <!--
-     <indexReaderFactory name="IndexReaderFactory" 
-                         class="solr.StandardIndexReaderFactory">
-       <int name="setTermIndexDivisor">12</int>
-     </indexReaderFactory >
-    -->
 
   <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        Query section - these settings control query time things like caches
        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
   <query>
-    <!-- Max Boolean Clauses
-
-         Maximum number of clauses in each BooleanQuery,  an exception
-         is thrown if exceeded.
-
-         ** WARNING **
-         
-         This option actually modifies a global Lucene property that
-         will affect all SolrCores.  If multiple solrconfig.xml files
-         disagree on this property, the value at any given moment will
-         be based on the last SolrCore to be initialized.
-         
-      -->
-    <maxBooleanClauses>1024</maxBooleanClauses>
-
 
     <!-- Solr Internal Query Caches
 
@@ -546,14 +517,6 @@
                    initialSize="512"
                    autowarmCount="0"/>
     
-    <!-- custom cache currently used by block join --> 
-    <cache name="perSegFilter"
-      class="solr.search.LRUCache"
-      size="10"
-      initialSize="0"
-      autowarmCount="10"
-      regenerator="solr.NoOpRegenerator" />
-
     <!-- Field Value Cache
          
          Cache used to hold field values that are quickly accessible
@@ -566,6 +529,19 @@
                         autowarmCount="128"
                         showItems="32" />
       -->
+
+    <!-- nCache, the native off-heap FieldCache
+         used for quickly accessing field values by document id
+         that have been un-inverted from indexed fields
+         for sorting, faceting, function queries, etc.
+      -->
+    <!--
+       <nCache class="solr.FastLRUCache"
+                        size="64"
+                        autowarmCount="100%"
+                        showItems="-1" />
+      -->
+
 
     <!-- Custom Cache
 
@@ -1169,11 +1145,6 @@
      </requestHandler>
     -->
 
-  <!--
-    Enabling this request handler (which is NOT a default part of the admin handler) will allow the Solr UI to edit
-    all the config files. This is intended for secure/development use ONLY! Leaving available and publically
-    accessible is a security vulnerability and should be done with extreme caution!
-  -->
   <!-- ping/healthcheck -->
   <requestHandler name="/admin/ping" class="solr.PingRequestHandler">
     <lst name="invariants">

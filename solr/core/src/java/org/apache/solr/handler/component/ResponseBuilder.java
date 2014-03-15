@@ -18,12 +18,13 @@
 package org.apache.solr.handler.component;
 
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.grouping.SearchGroup;
-import org.apache.lucene.search.grouping.TopGroups;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.util.NamedList;
+import org.apache.solr.search.grouping.SearchGroup;
+import org.apache.solr.search.grouping.TopGroups;
+import org.apache.solr.search.grouping.distributed.command.QueryCommand;
 import org.apache.solr.util.RTimer;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.request.SolrQueryRequest;
@@ -433,5 +434,12 @@ public class ResponseBuilder
   }
   public void setNextCursorMark(CursorMark nextCursorMark) {
     this.nextCursorMark = nextCursorMark;
+  }
+
+
+  public void close() {
+    if (results != null && results.docSet != null) {
+      results.docSet.decref();
+    }
   }
 }

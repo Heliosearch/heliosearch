@@ -154,13 +154,14 @@ public class TestSort extends SolrTestCaseJ4 {
         } else if (Type.DOC.equals(type)) {
           assertEquals("sorts["+j+"] is (unexpectedly) type doc : " + input,
                        "_docid_", names[j]);
+/***
         } else if (Type.CUSTOM.equals(type) || Type.REWRITEABLE.equals(type)) {
 
           fail("sorts["+j+"] resulted in a '" + type.toString()
                + "', either sort parsing code is broken, or func/query " 
                + "semantics have gotten broader and munging in this test "
                + "needs improved: " + input);
-
+***/
         } else {
           assertEquals("sorts["+j+"] ("+type.toString()+
                        ") had unexpected field in: " + input,

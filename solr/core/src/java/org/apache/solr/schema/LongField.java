@@ -17,10 +17,14 @@
 
 package org.apache.solr.schema;
 
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.LongFieldSource;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.LongFieldSource;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.SortField;
+import org.apache.lucene.util.BytesRef;
 import org.apache.solr.response.TextResponseWriter;
 import org.apache.solr.search.QParser;
 
@@ -41,6 +45,20 @@ import java.util.Map;
  * @see TrieLongField
  */
 public class LongField extends PrimitiveFieldType implements LongValueFieldType {
+
+  private static final FieldCache.LongParser PARSER = new FieldCache.LongParser() {
+    
+    @Override
+    public TermsEnum termsEnum(Terms terms) throws IOException {
+      return terms.iterator(null);
+    }
+
+    @Override
+    public long parseLong(BytesRef term) {
+      return Long.parseLong(term.utf8ToString());
+    }
+  };
+
   @Override
   protected void init(IndexSchema schema, Map<String,String> args) {
     super.init(schema, args);
@@ -52,13 +70,13 @@ public class LongField extends PrimitiveFieldType implements LongValueFieldType 
   @Override
   public SortField getSortField(SchemaField field,boolean reverse) {
     field.checkSortability();
-    return new SortField(field.name,SortField.Type.LONG, reverse);
+    return new SortField(field.name, PARSER, reverse);
   }
 
   @Override
   public ValueSource getValueSource(SchemaField field, QParser qparser) {
     field.checkFieldCacheSource(qparser);
-    return new LongFieldSource(field.name);
+    return new LongFieldSource(field.name, PARSER);
   }
 
   @Override

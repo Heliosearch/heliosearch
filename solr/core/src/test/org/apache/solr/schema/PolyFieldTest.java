@@ -18,14 +18,14 @@ package org.apache.solr.schema;
 
 import java.util.List;
 
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.solr.SolrTestCaseJ4;
-import org.apache.solr.common.SolrException;
 import org.apache.solr.core.SolrCore;
+import org.apache.solr.common.SolrException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 

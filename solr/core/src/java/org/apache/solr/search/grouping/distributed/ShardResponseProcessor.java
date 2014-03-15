@@ -31,7 +31,7 @@ public interface ShardResponseProcessor {
    * Processes the responses from the specified shardRequest. The result is put into specific
    * fields in the specified rb.
    *
-   * @param rb The ResponseBuilder to put the merge result into
+   * @param rb           The ResponseBuilder to put the merge result into
    * @param shardRequest The shard request containing the responses from all shards.
    */
   void process(ResponseBuilder rb, ShardRequest shardRequest);

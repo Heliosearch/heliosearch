@@ -17,6 +17,8 @@ package org.apache.solr.search;
  * limitations under the License.
  */
 
+import org.apache.solr.core.RefCount;
+
 import java.io.IOException;
 
 /** 
@@ -30,8 +32,11 @@ public class NoOpRegenerator implements CacheRegenerator {
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
-  public boolean regenerateItem(SolrIndexSearcher newSearcher, SolrCache newCache, SolrCache oldCache, Object oldKey, Object oldVal) throws IOException {
-    newCache.put(oldKey, oldVal);
+  public boolean regenerateItem(SolrIndexSearcher.WarmContext warmContext, Object oldKey, Object oldVal) throws IOException {
+    if (oldVal instanceof RefCount) {
+      ((RefCount) oldVal).incref();
+    }
+    warmContext.cache.put(oldKey, oldVal);
     return true;
   }
   

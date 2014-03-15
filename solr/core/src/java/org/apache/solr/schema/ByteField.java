@@ -16,8 +16,8 @@ package org.apache.solr.schema;
  * limitations under the License.
  */
 
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.ByteFieldSource;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.IntFieldSource;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.SortField;
 
@@ -69,7 +69,7 @@ public class ByteField extends PrimitiveFieldType {
   @Override
   public ValueSource getValueSource(SchemaField field, QParser qparser) {
     field.checkFieldCacheSource(qparser);
-    return new ByteFieldSource(field.name);
+    return new IntFieldSource(field.name);
   }
 
   @Override

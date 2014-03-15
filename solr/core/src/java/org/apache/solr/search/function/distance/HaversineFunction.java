@@ -16,17 +16,16 @@ package org.apache.solr.search.function.distance;
  * limitations under the License.
  */
 
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
-import org.apache.lucene.queries.function.valuesource.MultiValueSource;
-import org.apache.lucene.search.IndexSearcher;
 import com.spatial4j.core.distance.DistanceUtils;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.DoubleFuncValues;
+import org.apache.solr.search.function.valuesource.MultiValueSource;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 /**
@@ -50,7 +49,7 @@ public class HaversineFunction extends ValueSource {
     this(p1, p2, radius, false);
   }
 
-  public HaversineFunction(MultiValueSource p1, MultiValueSource p2, double radius, boolean convertToRads){
+  public HaversineFunction(MultiValueSource p1, MultiValueSource p2, double radius, boolean convertToRads) {
     this.p1 = p1;
     this.p2 = p2;
     if (p1.dimension() != 2 || p2.dimension() != 2) {
@@ -65,10 +64,10 @@ public class HaversineFunction extends ValueSource {
   }
 
   /**
-   * @param doc  The doc to score
+   * @param doc The doc to score
    * @return The haversine distance formula
    */
-  protected double distance(int doc, FunctionValues p1DV, FunctionValues p2DV) {
+  protected double distance(int doc, FuncValues p1DV, FuncValues p2DV) {
 
     double[] p1D = new double[2];
     double[] p2D = new double[2];
@@ -89,20 +88,21 @@ public class HaversineFunction extends ValueSource {
       y2 = p2D[0];
       x2 = p2D[1];
     }
-    return DistanceUtils.distHaversineRAD(y1,x1,y2,x2)*radius;
+    return DistanceUtils.distHaversineRAD(y1, x1, y2, x2) * radius;
   }
 
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
-    final FunctionValues vals1 = p1.getValues(context, readerContext);
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
+    final FuncValues vals1 = p1.getValues(context, readerContext);
 
-    final FunctionValues vals2 = p2.getValues(context, readerContext);
-    return new DoubleDocValues(this) {
+    final FuncValues vals2 = p2.getValues(context, readerContext);
+    return new DoubleFuncValues(this) {
       @Override
       public double doubleVal(int doc) {
         return distance(doc, vals1, vals2);
       }
+
       @Override
       public String toString(int doc) {
         StringBuilder sb = new StringBuilder();
@@ -115,9 +115,9 @@ public class HaversineFunction extends ValueSource {
   }
 
   @Override
-  public void createWeight(Map context, IndexSearcher searcher) throws IOException {
-    p1.createWeight(context, searcher);
-    p2.createWeight(context, searcher);
+  public void createWeight(QueryContext context) throws IOException {
+    p1.createWeight(context);
+    p2.createWeight(context);
 
   }
 
@@ -126,8 +126,8 @@ public class HaversineFunction extends ValueSource {
     if (this.getClass() != o.getClass()) return false;
     HaversineFunction other = (HaversineFunction) o;
     return this.name().equals(other.name())
-            && p1.equals(other.p1) &&
-            p2.equals(other.p2) && radius == other.radius;
+        && p1.equals(other.p1) &&
+        p2.equals(other.p2) && radius == other.radius;
   }
 
   @Override

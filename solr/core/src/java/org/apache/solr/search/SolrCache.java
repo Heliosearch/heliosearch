@@ -77,30 +77,24 @@ public interface SolrCache<K,V> extends SolrInfoMBean {
   // Should SolrCache just extend the java.util.Map interface?
   // Following the conventions of the java.util.Map interface in any case.
 
-  /** :TODO: copy from Map */
   public int size();
 
-  /** :TODO: copy from Map */
-  public V put(K key, V value);
+  public void put(K key, V value);
 
-  /** :TODO: copy from Map */
   public V get(K key);
 
-  /** :TODO: copy from Map */
+  /** Like get, but does not change statistics */
+  public V check(K key);
+
   public void clear();
 
   /** 
    * Enumeration of possible States for cache instances.
-   * :TODO: only state that seems to ever be set is LIVE ?
   */
-  public enum State { 
-    /** :TODO */
-    CREATED, 
-    /** :TODO */
-    STATICWARMING, 
-    /** :TODO */
-    AUTOWARMING, 
-    /** :TODO */
+  public enum State {
+    CREATED,
+    STATICWARMING,
+    AUTOWARMING,
     LIVE 
   }
 
@@ -124,7 +118,7 @@ public interface SolrCache<K,V> extends SolrInfoMBean {
    * Warm this cache associated with <code>searcher</code> using the <code>old</code>
    * cache object.  <code>this</code> and <code>old</code> will have the same concrete type.
    */
-  void warm(SolrIndexSearcher searcher, SolrCache<K,V> old);
+  void warm(SolrIndexSearcher.WarmContext warmContext);
   // Q: an alternative to passing the searcher here would be to pass it in
   // init and have the cache implementation save it.
 

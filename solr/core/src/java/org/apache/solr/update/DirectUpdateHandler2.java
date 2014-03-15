@@ -25,7 +25,7 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
@@ -356,7 +356,7 @@ public class DirectUpdateHandler2 extends UpdateHandler implements SolrCoreState
         bq.add(q, Occur.MUST);
         SchemaField sf = ulog.getVersionInfo().getVersionField();
         ValueSource vs = sf.getType().getValueSource(sf, null);
-        ValueSourceRangeFilter filt = new ValueSourceRangeFilter(vs, null, Long.toString(Math.abs(cmd.getVersion())), true, true);
+        ValueSourceRangeFilter filt = new ValueSourceRangeFilter(vs, null, Long.toString(Math.abs(cmd.getVersion())), true, true, true);
         FunctionRangeQuery range = new FunctionRangeQuery(filt);
         bq.add(range, Occur.MUST);
         q = bq;

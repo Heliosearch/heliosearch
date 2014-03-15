@@ -19,6 +19,7 @@ package org.apache.solr.request;
 
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.CommonParams;
+import org.apache.solr.core.Diagnostics;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.response.SolrQueryResponse;
@@ -26,6 +27,7 @@ import org.apache.solr.util.TimeZoneUtils;
 
 import java.io.Closeable;
 import java.util.Date;
+import java.util.Deque;
 import java.util.TimeZone;
 import java.util.LinkedList;
 import java.util.List;
@@ -39,7 +41,7 @@ public class SolrRequestInfo {
   protected Date now;
   protected TimeZone tz;
   protected ResponseBuilder rb;
-  protected List<Closeable> closeHooks;
+  protected Deque<Closeable> closeHooks;
 
 
   public static SolrRequestInfo getRequestInfo() {
@@ -60,6 +62,12 @@ public class SolrRequestInfo {
   public static void clearRequestInfo() {
     try {
       SolrRequestInfo info = threadLocal.get();
+
+      // TODO: detect if a search or update has no RequestInfo by inspecting stack trace?
+      if (info == null) {
+        // SolrCore.log.warn("Thread has no SolrRequestInfo! thread=" + Diagnostics.toString(Thread.currentThread().getStackTrace()));
+      }
+
       if (info != null && info.closeHooks != null) {
         for (Closeable hook : info.closeHooks) {
           try {
@@ -69,6 +77,17 @@ public class SolrRequestInfo {
           }
         }
       }
+
+      if (info != null && info.rb != null) {
+        try {
+          info.rb.close();
+        } catch (Throwable throwable) {
+          SolrException.log(SolrCore.log, "Exception during close hook", throwable);
+        }
+      } else {
+        // System.err.println("######### NO RESPONSE BUILDER FOR " + info.req);
+      }
+
     } finally {
       threadLocal.remove();
     }
@@ -134,7 +153,8 @@ public class SolrRequestInfo {
       if (closeHooks == null) {
         closeHooks = new LinkedList<>();
       }
-      closeHooks.add(hook);
+      // addFirst so we will close in reverse order
+      closeHooks.addFirst(hook);
     }
   }
 }

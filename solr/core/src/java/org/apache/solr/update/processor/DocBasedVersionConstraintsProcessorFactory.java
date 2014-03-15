@@ -17,8 +17,9 @@
 
 package org.apache.solr.update.processor;
 
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrInputDocument;
@@ -40,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Map;
 
 import static org.apache.solr.common.SolrException.ErrorCode.BAD_REQUEST;
 import static org.apache.solr.common.SolrException.ErrorCode.CONFLICT;
@@ -276,14 +276,14 @@ public class DocBasedVersionConstraintsProcessorFactory extends UpdateRequestPro
             }
 
             ValueSource vs = solrVersionField.getType().getValueSource(solrVersionField, null);
-            Map context = ValueSource.newContext(searcher);
-            vs.createWeight(context, searcher);
-            FunctionValues fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
+            QueryContext context = QueryContext.newContext(searcher);
+            vs.createWeight(context);
+            FuncValues fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
             oldSolrVersion = fv.longVal((int)lookup);
 
             vs = userVersionField.getType().getValueSource(userVersionField, null);
-            context = ValueSource.newContext(searcher);
-            vs.createWeight(context, searcher);
+            context = QueryContext.newContext(searcher);
+            vs.createWeight(context);
             fv = vs.getValues(context, searcher.getTopReaderContext().leaves().get((int)(lookup>>32)));
             oldUserVersion = fv.objectVal((int)lookup);
 

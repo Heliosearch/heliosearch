@@ -18,15 +18,12 @@
 package org.apache.solr.search;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.ValueSourceScorer;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSourceScorer;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.solr.search.function.ValueSourceRangeFilter;
 
 import java.io.IOException;
-import java.util.Map;
 
 // This class works as either a normal constant score query, or as a PostFilter using a collector
 public class FunctionRangeQuery extends SolrConstantScoreQuery implements PostFilter {
@@ -39,16 +36,16 @@ public class FunctionRangeQuery extends SolrConstantScoreQuery implements PostFi
 
   @Override
   public DelegatingCollector getFilterCollector(IndexSearcher searcher) {
-    Map fcontext = ValueSource.newContext(searcher);
+    QueryContext fcontext = QueryContext.newContext(searcher);
     return new FunctionRangeCollector(fcontext);
   }
 
   class FunctionRangeCollector extends DelegatingCollector {
-    final Map fcontext;
+    final QueryContext fcontext;
     ValueSourceScorer scorer;
     int maxdoc;
 
-    public FunctionRangeCollector(Map fcontext) {
+    public FunctionRangeCollector(QueryContext fcontext) {
       this.fcontext = fcontext;
     }
 
@@ -62,8 +59,8 @@ public class FunctionRangeQuery extends SolrConstantScoreQuery implements PostFi
     @Override
     public void setNextReader(AtomicReaderContext context) throws IOException {
       maxdoc = context.reader().maxDoc();
-      FunctionValues dv = rangeFilt.getValueSource().getValues(fcontext, context);
-      scorer = dv.getRangeScorer(context.reader(), rangeFilt.getLowerVal(), rangeFilt.getUpperVal(), rangeFilt.isIncludeLower(), rangeFilt.isIncludeUpper());
+      FuncValues dv = rangeFilt.getValueSource().getValues(fcontext, context);
+      scorer = dv.getRangeScorer(context, rangeFilt.getLowerVal(), rangeFilt.getUpperVal(), rangeFilt.isIncludeLower(), rangeFilt.isIncludeUpper(), rangeFilt.isMatchMissing());
       super.setNextReader(context);
     }
   }

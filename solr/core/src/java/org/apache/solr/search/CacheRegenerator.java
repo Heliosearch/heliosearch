@@ -32,12 +32,9 @@ public interface CacheRegenerator {
   /**
    * Regenerate an old cache item and insert it into <code>newCache</code>
    *
-   * @param newSearcher the new searcher who's caches are being autowarmed
-   * @param newCache    where regenerated cache items should be stored. the target of the autowarming
-   * @param oldCache    the old cache being used as a source for autowarming
    * @param oldKey      the key of the old cache item to regenerate in the new cache
    * @param oldVal      the old value of the cache item
    * @return true to continue with autowarming, false to stop
    */
-  public boolean regenerateItem(SolrIndexSearcher newSearcher, SolrCache newCache, SolrCache oldCache, Object oldKey, Object oldVal) throws IOException;
+  public boolean regenerateItem(SolrIndexSearcher.WarmContext warmContext, Object oldKey, Object oldVal) throws IOException;
 }

@@ -17,7 +17,12 @@ package org.apache.solr.search.grouping.distributed.command;
  * limitations under the License.
  */
 
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.Sort;
+import org.apache.lucene.search.TopDocsCollector;
+import org.apache.lucene.search.TopFieldCollector;
+import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.QParser;
@@ -59,7 +64,7 @@ public class QueryCommand implements Command<QueryCommandResult> {
      * The groupQueryString is parsed into a query.
      *
      * @param groupQueryString The group query string to parse
-     * @param request The current request
+     * @param request          The current request
      * @return this
      */
     public Builder setQuery(String groupQueryString, SolrQueryRequest request) throws SyntaxError {
@@ -68,10 +73,6 @@ public class QueryCommand implements Command<QueryCommandResult> {
       return setQuery(parser.getQuery());
     }
 
-    public Builder setDocSet(DocSet docSet) {
-      this.docSet = docSet;
-      return this;
-    }
 
     /**
      * Sets the docSet based on the created {@link DocSet}
@@ -81,7 +82,8 @@ public class QueryCommand implements Command<QueryCommandResult> {
      * @throws IOException If I/O related errors occur.
      */
     public Builder setDocSet(SolrIndexSearcher searcher) throws IOException {
-      return setDocSet(searcher.getDocSet(query));
+      this.docSet = searcher.getDocSet(query);
+      return this;
     }
 
     public Builder setDocsToCollect(int docsToCollect) {
@@ -96,6 +98,10 @@ public class QueryCommand implements Command<QueryCommandResult> {
 
     public QueryCommand build() {
       if (sort == null || query == null || docSet == null || docsToCollect == null) {
+        if (docSet != null) {
+          docSet.decref();
+          docSet = null;
+        }
         throw new IllegalStateException("All fields must be set");
       }
 
@@ -152,5 +158,12 @@ public class QueryCommand implements Command<QueryCommandResult> {
   @Override
   public Sort getSortWithinGroup() {
     return null;
+  }
+
+  @Override
+  public void close() {
+    if (docSet != null) {
+      docSet.decref();
+    }
   }
 }

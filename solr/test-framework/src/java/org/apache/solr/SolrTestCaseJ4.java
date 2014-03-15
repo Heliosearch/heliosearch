@@ -21,6 +21,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -51,6 +53,7 @@ import javax.xml.xpath.XPathExpressionException;
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.MockAnalyzer;
+import org.apache.lucene.analysis.MockTokenizer;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.IOUtils;
@@ -149,6 +152,7 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
   @BeforeClass 
   @SuppressWarnings("unused")
   private static void beforeClass() {
+    HSTest.startTracking();
     System.setProperty("jetty.testMode", "true");
     System.setProperty("enable.update.log", usually() ? "true" : "false");
     System.setProperty("tests.shardhandler.randomSeed", Long.toString(random().nextLong()));
@@ -190,6 +194,7 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
     sslConfig = null;
     
     IpTables.unblockAllPorts();
+    HSTest.endTracking();
   }
   
   protected static boolean isSSLMode() {
@@ -420,7 +425,7 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
       fail(msg);
     }
  }
-  
+
   /** Causes an exception matching the regex pattern to not be logged. */
   public static void ignoreException(String pattern) {
     if (SolrException.ignorePatterns == null)
@@ -1223,6 +1228,10 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
     public abstract int getInt();
   }
 
+  public abstract static class LVals extends Vals {
+    public abstract long getLong();
+  }
+
   public static class IRange extends IVals {
     final int min;
     final int max;
@@ -1285,7 +1294,27 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
     public Comparable get() {
       return getFloat();
     }
-  }  
+  }
+
+  public static class DVal extends Vals {
+    final double min;
+    final double max;
+    public DVal(double min, double max) {
+      this.min = min;
+      this.max = max;
+    }
+
+    public double getDouble() {
+      if (min >= max) return min;
+      return min + random().nextDouble() *  (max - min);
+    }
+
+    @Override
+    public Comparable get() {
+      return getDouble();
+    }
+  }
+
 
   public static class SVal extends Vals {
     char start;
@@ -1441,7 +1470,11 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
 
       // commit 10% of the time
       if (random().nextInt(commitOneOutOf)==0) {
-        assertU(commit());
+        if (random().nextInt(10) == 0) {
+          assertU(commit());
+        } else {
+          assertU(commit("softCommit","true"));
+        }
       }
 
       // duplicate 10% of the docs
@@ -1843,6 +1876,7 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
       return this;
     }
   }
+
   public boolean assertSolrDocumentEquals(Object expected, Object actual) {
 
     if (!(expected instanceof SolrDocument)  || !(actual instanceof SolrDocument)) {

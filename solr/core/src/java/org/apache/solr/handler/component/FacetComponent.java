@@ -39,6 +39,7 @@ import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.request.SimpleFacets;
+import org.apache.solr.request.SimpleFacetsHS;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.SyntaxError;
@@ -76,7 +77,7 @@ public class FacetComponent extends SearchComponent
   {
     if (rb.doFacets) {
       SolrParams params = rb.req.getParams();
-      SimpleFacets f = new SimpleFacets(rb.req,
+      SimpleFacetsHS f = new SimpleFacetsHS(rb.req,
               rb.getResults().docSet,
               params,
               rb );

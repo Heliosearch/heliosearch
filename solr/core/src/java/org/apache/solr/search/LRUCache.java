@@ -111,7 +111,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public V put(K key, V value) {
+  public void put(K key, V value) {
     synchronized (map) {
       if (getState() == State.LIVE) {
         stats.inserts.incrementAndGet();
@@ -120,7 +120,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
       // increment local inserts regardless of state???
       // it does make it more consistent with the current size...
       inserts++;
-      return map.put(key,value);
+      map.put(key,value);
     }
   }
 
@@ -142,6 +142,11 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
+  public V check(K key) {
+    return get(key);
+  }
+
+  @Override
   public void clear() {
     synchronized(map) {
       map.clear();
@@ -149,10 +154,12 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public void warm(SolrIndexSearcher searcher, SolrCache<K,V> old) {
+  public void warm(SolrIndexSearcher.WarmContext warmContext) {
     if (regenerator==null) return;
+    warmContext.cache = this;
+
     long warmingStartTime = System.currentTimeMillis();
-    LRUCache<K,V> other = (LRUCache<K,V>)old;
+    LRUCache<K,V> other = (LRUCache<K,V>)warmContext.oldCache;
 
     // warm entries
     if (isAutowarmingOn()) {
@@ -185,7 +192,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
       // correct in the new cache.
       for (int i=0; i<keys.length; i++) {
         try {
-          boolean continueRegen = regenerator.regenerateItem(searcher, this, old, keys[i], vals[i]);
+          boolean continueRegen = regenerator.regenerateItem(warmContext, keys[i], vals[i]);
           if (!continueRegen) break;
         }
         catch (Exception e) {

@@ -16,9 +16,9 @@
  */
 package org.apache.solr.search;
 
-import org.apache.lucene.queries.function.FunctionQuery;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.QueryValueSource;
+import org.apache.solr.search.function.FunctionQuery;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.QueryValueSource;
 import org.apache.lucene.search.*;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
@@ -64,7 +64,7 @@ public class FunctionRangeQParserPlugin extends QParserPlugin {
         boolean includeUpper = localParams.getBool("incu",true);
 
         // TODO: add a score=val option to allow score to be the value
-        ValueSourceRangeFilter rf = new ValueSourceRangeFilter(vs, l, u, includeLower, includeUpper);
+        ValueSourceRangeFilter rf = new ValueSourceRangeFilter(vs, l, u, includeLower, includeUpper, false);
         FunctionRangeQuery frq = new FunctionRangeQuery(rf);
         return frq;
       }

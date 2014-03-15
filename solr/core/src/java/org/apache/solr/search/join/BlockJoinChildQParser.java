@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
+
 package org.apache.solr.search.join;
 
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.join.ToChildBlockJoinQuery;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.request.SolrQueryRequest;
 
@@ -29,7 +29,7 @@ public class BlockJoinChildQParser extends BlockJoinParentQParser {
   }
 
   protected Query createQuery(Query parentListQuery, Query query) {
-    return new ToChildBlockJoinQuery(query, getFilter(parentListQuery), false);
+    return new BlockJoinChildQuery(query, parentListQuery, false);
   }
 
   @Override
@@ -37,5 +37,4 @@ public class BlockJoinChildQParser extends BlockJoinParentQParser {
     return "of";
   }
 }
-
 

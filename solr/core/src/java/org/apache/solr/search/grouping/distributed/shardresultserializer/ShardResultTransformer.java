@@ -24,7 +24,7 @@ import java.io.IOException;
 
 /**
  * A <code>ShardResultTransformer</code> is responsible for transforming a grouped shard result into group related
- * structures (such as {@link org.apache.lucene.search.grouping.TopGroups} and {@link org.apache.lucene.search.grouping.SearchGroup})
+ * structures (such as {@link org.apache.solr.search.grouping.TopGroups} and {@link org.apache.solr.search.grouping.SearchGroup})
  * and visa versa.
  *
  * @lucene.experimental
@@ -43,10 +43,10 @@ public interface ShardResultTransformer<T, R> {
   /**
    * Transforms the specified shard response into native structures.
    *
-   * @param shardResponse The shard response containing data in a {@link NamedList} structure
-   * @param groupSort The group sort
+   * @param shardResponse   The shard response containing data in a {@link NamedList} structure
+   * @param groupSort       The group sort
    * @param sortWithinGroup The sort inside a group
-   * @param shard The shard address where the response originated from
+   * @param shard           The shard address where the response originated from
    * @return native structure of the data
    */
   R transformToNative(NamedList<NamedList> shardResponse, Sort groupSort, Sort sortWithinGroup, String shard);

@@ -18,8 +18,8 @@
 package org.apache.solr.search;
 
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queries.function.FunctionQuery;
-import org.apache.lucene.queries.function.valuesource.QueryValueSource;
+import org.apache.solr.search.function.FunctionQuery;
+import org.apache.solr.search.function.valuesource.QueryValueSource;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.ConstantScoreQuery;

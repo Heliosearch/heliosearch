@@ -36,6 +36,7 @@ import org.apache.solr.handler.component.SpellCheckComponent;
 import org.apache.solr.request.LocalSolrQueryRequest;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestHandler;
+import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.response.SolrQueryResponse;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -396,8 +397,14 @@ public class SpellCheckCollatorTest extends SolrTestCaseJ4 {
     SolrQueryResponse rsp = new SolrQueryResponse();
     rsp.add("responseHeader", new SimpleOrderedMap());
     SolrQueryRequest req = new LocalSolrQueryRequest(core, params);
+
+    SolrRequestInfo.setRequestInfo(new SolrRequestInfo(req, rsp));
+
     handler.handleRequest(req, rsp);
     req.close();
+
+    SolrRequestInfo.clearRequestInfo();
+
     NamedList values = rsp.getValues();
     NamedList spellCheck = (NamedList) values.get("spellcheck");
     NamedList suggestions = (NamedList) spellCheck.get("suggestions");

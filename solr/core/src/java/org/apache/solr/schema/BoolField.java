@@ -25,18 +25,19 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.SortedDocValues;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.docvalues.BoolDocValues;
-import org.apache.lucene.queries.function.valuesource.OrdFieldSource;
+import org.apache.lucene.index.IndexableField;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.funcvalues.BoolFuncValues;
+import org.apache.solr.search.function.valuesource.OrdFieldSource;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
-import org.apache.lucene.util.mutable.MutableValue;
-import org.apache.lucene.util.mutable.MutableValueBool;
+import org.apache.solr.search.mutable.MutableValue;
+import org.apache.solr.search.mutable.MutableValueBool;
 import org.apache.solr.analysis.SolrAnalyzer;
 import org.apache.solr.response.TextResponseWriter;
 import org.apache.solr.search.QParser;
@@ -85,8 +86,8 @@ public class BoolField extends PrimitiveFieldType {
           int ch = input.read();
           if (ch==-1) return false;
           termAtt.copyBuffer(
-                  ((ch=='t' || ch=='T' || ch=='1') ? TRUE_TOKEN : FALSE_TOKEN)
-                  ,0,1);
+              ((ch=='t' || ch=='T' || ch=='1') ? TRUE_TOKEN : FALSE_TOKEN)
+              ,0,1);
           return true;
         }
       };
@@ -94,7 +95,6 @@ public class BoolField extends PrimitiveFieldType {
       return new TokenStreamComponents(tokenizer);
     }
   };
-
 
   @Override
   public Analyzer getAnalyzer() {
@@ -167,7 +167,7 @@ class BoolFieldSource extends ValueSource {
 
 
   @Override
-  public FunctionValues getValues(Map context, AtomicReaderContext readerContext) throws IOException {
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final SortedDocValues sindex = FieldCache.DEFAULT.getTermsIndex(readerContext.reader(), field);
 
     // figure out what ord maps to true
@@ -185,7 +185,7 @@ class BoolFieldSource extends ValueSource {
 
     final int trueOrd = tord;
 
-    return new BoolDocValues(this) {
+    return new BoolFuncValues(this) {
       @Override
       public boolean boolVal(int doc) {
         return sindex.getOrd(doc) == trueOrd;

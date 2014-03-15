@@ -24,12 +24,13 @@ import java.util.Set;
 
 import com.spatial4j.core.shape.Point;
 import org.apache.lucene.document.FieldType;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.VectorValueSource;
+import org.apache.lucene.index.IndexableField;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.VectorValueSource;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.ComplexExplanation;
@@ -304,15 +305,13 @@ class SpatialDistanceQuery extends ExtendedQueryBase implements PostFilter {
     protected IndexSearcher searcher;
     protected float queryNorm;
     protected float queryWeight;
-    protected Map latContext;
-    protected Map lonContext;
+    protected QueryContext context;
 
     public SpatialWeight(IndexSearcher searcher) throws IOException {
       this.searcher = searcher;
-      this.latContext = ValueSource.newContext(searcher);
-      this.lonContext = ValueSource.newContext(searcher);
-      latSource.createWeight(latContext, searcher);
-      lonSource.createWeight(lonContext, searcher);
+      this.context = QueryContext.newContext(searcher);
+      latSource.createWeight(context);
+      lonSource.createWeight(context);
     }
 
     @Override
@@ -349,8 +348,8 @@ class SpatialDistanceQuery extends ExtendedQueryBase implements PostFilter {
     final int maxDoc;
     final float qWeight;
     int doc=-1;
-    final FunctionValues latVals;
-    final FunctionValues lonVals;
+    final FuncValues latVals;
+    final FuncValues lonVals;
     final Bits acceptDocs;
 
 
@@ -374,8 +373,8 @@ class SpatialDistanceQuery extends ExtendedQueryBase implements PostFilter {
       this.reader = readerContext.reader();
       this.maxDoc = reader.maxDoc();
       this.acceptDocs = acceptDocs;
-      latVals = latSource.getValues(weight.latContext, readerContext);
-      lonVals = lonSource.getValues(weight.lonContext, readerContext);
+      latVals = latSource.getValues(weight.context, readerContext);
+      lonVals = lonSource.getValues(weight.context, readerContext);
 
       this.lonMin = SpatialDistanceQuery.this.lonMin;
       this.lonMax = SpatialDistanceQuery.this.lonMax;

@@ -17,6 +17,24 @@
 
 package org.apache.solr.schema;
 
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.search.FieldCache;
+import org.apache.lucene.search.FieldComparator;
+import org.apache.lucene.search.FieldComparatorSource;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.SortField;
+import org.apache.lucene.util.Bits;
+import org.apache.solr.search.QParser;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.field.IntFieldValues;
+import org.apache.solr.search.field.IntLeafValues;
+import org.apache.solr.search.field.IntTopValues;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.IntFieldSource;
+
+import java.io.IOException;
+
 /**
  * A numeric field that can contain 32-bit signed two's complement integer values.
  *
@@ -31,4 +49,30 @@ public class TrieIntField extends TrieField implements IntValueFieldType {
   {
     type=TrieTypes.INTEGER;
   }
+
+  @Override
+  public ValueSource getValueSource(SchemaField field, QParser qparser) {
+    // return super.getValueSource(field, qparser);
+
+    field.checkFieldCacheSource(qparser);
+
+    if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
+      return new IntFieldSource( field.getName(), FieldCache.NUMERIC_UTILS_INT_PARSER );
+    } else {
+      return new IntFieldValues(field, qparser);
+    }
+  }
+
+  @Override
+  public SortField getSortField(SchemaField field, boolean top) {
+    // return super.getSortField(field, top);
+
+    field.checkSortability();
+
+    return new IntFieldValues(field, null).getSortField(top, field.sortMissingFirst(), field.sortMissingLast(), null);
+
+  }
+
+
 }
+

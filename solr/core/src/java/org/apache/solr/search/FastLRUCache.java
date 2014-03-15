@@ -17,6 +17,7 @@ package org.apache.solr.search;
  */
 
 import org.apache.solr.common.SolrException;
+import org.apache.solr.core.RefCount;
 import org.apache.solr.util.ConcurrentLRUCache;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
 
 /**
  * SolrCache based on ConcurrentLRUCache implementation.
@@ -85,7 +85,7 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
     str = (String) args.get("showItems");
     showItems = str == null ? 0 : Integer.parseInt(str);
     description = generateDescription(limit, initialSize, minLimit, acceptableLimit, newThread);
-    cache = new ConcurrentLRUCache<>(limit, minLimit, acceptableLimit, initialSize, newThread, false, null);
+    cache = new ConcurrentLRUCache<K,V>(limit, minLimit, acceptableLimit, initialSize, newThread, false, null);
     cache.setAlive(false);
 
     statsList = (List<ConcurrentLRUCache.Stats>) persistence;
@@ -93,7 +93,7 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
       // must be the first time a cache of this type is being created
       // Use a CopyOnWriteArrayList since puts are very rare and iteration may be a frequent operation
       // because it is used in getStatistics()
-      statsList = new CopyOnWriteArrayList<>();
+      statsList = new CopyOnWriteArrayList<ConcurrentLRUCache.Stats>();
 
       // the first entry will be for cumulative stats of caches that have been closed.
       statsList.add(new ConcurrentLRUCache.Stats());
@@ -121,13 +121,21 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public V put(K key, V value) {
-    return cache.put(key, value);
+  public void put(K key, V value) {
+    Object old = cache.put(key, value);
+    if (old instanceof RefCount) {
+      ((RefCount)old).tryDecref();
+    }
   }
 
   @Override
   public V get(K key) {
     return cache.get(key);
+  }
+
+  @Override
+  public V check(K key) {
+    return cache.check(key);
   }
 
   @Override
@@ -142,31 +150,42 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
   }
 
   @Override
-  public void warm(SolrIndexSearcher searcher, SolrCache old) {
+  public void warm(SolrIndexSearcher.WarmContext warmContext) {
     if (regenerator == null) return;
-    long warmingStartTime = System.nanoTime();
-    FastLRUCache other = (FastLRUCache) old;
+    warmContext.cache = this;
+
+    long warmingStartTime = System.currentTimeMillis();
+    FastLRUCache other = (FastLRUCache) warmContext.oldCache;
     // warm entries
     if (isAutowarmingOn()) {
       int sz = autowarm.getWarmCount(other.size());
       Map items = other.cache.getLatestAccessedItems(sz);
-      Map.Entry[] itemsArr = new Map.Entry[items.size()];
-      int counter = 0;
-      for (Object mapEntry : items.entrySet()) {
-        itemsArr[counter++] = (Map.Entry) mapEntry;
-      }
-      for (int i = itemsArr.length - 1; i >= 0; i--) {
-        try {
-          boolean continueRegen = regenerator.regenerateItem(searcher,
-                  this, old, itemsArr[i].getKey(), itemsArr[i].getValue());
-          if (!continueRegen) break;
+      try {
+        Map.Entry[] itemsArr = new Map.Entry[items.size()];
+        int counter = 0;
+        for (Object mapEntry : items.entrySet()) {
+          itemsArr[counter++] = (Map.Entry) mapEntry;
         }
-        catch (Exception e) {
-          SolrException.log(log, "Error during auto-warming of key:" + itemsArr[i].getKey(), e);
+        for (int i = itemsArr.length - 1; i >= 0; i--) {
+          try {
+            boolean continueRegen = regenerator.regenerateItem(warmContext, itemsArr[i].getKey(), itemsArr[i].getValue());
+            if (!continueRegen) break;
+          }
+          catch (Exception e) {
+            SolrException.log(log, "Error during auto-warming of key:" + itemsArr[i].getKey(), e);
+          }
         }
+      } finally {
+
+        for (Object o : items.values()) {
+          if (o instanceof RefCount) {
+            ((RefCount)o).decref();
+          }
+        }
+
       }
     }
-    warmupTime = TimeUnit.MILLISECONDS.convert(System.nanoTime() - warmingStartTime, TimeUnit.NANOSECONDS);
+    warmupTime = System.currentTimeMillis() - warmingStartTime;
   }
 
 
@@ -197,7 +216,7 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
 
   @Override
   public NamedList getStatistics() {
-    NamedList<Serializable> lst = new SimpleOrderedMap<>();
+    NamedList<Serializable> lst = new SimpleOrderedMap<Serializable>();
     if (cache == null)  return lst;
     ConcurrentLRUCache.Stats stats = cache.getStats();
     long lookups = stats.getCumulativeLookups();
@@ -238,9 +257,15 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
         Object k = e.getKey();
         Object v = e.getValue();
 
-        String ks = "item_" + k;
-        String vs = v.toString();
-        lst.add(ks,vs);
+        try {
+          String ks = "item_" + k;
+          String vs = v.toString();
+          lst.add(ks,vs);
+        } finally {
+          if (v instanceof RefCount) {
+            ((RefCount)v).decref();
+          }
+        }
       }
       
     }

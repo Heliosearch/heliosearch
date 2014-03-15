@@ -39,7 +39,7 @@ import javax.xml.xpath.XPathConstants;
 public class CacheConfig {
   private String nodeName;
 
-  private Class<? extends SolrCache> clazz;
+  public Class<? extends SolrCache> clazz;
   private Map<String,String> args;
   private CacheRegenerator regenerator;
 

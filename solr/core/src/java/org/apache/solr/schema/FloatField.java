@@ -17,11 +17,15 @@
 
 package org.apache.solr.schema;
 
-import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.queries.function.valuesource.FloatFieldSource;
+import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.function.valuesource.FloatFieldSource;
+import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.SortField;
+import org.apache.lucene.util.BytesRef;
 import org.apache.solr.search.QParser;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.solr.response.TextResponseWriter;
 
 import java.util.Map;
@@ -41,6 +45,20 @@ import java.io.IOException;
  * @see TrieFloatField
  */
 public class FloatField extends PrimitiveFieldType implements FloatValueFieldType {
+
+  private static final FieldCache.FloatParser PARSER = new FieldCache.FloatParser() {
+    
+    @Override
+    public TermsEnum termsEnum(Terms terms) throws IOException {
+      return terms.iterator(null);
+    }
+
+    @Override
+    public float parseFloat(BytesRef term) {
+      return Float.parseFloat(term.utf8ToString());
+    }
+  };
+
   @Override
   protected void init(IndexSchema schema, Map<String,String> args) {
     super.init(schema, args);
@@ -56,7 +74,7 @@ public class FloatField extends PrimitiveFieldType implements FloatValueFieldTyp
   @Override
   public ValueSource getValueSource(SchemaField field, QParser qparser) {
     field.checkFieldCacheSource(qparser);
-    return new FloatFieldSource(field.name);
+    return new FloatFieldSource(field.name, PARSER);
   }
 
   @Override

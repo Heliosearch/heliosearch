@@ -17,6 +17,7 @@ package org.apache.solr.util;
  */
 
 import org.apache.lucene.util.PriorityQueue;
+import org.apache.solr.core.RefCount;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +65,7 @@ public class ConcurrentLRUCache<K,V> {
     if (upperWaterMark < 1) throw new IllegalArgumentException("upperWaterMark must be > 0");
     if (lowerWaterMark >= upperWaterMark)
       throw new IllegalArgumentException("lowerWaterMark must be  < upperWaterMark");
-    map = new ConcurrentHashMap<>(initialSize);
+    map = new ConcurrentHashMap<Object, CacheEntry<K,V>>(initialSize);
     newThreadForCleanup = runNewThreadForCleanup;
     this.upperWaterMark = upperWaterMark;
     this.lowerWaterMark = lowerWaterMark;
@@ -91,7 +92,27 @@ public class ConcurrentLRUCache<K,V> {
       if (islive) stats.missCounter.incrementAndGet();
       return null;
     }
+    if (e.value instanceof RefCount) {
+      if ( ((RefCount)e.value).tryIncref() == false) {
+        return null;   // a concurrent decref() beat us to the punch
+      }
+    }
+
     if (islive) e.lastAccessed = stats.accessCounter.incrementAndGet();
+    return e.value;
+  }
+
+  /** Like get, but does not update stats */
+  public V check(K key) {
+    CacheEntry<K,V> e = map.get(key);
+    if (e == null) {
+      return null;
+    }
+    if (e.value instanceof RefCount) {
+      if ( ((RefCount)e.value).tryIncref() == false) {
+        return null;   // a concurrent decref() beat us to the punch
+      }
+    }
     return e.value;
   }
 
@@ -106,7 +127,7 @@ public class ConcurrentLRUCache<K,V> {
 
   public V put(K key, V val) {
     if (val == null) return null;
-    CacheEntry<K,V> e = new CacheEntry<>(key, val, stats.accessCounter.incrementAndGet());
+    CacheEntry<K,V> e = new CacheEntry<K,V>(key, val, stats.accessCounter.incrementAndGet());
     CacheEntry<K,V> oldCacheEntry = map.put(key, e);
     int currentSize;
     if (oldCacheEntry == null) {
@@ -284,7 +305,7 @@ public class ConcurrentLRUCache<K,V> {
         wantToKeep = lowerWaterMark - numKept;
         wantToRemove = sz - lowerWaterMark - numRemoved;
 
-        PQueue<K,V> queue = new PQueue<>(wantToRemove);
+        PQueue<K,V> queue = new PQueue<K,V>(wantToRemove);
 
         for (int i=eSize-1; i>=0; i--) {
           CacheEntry<K,V> ce = eset[i];
@@ -397,6 +418,9 @@ public class ConcurrentLRUCache<K,V> {
     stats.size.decrementAndGet();
     stats.evictionCounter.incrementAndGet();
     if(evictionListener != null) evictionListener.evictedEntry(o.key,o.value);
+    if (o.value instanceof RefCount) {
+      ((RefCount)o.value).decref();
+    }
   }
 
   /**
@@ -408,10 +432,10 @@ public class ConcurrentLRUCache<K,V> {
    * @return a LinkedHashMap containing 'n' or less than 'n' entries
    */
   public Map<K, V> getOldestAccessedItems(int n) {
-    Map<K, V> result = new LinkedHashMap<>();
+    Map<K, V> result = new LinkedHashMap<K, V>();
     if (n <= 0)
       return result;
-    TreeSet<CacheEntry<K,V>> tree = new TreeSet<>();
+    TreeSet<CacheEntry<K,V>> tree = new TreeSet<CacheEntry<K,V>>();
     markAndSweepLock.lock();
     try {
       for (Map.Entry<Object, CacheEntry<K,V>> entry : map.entrySet()) {
@@ -436,30 +460,43 @@ public class ConcurrentLRUCache<K,V> {
   }
 
   public Map<K,V> getLatestAccessedItems(int n) {
-    Map<K,V> result = new LinkedHashMap<>();
-    if (n <= 0)
+    Map<K,V> result = new LinkedHashMap<K,V>();
+    if (n <= 0 || closed)
       return result;
-    TreeSet<CacheEntry<K,V>> tree = new TreeSet<>();
+    TreeSet<CacheEntry<K,V>> tree = new TreeSet<CacheEntry<K,V>>();
     // we need to grab the lock since we are changing lastAccessedCopy
     markAndSweepLock.lock();
+    if (closed) return result;  // JMX Monitored Map seems to like to get stats after things are closed!
     try {
       for (Map.Entry<Object, CacheEntry<K,V>> entry : map.entrySet()) {
         CacheEntry<K,V> ce = entry.getValue();
         ce.lastAccessedCopy = ce.lastAccessed;
-        if (tree.size() < n) {
+
+        if (tree.size() < n || ce.lastAccessedCopy > tree.last().lastAccessedCopy) {
           tree.add(ce);
-        } else {
-          if (ce.lastAccessedCopy > tree.last().lastAccessedCopy) {
-            tree.remove(tree.last());
-            tree.add(ce);
+          if (ce.value instanceof RefCount) {
+            if ( ((RefCount)ce.value).tryIncref() == false ) {
+              continue;  // concurrent decref beat us to the punch
+            }
+          }
+          if (tree.size() > n) {
+            CacheEntry<K,V> old = tree.pollLast();
+            if (old.value instanceof RefCount) {
+              ((RefCount)old.value).tryDecref();
+            }
           }
         }
+
       }
     } finally {
       markAndSweepLock.unlock();
     }
     for (CacheEntry<K,V> e : tree) {
-      result.put(e.key, e.value);
+      V prev = result.put(e.key, e.value);
+      if (prev instanceof RefCount) {
+        // Can be hit with ant test -Dtest=TestFiltering -Dtests.seed=5112224A7DAF7DD46
+        ((RefCount)prev).decref();
+      }
     }
     return result;
   }
@@ -515,14 +552,28 @@ public class ConcurrentLRUCache<K,V> {
     }
   }
 
- private boolean isDestroyed =  false;
+  private volatile boolean closed =  false;
   public void destroy() {
+    closed = true;
+
     try {
       if(cleanupThread != null){
         cleanupThread.stopThread();
       }
+
+      markAndSweepLock.lock();
+
     } finally {
-      isDestroyed = true;
+
+      for (CacheEntry<K,V> ce : map.values()) {
+        if (ce.value instanceof RefCount) {
+          ((RefCount)ce.value).decref();
+        }
+      }
+
+      map.clear();
+
+      markAndSweepLock.unlock();
     }
   }
 
@@ -587,7 +638,7 @@ public class ConcurrentLRUCache<K,V> {
     private boolean stop = false;
 
     public CleanupThread(ConcurrentLRUCache c) {
-      cache = new WeakReference<>(c);
+      cache = new WeakReference<ConcurrentLRUCache>(c);
     }
 
     @Override
@@ -623,7 +674,7 @@ public class ConcurrentLRUCache<K,V> {
   @Override
   protected void finalize() throws Throwable {
     try {
-      if(!isDestroyed){
+      if(!closed){
         log.error("ConcurrentLRUCache was not destroyed prior to finalize(), indicates a bug -- POSSIBLE RESOURCE LEAK!!!");
         destroy();
       }

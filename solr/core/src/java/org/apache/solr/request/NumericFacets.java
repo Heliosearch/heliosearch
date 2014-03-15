@@ -33,8 +33,9 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.queries.function.FunctionValues;
-import org.apache.lucene.queries.function.ValueSource;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.function.FuncValues;
+import org.apache.solr.search.function.ValueSource;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
@@ -130,6 +131,8 @@ final class NumericFacets {
   }
 
   public static NamedList<Integer> getCounts(SolrIndexSearcher searcher, DocSet docs, String fieldName, int offset, int limit, int mincount, boolean missing, String sort) throws IOException {
+    QueryContext context = new QueryContext(searcher);
+
     final boolean zeros = mincount <= 0;
     mincount = Math.max(mincount, 1);
     final SchemaField sf = searcher.getSchema().getField(fieldName);
@@ -249,7 +252,7 @@ final class NumericFacets {
       // Entries from the PQ first, then using the terms dictionary
       for (Entry entry : counts) {
         final int readerIdx = ReaderUtil.subIndex(entry.docID, leaves);
-        final FunctionValues values = vs.getValues(Collections.emptyMap(), leaves.get(readerIdx));
+        final FuncValues values = vs.getValues(context, leaves.get(readerIdx));
         result.add(values.strVal(entry.docID - leaves.get(readerIdx).docBase), entry.count);
       }
 
@@ -262,7 +265,7 @@ final class NumericFacets {
         while (pq.size() > 0) {
           Entry entry = pq.pop();
           final int readerIdx = ReaderUtil.subIndex(entry.docID, leaves);
-          final FunctionValues values = vs.getValues(Collections.emptyMap(), leaves.get(readerIdx));
+          final FuncValues values = vs.getValues(context, leaves.get(readerIdx));
           alreadySeen.add(values.strVal(entry.docID - leaves.get(readerIdx).docBase));
         }
         for (int i = 0; i < result.size(); ++i) {
@@ -318,7 +321,7 @@ final class NumericFacets {
       while (pq.size() > 0) {
         final Entry entry = pq.pop();
         final int readerIdx = ReaderUtil.subIndex(entry.docID, leaves);
-        final FunctionValues values = vs.getValues(Collections.emptyMap(), leaves.get(readerIdx));
+        final FuncValues values = vs.getValues(context, leaves.get(readerIdx));
         counts.put(values.strVal(entry.docID - leaves.get(readerIdx).docBase), entry.count);
       }
       final Terms terms = searcher.getAtomicReader().terms(fieldName);
