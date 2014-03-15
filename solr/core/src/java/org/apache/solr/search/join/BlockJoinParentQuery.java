@@ -90,10 +90,10 @@ class BlockJoinParentQuery extends Query {
     // NOTE: acceptDocs applies (and is checked) only in the
     // parent document space
     @Override
-    public Scorer scorer(AtomicReaderContext readerContext, boolean scoreDocsInOrder, boolean topScorer, Bits acceptDocs) throws IOException {
+    public Scorer scorer(AtomicReaderContext readerContext, Bits acceptDocs) throws IOException {
 
       // Pass scoreDocsInOrder true, topScorer false to our sub and the live docs:
-      final Scorer childScorer = childWeight.scorer(readerContext, true, false, readerContext.reader().getLiveDocs());
+      final Scorer childScorer = childWeight.scorer(readerContext, readerContext.reader().getLiveDocs());
 
       if (childScorer == null) {
         // No matches
@@ -120,7 +120,7 @@ class BlockJoinParentQuery extends Query {
 
     @Override
     public Explanation explain(AtomicReaderContext context, int doc) throws IOException {
-      BlockJoinScorer scorer = (BlockJoinScorer) scorer(context, true, false, context.reader().getLiveDocs());
+      BlockJoinScorer scorer = (BlockJoinScorer) scorer(context,  context.reader().getLiveDocs());
       if (scorer != null && scorer.advance(doc) == doc) {
         return scorer.explain(context.docBase);
       }

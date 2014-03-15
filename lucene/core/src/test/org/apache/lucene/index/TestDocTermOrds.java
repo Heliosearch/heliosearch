@@ -38,7 +38,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.StringHelper;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 // TODO:
 //   - test w/ del docs
@@ -95,9 +95,9 @@ public class TestDocTermOrds extends LuceneTestCase {
     Directory dir = newDirectory();
 
     final int NUM_TERMS = atLeast(20);
-    final Set<BytesRef> terms = new HashSet<BytesRef>();
+    final Set<BytesRef> terms = new HashSet<>();
     while(terms.size() < NUM_TERMS) {
-      final String s = _TestUtil.randomRealisticUnicodeString(random());
+      final String s = TestUtil.randomRealisticUnicodeString(random());
       //final String s = _TestUtil.randomSimpleString(random);
       if (s.length() > 0) {
         terms.add(new BytesRef(s));
@@ -113,21 +113,21 @@ public class TestDocTermOrds extends LuceneTestCase {
     // Sometimes swap in codec that impls ord():
     if (random().nextInt(10) == 7) {
       // Make sure terms index has ords:
-      Codec codec = _TestUtil.alwaysPostingsFormat(PostingsFormat.forName("Lucene41WithOrds"));
+      Codec codec = TestUtil.alwaysPostingsFormat(PostingsFormat.forName("Lucene41WithOrds"));
       conf.setCodec(codec);
     }
     
     final RandomIndexWriter w = new RandomIndexWriter(random(), dir, conf);
 
     final int[][] idToOrds = new int[NUM_DOCS][];
-    final Set<Integer> ordsForDocSet = new HashSet<Integer>();
+    final Set<Integer> ordsForDocSet = new HashSet<>();
 
     for(int id=0;id<NUM_DOCS;id++) {
       Document doc = new Document();
 
       doc.add(new IntField("id", id, Field.Store.YES));
       
-      final int termCount = _TestUtil.nextInt(random(), 0, 20*RANDOM_MULTIPLIER);
+      final int termCount = TestUtil.nextInt(random(), 0, 20 * RANDOM_MULTIPLIER);
       while(ordsForDocSet.size() < termCount) {
         ordsForDocSet.add(random().nextInt(termsArray.length));
       }
@@ -181,21 +181,21 @@ public class TestDocTermOrds extends LuceneTestCase {
   public void testRandomWithPrefix() throws Exception {
     Directory dir = newDirectory();
 
-    final Set<String> prefixes = new HashSet<String>();
-    final int numPrefix = _TestUtil.nextInt(random(), 2, 7);
+    final Set<String> prefixes = new HashSet<>();
+    final int numPrefix = TestUtil.nextInt(random(), 2, 7);
     if (VERBOSE) {
       System.out.println("TEST: use " + numPrefix + " prefixes");
     }
     while(prefixes.size() < numPrefix) {
-      prefixes.add(_TestUtil.randomRealisticUnicodeString(random()));
+      prefixes.add(TestUtil.randomRealisticUnicodeString(random()));
       //prefixes.add(_TestUtil.randomSimpleString(random));
     }
     final String[] prefixesArray = prefixes.toArray(new String[prefixes.size()]);
 
     final int NUM_TERMS = atLeast(20);
-    final Set<BytesRef> terms = new HashSet<BytesRef>();
+    final Set<BytesRef> terms = new HashSet<>();
     while(terms.size() < NUM_TERMS) {
-      final String s = prefixesArray[random().nextInt(prefixesArray.length)] + _TestUtil.randomRealisticUnicodeString(random());
+      final String s = prefixesArray[random().nextInt(prefixesArray.length)] + TestUtil.randomRealisticUnicodeString(random());
       //final String s = prefixesArray[random.nextInt(prefixesArray.length)] + _TestUtil.randomSimpleString(random);
       if (s.length() > 0) {
         terms.add(new BytesRef(s));
@@ -210,21 +210,21 @@ public class TestDocTermOrds extends LuceneTestCase {
 
     // Sometimes swap in codec that impls ord():
     if (random().nextInt(10) == 7) {
-      Codec codec = _TestUtil.alwaysPostingsFormat(PostingsFormat.forName("Lucene41WithOrds"));
+      Codec codec = TestUtil.alwaysPostingsFormat(PostingsFormat.forName("Lucene41WithOrds"));
       conf.setCodec(codec);
     }
     
     final RandomIndexWriter w = new RandomIndexWriter(random(), dir, conf);
 
     final int[][] idToOrds = new int[NUM_DOCS][];
-    final Set<Integer> ordsForDocSet = new HashSet<Integer>();
+    final Set<Integer> ordsForDocSet = new HashSet<>();
 
     for(int id=0;id<NUM_DOCS;id++) {
       Document doc = new Document();
 
       doc.add(new IntField("id", id, Field.Store.YES));
       
-      final int termCount = _TestUtil.nextInt(random(), 0, 20*RANDOM_MULTIPLIER);
+      final int termCount = TestUtil.nextInt(random(), 0, 20 * RANDOM_MULTIPLIER);
       while(ordsForDocSet.size() < termCount) {
         ordsForDocSet.add(random().nextInt(termsArray.length));
       }
@@ -262,7 +262,7 @@ public class TestDocTermOrds extends LuceneTestCase {
       final int[][] idToOrdsPrefix = new int[NUM_DOCS][];
       for(int id=0;id<NUM_DOCS;id++) {
         final int[] docOrds = idToOrds[id];
-        final List<Integer> newOrds = new ArrayList<Integer>();
+        final List<Integer> newOrds = new ArrayList<>();
         for(int ord : idToOrds[id]) {
           if (StringHelper.startsWith(termsArray[ord], prefixRef)) {
             newOrds.add(ord);
@@ -303,7 +303,7 @@ public class TestDocTermOrds extends LuceneTestCase {
                                             "field",
                                             prefixRef,
                                             Integer.MAX_VALUE,
-                                            _TestUtil.nextInt(random(), 2, 10));
+                                            TestUtil.nextInt(random(), 2, 10));
                                             
 
     final FieldCache.Ints docIDToID = FieldCache.DEFAULT.getInts(r, "id", false);

@@ -43,7 +43,7 @@ import org.apache.lucene.store.TrackingDirectoryWrapper;
 import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.InfoStream;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 
 /** JUnit adaptation of an older test case DocTest. */
@@ -62,16 +62,16 @@ public class TestDoc extends LuceneTestCase {
         if (VERBOSE) {
           System.out.println("TEST: setUp");
         }
-        workDir = _TestUtil.getTempDir("TestDoc");
+        workDir = TestUtil.getTempDir("TestDoc");
         workDir.mkdirs();
 
-        indexDir = _TestUtil.getTempDir("testIndex");
+        indexDir = TestUtil.getTempDir("testIndex");
         indexDir.mkdirs();
 
         Directory directory = newFSDirectory(indexDir);
         directory.close();
 
-        files = new LinkedList<File>();
+        files = new LinkedList<>();
         files.add(createOutput("test.txt",
             "This is the first test file"
         ));
@@ -229,7 +229,7 @@ public class TestDoc extends LuceneTestCase {
       final SegmentInfo info = new SegmentInfo(si1.info.dir, Constants.LUCENE_MAIN_VERSION, merged,
                                                si1.info.getDocCount() + si2.info.getDocCount(),
                                                false, codec, null);
-      info.setFiles(new HashSet<String>(trackingDir.getCreatedFiles()));
+      info.setFiles(new HashSet<>(trackingDir.getCreatedFiles()));
       
       if (useCompoundFile) {
         Collection<String> filesToDelete = IndexWriter.createCompoundFile(InfoStream.getDefault(), dir, MergeState.CheckAbort.NONE, info, newIOContext(random()));

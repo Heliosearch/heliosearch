@@ -28,11 +28,11 @@ import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.util.LineFileDocs;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.PrintStreamInfoStream;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 public class TestIndexWriterOutOfFileDescriptors extends LuceneTestCase {
   public void test() throws Exception {
-    MockDirectoryWrapper dir = newMockFSDirectory(_TestUtil.getTempDir("TestIndexWriterOutOfFileDescriptors"));
+    MockDirectoryWrapper dir = newMockFSDirectory(TestUtil.getTempDir("TestIndexWriterOutOfFileDescriptors"));
     dir.setPreventDoubleWrite(false);
     double rate = random().nextDouble()*0.01;
     //System.out.println("rate=" + rate);
@@ -51,7 +51,9 @@ public class TestIndexWriterOutOfFileDescriptors extends LuceneTestCase {
         System.out.println("TEST: iter=" + iter);
       }
       try {
-        IndexWriterConfig iwc = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+        MockAnalyzer analyzer = new MockAnalyzer(random());
+        analyzer.setMaxTokenLength(TestUtil.nextInt(random(), 1, IndexWriter.MAX_TERM_LENGTH));
+        IndexWriterConfig iwc = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
 
         if (VERBOSE) {
           // Do this ourselves instead of relying on LTC so
@@ -129,8 +131,8 @@ public class TestIndexWriterOutOfFileDescriptors extends LuceneTestCase {
         // it to addIndexes later:
         dir.setRandomIOExceptionRateOnOpen(0.0);
         r = DirectoryReader.open(dir);
-        dirCopy = newMockFSDirectory(_TestUtil.getTempDir("TestIndexWriterOutOfFileDescriptors.copy"));
-        Set<String> files = new HashSet<String>();
+        dirCopy = newMockFSDirectory(TestUtil.getTempDir("TestIndexWriterOutOfFileDescriptors.copy"));
+        Set<String> files = new HashSet<>();
         for (String file : dir.listAll()) {
           dir.copy(dirCopy, file, file, IOContext.DEFAULT);
           files.add(file);

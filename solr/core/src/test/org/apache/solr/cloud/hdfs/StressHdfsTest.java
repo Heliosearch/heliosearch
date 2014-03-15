@@ -155,7 +155,7 @@ public class StressHdfsTest extends BasicDistributedZkTest {
     }
     
     // collect the data dirs
-    List<String> dataDirs = new ArrayList<String>();
+    List<String> dataDirs = new ArrayList<>();
     
     int i = 0;
     for (SolrServer client : clients) {
@@ -197,6 +197,16 @@ public class StressHdfsTest extends BasicDistributedZkTest {
     QueryRequest request = new QueryRequest(params);
     request.setPath("/admin/collections");
     cloudClient.request(request);
+    
+    long timeout = System.currentTimeMillis() + 10000;
+    while (cloudClient.getZkStateReader().getClusterState().hasCollection(DELETE_DATA_DIR_COLLECTION)) {
+      if (System.currentTimeMillis() > timeout) {
+        throw new AssertionError("Timeout waiting to see removed collection leave clusterstate");
+      }
+      
+      Thread.sleep(200);
+      cloudClient.getZkStateReader().updateClusterState(true);
+    }
     
     // check that all dirs are gone
     for (String dataDir : dataDirs) {

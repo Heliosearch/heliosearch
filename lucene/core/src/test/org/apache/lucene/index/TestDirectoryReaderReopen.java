@@ -38,7 +38,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 public class TestDirectoryReaderReopen extends LuceneTestCase {
   
@@ -196,7 +196,7 @@ public class TestDirectoryReaderReopen extends LuceneTestCase {
   public void testThreadSafety() throws Exception {
     final Directory dir = newDirectory();
     // NOTE: this also controls the number of threads!
-    final int n = _TestUtil.nextInt(random(), 20, 40);
+    final int n = TestUtil.nextInt(random(), 20, 40);
     IndexWriter writer = new IndexWriter(dir, newIndexWriterConfig(
         TEST_VERSION_CURRENT, new MockAnalyzer(random())));
     for (int i = 0; i < n; i++) {
@@ -275,7 +275,7 @@ public class TestDirectoryReaderReopen extends LuceneTestCase {
                 }
               }
               synchronized(this) {
-                wait(_TestUtil.nextInt(random(), 1, 100));
+                wait(TestUtil.nextInt(random(), 1, 100));
               }
             }
           }
@@ -294,7 +294,7 @@ public class TestDirectoryReaderReopen extends LuceneTestCase {
               }
               
               synchronized(this) {
-                wait(_TestUtil.nextInt(random(), 1, 100));
+                wait(TestUtil.nextInt(random(), 1, 100));
               }
             }
           }
@@ -552,14 +552,14 @@ public class TestDirectoryReaderReopen extends LuceneTestCase {
       Document doc = new Document();
       doc.add(newStringField("id", ""+i, Field.Store.NO));
       writer.addDocument(doc);
-      Map<String,String> data = new HashMap<String,String>();
+      Map<String,String> data = new HashMap<>();
       data.put("index", i+"");
       writer.setCommitData(data);
       writer.commit();
     }
     for(int i=0;i<4;i++) {
       writer.deleteDocuments(new Term("id", ""+i));
-      Map<String,String> data = new HashMap<String,String>();
+      Map<String,String> data = new HashMap<>();
       data.put("index", (4+i)+"");
       writer.setCommitData(data);
       writer.commit();

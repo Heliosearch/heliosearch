@@ -20,7 +20,7 @@ package org.apache.solr.search;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.solr.common.SolrException;
 import org.apache.lucene.util.Bits;
-import org.apache.lucene.util.OpenBitSet;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.DocIdSetIterator;
@@ -74,13 +74,15 @@ abstract class DocSetBase implements DocSet {
    * @see BitDocSet#getBits
    */
   @Override
-  public OpenBitSet getBits() {
-    OpenBitSet bits = new OpenBitSet();
+  public FixedBitSet getBits() {
+    FixedBitSet bits = new FixedBitSet(64);
     for (DocIterator iter = iterator(); iter.hasNext();) {
-      bits.set(iter.nextDoc());
+      int nextDoc = iter.nextDoc();
+      bits = FixedBitSet.ensureCapacity(bits, nextDoc);
+      bits.set(nextDoc);
     }
     return bits;
-  };
+  }
 
   @Override
   public DocSet intersection(DocSet other) {
@@ -91,7 +93,7 @@ abstract class DocSetBase implements DocSet {
     }
 
     // Default... handle with bitsets.
-    OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
     newbits.and(other.getBits());
     return new BitDocSet(newbits);
   }
@@ -110,8 +112,13 @@ abstract class DocSetBase implements DocSet {
 
   @Override
   public DocSet union(DocSet other) {
-    OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
-    newbits.or(other.getBits());
+    if (other instanceof BitDocSet) {
+      return other.union(this);
+    }
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
+    FixedBitSet otherbits = other.getBits();
+    newbits = FixedBitSet.ensureCapacity(newbits, otherbits.length());
+    newbits.or(otherbits);
     return new BitDocSet(newbits);
   }
 
@@ -133,7 +140,7 @@ abstract class DocSetBase implements DocSet {
 
   @Override
   public DocSet andNot(DocSet other) {
-    OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
     newbits.andNot(other.getBits());
     return new BitDocSet(newbits);
   }
@@ -145,7 +152,7 @@ abstract class DocSetBase implements DocSet {
 
   @Override
   public Filter getTopFilter() {
-    final OpenBitSet bs = getBits();
+    final FixedBitSet bs = getBits();
 
     return new Filter() {
       @Override
@@ -189,7 +196,7 @@ abstract class DocSetBase implements DocSet {
 
               @Override
               public long cost() {
-                return bs.capacity();
+                return bs.length();
               }
             };
           }
@@ -211,10 +218,10 @@ abstract class DocSetBase implements DocSet {
   }
 
   @Override
-  public void setBitsOn(OpenBitSet target) {
+  public void setBitsOn(FixedBitSet target) {
     DocIterator iter = iterator();
     while (iter.hasNext()) {
-      target.fastSet(iter.nextDoc());
+      target.set(iter.nextDoc());
     }
   }
 
@@ -223,6 +230,14 @@ abstract class DocSetBase implements DocSet {
     DocIterator iter = iterator();
     while (iter.hasNext()) {
       target.fastSet(iter.nextDoc());
+    }
+  }
+
+  @Override
+  public void addAllTo(DocSet target) {
+    DocIterator iter = iterator();
+    while (iter.hasNext()) {
+      target.add(iter.nextDoc());
     }
   }
 

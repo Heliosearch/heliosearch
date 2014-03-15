@@ -10,7 +10,8 @@ import java.util.Map;
 
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.junit.Test;
 
 
@@ -36,23 +37,23 @@ public class FileDictionaryTest extends LuceneTestCase {
   private Map.Entry<List<String>, String> generateFileEntry(String fieldDelimiter, boolean hasWeight, boolean hasPayload) {
     List<String> entryValues = new ArrayList<>();
     StringBuilder sb = new StringBuilder();
-    String term = _TestUtil.randomSimpleString(random(), 1, 300);
+    String term = TestUtil.randomSimpleString(random(), 1, 300);
     sb.append(term);
     entryValues.add(term);
     if (hasWeight) {
       sb.append(fieldDelimiter);
-      long weight = _TestUtil.nextLong(random(), Long.MIN_VALUE, Long.MAX_VALUE);
+      long weight = TestUtil.nextLong(random(), Long.MIN_VALUE, Long.MAX_VALUE);
       sb.append(weight);
       entryValues.add(String.valueOf(weight));
     }
     if (hasPayload) {
       sb.append(fieldDelimiter);
-      String payload = _TestUtil.randomSimpleString(random(), 1, 300);
+      String payload = TestUtil.randomSimpleString(random(), 1, 300);
       sb.append(payload);
       entryValues.add(payload);
     }
     sb.append("\n");
-    return new SimpleEntry<List<String>, String>(entryValues, sb.toString());
+    return new SimpleEntry<>(entryValues, sb.toString());
   }
   
   private Map.Entry<List<List<String>>,String> generateFileInput(int count, String fieldDelimiter, boolean hasWeights, boolean hasPayloads) {
@@ -67,7 +68,7 @@ public class FileDictionaryTest extends LuceneTestCase {
       entries.add(entrySet.getKey());
       sb.append(entrySet.getValue());
     }
-    return new SimpleEntry<List<List<String>>, String>(entries, sb.toString());
+    return new SimpleEntry<>(entries, sb.toString());
   }
   
   @Test
@@ -76,7 +77,7 @@ public class FileDictionaryTest extends LuceneTestCase {
     InputStream inputReader = new ByteArrayInputStream(fileInput.getValue().getBytes("UTF-8"));
     FileDictionary dictionary = new FileDictionary(inputReader);
     List<List<String>> entries = fileInput.getKey();
-    InputIterator inputIter = dictionary.getWordsIterator();
+    InputIterator inputIter = dictionary.getEntryIterator();
     assertFalse(inputIter.hasPayloads());
     BytesRef term;
     int count = 0;
@@ -98,7 +99,7 @@ public class FileDictionaryTest extends LuceneTestCase {
     InputStream inputReader = new ByteArrayInputStream(fileInput.getValue().getBytes("UTF-8"));
     FileDictionary dictionary = new FileDictionary(inputReader);
     List<List<String>> entries = fileInput.getKey();
-    InputIterator inputIter = dictionary.getWordsIterator();
+    InputIterator inputIter = dictionary.getEntryIterator();
     assertFalse(inputIter.hasPayloads());
     BytesRef term;
     int count = 0;
@@ -120,7 +121,7 @@ public class FileDictionaryTest extends LuceneTestCase {
     InputStream inputReader = new ByteArrayInputStream(fileInput.getValue().getBytes("UTF-8"));
     FileDictionary dictionary = new FileDictionary(inputReader);
     List<List<String>> entries = fileInput.getKey();
-    InputIterator inputIter = dictionary.getWordsIterator();
+    InputIterator inputIter = dictionary.getEntryIterator();
     assertTrue(inputIter.hasPayloads());
     BytesRef term;
     int count = 0;
@@ -146,7 +147,7 @@ public class FileDictionaryTest extends LuceneTestCase {
     InputStream inputReader = new ByteArrayInputStream(fileInput.getValue().getBytes("UTF-8"));
     FileDictionary dictionary = new FileDictionary(inputReader);
     List<List<String>> entries = fileInput.getKey();
-    InputIterator inputIter = dictionary.getWordsIterator();
+    InputIterator inputIter = dictionary.getEntryIterator();
     assertTrue(inputIter.hasPayloads());
     BytesRef term;
     int count = 0;
@@ -173,7 +174,7 @@ public class FileDictionaryTest extends LuceneTestCase {
     InputStream inputReader = new ByteArrayInputStream(fileInput.getValue().getBytes("UTF-8"));
     FileDictionary dictionary = new FileDictionary(inputReader, " , ");
     List<List<String>> entries = fileInput.getKey();
-    InputIterator inputIter = dictionary.getWordsIterator();
+    InputIterator inputIter = dictionary.getEntryIterator();
     assertTrue(inputIter.hasPayloads());
     BytesRef term;
     int count = 0;

@@ -70,12 +70,12 @@ public class TopGroupsShardResponseProcessor implements ShardResponseProcessor {
     }
     int docsPerGroupDefault = rb.getGroupingSpec().getGroupLimit();
 
-    Map<String, List<TopGroups<BytesRef>>> commandTopGroups = new HashMap<String, List<TopGroups<BytesRef>>>();
+    Map<String, List<TopGroups<BytesRef>>> commandTopGroups = new HashMap<>();
     for (String field : fields) {
       commandTopGroups.put(field, new ArrayList<TopGroups<BytesRef>>());
     }
 
-    Map<String, List<QueryCommandResult>> commandTopDocs = new HashMap<String, List<QueryCommandResult>>();
+    Map<String, List<QueryCommandResult>> commandTopDocs = new HashMap<>();
     for (String query : queries) {
       commandTopDocs.put(query, new ArrayList<QueryCommandResult>());
     }
@@ -84,14 +84,14 @@ public class TopGroupsShardResponseProcessor implements ShardResponseProcessor {
 
     NamedList<Object> shardInfo = null;
     if (rb.req.getParams().getBool(ShardParams.SHARDS_INFO, false)) {
-      shardInfo = new SimpleOrderedMap<Object>();
+      shardInfo = new SimpleOrderedMap<>();
       rb.rsp.getValues().add(ShardParams.SHARDS_INFO, shardInfo);
     }
 
     for (ShardResponse srsp : shardRequest.responses) {
       SimpleOrderedMap<Object> individualShardInfo = null;
       if (shardInfo != null) {
-        individualShardInfo = new SimpleOrderedMap<Object>();
+        individualShardInfo = new SimpleOrderedMap<>();
 
         if (srsp.getException() != null) {
           Throwable t = srsp.getException();
@@ -114,6 +114,9 @@ public class TopGroupsShardResponseProcessor implements ShardResponseProcessor {
         shardInfo.add(srsp.getShard(), individualShardInfo);
       }
       if (rb.req.getParams().getBool(ShardParams.SHARDS_TOLERANT, false) && srsp.getException() != null) {
+        if(rb.rsp.getResponseHeader().get("partialResults") == null) {
+          rb.rsp.getResponseHeader().add("partialResults", Boolean.TRUE);
+        }
         continue; // continue if there was an error and we're tolerant.  
       }
       NamedList<NamedList> secondPhaseResult = (NamedList<NamedList>) srsp.getSolrResponse().getResponse().get("secondPhase");
@@ -158,7 +161,7 @@ public class TopGroupsShardResponseProcessor implements ShardResponseProcessor {
 
       for (String query : commandTopDocs.keySet()) {
         List<QueryCommandResult> queryCommandResults = commandTopDocs.get(query);
-        List<TopDocs> topDocs = new ArrayList<TopDocs>(queryCommandResults.size());
+        List<TopDocs> topDocs = new ArrayList<>(queryCommandResults.size());
         int mergedMatches = 0;
         for (QueryCommandResult queryCommandResult : queryCommandResults) {
           topDocs.add(queryCommandResult.getTopDocs());
@@ -170,14 +173,17 @@ public class TopGroupsShardResponseProcessor implements ShardResponseProcessor {
         rb.mergedQueryCommandResults.put(query, new QueryCommandResult(mergedTopDocs, mergedMatches));
       }
 
-      Map<Object, ShardDoc> resultIds = new HashMap<Object, ShardDoc>();
+      Map<Object, ShardDoc> resultIds = new HashMap<>();
       int i = 0;
       for (TopGroups<BytesRef> topGroups : rb.mergedTopGroups.values()) {
         for (GroupDocs<BytesRef> group : topGroups.groups) {
           for (ScoreDoc scoreDoc : group.scoreDocs) {
             ShardDoc solrDoc = (ShardDoc) scoreDoc;
-            solrDoc.positionInResponse = i++;
-            resultIds.put(solrDoc.id, solrDoc);
+            // Include the first if there are duplicate IDs
+            if ( ! resultIds.containsKey(solrDoc.id)) {
+              solrDoc.positionInResponse = i++;
+              resultIds.put(solrDoc.id, solrDoc);
+            }
           }
         }
       }

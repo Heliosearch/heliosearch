@@ -25,7 +25,7 @@ import org.apache.solr.search.QParser;
  * Usage: {!child of="PARENT:true"}PARENT_PRICE:10
  */
 public class BlockJoinChildQParserPlugin extends BlockJoinParentQParserPlugin {
-  public static String NAME = "child";
+  public static final String NAME = "child";
 
   @Override
   protected QParser createBJQParser(String qstr, SolrParams localParams, SolrParams params, SolrQueryRequest req) {

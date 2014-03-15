@@ -18,19 +18,21 @@ package org.apache.lucene.facet.taxonomy;
  */
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.lucene.facet.FacetsCollector;
 import org.apache.lucene.facet.FacetsCollector.MatchingDocs;
+import org.apache.lucene.facet.FacetsCollector;
 import org.apache.lucene.facet.FacetsConfig;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.queries.function.docvalues.DoubleDocValues;
+import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Scorer;
-import org.apache.lucene.util.FixedBitSet;
+import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.IntsRef;
 
 /** Aggregates sum of values from {@link
@@ -70,26 +72,36 @@ public class TaxonomyFacetSumValueSource extends FloatTaxonomyFacets {
     @Override public int nextDoc() throws IOException { throw new UnsupportedOperationException(); }
     @Override public int advance(int target) throws IOException { throw new UnsupportedOperationException(); }
     @Override public long cost() { return 0; }
+
+    @Override
+    public Weight getWeight() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<ChildScorer> getChildren() {
+      throw new UnsupportedOperationException();
+    }
   }
 
   private final void sumValues(List<MatchingDocs> matchingDocs, boolean keepScores, ValueSource valueSource) throws IOException {
     final FakeScorer scorer = new FakeScorer();
-    Map<String, Scorer> context = new HashMap<String, Scorer>();
+    Map<String, Scorer> context = new HashMap<>();
     if (keepScores) {
       context.put("scorer", scorer);
     }
     IntsRef scratch = new IntsRef();
     for(MatchingDocs hits : matchingDocs) {
       OrdinalsReader.OrdinalsSegmentReader ords = ordinalsReader.getReader(hits.context);
-      FixedBitSet bits = hits.bits;
-    
-      final int length = hits.bits.length();
-      int doc = 0;
+      
       int scoresIdx = 0;
       float[] scores = hits.scores;
 
       FunctionValues functionValues = valueSource.getValues(context, hits.context);
-      while (doc < length && (doc = bits.nextSetBit(doc)) != -1) {
+      DocIdSetIterator docs = hits.bits.iterator();
+      
+      int doc;
+      while ((doc = docs.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
         ords.get(doc, scratch);
         if (keepScores) {
           scorer.docID = doc;
@@ -99,7 +111,6 @@ public class TaxonomyFacetSumValueSource extends FloatTaxonomyFacets {
         for(int i=0;i<scratch.length;i++) {
           values[scratch.ints[i]] += value;
         }
-        ++doc;
       }
     }
 

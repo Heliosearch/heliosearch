@@ -28,8 +28,8 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.lucene.util.ArrayUtil;
+import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.UnicodeUtil;
-import org.apache.lucene.util._TestUtil;
 
 /**
  * Utilities for testing automata.
@@ -65,14 +65,14 @@ public class AutomatonTestUtil {
       if (0 == t && i < end - 1) {
         // Make a surrogate pair
         // High surrogate
-        buffer[i++] = (char) _TestUtil.nextInt(r, 0xd800, 0xdbff);
+        buffer[i++] = (char) TestUtil.nextInt(r, 0xd800, 0xdbff);
         // Low surrogate
-        buffer[i] = (char) _TestUtil.nextInt(r, 0xdc00, 0xdfff);
+        buffer[i] = (char) TestUtil.nextInt(r, 0xdc00, 0xdfff);
       }
       else if (t <= 1) buffer[i] = (char) r.nextInt(0x80);
-      else if (2 == t) buffer[i] = (char) _TestUtil.nextInt(r, 0x80, 0x800);
-      else if (3 == t) buffer[i] = (char) _TestUtil.nextInt(r, 0x800, 0xd7ff);
-      else if (4 == t) buffer[i] = (char) _TestUtil.nextInt(r, 0xe000, 0xffff);
+      else if (2 == t) buffer[i] = (char) TestUtil.nextInt(r, 0x80, 0x800);
+      else if (3 == t) buffer[i] = (char) TestUtil.nextInt(r, 0x800, 0xd7ff);
+      else if (4 == t) buffer[i] = (char) TestUtil.nextInt(r, 0xe000, 0xffff);
       else if (5 == t) buffer[i] = '.';
       else if (6 == t) buffer[i] = '?';
       else if (7 == t) buffer[i] = '*';
@@ -157,11 +157,11 @@ public class AutomatonTestUtil {
 
       // must use IdentityHashmap because two Transitions w/
       // different start nodes can be considered the same
-      leadsToAccept = new IdentityHashMap<Transition,Boolean>();
-      final Map<State,List<ArrivingTransition>> allArriving = new HashMap<State,List<ArrivingTransition>>();
+      leadsToAccept = new IdentityHashMap<>();
+      final Map<State,List<ArrivingTransition>> allArriving = new HashMap<>();
 
-      final LinkedList<State> q = new LinkedList<State>();
-      final Set<State> seen = new HashSet<State>();
+      final LinkedList<State> q = new LinkedList<>();
+      final Set<State> seen = new HashSet<>();
 
       // reverse map the transitions, so we can quickly look
       // up all arriving transitions to a given state
@@ -170,7 +170,7 @@ public class AutomatonTestUtil {
           final Transition t = s.transitionsArray[i];
           List<ArrivingTransition> tl = allArriving.get(t.to);
           if (tl == null) {
-            tl = new ArrayList<ArrivingTransition>();
+            tl = new ArrayList<>();
             allArriving.put(t.to, tl);
           }
           tl.add(new ArrivingTransition(s, t));
@@ -201,7 +201,7 @@ public class AutomatonTestUtil {
 
     public int[] getRandomAcceptedString(Random r) {
 
-      final List<Integer> soFar = new ArrayList<Integer>();
+      final List<Integer> soFar = new ArrayList<>();
       if (a.isSingleton()) {
         // accepts only one
         final String s = a.singleton;
@@ -239,7 +239,7 @@ public class AutomatonTestUtil {
           if (cheat) {
             // pick a transition that we know is the fastest
             // path to an accept state
-            List<Transition> toAccept = new ArrayList<Transition>();
+            List<Transition> toAccept = new ArrayList<>();
             for(int i=0;i<s.numTransitions;i++) {
               final Transition t0 = s.transitionsArray[i];
               if (leadsToAccept.containsKey(t0)) {
@@ -334,7 +334,7 @@ public class AutomatonTestUtil {
   public static void determinizeSimple(Automaton a) {
     if (a.deterministic || a.isSingleton())
       return;
-    Set<State> initialset = new HashSet<State>();
+    Set<State> initialset = new HashSet<>();
     initialset.add(a.initial);
     determinizeSimple(a, initialset);
   }
@@ -346,9 +346,9 @@ public class AutomatonTestUtil {
   public static void determinizeSimple(Automaton a, Set<State> initialset) {
     int[] points = a.getStartPoints();
     // subset construction
-    Map<Set<State>, Set<State>> sets = new HashMap<Set<State>, Set<State>>();
-    LinkedList<Set<State>> worklist = new LinkedList<Set<State>>();
-    Map<Set<State>, State> newstate = new HashMap<Set<State>, State>();
+    Map<Set<State>, Set<State>> sets = new HashMap<>();
+    LinkedList<Set<State>> worklist = new LinkedList<>();
+    Map<Set<State>, State> newstate = new HashMap<>();
     sets.put(initialset, initialset);
     worklist.add(initialset);
     a.initial = new State();
@@ -362,7 +362,7 @@ public class AutomatonTestUtil {
           break;
         }
       for (int n = 0; n < points.length; n++) {
-        Set<State> p = new HashSet<State>();
+        Set<State> p = new HashSet<>();
         for (State q : s)
           for (Transition t : q.getTransitions())
             if (t.min <= points[n] && points[n] <= t.max)

@@ -41,7 +41,7 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.IOUtils;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 public class TestSortedSetDocValuesFacets extends FacetTestCase {
 
@@ -74,7 +74,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
     IndexSearcher searcher = newSearcher(writer.getReader());
 
     // Per-top-reader state:
-    SortedSetDocValuesReaderState state = new SortedSetDocValuesReaderState(searcher.getIndexReader());
+    SortedSetDocValuesReaderState state = new DefaultSortedSetDocValuesReaderState(searcher.getIndexReader());
     
     FacetsCollector c = new FacetsCollector();
 
@@ -110,7 +110,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
     writer.addDocument(config.build(doc));
 
     IndexReader r = writer.getReader();
-    SortedSetDocValuesReaderState state = new SortedSetDocValuesReaderState(r);
+    SortedSetDocValuesReaderState state = new DefaultSortedSetDocValuesReaderState(r);
 
     doc = new Document();
     doc.add(new SortedSetDocValuesFacetField("a", "bar"));
@@ -176,7 +176,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
     writer.close();
 
     // Per-top-reader state:
-    SortedSetDocValuesReaderState state = new SortedSetDocValuesReaderState(searcher.getIndexReader());
+    SortedSetDocValuesReaderState state = new DefaultSortedSetDocValuesReaderState(searcher.getIndexReader());
 
     FacetsCollector c = new FacetsCollector();
     searcher.search(new MatchAllDocsQuery(), c);    
@@ -221,7 +221,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
     writer.close();
 
     // Per-top-reader state:
-    SortedSetDocValuesReaderState state = new SortedSetDocValuesReaderState(searcher.getIndexReader());
+    SortedSetDocValuesReaderState state = new DefaultSortedSetDocValuesReaderState(searcher.getIndexReader());
 
     FacetsCollector c = new FacetsCollector();
     searcher.search(new MatchAllDocsQuery(), c);    
@@ -256,7 +256,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
     IndexSearcher searcher = new IndexSearcher(SlowCompositeReaderWrapper.wrap(writer.getReader()));
 
     // Per-top-reader state:
-    SortedSetDocValuesReaderState state = new SortedSetDocValuesReaderState(searcher.getIndexReader());
+    SortedSetDocValuesReaderState state = new DefaultSortedSetDocValuesReaderState(searcher.getIndexReader());
 
     FacetsCollector c = new FacetsCollector();
     searcher.search(new MatchAllDocsQuery(), c);    
@@ -278,7 +278,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
     RandomIndexWriter w = new RandomIndexWriter(random(), indexDir);
     FacetsConfig config = new FacetsConfig();
     int numDocs = atLeast(1000);
-    int numDims = _TestUtil.nextInt(random(), 1, 7);
+    int numDims = TestUtil.nextInt(random(), 1, 7);
     List<TestDoc> testDocs = getRandomDocs(tokens, numDocs, numDims);
     for(TestDoc testDoc : testDocs) {
       Document doc = new Document();
@@ -295,7 +295,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
     IndexSearcher searcher = newSearcher(w.getReader());
     
     // Per-top-reader state:
-    SortedSetDocValuesReaderState state = new SortedSetDocValuesReaderState(searcher.getIndexReader());
+    SortedSetDocValuesReaderState state = new DefaultSortedSetDocValuesReaderState(searcher.getIndexReader());
 
     int iters = atLeast(100);
     for(int iter=0;iter<iters;iter++) {
@@ -310,7 +310,7 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
       // Slow, yet hopefully bug-free, faceting:
       @SuppressWarnings({"rawtypes","unchecked"}) Map<String,Integer>[] expectedCounts = new HashMap[numDims];
       for(int i=0;i<numDims;i++) {
-        expectedCounts[i] = new HashMap<String,Integer>();
+        expectedCounts[i] = new HashMap<>();
       }
 
       for(TestDoc doc : testDocs) {
@@ -328,9 +328,9 @@ public class TestSortedSetDocValuesFacets extends FacetTestCase {
         }
       }
 
-      List<FacetResult> expected = new ArrayList<FacetResult>();
+      List<FacetResult> expected = new ArrayList<>();
       for(int i=0;i<numDims;i++) {
-        List<LabelAndValue> labelValues = new ArrayList<LabelAndValue>();
+        List<LabelAndValue> labelValues = new ArrayList<>();
         int totCount = 0;
         for(Map.Entry<String,Integer> ent : expectedCounts[i].entrySet()) {
           labelValues.add(new LabelAndValue(ent.getKey(), ent.getValue()));

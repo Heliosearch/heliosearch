@@ -23,14 +23,10 @@ import org.apache.lucene.search.BitsFilteredDocIdSet;
 import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Filter;
-import org.apache.lucene.util.BitUtil;
 import org.apache.lucene.util.Bits;
-import org.apache.lucene.util.OpenBitSet;
-import org.apache.lucene.util.OpenBitSetIterator;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.core.HS;
 
-import java.io.IOException;
-import java.util.Arrays;
 
 
 public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable  {
@@ -44,7 +40,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   }
 
   public BitDocSetNative(int numBits) {
-    this.wlen = OpenBitSet.bits2words(numBits);
+    this.wlen = FixedBitSet.bits2words(numBits);
     this.array = HS.allocArray(wlen, 8, true);
   }
 
@@ -55,16 +51,16 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     // Don't set size... the purpose of making a copy will be to change it.
   }
 
-  public BitDocSetNative(OpenBitSet other) {
-    this.wlen = other.getNumWords();
+  public BitDocSetNative(FixedBitSet other) {
+    this.wlen = FixedBitSet.bits2words(other.length());  // hmmm, we want numWords back!
     this.array = HS.allocArray(wlen, 8, false);  // don't zero memory since we will copy over it
     HS.copyLongs(other.getBits(), 0, this.array, 0, wlen);
   }
 
-  public OpenBitSet toOpenBitSet() {
+  public FixedBitSet toFixedBitSet() {
     long[] longArray = new long[wlen];
     HS.copyLongs(array, 0, longArray, 0, wlen);
-    return new OpenBitSet(longArray, wlen);
+    return new FixedBitSet(longArray, length());
     // Don't set size... the purpose of making a copy will be to change it.
   }
 
@@ -108,7 +104,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   @Override
   public DocIterator iterator() {
     return new DocIterator() {
-      private final OpenBitSetIterator iter = new OpenBitSetIterator(bits);
+      private final FixedBitSetIterator iter = new FixedBitSetIterator(bits);
       private int pos = iter.nextDoc();
       @Override
       public boolean hasNext() {
@@ -142,9 +138,9 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   ***/
 
   @Override
-  public OpenBitSet getBits() {
+  public FixedBitSet getBits() {
     // HS-TODO: if used in production, we should optimize
-    OpenBitSet obs = new OpenBitSet(capacity());
+    FixedBitSet obs = new FixedBitSet(capacity());
     long[] target = obs.getBits();
     for (int i=0; i<wlen; i++) {
       target[i] = HS.getLong(array, i);
@@ -196,7 +192,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   }
 
   /** Returns true or false for the specified bit index.
-   * The index should be less than the OpenBitSet size
+   * The index should be less than the FixedBitSet size
    */
   public boolean get(int index) {
     int i = index >> 6;               // div 64
@@ -208,7 +204,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   }
 
   /** Returns true or false for the specified bit index.
-   * The index should be less than the OpenBitSet size
+   * The index should be less than the FixedBitSet size
    */
   public boolean fastGet(int index) {
     int i = index >> 6;               // div 64
@@ -220,7 +216,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   }
 
   /** returns 1 if the bit is set, 0 if not.
-   * The index should be less than the OpenBitSet size
+   * The index should be less than the FixedBitSet size
    */
   public int getBit(int index) {
     int i = index >> 6;                // div 64
@@ -348,8 +344,8 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     return result;
   }
 
-  public static int intersectionCount(BitDocSetNative a, OpenBitSet b) {
-    assert(a.wlen == b.getNumWords());
+  public static int intersectionCount(BitDocSetNative a, FixedBitSet b) {
+    assert(a.wlen == b.getBits().length);
     int nWords = a.numWords();
     long[] bArray = b.getBits();
     int result = 0;
@@ -510,7 +506,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   ///////////////////////////////////////////////////////////////////////
 
   /** Returns true of the doc exists in the set.
-   *  Should only be called when doc < OpenBitSet.size()
+   *  Should only be called when doc < FixedBitSet.size()
    */
   @Override
   public boolean exists(int doc) {
@@ -561,8 +557,8 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   }
 
   @Override
-  public void setBitsOn(OpenBitSet target) {
-    assert this.wlen == target.getNumWords();
+  public void setBitsOn(FixedBitSet target) {
+    assert this.wlen == target.getBits().length;
     long thisArr = this.array;
     long[] otherArr = target.getBits();
     // testing against zero can be more efficient
@@ -575,6 +571,11 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   @Override
   public void setBitsOn(BitDocSetNative target) {
     target.unionMe(this);
+  }
+
+  @Override
+  public void addAllTo(DocSet target) {
+
   }
 
   @Override
@@ -681,7 +682,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
                 // we don't want to actually compute cardinality, but
                 // if its already been computed, we use it (pro-rated for the segment)
                 if (size != -1) {
-                  return (long)(size * ((OpenBitSet.bits2words(maxDoc)<<6) / (float)bs.capacity()));
+                  return (long)(size * ((FixedBitSet.bits2words(maxDoc)<<6) / (float)bs.capacity()));
                 } else {
                   return maxDoc;
                 }

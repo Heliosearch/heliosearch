@@ -29,6 +29,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.solr.SolrTestCaseJ4;
+import org.apache.solr.common.SolrException;
 import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.solr.common.cloud.ZkNodeProps;
 import org.apache.solr.common.cloud.ZkStateReader;
@@ -82,7 +83,7 @@ public class ZkCLITest extends SolrTestCaseJ4 {
     } else {
       File tmpSolrHome = new File(dataDir, "tmp-solr-home");
       FileUtils.copyDirectory(new File(ExternalPaths.EXAMPLE_HOME), tmpSolrHome);
-      FileUtils.copyFile(new File(ExternalPaths.SOURCE_HOME, "core/src/test-files/old-solr-example/solr.xml"), new File(tmpSolrHome, "solr.xml"));
+      FileUtils.copyFile(getFile("old-solr-example/solr.xml"), new File(tmpSolrHome, "solr.xml"));
       solrHome = tmpSolrHome.getAbsolutePath();
     }
     
@@ -303,6 +304,12 @@ public class ZkCLITest extends SolrTestCaseJ4 {
       fail("Expected NoNodeException");
     } catch (KeeperException.NoNodeException ex) {
     }
+  }
+
+  @Test(expected = SolrException.class)
+  public void testInvalidZKAddress() throws SolrException{
+    SolrZkClient zkClient = new SolrZkClient("----------:33332", 100);
+    zkClient.close();
   }
 
   @Override

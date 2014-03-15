@@ -240,8 +240,7 @@ public class SimpleFacetsHS {
           searcher.search(new MatchAllDocsQuery(), base.getTopFilter(), allGroupHeadsCollector);
           int maxDoc = searcher.maxDoc();
           FixedBitSet fixedBitSet = allGroupHeadsCollector.retrieveGroupHeads(maxDoc);
-          long[] bits = fixedBitSet.getBits();
-          this.docs = new BitDocSetNative(new OpenBitSet(bits, bits.length));    // HS_TODO: make this more efficient...
+          this.docs = new BitDocSetNative(fixedBitSet);    // HS_TODO: make this more efficient...
         }
       } else {
           // Normal non-grouping path

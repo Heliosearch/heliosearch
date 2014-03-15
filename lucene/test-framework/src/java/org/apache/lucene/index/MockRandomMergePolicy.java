@@ -25,8 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.lucene.index.MergePolicy.MergeTrigger;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 /**
  * MergePolicy that makes random decisions for testing.
@@ -47,7 +46,7 @@ public class MockRandomMergePolicy extends MergePolicy {
 
     int numSegments = segmentInfos.size();
 
-    List<SegmentCommitInfo> segments = new ArrayList<SegmentCommitInfo>();
+    List<SegmentCommitInfo> segments = new ArrayList<>();
     final Collection<SegmentCommitInfo> merging = writer.get().getMergingSegments();
 
     for(SegmentCommitInfo sipc : segmentInfos) {
@@ -64,7 +63,7 @@ public class MockRandomMergePolicy extends MergePolicy {
 
       // TODO: sometimes make more than 1 merge?
       mergeSpec = new MergeSpecification();
-      final int segsToMerge = _TestUtil.nextInt(random, 1, numSegments);
+      final int segsToMerge = TestUtil.nextInt(random, 1, numSegments);
       mergeSpec.add(new OneMerge(segments.subList(0, segsToMerge)));
     }
 
@@ -76,7 +75,7 @@ public class MockRandomMergePolicy extends MergePolicy {
        SegmentInfos segmentInfos, int maxSegmentCount, Map<SegmentCommitInfo,Boolean> segmentsToMerge)
     throws IOException {
 
-    final List<SegmentCommitInfo> eligibleSegments = new ArrayList<SegmentCommitInfo>();
+    final List<SegmentCommitInfo> eligibleSegments = new ArrayList<>();
     for(SegmentCommitInfo info : segmentInfos) {
       if (segmentsToMerge.containsKey(info)) {
         eligibleSegments.add(info);
@@ -93,7 +92,7 @@ public class MockRandomMergePolicy extends MergePolicy {
       int upto = 0;
       while(upto < eligibleSegments.size()) {
         int max = Math.min(10, eligibleSegments.size()-upto);
-        int inc = max <= 2 ? max : _TestUtil.nextInt(random, 2, max);
+        int inc = max <= 2 ? max : TestUtil.nextInt(random, 2, max);
         mergeSpec.add(new OneMerge(eligibleSegments.subList(upto, upto+inc)));
         upto += inc;
       }

@@ -31,7 +31,7 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LineFileDocs;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.automaton.Automaton;
 import org.apache.lucene.util.automaton.BasicAutomata;
 import org.apache.lucene.util.automaton.CompiledAutomaton;
@@ -44,7 +44,9 @@ public class TestTermsEnum extends LuceneTestCase {
     Random random = new Random(random().nextLong());
     final LineFileDocs docs = new LineFileDocs(random, true);
     final Directory d = newDirectory();
-    final RandomIndexWriter w = new RandomIndexWriter(random(), d);
+    MockAnalyzer analyzer = new MockAnalyzer(random());
+    analyzer.setMaxTokenLength(TestUtil.nextInt(random(), 1, IndexWriter.MAX_TERM_LENGTH));
+    final RandomIndexWriter w = new RandomIndexWriter(random(), d, analyzer);
     final int numDocs = atLeast(10);
     for(int docCount=0;docCount<numDocs;docCount++) {
       w.addDocument(docs.nextDoc());
@@ -52,7 +54,7 @@ public class TestTermsEnum extends LuceneTestCase {
     final IndexReader r = w.getReader();
     w.close();
 
-    final List<BytesRef> terms = new ArrayList<BytesRef>();
+    final List<BytesRef> terms = new ArrayList<>();
     final TermsEnum termsEnum = MultiFields.getTerms(r, "body").iterator(null);
     BytesRef term;
     while((term = termsEnum.next()) != null) {
@@ -93,9 +95,9 @@ public class TestTermsEnum extends LuceneTestCase {
         if (random().nextBoolean()) {
           // likely fake term
           if (random().nextBoolean()) {
-            target = new BytesRef(_TestUtil.randomSimpleString(random()));
+            target = new BytesRef(TestUtil.randomSimpleString(random()));
           } else {
-            target = new BytesRef(_TestUtil.randomRealisticUnicodeString(random()));
+            target = new BytesRef(TestUtil.randomRealisticUnicodeString(random()));
           }
           exists = "likely not";
         } else {
@@ -186,9 +188,9 @@ public class TestTermsEnum extends LuceneTestCase {
     final int numTerms = atLeast(300);
     //final int numTerms = 50;
 
-    final Set<String> terms = new HashSet<String>();
-    final Collection<String> pendingTerms = new ArrayList<String>();
-    final Map<BytesRef,Integer> termToID = new HashMap<BytesRef,Integer>();
+    final Set<String> terms = new HashSet<>();
+    final Collection<String> pendingTerms = new ArrayList<>();
+    final Map<BytesRef,Integer> termToID = new HashMap<>();
     int id = 0;
     while(terms.size() != numTerms) {
       final String s = getRandomString();
@@ -203,7 +205,7 @@ public class TestTermsEnum extends LuceneTestCase {
     addDoc(w, pendingTerms, termToID, id++);
 
     final BytesRef[] termsArray = new BytesRef[terms.size()];
-    final Set<BytesRef> termsSet = new HashSet<BytesRef>();
+    final Set<BytesRef> termsSet = new HashSet<>();
     {
       int upto = 0;
       for(String s : terms) {
@@ -233,8 +235,8 @@ public class TestTermsEnum extends LuceneTestCase {
 
       // From the random terms, pick some ratio and compile an
       // automaton:
-      final Set<String> acceptTerms = new HashSet<String>();
-      final TreeSet<BytesRef> sortedAcceptTerms = new TreeSet<BytesRef>();
+      final Set<String> acceptTerms = new HashSet<>();
+      final TreeSet<BytesRef> sortedAcceptTerms = new TreeSet<>();
       final double keepPct = random().nextDouble();
       Automaton a;
       if (iter == 0) {
@@ -269,7 +271,7 @@ public class TestTermsEnum extends LuceneTestCase {
       final CompiledAutomaton c = new CompiledAutomaton(a, true, false);
 
       final BytesRef[] acceptTermsArray = new BytesRef[acceptTerms.size()];
-      final Set<BytesRef> acceptTermsSet = new HashSet<BytesRef>();
+      final Set<BytesRef> acceptTermsSet = new HashSet<>();
       int upto = 0;
       for(String s : acceptTerms) {
         final BytesRef b = new BytesRef(s);
@@ -332,7 +334,7 @@ public class TestTermsEnum extends LuceneTestCase {
           }
           assertEquals(expected, actual);
           assertEquals(1, te.docFreq());
-          docsEnum = _TestUtil.docs(random(), te, null, docsEnum, DocsEnum.FLAG_NONE);
+          docsEnum = TestUtil.docs(random(), te, null, docsEnum, DocsEnum.FLAG_NONE);
           final int docID = docsEnum.nextDoc();
           assertTrue(docID != DocIdSetIterator.NO_MORE_DOCS);
           assertEquals(docIDToID.get(docID), termToID.get(expected).intValue());
@@ -524,12 +526,12 @@ public class TestTermsEnum extends LuceneTestCase {
 
   private String getRandomString() {
     //return _TestUtil.randomSimpleString(random());
-    return _TestUtil.randomRealisticUnicodeString(random());
+    return TestUtil.randomRealisticUnicodeString(random());
   }
 
   public void testRandomTerms() throws Exception {
-    final String[] terms = new String[_TestUtil.nextInt(random(), 1, atLeast(1000))];
-    final Set<String> seen = new HashSet<String>();
+    final String[] terms = new String[TestUtil.nextInt(random(), 1, atLeast(1000))];
+    final Set<String> seen = new HashSet<>();
 
     final boolean allowEmptyString = random().nextBoolean();
 
@@ -620,7 +622,7 @@ public class TestTermsEnum extends LuceneTestCase {
 
     final int END_LOC = -validTerms.length-1;
     
-    final List<TermAndState> termStates = new ArrayList<TermAndState>();
+    final List<TermAndState> termStates = new ArrayList<>();
 
     for(int iter=0;iter<100*RANDOM_MULTIPLIER;iter++) {
 

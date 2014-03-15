@@ -357,8 +357,7 @@ public class Grouping {
       if (getGroupedDocSet && allGroupHeadsCollector != null) {
         FixedBitSet fixedBitSet = allGroupHeadsCollector.retrieveGroupHeads(maxDoc);
         long[] bits = fixedBitSet.getBits();
-        OpenBitSet openBitSet = new OpenBitSet(bits, bits.length);
-        qr.setDocSet(new BitDocSet(openBitSet));
+        qr.setDocSet(new BitDocSet(fixedBitSet)); // HS TODO: make native?
       } else if (getDocSet) {
         qr.setDocSet(setCollector.getDocSet());
       }

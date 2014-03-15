@@ -17,7 +17,6 @@ package org.apache.lucene.search.suggest.analyzing;
  * limitations under the License.
  */
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,13 +27,17 @@ import java.util.TreeSet;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.BinaryDocValues;
 import org.apache.lucene.index.DocsAndPositionsEnum;
 import org.apache.lucene.index.FieldInfo;
+import org.apache.lucene.index.MultiDocValues;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.FieldDoc;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.suggest.Lookup;
+import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Version;
 
@@ -89,8 +92,8 @@ public class BlendedInfixSuggester extends AnalyzingInfixSuggester {
    * Create a new instance, loading from a previously built
    * directory, if it exists.
    */
-  public BlendedInfixSuggester(Version matchVersion, File indexPath, Analyzer analyzer) throws IOException {
-    super(matchVersion, indexPath, analyzer);
+  public BlendedInfixSuggester(Version matchVersion, Directory dir, Analyzer analyzer) throws IOException {
+    super(matchVersion, dir, analyzer);
     this.blenderType = BlenderType.POSITION_LINEAR;
     this.numFactor = DEFAULT_NUM_FACTOR;
   }
@@ -103,21 +106,21 @@ public class BlendedInfixSuggester extends AnalyzingInfixSuggester {
    * @param numFactor   Factor to multiply the number of searched elements before ponderate
    * @throws IOException If there are problems opening the underlying Lucene index.
    */
-  public BlendedInfixSuggester(Version matchVersion, File indexPath, Analyzer indexAnalyzer, Analyzer queryAnalyzer,
+  public BlendedInfixSuggester(Version matchVersion, Directory dir, Analyzer indexAnalyzer, Analyzer queryAnalyzer,
                                int minPrefixChars, BlenderType blenderType, int numFactor) throws IOException {
-    super(matchVersion, indexPath, indexAnalyzer, queryAnalyzer, minPrefixChars);
+    super(matchVersion, dir, indexAnalyzer, queryAnalyzer, minPrefixChars);
     this.blenderType = blenderType;
     this.numFactor = numFactor;
   }
 
   @Override
-  public List<Lookup.LookupResult> lookup(CharSequence key, boolean onlyMorePopular, int num) {
+  public List<Lookup.LookupResult> lookup(CharSequence key, boolean onlyMorePopular, int num) throws IOException {
     // here we multiply the number of searched element by the defined factor
     return super.lookup(key, onlyMorePopular, num * numFactor);
   }
 
   @Override
-  public List<Lookup.LookupResult> lookup(CharSequence key, int num, boolean allTermsRequired, boolean doHighlight) {
+  public List<Lookup.LookupResult> lookup(CharSequence key, int num, boolean allTermsRequired, boolean doHighlight) throws IOException {
     // here we multiply the number of searched element by the defined factor
     return super.lookup(key, num * numFactor, allTermsRequired, doHighlight);
   }
@@ -134,9 +137,16 @@ public class BlendedInfixSuggester extends AnalyzingInfixSuggester {
   }
 
   @Override
-  protected List<Lookup.LookupResult> createResults(TopDocs hits, int num, CharSequence key,
+  protected List<Lookup.LookupResult> createResults(IndexSearcher searcher, TopFieldDocs hits, int num, CharSequence key,
                                                     boolean doHighlight, Set<String> matchedTokens, String prefixToken)
       throws IOException {
+
+    BinaryDocValues textDV = MultiDocValues.getBinaryValues(searcher.getIndexReader(), TEXT_FIELD_NAME);
+    assert textDV != null;
+
+    // This will just be null if app didn't pass payloads to build():
+    // TODO: maybe just stored fields?  they compress...
+    BinaryDocValues payloadsDV = MultiDocValues.getBinaryValues(searcher.getIndexReader(), "payloads");
 
     TreeSet<Lookup.LookupResult> results = new TreeSet<>(LOOKUP_COMP);
 
@@ -145,16 +155,16 @@ public class BlendedInfixSuggester extends AnalyzingInfixSuggester {
 
     BytesRef scratch = new BytesRef();
     for (int i = 0; i < hits.scoreDocs.length; i++) {
+      FieldDoc fd = (FieldDoc) hits.scoreDocs[i];
 
-      ScoreDoc sd = hits.scoreDocs[i];
-      textDV.get(sd.doc, scratch);
+      textDV.get(fd.doc, scratch);
       String text = scratch.utf8ToString();
-      long weight = weightsDV.get(sd.doc);
+      long weight = (Long) fd.fields[0];
 
       BytesRef payload;
       if (payloadsDV != null) {
         payload = new BytesRef();
-        payloadsDV.get(sd.doc, payload);
+        payloadsDV.get(fd.doc, payload);
       } else {
         payload = null;
       }
@@ -164,7 +174,7 @@ public class BlendedInfixSuggester extends AnalyzingInfixSuggester {
         // if hit starts with the key, we don't change the score
         coefficient = 1;
       } else {
-        coefficient = createCoefficient(sd.doc, matchedTokens, prefixToken);
+        coefficient = createCoefficient(searcher, fd.doc, matchedTokens, prefixToken);
       }
 
       long score = (long) (weight * coefficient);
@@ -212,7 +222,7 @@ public class BlendedInfixSuggester extends AnalyzingInfixSuggester {
    * @return the coefficient
    * @throws IOException If there are problems reading term vectors from the underlying Lucene index.
    */
-  private double createCoefficient(int doc, Set<String> matchedTokens, String prefixToken) throws IOException {
+  private double createCoefficient(IndexSearcher searcher, int doc, Set<String> matchedTokens, String prefixToken) throws IOException {
 
     Terms tv = searcher.getIndexReader().getTermVector(doc, TEXT_FIELD_NAME);
     TermsEnum it = tv.iterator(TermsEnum.EMPTY);

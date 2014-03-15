@@ -70,7 +70,7 @@ public class TestMultiPhraseQuery extends LuceneTestCase {
     query1.add(new Term("body", "blueberry"));
     query2.add(new Term("body", "strawberry"));
     
-    LinkedList<Term> termsWithPrefix = new LinkedList<Term>();
+    LinkedList<Term> termsWithPrefix = new LinkedList<>();
     
     // this TermEnum gives "piccadilly", "pie" and "pizza".
     String prefix = "pi";
@@ -566,6 +566,18 @@ public class TestMultiPhraseQuery extends LuceneTestCase {
       terms[i] = new Term("field",tap[i].toString());
     }
     return terms;
+  }
+  
+  public void testNegativeSlop() throws Exception {
+    MultiPhraseQuery query = new MultiPhraseQuery();
+    query.add(new Term("field", "two"));
+    query.add(new Term("field", "one"));
+    try {
+      query.setSlop(-2);
+      fail("didn't get expected exception");
+    } catch (IllegalArgumentException expected) {
+      // expected exception
+    }
   }
   
 }

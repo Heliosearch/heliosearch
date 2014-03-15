@@ -228,6 +228,19 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
         }
       }
 
+      DistribPhase phase =
+          DistribPhase.parseParam(req.getParams().get(DISTRIB_UPDATE_PARAM));
+
+      if (DistribPhase.FROMLEADER == phase && !couldIbeSubShardLeader(coll)) {
+        if (req.getCore().getCoreDescriptor().getCloudDescriptor().isLeader()) {
+          // locally we think we are leader but the request says it came FROMLEADER
+          // that could indicate a problem, let the full logic below figure it out
+        } else {
+          isLeader = false;     // we actually might be the leader, but we don't want leader-logic for these types of updates anyway.
+          forwardToLeader = false;
+          return nodes;
+        }
+      }
 
       String shardId = slice.getName();
 
@@ -251,9 +264,6 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
           }
         }
 
-        DistribPhase phase =
-            DistribPhase.parseParam(req.getParams().get(DISTRIB_UPDATE_PARAM));
-
         doDefensiveChecks(phase);
 
         // if request is coming from another collection then we want it to be sent to all replicas
@@ -273,13 +283,13 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
 
           if (replicaProps != null) {
             if (nodes == null)  {
-            nodes = new ArrayList<Node>(replicaProps.size());
+            nodes = new ArrayList<>(replicaProps.size());
             }
             // check for test param that lets us miss replicas
             String[] skipList = req.getParams().getParams(TEST_DISTRIB_SKIP_SERVERS);
             Set<String> skipListSet = null;
             if (skipList != null) {
-              skipListSet = new HashSet<String>(skipList.length);
+              skipListSet = new HashSet<>(skipList.length);
               skipListSet.addAll(Arrays.asList(skipList));
               log.info("test.distrib.skip.servers was found and contains:" + skipListSet);
             }
@@ -299,7 +309,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
 
         } else {
           // I need to forward onto the leader...
-          nodes = new ArrayList<Node>(1);
+          nodes = new ArrayList<>(1);
           nodes.add(new RetryNode(new ZkCoreNodeProps(leaderReplica), zkController.getZkStateReader(), collection, shardId));
           forwardToLeader = true;
         }
@@ -314,11 +324,21 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
     return nodes;
   }
 
+  private boolean couldIbeSubShardLeader(DocCollection coll) {
+    // Could I be the leader of a shard in "construction/recovery" state?
+    String myShardId = req.getCore().getCoreDescriptor().getCloudDescriptor()
+        .getShardId();
+    Slice mySlice = coll.getSlice(myShardId);
+    String state = mySlice.getState();
+    return (Slice.CONSTRUCTION.equals(state) || Slice.RECOVERY.equals(state));
+  }
+  
   private boolean amISubShardLeader(DocCollection coll, Slice parentSlice, String id, SolrInputDocument doc) throws InterruptedException {
-    // Am I the leader of a shard in "construction" state?
+    // Am I the leader of a shard in "construction/recovery" state?
     String myShardId = req.getCore().getCoreDescriptor().getCloudDescriptor().getShardId();
     Slice mySlice = coll.getSlice(myShardId);
-    if (Slice.CONSTRUCTION.equals(mySlice.getState()) || Slice.RECOVERY.equals(mySlice.getState())) {
+    String state = mySlice.getState();
+    if (Slice.CONSTRUCTION.equals(state) || Slice.RECOVERY.equals(state)) {
       Replica myLeader = zkController.getZkStateReader().getLeaderRetry(collection, myShardId);
       boolean amILeader = myLeader.getName().equals(
           req.getCore().getCoreDescriptor().getCloudDescriptor()
@@ -353,7 +373,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
           Replica sliceLeader = aslice.getLeader();
           // slice leader can be null because node/shard is created zk before leader election
           if (sliceLeader != null && zkController.getClusterState().liveNodesContain(sliceLeader.getNodeName()))  {
-            if (nodes == null) nodes = new ArrayList<Node>();
+            if (nodes == null) nodes = new ArrayList<>();
             ZkCoreNodeProps nodeProps = new ZkCoreNodeProps(sliceLeader);
             nodes.add(new StdNode(nodeProps));
           }
@@ -380,7 +400,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
             Collection<Slice> activeSlices = cstate.getActiveSlices(targetCollectionName);
             if (activeSlices != null && !activeSlices.isEmpty()) {
               Slice any = activeSlices.iterator().next();
-              if (nodes == null) nodes = new ArrayList<Node>();
+              if (nodes == null) nodes = new ArrayList<>();
               nodes.add(new StdNode(new ZkCoreNodeProps(any.getLeader())));
             }
           }
@@ -391,13 +411,14 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
         if (routeKey != null) {
           RoutingRule rule = routingRules.get(routeKey + "!");
           if (rule != null) {
+            // TODO: look at using nanoTime
             if (rule.getExpireAt() >= System.currentTimeMillis()) {
               List<DocRouter.Range> ranges = rule.getRouteRanges();
               if (ranges != null && !ranges.isEmpty()) {
                 int hash = compositeIdRouter.sliceHash(id, doc, null, coll);
                 for (DocRouter.Range range : ranges) {
                   if (range.includes(hash)) {
-                    if (nodes == null) nodes = new ArrayList<Node>();
+                    if (nodes == null) nodes = new ArrayList<>();
                     DocCollection targetColl = cstate.getCollection(rule.getTargetCollectionName());
                     Collection<Slice> activeSlices = targetColl.getRouter().getSearchSlicesSingle(id, null, targetColl);
                     if (activeSlices == null || activeSlices.isEmpty()) {
@@ -505,7 +526,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
           .getReplicaProps(collection, shardId, leaderReplica.getName(),
               req.getCore().getName());
       if (replicaProps != null) {
-        nodes = new ArrayList<Node>(replicaProps.size());
+        nodes = new ArrayList<>(replicaProps.size());
         for (ZkCoreNodeProps props : replicaProps) {
           nodes.add(new StdNode(props));
         }
@@ -1079,7 +1100,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
       if(route == null) route = params.get(ShardParams.SHARD_KEYS);// deprecated . kept for backcompat
       Collection<Slice> slices = coll.getRouter().getSearchSlices(route, params, coll);
 
-      List<Node> leaders =  new ArrayList<Node>(slices.size());
+      List<Node> leaders =  new ArrayList<>(slices.size());
       for (Slice slice : slices) {
         String sliceName = slice.getName();
         Replica leader;
@@ -1203,7 +1224,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
               .getReplicaProps(collection, myShardId, leaderReplica.getName(),
                   req.getCore().getName(), null, ZkStateReader.DOWN);
           if (replicaProps != null) {
-            List<Node> myReplicas = new ArrayList<Node>();
+            List<Node> myReplicas = new ArrayList<>();
             for (ZkCoreNodeProps replicaProp : replicaProps) {
               myReplicas.add(new StdNode(replicaProp));
             }
@@ -1458,7 +1479,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
   private List<Node> getCollectionUrls(SolrQueryRequest req, String collection) {
     ClusterState clusterState = req.getCore().getCoreDescriptor()
         .getCoreContainer().getZkController().getClusterState();
-    List<Node> urls = new ArrayList<Node>();
+    List<Node> urls = new ArrayList<>();
     Map<String,Slice> slices = clusterState.getSlicesMap(collection);
     if (slices == null) {
       throw new ZooKeeperException(ErrorCode.BAD_REQUEST,

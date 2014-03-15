@@ -18,7 +18,6 @@ package org.apache.lucene.index;
  */
 
 import java.io.IOException;
-import java.io.Reader;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,7 +32,7 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 public class TestIndexWriterCommit extends LuceneTestCase {
   /*
@@ -178,8 +177,8 @@ public class TestIndexWriterCommit extends LuceneTestCase {
     // sum because the merged FST may use array encoding for
     // some arcs (which uses more space):
 
-    final String idFormat = _TestUtil.getPostingsFormat("id");
-    final String contentFormat = _TestUtil.getPostingsFormat("content");
+    final String idFormat = TestUtil.getPostingsFormat("id");
+    final String contentFormat = TestUtil.getPostingsFormat("content");
     assumeFalse("This test cannot run with Memory codec", idFormat.equals("Memory") || contentFormat.equals("Memory"));
     MockDirectoryWrapper dir = newMockDirectory();
     Analyzer analyzer;
@@ -330,7 +329,7 @@ public class TestIndexWriterCommit extends LuceneTestCase {
     final Directory dir = newDirectory();
     final RandomIndexWriter w = new RandomIndexWriter(random(), dir, newIndexWriterConfig(
                                                                                         TEST_VERSION_CURRENT, new MockAnalyzer(random())).setMergePolicy(newLogMergePolicy()));
-    _TestUtil.reduceOpenFiles(w.w);
+    TestUtil.reduceOpenFiles(w.w);
     w.commit();
     final AtomicBoolean failed = new AtomicBoolean();
     Thread[] threads = new Thread[NUM_THREADS];
@@ -426,7 +425,7 @@ public class TestIndexWriterCommit extends LuceneTestCase {
     w.addDocument(doc);
 
     // commit to "first"
-    Map<String,String> commitData = new HashMap<String,String>();
+    Map<String,String> commitData = new HashMap<>();
     commitData.put("tag", "first");
     w.setCommitData(commitData);
     w.commit();
@@ -634,7 +633,7 @@ public class TestIndexWriterCommit extends LuceneTestCase {
     w = new IndexWriter(dir, newIndexWriterConfig( TEST_VERSION_CURRENT, new MockAnalyzer(random())).setMaxBufferedDocs(2));
     for(int j=0;j<17;j++)
       TestIndexWriter.addDoc(w);
-    Map<String,String> data = new HashMap<String,String>();
+    Map<String,String> data = new HashMap<>();
     data.put("label", "test1");
     w.setCommitData(data);
     w.close();

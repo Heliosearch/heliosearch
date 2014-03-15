@@ -24,6 +24,7 @@ import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.Bits;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.core.HS;
 import org.apache.solr.core.RefCount;
@@ -583,9 +584,9 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   }
 
   @Override
-  public void setBitsOn(OpenBitSet target) {
+  public void setBitsOn(FixedBitSet target) {
     for (int i=0; i<len; i++) {
-      target.fastSet( HS.getInt(array, i) );
+      target.set( HS.getInt(array, i) );
     }
   }
 
@@ -650,9 +651,9 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   }
 
   @Override
-  public OpenBitSet getBits() {   // TODO: change to native?
+  public FixedBitSet getBits() {   // TODO: change to native?
     int maxDoc = size() > 0 ? HS.getInt(array,len-1) : 0;    // WARNING!!!  can't used fixed bit sizes here!
-    OpenBitSet bs = new OpenBitSet(maxDoc+1);
+    FixedBitSet bs = new FixedBitSet(maxDoc+1);
     setBitsOn(bs);
     return bs;
   }

@@ -58,8 +58,8 @@ public class SearchGroupShardResponseProcessor implements ShardResponseProcessor
     Sort groupSort = rb.getGroupingSpec().getGroupSort();
     String[] fields = rb.getGroupingSpec().getFields();
 
-    Map<String, List<Collection<SearchGroup<BytesRef>>>> commandSearchGroups = new HashMap<String, List<Collection<SearchGroup<BytesRef>>>>();
-    Map<String, Map<SearchGroup<BytesRef>, Set<String>>> tempSearchGroupToShards = new HashMap<String, Map<SearchGroup<BytesRef>, Set<String>>>();
+    Map<String, List<Collection<SearchGroup<BytesRef>>>> commandSearchGroups = new HashMap<>();
+    Map<String, Map<SearchGroup<BytesRef>, Set<String>>> tempSearchGroupToShards = new HashMap<>();
     for (String field : fields) {
       commandSearchGroups.put(field, new ArrayList<Collection<SearchGroup<BytesRef>>>(shardRequest.responses.size()));
       tempSearchGroupToShards.put(field, new HashMap<SearchGroup<BytesRef>, Set<String>>());
@@ -75,13 +75,13 @@ public class SearchGroupShardResponseProcessor implements ShardResponseProcessor
 
       NamedList<Object> shardInfo = null;
       if (rb.req.getParams().getBool(ShardParams.SHARDS_INFO, false)) {
-        shardInfo = new SimpleOrderedMap<Object>();
+        shardInfo = new SimpleOrderedMap<>();
         rb.rsp.getValues().add(ShardParams.SHARDS_INFO + ".firstPhase", shardInfo);
       }
 
       for (ShardResponse srsp : shardRequest.responses) {
         if (shardInfo != null) {
-          SimpleOrderedMap<Object> nl = new SimpleOrderedMap<Object>();
+          SimpleOrderedMap<Object> nl = new SimpleOrderedMap<>();
 
           if (srsp.getException() != null) {
             Throwable t = srsp.getException();
@@ -104,6 +104,9 @@ public class SearchGroupShardResponseProcessor implements ShardResponseProcessor
           shardInfo.add(srsp.getShard(), nl);
         }
         if (rb.req.getParams().getBool(ShardParams.SHARDS_TOLERANT, false) && srsp.getException() != null) {
+          if(rb.rsp.getResponseHeader().get("partialResults") == null) {
+            rb.rsp.getResponseHeader().add("partialResults", Boolean.TRUE);
+          }
           continue; // continue if there was an error and we're tolerant.  
         }
         maxElapsedTime = (int) Math.max(maxElapsedTime, srsp.getSolrResponse().getElapsedTime());
@@ -129,7 +132,7 @@ public class SearchGroupShardResponseProcessor implements ShardResponseProcessor
             Map<SearchGroup<BytesRef>, java.util.Set<String>> map = tempSearchGroupToShards.get(field);
             Set<String> shards = map.get(searchGroup);
             if (shards == null) {
-              shards = new HashSet<String>();
+              shards = new HashSet<>();
               map.put(searchGroup, shards);
             }
             shards.add(srsp.getShard());

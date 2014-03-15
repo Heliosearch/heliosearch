@@ -32,6 +32,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.lucene.document.Document;
@@ -67,11 +68,11 @@ import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.FieldDoc;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.FieldDoc;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Sort;
@@ -79,9 +80,9 @@ import org.apache.lucene.search.SortField;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TimeLimitingCollector;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.TopDocsCollector;
 import org.apache.lucene.search.TopFieldCollector;
+import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.search.TopScoreDocCollector;
 import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.search.Weight;
@@ -153,7 +154,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
   // map of generic caches - not synchronized since it's read-only after the constructor.
   private final HashMap<String, SolrCache> cacheMap;
-  private static final HashMap<String, SolrCache> noGenericCaches=new HashMap<String,SolrCache>(0);
+  private static final HashMap<String, SolrCache> noGenericCaches=new HashMap<>(0);
 
   // list of all caches associated with this searcher.
   private final SolrCache[] cacheList;
@@ -197,7 +198,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     this.atomicReader = SlowCompositeReaderWrapper.wrap(this.reader);
     this.core = core;
     this.schema = schema;
-    this.name = "Searcher@" + Integer.toHexString(hashCode()) + (name!=null ? " "+name : "");
+    this.name = "Searcher@" + Integer.toHexString(hashCode()) + "[" + core.getName() + "]" + (name != null ? " " + name : "");
     log.info("Opening " + this.name);
     this.smallSetSize = (this.reader.maxDoc()>>6)+5;
 
@@ -230,6 +231,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       ArrayList<SolrCache> clist = new ArrayList<SolrCache>();
       nCache = solrConfig.nCacheConfig ==null ? null : solrConfig.nCacheConfig.newInstance();
       if (nCache !=null) clist.add(nCache);
+ 
       fieldValueCache = solrConfig.fieldValueCacheConfig==null ? null : solrConfig.fieldValueCacheConfig.newInstance();
       if (fieldValueCache!=null) clist.add(fieldValueCache);
       filterCache= solrConfig.filterCacheConfig==null ? null : solrConfig.filterCacheConfig.newInstance();
@@ -242,7 +244,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       if (solrConfig.userCacheConfigs == null) {
         cacheMap = noGenericCaches;
       } else {
-        cacheMap = new HashMap<String,SolrCache>(solrConfig.userCacheConfigs.length);
+        cacheMap = new HashMap<>(solrConfig.userCacheConfigs.length);
         for (CacheConfig userCacheConfig : solrConfig.userCacheConfigs) {
           SolrCache cache = null;
           if (userCacheConfig != null) cache = userCacheConfig.newInstance();
@@ -273,6 +275,8 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     // do this at the end since an exception in the constructor means we won't close    
     numOpens.incrementAndGet();
   }
+
+  public boolean isCachingEnabled() { return cachingEnabled; }
 
   public String getPath() {
     return path;
@@ -389,7 +393,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
   public Collection<String> getStoredHighlightFieldNames() {
     synchronized (this) {
       if (storedHighlightFieldNames == null) {
-        storedHighlightFieldNames = new LinkedList<String>();
+        storedHighlightFieldNames = new LinkedList<>();
         for (String fieldName : fieldNames) {
           try {
             SchemaField field = schema.getField(fieldName);
@@ -1029,10 +1033,10 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
         ExtendedQuery eq = (ExtendedQuery)q;
         if (!eq.getCache()) {
           if (eq.getCost() >= 100 && eq instanceof PostFilter) {
-            if (postFilters == null) postFilters = new ArrayList<Query>(sets.length-end);
+            if (postFilters == null) postFilters = new ArrayList<>(sets.length-end);
             postFilters.add(q);
           } else {
-            if (notCached == null) notCached = new ArrayList<Query>(sets.length-end);
+            if (notCached == null) notCached = new ArrayList<>(sets.length-end);
             notCached.add(q);
           }
           continue;
@@ -1041,7 +1045,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
       if (filterCache == null) {
         // there is no cache: don't pull bitsets
-        if (notCached == null) notCached = new ArrayList<Query>(sets.length-end);
+        if (notCached == null) notCached = new ArrayList<>(sets.length-end);
         WrappedQuery uncached = new WrappedQuery(q);
         uncached.setCache(false);
         notCached.add(uncached);
@@ -1095,7 +1099,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
     if (notCached != null) {
       Collections.sort(notCached, sortByCost);
-      List<Weight> weights = new ArrayList<Weight>(notCached.size());
+      List<Weight> weights = new ArrayList<>(notCached.size());
       for (Query q : notCached) {
         Query qq = QueryUtils.makeQueryable(q);
         weights.add(createNormalizedWeight(qq));
@@ -2321,7 +2325,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
     }
 
     // Make sure nCache is first, followed by filters... then filters can help queryResults execute!
-    long warmingStartTime = System.currentTimeMillis();
+    long warmingStartTime = System.nanoTime();
     // warm the caches in order...
     ModifiableSolrParams params = new ModifiableSolrParams();
     params.add("warming","true");
@@ -2352,7 +2356,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
       if (debug) log.debug("autowarming result for " + this + "\n\t" + this.cacheList[i]);
     }
-    warmupTime = System.currentTimeMillis() - warmingStartTime;
+    warmupTime = TimeUnit.MILLISECONDS.convert(System.nanoTime() - warmingStartTime, TimeUnit.NANOSECONDS);
   }
 
   /**
@@ -2408,7 +2412,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
   @Override
   public NamedList<Object> getStatistics() {
-    NamedList<Object> lst = new SimpleOrderedMap<Object>();
+    NamedList<Object> lst = new SimpleOrderedMap<>();
     lst.add("searcherName", name);
     lst.add("caching", cachingEnabled);
     lst.add("numDocs", reader.numDocs());
@@ -2487,7 +2491,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       }
       filterList = null;
       if (f != null) {
-        filterList = new ArrayList<Query>(2);
+        filterList = new ArrayList<>(2);
         filterList.add(f);
       }
       return this;
@@ -2640,14 +2644,14 @@ class FilterImpl extends Filter {
 
     @Override
     public DocIdSetIterator iterator() throws IOException {
-      List<DocIdSetIterator> iterators = new ArrayList<DocIdSetIterator>(weights.size()+1);
+      List<DocIdSetIterator> iterators = new ArrayList<>(weights.size()+1);
       if (docIdSet != null) {
         DocIdSetIterator iter = docIdSet.iterator();
         if (iter == null) return null;
         iterators.add(iter);
       }
       for (Weight w : weights) {
-        Scorer scorer = w.scorer(context, true, false, context.reader().getLiveDocs());
+        Scorer scorer = w.scorer(context, context.reader().getLiveDocs());
         if (scorer == null) return null;
         iterators.add(scorer);
       }

@@ -131,7 +131,7 @@ class QueryFuncValues extends FloatFuncValues {
     try {
       if (doc < lastDocRequested) {
         if (noMatches) return defVal;
-        scorer = weight.scorer(readerContext, true, false, acceptDocs);
+        scorer = weight.scorer(readerContext, acceptDocs);
         if (scorer == null) {
           noMatches = true;
           return defVal;
@@ -162,7 +162,7 @@ class QueryFuncValues extends FloatFuncValues {
     try {
       if (doc < lastDocRequested) {
         if (noMatches) return false;
-        scorer = weight.scorer(readerContext, true, false, acceptDocs);
+        scorer = weight.scorer(readerContext, acceptDocs);
         scorerDoc = -1;
         if (scorer == null) {
           noMatches = true;
@@ -220,7 +220,7 @@ class QueryFuncValues extends FloatFuncValues {
             mval.exists = false;
             return;
           }
-          scorer = weight.scorer(readerContext, true, false, acceptDocs);
+          scorer = weight.scorer(readerContext, acceptDocs);
           scorerDoc = -1;
           if (scorer == null) {
             noMatches = true;

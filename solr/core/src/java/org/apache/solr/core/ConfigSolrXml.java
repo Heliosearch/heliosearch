@@ -40,9 +40,7 @@ public class ConfigSolrXml extends ConfigSolr {
       checkForIllegalConfig();
       fillPropMap();
       config.substituteProperties();
-      log.info("Config-defined core root directory: {}", get(CfgProp.SOLR_COREROOTDIRECTORY, ""));
-      String coreRoot = get(CfgProp.SOLR_COREROOTDIRECTORY, config.getResourceLoader().getInstanceDir());
-      coresLocator = new CorePropertiesLocator(coreRoot);
+      coresLocator = new CorePropertiesLocator(getCoreRootDirectory());
     }
     catch (IOException e) {
       throw new SolrException(SolrException.ErrorCode.SERVER_ERROR, e);
@@ -69,6 +67,7 @@ public class ConfigSolrXml extends ConfigSolr {
     failIfFound("solr/cores/@hostContext");
     failIfFound("solr/cores/@hostPort");
     failIfFound("solr/cores/@leaderVoteWait");
+    failIfFound("solr/cores/@leaderConflictResolveWait");
     failIfFound("solr/cores/@genericCoreNodeNames");
     failIfFound("solr/cores/@managementPath");
     failIfFound("solr/cores/@shareSchema");
@@ -115,6 +114,7 @@ public class ConfigSolrXml extends ConfigSolr {
     propMap.put(CfgProp.SOLR_HOSTCONTEXT, doSub("solr/solrcloud/str[@name='hostContext']"));
     propMap.put(CfgProp.SOLR_HOSTPORT, doSub("solr/solrcloud/int[@name='hostPort']"));
     propMap.put(CfgProp.SOLR_LEADERVOTEWAIT, doSub("solr/solrcloud/int[@name='leaderVoteWait']"));
+    propMap.put(CfgProp.SOLR_LEADERCONFLICTRESOLVEWAIT, doSub("solr/solrcloud/int[@name='leaderConflictResolveWait']"));
     propMap.put(CfgProp.SOLR_GENERICCORENODENAMES, doSub("solr/solrcloud/bool[@name='genericCoreNodeNames']"));
     propMap.put(CfgProp.SOLR_MANAGEMENTPATH, doSub("solr/str[@name='managementPath']"));
     propMap.put(CfgProp.SOLR_SHAREDLIB, doSub("solr/str[@name='sharedLib']"));

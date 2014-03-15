@@ -21,7 +21,7 @@ import org.apache.lucene.search.*;
 import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.OpenBitSet;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.StringHelper;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.SolrParams;
@@ -47,7 +47,7 @@ import java.util.Set;
 
 
 public class JoinQParserPlugin extends QParserPlugin {
-  public static String NAME = "join";
+  public static final String NAME = "join";
 
   @Override
   public void init(NamedList args) {
@@ -220,8 +220,7 @@ class JoinQuery extends Query {
 
 
     @Override
-    public Scorer scorer(AtomicReaderContext context, boolean scoreDocsInOrder,
-        boolean topScorer, Bits acceptDocs) throws IOException {
+    public Scorer scorer(AtomicReaderContext context, Bits acceptDocs) throws IOException {
       if (filter == null) {
         boolean debug = rb != null && rb.isDebug();
         long start = debug ? System.currentTimeMillis() : 0;
@@ -272,7 +271,7 @@ class JoinQuery extends Query {
 
 
     public DocSet getDocSet() throws IOException {
-      OpenBitSet resultBits = null;
+      FixedBitSet resultBits = null;
 
       // minimum docFreq to use the cache
       int minDocFreqFrom = Math.max(5, fromSearcher.maxDoc() >> 13);
@@ -392,7 +391,7 @@ class JoinQuery extends Query {
               int df = toTermsEnum.docFreq();
               toTermHitsTotalDf += df;
               if (resultBits==null && df + resultListDocs > maxSortedIntSize && resultList.size() > 0) {
-                resultBits = new OpenBitSet(toSearcher.maxDoc());
+                resultBits = new FixedBitSet(toSearcher.maxDoc());
               }
 
               // if we don't have a bitset yet, or if the resulting set will be too large
@@ -406,11 +405,11 @@ class JoinQuery extends Query {
                   toTermSet.decref();
                 } else {
                   if (toTermSet instanceof BitDocSetNative) {
-                    resultBits = ((BitDocSetNative)toTermSet).toOpenBitSet();
+                    resultBits = ((BitDocSetNative)toTermSet).toFixedBitSet();
                     toTermSet.decref();
                   } else if (toTermSet instanceof BitDocSet) {
                     // shouldn't happen any more?
-                    resultBits = (OpenBitSet)((BitDocSet)toTermSet).bits.clone();
+                    resultBits = (FixedBitSet)((BitDocSet)toTermSet).bits.clone();
                   } else {
                     // should be SortedIntDocSetNative
                     resultList.add(toTermSet);
@@ -433,14 +432,14 @@ class JoinQuery extends Query {
                     int docid;
                     while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
                       resultListDocs++;
-                      resultBits.fastSet(docid + base);
+                      resultBits.set(docid + base);
                     }
                   }
                 } else {
                   int docid;
                   while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
                     resultListDocs++;
-                    resultBits.fastSet(docid);
+                    resultBits.set(docid);
                   }
                 }
               }
@@ -521,7 +520,7 @@ class JoinQuery extends Query {
 
     @Override
     public Explanation explain(AtomicReaderContext context, int doc) throws IOException {
-      Scorer scorer = scorer(context, true, false, context.reader().getLiveDocs());
+      Scorer scorer = scorer(context, context.reader().getLiveDocs());
       boolean exists = scorer.advance(doc) == doc;
 
       ComplexExplanation result = new ComplexExplanation();

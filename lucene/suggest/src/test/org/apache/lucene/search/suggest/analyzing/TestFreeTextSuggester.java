@@ -23,7 +23,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -48,7 +47,7 @@ import org.apache.lucene.search.suggest.InputIterator;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LineFileDocs;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.junit.Ignore;
 
 public class TestFreeTextSuggester extends LuceneTestCase {
@@ -62,6 +61,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
     Analyzer a = new MockAnalyzer(random());
     FreeTextSuggester sug = new FreeTextSuggester(a, a, 2, (byte) 0x20);
     sug.build(new InputArrayIterator(keys));
+    assertEquals(2, sug.getCount());
 
     for(int i=0;i<2;i++) {
 
@@ -82,7 +82,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
                    toString(sug.lookup("b", 10)));
 
       // Try again after save/load:
-      File tmpDir = _TestUtil.getTempDir("FreeTextSuggesterTest");
+      File tmpDir = TestUtil.getTempDir("FreeTextSuggesterTest");
       tmpDir.mkdir();
 
       File path = new File(tmpDir, "suggester");
@@ -95,6 +95,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
       sug = new FreeTextSuggester(a, a, 2, (byte) 0x20);
       sug.load(is);
       is.close();
+      assertEquals(2, sug.getCount());
     }
   }
 
@@ -171,6 +172,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
         public boolean hasPayloads() {
           return false;
         }
+
       });
     if (VERBOSE) {
       System.out.println(sug.sizeInBytes() + " bytes");
@@ -290,10 +292,10 @@ public class TestFreeTextSuggester extends LuceneTestCase {
   };
 
   public void testRandom() throws IOException {
-    String[] terms = new String[_TestUtil.nextInt(random(), 2, 10)];
-    Set<String> seen = new HashSet<String>();
+    String[] terms = new String[TestUtil.nextInt(random(), 2, 10)];
+    Set<String> seen = new HashSet<>();
     while (seen.size() < terms.length) {
-      String token = _TestUtil.randomSimpleString(random(), 1, 5);
+      String token = TestUtil.randomSimpleString(random(), 1, 5);
       if (!seen.contains(token)) {
         terms[seen.size()] = token;
         seen.add(token);
@@ -322,7 +324,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
       totTokens += docs[i].length;
     }
 
-    int grams = _TestUtil.nextInt(random(), 1, 4);
+    int grams = TestUtil.nextInt(random(), 1, 4);
 
     if (VERBOSE) {
       System.out.println("TEST: " + terms.length + " terms; " + numDocs + " docs; " + grams + " grams");
@@ -365,12 +367,12 @@ public class TestFreeTextSuggester extends LuceneTestCase {
       });
 
     // Build inefficient but hopefully correct model:
-    List<Map<String,Integer>> gramCounts = new ArrayList<Map<String,Integer>>(grams);
+    List<Map<String,Integer>> gramCounts = new ArrayList<>(grams);
     for(int gram=0;gram<grams;gram++) {
       if (VERBOSE) {
         System.out.println("TEST: build model for gram=" + gram);
       }
-      Map<String,Integer> model = new HashMap<String,Integer>();
+      Map<String,Integer> model = new HashMap<>();
       gramCounts.add(model);
       for(String[] doc : docs) {
         for(int i=0;i<doc.length-gram;i++) {
@@ -397,7 +399,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
 
     int lookups = atLeast(100);
     for(int iter=0;iter<lookups;iter++) {
-      String[] tokens = new String[_TestUtil.nextInt(random(), 1, 5)];
+      String[] tokens = new String[TestUtil.nextInt(random(), 1, 5)];
       for(int i=0;i<tokens.length;i++) {
         tokens[i] = getZipfToken(terms);
       }
@@ -410,10 +412,10 @@ public class TestFreeTextSuggester extends LuceneTestCase {
       } else {
         trimStart = 0;
       }
-      int trimAt = _TestUtil.nextInt(random(), trimStart, tokens[tokens.length-1].length());
+      int trimAt = TestUtil.nextInt(random(), trimStart, tokens[tokens.length - 1].length());
       tokens[tokens.length-1] = tokens[tokens.length-1].substring(0, trimAt);
 
-      int num = _TestUtil.nextInt(random(), 1, 100);
+      int num = TestUtil.nextInt(random(), 1, 100);
       StringBuilder b = new StringBuilder();
       for(String token : tokens) {
         b.append(' ');
@@ -427,9 +429,9 @@ public class TestFreeTextSuggester extends LuceneTestCase {
       }
 
       // Expected:
-      List<LookupResult> expected = new ArrayList<LookupResult>();
+      List<LookupResult> expected = new ArrayList<>();
       double backoff = 1.0;
-      seen = new HashSet<String>();
+      seen = new HashSet<>();
 
       if (VERBOSE) {
         System.out.println("  compute expected");
@@ -492,7 +494,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
         if (VERBOSE) {
           System.out.println("      find terms w/ prefix=" + tokens[tokens.length-1]);
         }
-        List<LookupResult> tmp = new ArrayList<LookupResult>();
+        List<LookupResult> tmp = new ArrayList<>();
         for(String term : terms) {
           if (term.startsWith(tokens[tokens.length-1])) {
             if (VERBOSE) {
@@ -585,7 +587,7 @@ public class TestFreeTextSuggester extends LuceneTestCase {
 
   @SafeVarargs
   private final <T> Iterable<T> shuffle(T...values) {
-    final List<T> asList = new ArrayList<T>(values.length);
+    final List<T> asList = new ArrayList<>(values.length);
     for (T value : values) {
       asList.add(value);
     }

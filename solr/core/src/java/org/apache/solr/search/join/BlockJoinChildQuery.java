@@ -81,8 +81,8 @@ class BlockJoinChildQuery extends Query {
     }
 
     @Override
-    public Scorer scorer(AtomicReaderContext readerContext, boolean scoreDocsInOrder, boolean topScorer, Bits acceptDocs) throws IOException {
-       Scorer parentScorer = parentWeight.scorer(readerContext, true, false, null);
+    public Scorer scorer(AtomicReaderContext readerContext, Bits acceptDocs) throws IOException {
+       Scorer parentScorer = parentWeight.scorer(readerContext, null);
       if (parentScorer == null) return null;
 
       if (parentBitSet == null) {

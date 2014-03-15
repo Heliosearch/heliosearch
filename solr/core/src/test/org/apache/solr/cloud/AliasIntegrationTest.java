@@ -85,13 +85,13 @@ public class AliasIntegrationTest extends AbstractFullDistribZkTestBase {
     handle.put("QTime", SKIPVAL);
     handle.put("timestamp", SKIPVAL);
     
-    waitForThingsToLevelOut(15);
+    waitForThingsToLevelOut(30);
 
     del("*:*");
     
     createCollection("collection2", 2, 1, 10);
     
-    List<Integer> numShardsNumReplicaList = new ArrayList<Integer>(2);
+    List<Integer> numShardsNumReplicaList = new ArrayList<>(2);
     numShardsNumReplicaList.add(2);
     numShardsNumReplicaList.add(1);
     checkForCollection("collection2", numShardsNumReplicaList, null);
@@ -138,7 +138,7 @@ public class AliasIntegrationTest extends AbstractFullDistribZkTestBase {
     query.set("collection", "testalias");
     JettySolrRunner jetty = jettys.get(random().nextInt(jettys.size()));
     int port = jetty.getLocalPort();
-    HttpSolrServer server = new HttpSolrServer("http://127.0.0.1:" + port + context + "/testalias");
+    HttpSolrServer server = new HttpSolrServer(buildUrl(port) + "/testalias");
     res = server.query(query);
     assertEquals(3, res.getResults().getNumFound());
     
@@ -146,7 +146,7 @@ public class AliasIntegrationTest extends AbstractFullDistribZkTestBase {
     query = new SolrQuery("*:*");
     jetty = jettys.get(random().nextInt(jettys.size()));
     port = jetty.getLocalPort();
-    server = new HttpSolrServer("http://127.0.0.1:" + port + context + "/testalias");
+    server = new HttpSolrServer(buildUrl(port) + "/testalias");
     res = server.query(query);
     assertEquals(3, res.getResults().getNumFound());
     
@@ -173,7 +173,7 @@ public class AliasIntegrationTest extends AbstractFullDistribZkTestBase {
     query.set("collection", "testalias");
     jetty = jettys.get(random().nextInt(jettys.size()));
     port = jetty.getLocalPort();
-    server = new HttpSolrServer("http://127.0.0.1:" + port + context + "/testalias");
+    server = new HttpSolrServer(buildUrl(port) + "/testalias");
     res = server.query(query);
     assertEquals(5, res.getResults().getNumFound());
     
@@ -181,7 +181,7 @@ public class AliasIntegrationTest extends AbstractFullDistribZkTestBase {
     query = new SolrQuery("*:*");
     jetty = jettys.get(random().nextInt(jettys.size()));
     port = jetty.getLocalPort();
-    server = new HttpSolrServer("http://127.0.0.1:" + port + context + "/testalias");
+    server = new HttpSolrServer(buildUrl(port) + "/testalias");
     res = server.query(query);
     assertEquals(5, res.getResults().getNumFound());
     

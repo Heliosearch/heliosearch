@@ -132,7 +132,7 @@ public class TestHarness extends BaseTestHarness {
       this.coreName = coreName;
 
       SolrResourceLoader loader = new SolrResourceLoader(SolrResourceLoader.locateSolrHome());
-      ConfigSolr config = getTestHarnessConfig(coreName, dataDir, solrConfig, indexSchema);
+      ConfigSolr config = getTestHarnessConfig(loader, coreName, dataDir, solrConfig, indexSchema);
       container = new CoreContainer(loader, config);
       container.load();
 
@@ -150,11 +150,19 @@ public class TestHarness extends BaseTestHarness {
   /**
    * Create a TestHarness using a specific solr home directory and solr xml
    * @param solrHome the solr home directory
-   * @param solrXml a File pointing to a solr.xml configuration
+   * @param solrXml the text of a solrxml
    */
   public TestHarness(String solrHome, String solrXml) {
-    this(new SolrResourceLoader(solrHome),
-          ConfigSolr.fromString(solrXml));
+    this(new SolrResourceLoader(solrHome), solrXml);
+  }
+
+  /**
+   * Create a TestHarness using a specific solr resource loader and solr xml
+   * @param loader the SolrResourceLoader to use
+   * @param solrXml the text of a solrxml
+   */
+  public TestHarness(SolrResourceLoader loader, String solrXml) {
+    this(loader, ConfigSolr.fromString(loader, solrXml));
   }
 
   /**
@@ -169,7 +177,7 @@ public class TestHarness extends BaseTestHarness {
     updater.init(null);
   }
 
-  private static ConfigSolr getTestHarnessConfig(String coreName, String dataDir,
+  private static ConfigSolr getTestHarnessConfig(SolrResourceLoader loader, String coreName, String dataDir,
                                                  String solrConfig, String schema) {
     String solrxml = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n"
         + "<solr persistent=\"false\">\n"
@@ -185,7 +193,7 @@ public class TestHarness extends BaseTestHarness {
         + "\" transient=\"false\" loadOnStartup=\"true\""
         + " shard=\"${shard:shard1}\" collection=\"${collection:collection1}\" instanceDir=\"" + coreName + "/\" />\n"
         + "  </cores>\n" + "</solr>";
-    return ConfigSolr.fromString(solrxml);
+    return ConfigSolr.fromString(loader, solrxml);
   }
   
   public CoreContainer getCoreContainer() {
@@ -380,7 +388,7 @@ public class TestHarness extends BaseTestHarness {
     public String qtype = null;
     public int start = 0;
     public int limit = 1000;
-    public Map<String,String> args = new HashMap<String,String>();
+    public Map<String,String> args = new HashMap<>();
     public LocalRequestFactory() {
     }
     /**
@@ -415,7 +423,7 @@ public class TestHarness extends BaseTestHarness {
       }
       Map.Entry<String, String> [] entries = new NamedListEntry[q.length / 2];
       for (int i = 0; i < q.length; i += 2) {
-        entries[i/2] = new NamedListEntry<String>(q[i], q[i+1]);
+        entries[i/2] = new NamedListEntry<>(q[i], q[i+1]);
       }
       return new LocalSolrQueryRequest(TestHarness.this.getCore(), new NamedList(entries));
     }

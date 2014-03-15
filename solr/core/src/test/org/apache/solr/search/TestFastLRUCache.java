@@ -38,8 +38,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestFastLRUCache extends LuceneTestCase {
   
   public void testPercentageAutowarm() throws IOException {
-    FastLRUCache<Object, Object> fastCache = new FastLRUCache<Object, Object>();
-    Map<String, String> params = new HashMap<String, String>();
+    FastLRUCache<Object, Object> fastCache = new FastLRUCache<>();
+    Map<String, String> params = new HashMap<>();
     params.put("size", "100");
     params.put("initialSize", "10");
     params.put("autowarmCount", "100%");
@@ -56,7 +56,7 @@ public class TestFastLRUCache extends LuceneTestCase {
     assertEquals(1L, nl.get("hits"));
     assertEquals(101L, nl.get("inserts"));
     assertEquals(null, fastCache.get(1));  // first item put in should be the first out
-    FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<Object, Object>();
+    FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<>();
     fastCacheNew.init(params, o, cr);
 
     SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
@@ -88,8 +88,8 @@ public class TestFastLRUCache extends LuceneTestCase {
   }
   
   private void doTestPercentageAutowarm(int limit, int percentage, int[] hits, int[]misses) {
-    FastLRUCache<Object, Object> fastCache = new FastLRUCache<Object, Object>();
-    Map<String, String> params = new HashMap<String, String>();
+    FastLRUCache<Object, Object> fastCache = new FastLRUCache<>();
+    Map<String, String> params = new HashMap<>();
     params.put("size", String.valueOf(limit));
     params.put("initialSize", "10");
     params.put("autowarmCount", percentage + "%");
@@ -100,7 +100,7 @@ public class TestFastLRUCache extends LuceneTestCase {
       fastCache.put(i, "" + i);//adds numbers from 1 to 100
     }
 
-    FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<Object, Object>();
+    FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<>();
     fastCacheNew.init(params, o, cr);
 
     SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
@@ -124,8 +124,8 @@ public class TestFastLRUCache extends LuceneTestCase {
   }
   
   public void testNoAutowarm() throws IOException {
-    FastLRUCache<Object, Object> fastCache = new FastLRUCache<Object, Object>();
-    Map<String, String> params = new HashMap<String, String>();
+    FastLRUCache<Object, Object> fastCache = new FastLRUCache<>();
+    Map<String, String> params = new HashMap<>();
     params.put("size", "100");
     params.put("initialSize", "10");
     CacheRegenerator cr = new NoOpRegenerator();
@@ -141,7 +141,7 @@ public class TestFastLRUCache extends LuceneTestCase {
     assertEquals(1L, nl.get("hits"));
     assertEquals(101L, nl.get("inserts"));
     assertEquals(null, fastCache.get(1));  // first item put in should be the first out
-    FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<Object, Object>();
+    FastLRUCache<Object, Object> fastCacheNew = new FastLRUCache<>();
     fastCacheNew.init(params, o, cr);
 
     SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
@@ -157,8 +157,8 @@ public class TestFastLRUCache extends LuceneTestCase {
   }
   
   public void testFullAutowarm() throws IOException {
-    FastLRUCache<Object, Object> cache = new FastLRUCache<Object, Object>();
-    Map<Object, Object> params = new HashMap<Object, Object>();
+    FastLRUCache<Object, Object> cache = new FastLRUCache<>();
+    Map<Object, Object> params = new HashMap<>();
     params.put("size", "100");
     params.put("initialSize", "10");
     params.put("autowarmCount", "-1");
@@ -174,7 +174,7 @@ public class TestFastLRUCache extends LuceneTestCase {
     assertEquals(null, cache.get(1));  // first item put in should be the first out
 
 
-    FastLRUCache<Object, Object> cacheNew = new FastLRUCache<Object, Object>();
+    FastLRUCache<Object, Object> cacheNew = new FastLRUCache<>();
     cacheNew.init(params, o, cr);
 
     SolrIndexSearcher.WarmContext warmContext = new SolrIndexSearcher.WarmContext();
@@ -237,7 +237,7 @@ public class TestFastLRUCache extends LuceneTestCase {
   }
 
   public void testOldestItems() {
-    ConcurrentLRUCache<Integer, String> cache = new ConcurrentLRUCache<Integer, String>(100, 90);
+    ConcurrentLRUCache<Integer, String> cache = new ConcurrentLRUCache<>(100, 90);
     for (int i = 0; i < 50; i++) {
       cache.put(i + 1, "" + (i + 1));
     }
@@ -266,7 +266,7 @@ public class TestFastLRUCache extends LuceneTestCase {
     int sz = random().nextInt(100)+5;
     int lowWaterMark = random().nextInt(sz-3)+1;
     int keyrange = random().nextInt(sz*3)+1;
-    ConcurrentLRUCache<Integer, String> cache = new ConcurrentLRUCache<Integer, String>(sz, lowWaterMark);
+    ConcurrentLRUCache<Integer, String> cache = new ConcurrentLRUCache<>(sz, lowWaterMark);
     for (int i=0; i<10000; i++) {
       cache.put(random().nextInt(keyrange), "");
       cache.get(random().nextInt(keyrange));

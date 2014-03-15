@@ -299,7 +299,7 @@ public class PostingsHighlighter {
    *         {@link IndexOptions#DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS}
    */
   public Map<String,String[]> highlightFields(String fieldsIn[], Query query, IndexSearcher searcher, int[] docidsIn, int maxPassagesIn[]) throws IOException {
-    Map<String,String[]> snippets = new HashMap<String,String[]>();
+    Map<String,String[]> snippets = new HashMap<>();
     for(Map.Entry<String,Object[]> ent : highlightFieldsAsObjects(fieldsIn, query, searcher, docidsIn, maxPassagesIn).entrySet()) {
       Object[] snippetObjects = ent.getValue();
       String[] snippetStrings = new String[snippetObjects.length];
@@ -346,7 +346,7 @@ public class PostingsHighlighter {
     }
     final IndexReader reader = searcher.getIndexReader();
     Query rewritten = rewrite(query);
-    SortedSet<Term> queryTerms = new TreeSet<Term>();
+    SortedSet<Term> queryTerms = new TreeSet<>();
     rewritten.extractTerms(queryTerms);
 
     IndexReaderContext readerContext = reader.getContext();
@@ -384,7 +384,7 @@ public class PostingsHighlighter {
     // pull stored data:
     String[][] contents = loadFieldValues(searcher, fields, docids, maxLength);
     
-    Map<String,Object[]> highlights = new HashMap<String,Object[]>();
+    Map<String,Object[]> highlights = new HashMap<>();
     for (int i = 0; i < fields.length; i++) {
       String field = fields[i];
       int numPassages = maxPassages[i];
@@ -454,33 +454,33 @@ public class PostingsHighlighter {
   }
     
   private Map<Integer,Object> highlightField(String field, String contents[], BreakIterator bi, BytesRef terms[], int[] docids, List<AtomicReaderContext> leaves, int maxPassages, Query query) throws IOException {  
-    Map<Integer,Object> highlights = new HashMap<Integer,Object>();
+    Map<Integer,Object> highlights = new HashMap<>();
     
-    // reuse in the real sense... for docs in same segment we just advance our old enum
-    DocsAndPositionsEnum postings[] = null;
-    TermsEnum termsEnum = null;
-    int lastLeaf = -1;
-
     PassageFormatter fieldFormatter = getFormatter(field);
     if (fieldFormatter == null) {
       throw new NullPointerException("PassageFormatter cannot be null");
     }
     
-    // check if we should do any multitermprocessing
+    // check if we should do any multiterm processing
     Analyzer analyzer = getIndexAnalyzer(field);
     CharacterRunAutomaton automata[] = new CharacterRunAutomaton[0];
     if (analyzer != null) {
       automata = MultiTermHighlighting.extractAutomata(query, field);
     }
     
-    final BytesRef allTerms[];
+    // resize 'terms', where the last term is the multiterm matcher
     if (automata.length > 0) {
-      allTerms = new BytesRef[terms.length + 1];
-      System.arraycopy(terms, 0, allTerms, 0, terms.length);
-    } else {
-      allTerms = terms;
+      BytesRef newTerms[] = new BytesRef[terms.length + 1];
+      System.arraycopy(terms, 0, newTerms, 0, terms.length);
+      terms = newTerms;
     }
 
+    // we are processing in increasing docid order, so we only need to reinitialize stuff on segment changes
+    // otherwise, we will just advance() existing enums to the new document in the same segment.
+    DocsAndPositionsEnum postings[] = null;
+    TermsEnum termsEnum = null;
+    int lastLeaf = -1;
+    
     for (int i = 0; i < docids.length; i++) {
       String content = contents[i];
       if (content.length() == 0) {
@@ -491,28 +491,39 @@ public class PostingsHighlighter {
       int leaf = ReaderUtil.subIndex(doc, leaves);
       AtomicReaderContext subContext = leaves.get(leaf);
       AtomicReader r = subContext.reader();
-      Terms t = r.terms(field);
-      if (t == null) {
-        continue; // nothing to do
-      }
+      
+      assert leaf >= lastLeaf; // increasing order
+      
+      // if the segment has changed, we must initialize new enums.
       if (leaf != lastLeaf) {
-        termsEnum = t.iterator(null);
-        postings = new DocsAndPositionsEnum[allTerms.length];
+        Terms t = r.terms(field);
+        if (t != null) {
+          termsEnum = t.iterator(null);
+          postings = new DocsAndPositionsEnum[terms.length];
+        }
       }
+      if (termsEnum == null) {
+        continue; // no terms for this field, nothing to do
+      }
+      
+      // if there are multi-term matches, we have to initialize the "fake" enum for each document
       if (automata.length > 0) {
         DocsAndPositionsEnum dp = MultiTermHighlighting.getDocsEnum(analyzer.tokenStream(field, content), automata);
         dp.advance(doc - subContext.docBase);
-        postings[terms.length] = dp;
+        postings[terms.length-1] = dp; // last term is the multiterm matcher
       }
-      Passage passages[] = highlightDoc(field, allTerms, content.length(), bi, doc - subContext.docBase, termsEnum, postings, maxPassages);
+      
+      Passage passages[] = highlightDoc(field, terms, content.length(), bi, doc - subContext.docBase, termsEnum, postings, maxPassages);
+      
       if (passages.length == 0) {
+        // no passages were returned, so ask for a default summary
         passages = getEmptyHighlight(field, bi, maxPassages);
       }
+
       if (passages.length > 0) {
-        // otherwise a null snippet (eg if field is missing
-        // entirely from the doc)
         highlights.put(doc, fieldFormatter.format(passages, content));
       }
+      
       lastLeaf = leaf;
     }
     
@@ -528,7 +539,7 @@ public class PostingsHighlighter {
     if (scorer == null) {
       throw new NullPointerException("PassageScorer cannot be null");
     }
-    PriorityQueue<OffsetsEnum> pq = new PriorityQueue<OffsetsEnum>();
+    PriorityQueue<OffsetsEnum> pq = new PriorityQueue<>();
     float weights[] = new float[terms.length];
     // initialize postings
     for (int i = 0; i < terms.length; i++) {
@@ -563,7 +574,7 @@ public class PostingsHighlighter {
     
     pq.add(new OffsetsEnum(EMPTY, Integer.MAX_VALUE)); // a sentinel for termination
     
-    PriorityQueue<Passage> passageQueue = new PriorityQueue<Passage>(n, new Comparator<Passage>() {
+    PriorityQueue<Passage> passageQueue = new PriorityQueue<>(n, new Comparator<Passage>() {
       @Override
       public int compare(Passage left, Passage right) {
         if (left.score < right.score) {
@@ -667,7 +678,7 @@ public class PostingsHighlighter {
    *  to customize. */
   protected Passage[] getEmptyHighlight(String fieldName, BreakIterator bi, int maxPassages) {
     // BreakIterator should be un-next'd:
-    List<Passage> passages = new ArrayList<Passage>();
+    List<Passage> passages = new ArrayList<>();
     int pos = bi.current();
     assert pos == 0;
     while (passages.size() < maxPassages) {

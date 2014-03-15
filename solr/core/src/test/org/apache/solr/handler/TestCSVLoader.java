@@ -17,7 +17,7 @@
 
 package org.apache.solr.handler;
 
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.request.LocalSolrQueryRequest;
 import org.apache.solr.common.params.CommonParams;
@@ -50,7 +50,7 @@ public class TestCSVLoader extends SolrTestCaseJ4 {
     // if you override setUp or tearDown, you better call
     // the super classes version
     super.setUp();
-    File tempDir = _TestUtil.getTempDir("TestCSVLoader");
+    File tempDir = TestUtil.getTempDir("TestCSVLoader");
     file = new File(tempDir, "solr_tmp.csv");
     filename = file.getPath();
     cleanup();
@@ -93,7 +93,7 @@ public class TestCSVLoader extends SolrTestCaseJ4 {
 
     // TODO: stop using locally defined streams once stream.file and
     // stream.body work everywhere
-    List<ContentStream> cs = new ArrayList<ContentStream>(1);
+    List<ContentStream> cs = new ArrayList<>(1);
     ContentStreamBase f = new ContentStreamBase.FileStream(new File(filename));
     f.setContentType("text/csv");
     cs.add(f);

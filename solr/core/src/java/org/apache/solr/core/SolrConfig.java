@@ -18,6 +18,7 @@
 package org.apache.solr.core;
 
 import static org.apache.solr.core.SolrConfig.PluginOpts.*;
+
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.schema.IndexSchemaFactory;
@@ -29,21 +30,20 @@ import org.apache.solr.handler.component.SearchComponent;
 import org.apache.solr.request.SolrRequestHandler;
 import org.apache.solr.response.QueryResponseWriter;
 import org.apache.solr.response.transform.TransformerFactory;
-
+import org.apache.solr.rest.RestManager;
 import org.apache.solr.search.CacheConfig;
 import org.apache.solr.search.FastLRUCache;
 import org.apache.solr.search.QParserPlugin;
 import org.apache.solr.search.ValueSourceParser;
+import org.apache.solr.servlet.SolrRequestParsers;
 import org.apache.solr.update.SolrIndexConfig;
 import org.apache.solr.update.UpdateLog;
 import org.apache.solr.update.processor.UpdateRequestProcessorChain;
 import org.apache.solr.spelling.QueryConverter;
 import org.apache.lucene.index.IndexDeletionPolicy;
 import org.apache.lucene.util.Version;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -89,6 +89,8 @@ public class SolrConfig extends Config {
   private boolean handleSelect;
 
   private boolean addHttpRequestToContext;
+
+  private final SolrRequestParsers solrRequestParsers;
   
   /** Creates a default instance from the solrconfig.xml. */
   public SolrConfig()
@@ -211,7 +213,7 @@ public class SolrConfig extends Config {
     documentCacheConfig = CacheConfig.getConfig(this, "query/documentCache");
     conf = CacheConfig.getConfig(this, "query/fieldValueCache");
     if (conf == null) {
-      Map<String,String> args = new HashMap<String,String>();
+      Map<String,String> args = new HashMap<>();
       args.put("name","fieldValueCache");
       args.put("size","10000");
       args.put("initialSize","10");
@@ -285,7 +287,7 @@ public class SolrConfig extends Config {
      loadPluginInfo(UpdateLog.class,"updateHandler/updateLog");
      loadPluginInfo(IndexSchemaFactory.class,"schemaFactory", 
                     REQUIRE_CLASS);
-
+     loadPluginInfo(RestManager.class, "restManager");
      updateHandlerInfo = loadUpdatehandlerInfo();
      
      multipartUploadLimitKB = getInt( 
@@ -304,6 +306,7 @@ public class SolrConfig extends Config {
      addHttpRequestToContext = getBool( 
          "requestDispatcher/requestParsers/@addHttpRequestToContext", false ); 
 
+    solrRequestParsers = new SolrRequestParsers(this);
     Config.log.info("Loaded SolrConfig: " + name);
   }
 
@@ -335,13 +338,17 @@ public class SolrConfig extends Config {
   }
 
   public List<PluginInfo> readPluginInfos(String tag, boolean requireName, boolean requireClass) {
-    ArrayList<PluginInfo> result = new ArrayList<PluginInfo>();
+    ArrayList<PluginInfo> result = new ArrayList<>();
     NodeList nodes = (NodeList) evaluate(tag, XPathConstants.NODESET);
     for (int i=0; i<nodes.getLength(); i++) {
       PluginInfo pluginInfo = new PluginInfo(nodes.item(i), "[solrconfig.xml] " + tag, requireName, requireClass);
       if(pluginInfo.isEnabled()) result.add(pluginInfo);
     }
     return result;
+  }
+  
+  public SolrRequestParsers getRequestParsers() {
+    return solrRequestParsers;
   }
 
   /* The set of materialized parameters: */
@@ -375,7 +382,7 @@ public class SolrConfig extends Config {
 
   protected UpdateHandlerInfo updateHandlerInfo ;
 
-  private Map<String, List<PluginInfo>> pluginStore = new LinkedHashMap<String, List<PluginInfo>>();
+  private Map<String, List<PluginInfo>> pluginStore = new LinkedHashMap<>();
 
   public final int maxWarmingSearchers;
   public final boolean unlockOnStartup;

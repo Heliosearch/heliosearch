@@ -35,8 +35,7 @@ import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.OpenBitSet;
-import org.apache.lucene.util.OpenBitSetIterator;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.HSTest;
 import org.apache.solr.SolrTestCaseJ4;
 import org.junit.AfterClass;
@@ -105,7 +104,7 @@ public class TestDocSetNative extends TestDocSet {
   }
 
   public void testTryWith() throws Exception {
-    OpenBitSet obs = getRandomSet(10,5);
+    FixedBitSet obs = getRandomSet(10,5);
 
     try(
         DocSet a = getBitDocSetNative(obs);
@@ -123,8 +122,8 @@ public class TestDocSetNative extends TestDocSet {
   }
 
   public void testSimple() throws Exception {
-    OpenBitSet obs1 = getRandomSet(10,5);
-    OpenBitSet obs2 = getRandomSet(10,5);
+    FixedBitSet obs1 = getRandomSet(10,5);
+    FixedBitSet obs2 = getRandomSet(10,5);
 
 //    DocSet s1 = super.getHashDocSet(obs1);
 //    DocSet s2 = super.getIntDocSetNative(obs2);
@@ -150,21 +149,21 @@ public class TestDocSetNative extends TestDocSet {
 
   /**
   @Override
-  public DocSet getHashDocSet(OpenBitSet obs) {
+  public DocSet getHashDocSet(FixedBitSet obs) {
     // return super.getHashDocSet(obs);
     // return super.getIntDocSetNative(obs);
     return super.getBitDocSetNative(obs);
   }
 
   @Override
-  public DocSet getDocSlice(OpenBitSet obs) {
+  public DocSet getDocSlice(FixedBitSet obs) {
 //    return super.getIntDocSetNative(obs);
     return super.getBitDocSetNative(obs);
   }
    **/
 
   @Override
-  public DocSet getSmallSet(OpenBitSet obs) {
+  public DocSet getSmallSet(FixedBitSet obs) {
      return super.getIntDocSetNative(obs);
 //     return super.getIntDocSetNative(obs);
 //    return super.getBitDocSetNative(obs);
@@ -172,7 +171,7 @@ public class TestDocSetNative extends TestDocSet {
 
 
   @Override
-  public DocSet getBigSet(OpenBitSet obs) {
+  public DocSet getBigSet(FixedBitSet obs) {
     // return super.getIntDocSetNative(obs);
     return super.getBitDocSetNative(obs);
   }

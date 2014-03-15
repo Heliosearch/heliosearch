@@ -74,8 +74,8 @@ public abstract class ConfigSolr {
     }
   }
 
-  public static ConfigSolr fromString(String xml) {
-    return fromInputStream(null, new ByteArrayInputStream(xml.getBytes(Charsets.UTF_8)));
+  public static ConfigSolr fromString(SolrResourceLoader loader, String xml) {
+    return fromInputStream(loader, new ByteArrayInputStream(xml.getBytes(Charsets.UTF_8)));
   }
 
   public static ConfigSolr fromInputStream(SolrResourceLoader loader, InputStream is) {
@@ -104,6 +104,17 @@ public abstract class ConfigSolr {
   
   public abstract CoresLocator getCoresLocator();
 
+
+  /**
+   * The directory against which relative core instance dirs are resolved.  If none is
+   * specified in the config, uses solr home.
+   *
+   * @return core root directory
+   */
+  public String getCoreRootDirectory() {
+    return get(CfgProp.SOLR_COREROOTDIRECTORY, config.getResourceLoader().getInstanceDir());
+  }
+
   public PluginInfo getShardHandlerFactoryPluginInfo() {
     Node node = config.getNode(getShardHandlerFactoryConfigPath(), false);
     return (node == null) ? null : new PluginInfo(node, "shardHandlerFactory", false, true);
@@ -127,6 +138,7 @@ public abstract class ConfigSolr {
 
   private static final int DEFAULT_ZK_CLIENT_TIMEOUT = 15000;
   private static final int DEFAULT_LEADER_VOTE_WAIT = 180000;  // 3 minutes
+  private static final int DEFAULT_LEADER_CONFLICT_RESOLVE_WAIT = 180000;
   private static final int DEFAULT_CORE_LOAD_THREADS = 3;
 
   protected static final String DEFAULT_CORE_ADMIN_PATH = "/admin/cores";
@@ -145,6 +157,10 @@ public abstract class ConfigSolr {
 
   public int getLeaderVoteWait() {
     return getInt(CfgProp.SOLR_LEADERVOTEWAIT, DEFAULT_LEADER_VOTE_WAIT);
+  }
+  
+  public int getLeaderConflictResolveWait() {
+    return getInt(CfgProp.SOLR_LEADERCONFLICTRESOLVEWAIT, DEFAULT_LEADER_CONFLICT_RESOLVE_WAIT);
   }
 
   public boolean getGenericCoreNodeNames() {
@@ -244,6 +260,7 @@ public abstract class ConfigSolr {
     SOLR_GENERICCORENODENAMES,
     SOLR_ZKCLIENTTIMEOUT,
     SOLR_ZKHOST,
+    SOLR_LEADERCONFLICTRESOLVEWAIT,
 
     //TODO: Remove all of these elements for 5.0
     SOLR_PERSISTENT,
@@ -252,7 +269,7 @@ public abstract class ConfigSolr {
   }
 
   protected Config config;
-  protected Map<CfgProp, String> propMap = new HashMap<CfgProp, String>();
+  protected Map<CfgProp, String> propMap = new HashMap<>();
 
   public ConfigSolr(Config config) {
     this.config = config;

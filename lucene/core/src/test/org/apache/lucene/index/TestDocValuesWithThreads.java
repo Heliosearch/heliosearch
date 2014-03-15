@@ -34,7 +34,8 @@ import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 public class TestDocValuesWithThreads extends LuceneTestCase {
 
@@ -42,18 +43,18 @@ public class TestDocValuesWithThreads extends LuceneTestCase {
     Directory dir = newDirectory();
     IndexWriter w = new IndexWriter(dir, newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setMergePolicy(newLogMergePolicy()));
 
-    final List<Long> numbers = new ArrayList<Long>();
-    final List<BytesRef> binary = new ArrayList<BytesRef>();
-    final List<BytesRef> sorted = new ArrayList<BytesRef>();
+    final List<Long> numbers = new ArrayList<>();
+    final List<BytesRef> binary = new ArrayList<>();
+    final List<BytesRef> sorted = new ArrayList<>();
     final int numDocs = atLeast(100);
     for(int i=0;i<numDocs;i++) {
       Document d = new Document();
       long number = random().nextLong();
       d.add(new NumericDocValuesField("number", number));
-      BytesRef bytes = new BytesRef(_TestUtil.randomRealisticUnicodeString(random()));
+      BytesRef bytes = new BytesRef(TestUtil.randomRealisticUnicodeString(random()));
       d.add(new BinaryDocValuesField("bytes", bytes));
       binary.add(bytes);
-      bytes = new BytesRef(_TestUtil.randomRealisticUnicodeString(random()));
+      bytes = new BytesRef(TestUtil.randomRealisticUnicodeString(random()));
       d.add(new SortedDocValuesField("sorted", bytes));
       sorted.add(bytes);
       w.addDocument(d);
@@ -67,8 +68,8 @@ public class TestDocValuesWithThreads extends LuceneTestCase {
     assertEquals(1, r.leaves().size());
     final AtomicReader ar = r.leaves().get(0).reader();
 
-    int numThreads = _TestUtil.nextInt(random(), 2, 5);
-    List<Thread> threads = new ArrayList<Thread>();
+    int numThreads = TestUtil.nextInt(random(), 2, 5);
+    List<Thread> threads = new ArrayList<>();
     final CountDownLatch startingGun = new CountDownLatch(1);
     for(int t=0;t<numThreads;t++) {
       final Random threadRandom = new Random(random().nextLong());
@@ -132,20 +133,20 @@ public class TestDocValuesWithThreads extends LuceneTestCase {
     final Directory dir = newDirectory();
     final RandomIndexWriter writer = new RandomIndexWriter(random, dir);
     final boolean allowDups = random.nextBoolean();
-    final Set<String> seen = new HashSet<String>();
+    final Set<String> seen = new HashSet<>();
     if (VERBOSE) {
       System.out.println("TEST: NUM_DOCS=" + NUM_DOCS + " allowDups=" + allowDups);
     }
     int numDocs = 0;
-    final List<BytesRef> docValues = new ArrayList<BytesRef>();
+    final List<BytesRef> docValues = new ArrayList<>();
 
     // TODO: deletions
     while (numDocs < NUM_DOCS) {
       final String s;
       if (random.nextBoolean()) {
-        s = _TestUtil.randomSimpleString(random);
+        s = TestUtil.randomSimpleString(random);
       } else {
-        s = _TestUtil.randomUnicodeString(random);
+        s = TestUtil.randomUnicodeString(random);
       }
       final BytesRef br = new BytesRef(s);
 
@@ -181,7 +182,7 @@ public class TestDocValuesWithThreads extends LuceneTestCase {
 
     final long END_TIME = System.currentTimeMillis() + (TEST_NIGHTLY ? 30 : 1);
 
-    final int NUM_THREADS = _TestUtil.nextInt(random(), 1, 10);
+    final int NUM_THREADS = TestUtil.nextInt(random(), 1, 10);
     Thread[] threads = new Thread[NUM_THREADS];
     for(int thread=0;thread<NUM_THREADS;thread++) {
       threads[thread] = new Thread() {

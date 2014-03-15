@@ -18,9 +18,12 @@ package org.apache.solr.common.cloud;
  */
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -68,6 +71,9 @@ public class ZkStateReader {
   public static final String LIVE_NODES_ZKNODE = "/live_nodes";
   public static final String ALIASES = "/aliases.json";
   public static final String CLUSTER_STATE = "/clusterstate.json";
+  public static final String CLUSTER_PROPS = "/clusterprops.json";
+
+
   public static final String ROLES = "/roles.json";
 
   public static final String RECOVERING = "recovering";
@@ -78,6 +84,10 @@ public class ZkStateReader {
 
   public static final String CONFIGS_ZKNODE = "/configs";
   public final static String CONFIGNAME_PROP="configName";
+
+  public static final String LEGACY_CLOUD = "legacyCloud";
+
+  public static final String URL_SCHEME = "urlScheme";
   
   private volatile ClusterState clusterState;
 
@@ -140,10 +150,15 @@ public class ZkStateReader {
       configName = props.getStr(CONFIGNAME_PROP);
     }
 
-    if (configName != null && !zkClient.exists(CONFIGS_ZKNODE + "/" + configName, true)) {
-      log.error("Specified config does not exist in ZooKeeper:" + configName);
-      throw new ZooKeeperException(ErrorCode.SERVER_ERROR,
-          "Specified config does not exist in ZooKeeper:" + configName);
+    if (configName != null) {
+      if (!zkClient.exists(CONFIGS_ZKNODE + "/" + configName, true)) {
+        log.error("Specified config does not exist in ZooKeeper:" + configName);
+        throw new ZooKeeperException(ErrorCode.SERVER_ERROR,
+            "Specified config does not exist in ZooKeeper:" + configName);
+      } else if (log.isInfoEnabled()) {
+        log.info("path={} {}={} specified config exists in ZooKeeper",
+            new Object[] {path, CONFIGNAME_PROP, configName});
+      }
     }
 
     return configName;
@@ -169,7 +184,7 @@ public class ZkStateReader {
 
   private ZkCmdExecutor cmdExecutor;
 
-  private Aliases aliases = new Aliases();
+  private volatile Aliases aliases = new Aliases();
 
   private volatile boolean closed = false;
 
@@ -298,7 +313,7 @@ public class ZkStateReader {
                   List<String> liveNodes = zkClient.getChildren(
                       LIVE_NODES_ZKNODE, this, true);
                   log.info("Updating live nodes... ({})", liveNodes.size());
-                  Set<String> liveNodesSet = new HashSet<String>();
+                  Set<String> liveNodesSet = new HashSet<>();
                   liveNodesSet.addAll(liveNodes);
                   ClusterState clusterState = new ClusterState(
                       ZkStateReader.this.clusterState.getZkClusterStateVersion(),
@@ -325,7 +340,7 @@ public class ZkStateReader {
             
           }, true);
     
-      Set<String> liveNodeSet = new HashSet<String>();
+      Set<String> liveNodeSet = new HashSet<>();
       liveNodeSet.addAll(liveNodes);
       ClusterState clusterState = ClusterState.load(zkClient, liveNodeSet, ZkStateReader.this);
       this.clusterState = clusterState;
@@ -388,7 +403,7 @@ public class ZkStateReader {
       synchronized (getUpdateLock()) {
         List<String> liveNodes = zkClient.getChildren(LIVE_NODES_ZKNODE, null,
             true);
-        Set<String> liveNodesSet = new HashSet<String>();
+        Set<String> liveNodesSet = new HashSet<>();
         liveNodesSet.addAll(liveNodes);
         
         if (!onlyLiveNodes) {
@@ -424,7 +439,7 @@ public class ZkStateReader {
             try {
               List<String> liveNodes = zkClient.getChildren(LIVE_NODES_ZKNODE,
                   null, true);
-              Set<String> liveNodesSet = new HashSet<String>();
+              Set<String> liveNodesSet = new HashSet<>();
               liveNodesSet.addAll(liveNodes);
               
               if (!onlyLiveNodes) {
@@ -507,8 +522,8 @@ public class ZkStateReader {
    * Get shard leader properties, with retry if none exist.
    */
   public Replica getLeaderRetry(String collection, String shard, int timeout) throws InterruptedException {
-    long timeoutAt = System.currentTimeMillis() + timeout;
-    while (System.currentTimeMillis() < timeoutAt && !closed) {
+    long timeoutAt = System.nanoTime() + TimeUnit.NANOSECONDS.convert(timeout, TimeUnit.MILLISECONDS);
+    while (System.nanoTime() < timeoutAt && !closed) {
       if (clusterState != null) {    
         Replica replica = clusterState.getLeader(collection, shard);
         if (replica != null && getClusterState().liveNodesContain(replica.getNodeName())) {
@@ -517,7 +532,8 @@ public class ZkStateReader {
       }
       Thread.sleep(50);
     }
-    throw new SolrException(ErrorCode.SERVICE_UNAVAILABLE, "No registered leader was found, collection:" + collection + " slice:" + shard);
+    throw new SolrException(ErrorCode.SERVICE_UNAVAILABLE, "No registered leader was found after waiting for "
+        + timeout + "ms " + ", collection: " + collection + " slice: " + shard);
   }
 
   /**
@@ -559,7 +575,7 @@ public class ZkStateReader {
     }
     
     Map<String,Replica> shardMap = replicas.getReplicasMap();
-    List<ZkCoreNodeProps> nodes = new ArrayList<ZkCoreNodeProps>(shardMap.size());
+    List<ZkCoreNodeProps> nodes = new ArrayList<>(shardMap.size());
     for (Entry<String,Replica> entry : shardMap.entrySet()) {
       ZkCoreNodeProps nodeProps = new ZkCoreNodeProps(entry.getValue());
       
@@ -594,6 +610,43 @@ public class ZkStateReader {
     Aliases aliases = ClusterState.load(data);
 
     ZkStateReader.this.aliases = aliases;
+  }
+  public Map getClusterProps(){
+    Map result = null;
+    try {
+      if(getZkClient().exists(ZkStateReader.CLUSTER_PROPS,true)){
+        result = (Map) ZkStateReader.fromJSON(getZkClient().getData(ZkStateReader.CLUSTER_PROPS, null, new Stat(), true)) ;
+      } else {
+        result= new LinkedHashMap();
+      }
+      return result;
+    } catch (Exception e) {
+      throw new SolrException(ErrorCode.SERVER_ERROR,"Error reading cluster properties",e) ;
+    }
+  }
+  
+  /**
+   * Returns the baseURL corresponding to a given node's nodeName --
+   * NOTE: does not (currently) imply that the nodeName (or resulting 
+   * baseURL) exists in the cluster.
+   * @lucene.experimental
+   */
+  public String getBaseUrlForNodeName(final String nodeName) {
+    final int _offset = nodeName.indexOf("_");
+    if (_offset < 0) {
+      throw new IllegalArgumentException("nodeName does not contain expected '_' seperator: " + nodeName);
+    }
+    final String hostAndPort = nodeName.substring(0,_offset);
+    try {
+      final String path = URLDecoder.decode(nodeName.substring(1+_offset), "UTF-8");
+      String urlScheme = (String) getClusterProps().get(URL_SCHEME);
+      if(urlScheme == null) {
+        urlScheme = "http";
+      }
+      return urlScheme + "://" + hostAndPort + (path.isEmpty() ? "" : ("/" + path));
+    } catch (UnsupportedEncodingException e) {
+      throw new IllegalStateException("JVM Does not seem to support UTF-8", e);
+    }
   }
   
 }

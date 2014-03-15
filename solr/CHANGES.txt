@@ -47,6 +47,16 @@ Detailed Change List
 New Features
 ----------------------
 
+* SOLR-5287: You can edit files in the conf directory from the admin UI.
+  (Erick Erickson, Stefan Matheis)
+  Additional work:
+  - SOLR-5446: Admin UI - Allow changing Schema and Config (steffkes)
+  - SOLR-5458: Admin UI - Remove separated Pages for Config & Schema (steffkes)
+  - SOLR-5456: Admin UI - Allow creating new Files (steffkes)
+  - SOLR-5518: Added EditFileRequestHandler to deal with security issues around
+    modifying solr configuration files.  (Erick Erickson)
+  - SOLR-5539: Admin UI - Remove ability to create/modify files (steffkes)
+
 
 Other Changes
 ----------------------
@@ -55,6 +65,166 @@ Other Changes
   were deprecated in 4.3 have been removed completely. (hossman)
 
 * SOLR-4792: Stop shipping a .war. (Robert Muir)
+
+==================  4.8.0 ==================
+
+Versions of Major Components
+---------------------
+Apache Tika 1.4
+Carrot2 3.8.0
+Velocity 1.7 and Velocity Tools 2.0
+Apache UIMA 2.3.1
+Apache ZooKeeper 3.4.5
+
+Upgrading from Solr 4.7
+----------------------
+
+* In previous versions of Solr, Terms that exceeded Lucene's MAX_TERM_LENGTH were
+  silently ignored when indexing documents.  Begining with Solr 4.8, a document
+  an error will be generated when attempting to index a document with a term
+  that is too large.  If you wish to continue to have large terms ignored,
+  use "solr.LengthFilterFactory" in all of your Analyzers.  See LUCENE-5472 for
+  more details.
+  
+* Solr 4.8 needs Java 7 as minimum requirement.  If you not have done already,
+  update the underlying JDK/JRE versions to at least Oracle Java 7u1 or OpenJDK
+  7u1.  Please review the list of known JVM bugs at:
+  http://wiki.apache.org/lucene-java/JavaBugs
+  Solr 4.8 was also tested to work with Java 8, so give it a try!
+
+Detailed Change List
+----------------------
+
+System Requirements
+----------------------
+
+* LUCENE-4747, LUCENE-5514: Move to Java 7 as minimum Java version.
+  (Robert Muir, Uwe Schindler)
+
+
+New Features
+----------------------
+
+* SOLR-5130: Implement addReplica Collections API (Noble Paul)
+
+* SOLR-5183: JSON updates now support nested child documents using a 
+  "_childDocument_" object key.  (Varun Thacker, hossman)
+
+* SOLR-5714: You can now use one pool of memory for for the HDFS block cache
+  that all collections share. (Mark Miller, Gregory Chanan)
+
+* SOLR-5720: Add ExpandComponent to expand results collapsed by the 
+  CollapsingQParserPlugin. (Joel Bernstein)
+
+* SOLR-5653: Create a RestManager to provide REST API endpoints for
+  reconfigurable plugins. (Tim Potter, Steve Rowe)
+
+* SOLR-5655: Create a stopword filter factory that is (re)configurable,
+  and capable of reporting its configuration, via REST API.
+  (Tim Potter via Steve Rowe)
+
+* SOLR-5477: Async execution of OverseerCollectionProcessor(CollectionsAPI)
+  tasks. (Anshum Gupta)
+
+Bug Fixes
+----------------------
+
+* SOLR-5647: The lib paths in example-schemaless will now load correctly.
+  (Paul Westin via Shawn Heisey)
+
+* SOLR-5423: CSV output doesn't include function field
+  (Arun Kumar, hossman, Steve Rowe)
+
+* SOLR-5777: Fix ordering of field values in JSON updates where
+  field name key is repeated (hossman)
+
+* SOLR-5782: The full MapReduceIndexer help text does not display when using
+  --help.  (Mark Miller, Wolfgang Hoschek)
+
+* SOLR-5734: We should use System.nanoTime rather than System.currentTimeMillis
+  when calculating elapsed time. (Mark Miller, Ramkumar Aiyengar)
+
+* SOLR-5760: ConcurrentUpdateSolrServer has a blockUntilFinished call when
+  streamDeletes is true that should be tucked into the if statement below it.
+  (Mark Miller, Gregory Chanan)
+
+* SOLR-5761: HttpSolrServer has a few fields that can be set via setters but
+  are not volatile. (Mark Miller, Gregory Chanan)
+
+* SOLR-5811: The Overseer will retry work items until success, which is a serious
+  problem if you hit a bad work item. (Mark Miller)
+  
+* SOLR-5796: Increase how long we are willing to wait for a core to see the ZK
+  advertised leader in it's local state. (Timothy Potter, Mark Miller)  
+
+* SOLR-5818: distrib search with custom comparator does not quite work correctly
+  (Ryan Ernst)
+
+* SOLR-5834: Overseer threads are only being interrupted and not closed.
+  (hossman, Mark Miller)
+
+* SOLR-5839: ZookeeperInfoServlet does not trim path properly.
+  (Furkan KAMACI via Mark Miller)
+
+* SOLR-5800: Admin UI - Analysis form doesn't render results correctly when a
+  CharFilter is used. (steffkes)
+
+* SOLR-5861: Recovery should not set onlyIfLeaderActive=true for slice in 'recovery'
+  state. (shalin)
+
+Optimizations
+----------------------
+* SOLR-1880: Distributed Search skips GET_FIELDS stage if EXECUTE_QUERY
+  stage gets all fields. Requests with fl=id or fl=id,score are now single-pass.
+  (Shawn Smith, Vitaliy Zhovtyuk, shalin)
+
+* SOLR-5783: Requests to open a new searcher will now reuse the current registered
+  searcher (w/o additional warming) if possible in situations where the underlying 
+  index has not changed.  This reduces overhead in situations such as deletes that 
+  do not modify the index, and/or redundant commits. (hossman)
+  
+
+Other Changes
+---------------------
+
+* SOLR-5764: Fix recently added tests to not use absolute paths to load test-files,
+  use SolrTestCaseJ4.getFile() and getResource() instead; fix morphlines/map-reduce
+  to not duplicate test resources and fix dependencies among them.
+  (Uwe Schindler)
+
+* SOLR-5765: Update to SLF4J 1.7.6. (Mark Miller)
+
+* SOLR-5609: If legacy mode is disabled don't let cores create slices/replicas/collections .
+  All operations should be performed through collection API (Noble Paul)
+
+* SOLR-5613: Upgrade to commons-codec 1.9 for better BeiderMorseFilter performance.
+  (Thomas Champagne, Shawn Heisey via shalin)
+
+* SOLR-5771: Add SolrTestCaseJ4.SuppressSSL annotation to disable SSL (instead of static boolean).
+  (Robert Muir)
+
+* SOLR-5799: When registering as the leader, if an existing ephemeral
+  registration exists, wait a short time to see if it goes away.
+  (Mark Miller)
+
+* LUCENE-5472: IndexWriter.addDocument will now throw an IllegalArgumentException 
+  if a Term to be indexed exceeds IndexWriter.MAX_TERM_LENGTH.  To recreate previous
+  behavior of silently ignoring these terms, use LengthFilter in your Analyzer.
+  (hossman, Mike McCandless, Varun Thacker)
+
+* SOLR-5796: Make how long we are willing to wait for a core to see the ZK
+  advertised leader in it's local state configurable. 
+  (Timothy Potter via Mark Miller)
+  
+* SOLR-5825: Separate http request creating and execution in SolrJ
+  (Steven Bower via Erick Erickson)
+  
+* SOLR-5837: Add hashCode/equals to SolrDocument, SolrInputDocument
+  and SolrInputField for testing purposes. (Varun Thacker, Noble Paul,
+  Mark Miller)
+
+* SOLR-5853: The createCollection methods in the test framework now reports
+  result of operation in the returned CollectionAdminResponse (janhoy)
 
 ==================  4.7.0 ==================
 
@@ -71,6 +241,13 @@ Upgrading from Solr 4.6.0
 
 * CloudSolrServer and LBHttpSolrServer no longer declare MalformedURLException
   as thrown from their constructors.  
+
+* Due to a bug in previous versions the default value of the 'discountOverlap' property
+  of DefaultSimilarity was not being set appropriately if you were using the implicit
+  DefaultSimilarityFactory instead of explicitly configuring it.  To preserve 
+  consistent behavior for people who upgrade, the implicit behavior is now contingent 
+  on the <luceneMatchVersion/> -- discountOverlap=false for 4.6 and below, 
+  discountOverlap=true for 4.7 and above.  See SOLR-5561 for more information.
                       
 Detailed Change List
 ----------------------
@@ -78,8 +255,8 @@ Detailed Change List
 New Features
 ----------------------
 
-* SOLR-5308: SOLR-5601: A new 'migrate' collection API to split all documents with a
-  route key into another collection (shalin)
+* SOLR-5308: SOLR-5601: SOLR-5710: A new 'migrate' collection API to split all
+  documents with a route key into another collection (shalin)
 
 * SOLR-5441: Expose number of transaction log files and their size via JMX.
   (Rafał Kuć via shalin)
@@ -87,20 +264,17 @@ New Features
 * SOLR-5320: Added support for tri-level compositeId routing.
   (Anshum Gupta via shalin)
   
-* SOLR-5287: You can edit files in the conf directory from the admin UI 
-  (Erick Erickson, Stefan Matheis)
+* SOLR-5287,SOLR-5522,SOLR-5446,SOLR-5456,SOLR-5539,SOLR-5458:
+  Admin UI - Added a new "Files" conf directory browser/file viewer.
+  (steffkes, Erick Erickson)
 
 * SOLR-5447, SOLR-5490: Add a QParserPlugin for Lucene's SimpleQueryParser.
   (Jack Conradson via shalin)
 
-* SOLR-5446: Admin UI - Allow changing Schema and Config (steffkes)
-
-* SOLR-5456: Admin UI - Allow creating new Files (steffkes)
-
-* SOLR-5208: Support for the setting of core.properties key/values at create-time on 
+* SOLR-5208: Support for the setting of core.properties key/values at create-time on
   Collections API (Erick Erickson)
 
-* SOLR-5428: New 'stats.calcdistinct' parameter in StatsComponent returns
+* SOLR-5428: SOLR-5690: New 'stats.calcdistinct' parameter in StatsComponent returns
   set of distinct values and their count. This can also be specified per field
   e.g. 'f.field.stats.calcdistinct'. (Elran Dvir via shalin)
 
@@ -114,9 +288,6 @@ New Features
 
 * SOLR-5506: Support docValues in CollationField and ICUCollationField.
   (Robert Muir)
-  
-* SOLR-5518: Added EditFileRequestHandler to deal with security issues around modifying
-  solr configuration files.
 
 * SOLR-5023: Add support for deleteInstanceDir to be passed from SolrJ for Core
   Unload action. (Lyubov Romanchuk, shalin)
@@ -143,6 +314,9 @@ New Features
 * SOLR-5631: Add support for Lucene's FreeTextSuggester.
   (Areek Zillur via Robert Muir)
 
+* SOLR-5695: Add support for Lucene's BlendedInfixSuggester.
+  (Areek Zillur)
+  
 * SOLR-1301: Add a Solr contrib that allows for building Solr indexes via 
   Hadoop's MapReduce. (Matt Revelle, Alexander Kanarsky, Steve Rowe, 
   Mark Miller, Greg Bowyer, Jason Rutherglen, Kris Jirapinyo, Jason Venner ,
@@ -160,6 +334,27 @@ New Features
 
 * SOLR-5670: allow _version_ to use DocValues.  (Per Steffensen via yonik)
 
+* SOLR-5535: Set "partialResults" header for shards that error out if
+  shards.tolerant is specified. (Steve Davids via shalin)
+
+* SOLR-5610: Support cluster-wide properties with an API called
+  CLUSTERPROP (Noble Paul)
+
+* SOLR-5623: Better diagnosis of RuntimeExceptions in analysis
+  (Benson Margulies)
+
+* SOLR-5530: Added a NoOpResponseParser for SolrJ which puts the entire raw
+  response into an entry in the NamedList.
+  (Upayavira, Vitaliy Zhovtyuk via shalin)
+
+* SOLR-5682: Make the admin InfoHandler more pluggable / derivable.
+  (Greg Chanan via Mark Miller)
+
+* SOLR-5672: Add logParamsList parameter to support reduced logging.
+  (Christine Poerschke via Mark Miller)
+
+* SOLR-3854: SSL support for SolrCloud. (Sami Siren, hossman, Steve Davids, 
+  Alexey Serba, Mark Miller)
 
 Bug Fixes
 ----------------------
@@ -247,10 +442,85 @@ Bug Fixes
 * SOLR-5676: SolrCloud updates rejected if talking to secure ZooKeeper.
   (Greg Chanan via Mark Miller)
 
+* SOLR-5634: SolrJ GroupCommand.getNGroups returns null if group.format=simple
+  and group.ngroups=true. (Artem Lukanin via shalin)
+
+* SOLR-5667: Performance problem when not using hdfs block cache. (Mark Miller)
+
+* SOLR-5526: Fixed NPE that could arrise when explicitly configuring some built 
+  in QParserPlugins (Nikolay Khitrin, Vitaliy Zhovtyuk, hossman)
+
+* SOLR-5598: LanguageIdentifierUpdateProcessor ignores all but the first value
+  of multiValued string fields. (Andreas Hubold, Vitaliy Zhovtyuk via shalin)
+
+* SOLR-5593: Replicas should accept the last updates from a leader that has just 
+  lost it's connection to ZooKeeper. (Christine Poerschke via Mark Miller)
+
+* SOLR-5678: SolrZkClient should throw a SolrException when connect times out
+  rather than a RuntimeException. (Karl Wright, Anshum Gupta, Mark Miller)
+
+* SOLR-4072: Error message is incorrect for linkconfig in ZkCLI.
+  (Vamsee Yarlagadda, Adam Hahn, via Mark Miller)
+
+* SOLR-5691: Sharing non thread safe WeakHashMap across thread can cause
+  problems. (Bojan Smid, Mark Miller)
+
+* SOLR-5693: Running on HDFS does work correctly with NRT search. (Mark Miller)
+
+* SOLR-5644: SplitShard does not handle not finding a shard leader well.
+  (Mark Miller, Anshum Gupta via shalin)
+
+* SOLR-5704: coreRootDirectory was not respected when creating new cores
+  via CoreAdminHandler (Jesse Sipprell, Alan Woodward)
+
+* SOLR-5709: Highlighting grouped duplicate docs from different shards with
+  group.limit > 1 throws ArrayIndexOutOfBoundsException. (Steve Rowe)
+
+* SOLR-5561: Fix implicit DefaultSimilarityFactory initialization in IndexSchema 
+  to properly specify discountOverlap option.
+  (Isaac Hebsh, Ahmet Arslan, Vitaliy Zhovtyuk, hossman)
+
+* SOLR-5689: On reconnect, ZkController cancels election on first context rather
+  than latest. (Gregory Chanan, Mark Miller via shalin)
+
+* SOLR-5649: Clean up some minor ConnectionManager issues. 
+  (Mark Miller, Gregory Chanan)
+
+* SOLR-5365: Fix bug with compressed files in ExtractingRequestHandler by
+  upgrading commons-compress to 1.7 (Jan Høydahl, hossman)
+
+* SOLR-5675: cloud-scripts/zkcli.bat: quote option log4j
+  (Günther Ruck via steffkes
+
+* SOLR-5721: ConnectionManager can become stuck in likeExpired.
+  (Gregory Chanan via Mark Miller)
+  
+* SOLR-5731: In ConnectionManager, we should catch and only log exceptions
+  from BeforeReconnect. (Mark Miller)
+
+* SOLR-5718: Make LBHttpSolrServer zombie checks non-distrib and non-scoring.
+  (Christine Poerschke via Mark Miller)
+
+* SOLR-5727: LBHttpSolrServer should only retry on Connection exceptions when 
+  sending updates. Affects CloudSolrServer. (Mark Miller)
+
+* SOLR-5739: Sub-shards created by shard splitting have their update log set
+  to buffering mode on restarts. (Günther Ruck, shalin)
+
+* SOLR-5741: UpdateShardHandler was not correctly setting max total connections
+  on the HttpClient. (Shawn Heisey)
+
+* SOLR-5620: ZKStateReader.aliases should be volatile to ensure all threads see
+  the latest aliases. (Ramkumar Aiyengar via Mark Miller)
+
+* SOLR-5448: ShowFileRequestHandler treats everything as Directory, when in
+  Cloud-Mode. (Erick Erickson, steffkes)
+
+* SOLR-5770: All attempts to match a SolrCore with it's state in clusterstate.json 
+  should be done with the CoreNodeName. (Steve Davids via Mark Miller)
+
 Optimizations
 ----------------------
-
-* SOLR-5458: Admin UI - Remove separated Pages for Config & Schema (steffkes)
 
 * SOLR-5436: Eliminate the 1500ms wait in overseer loop as well as
   polling the ZK distributed queue. (Noble Paul, Mark Miller)
@@ -265,6 +535,16 @@ Optimizations
 
 * SOLR-5214: Reduce memory usage for shard splitting by merging segments one
   at a time. (Christine Poerschke via shalin)
+
+* SOLR-4227: Wrap XML RequestWriter's OutputStreamWriter in a BufferedWriter
+  to avoid frequent converter invocations. (Conrad Herrmann, shalin)
+
+* SOLR-5624: Enable QueryResultCache for CollapsingQParserPlugin.
+  (David Boychuck, Joel Bernstein)
+
+* LUCENE-5440: DocSet decoupled from OpenBitSet. DocSetBase moved to use 
+  FixedBitSet instead of OpenBitSet. As a result BitDocSet now only works 
+  with FixedBitSet. (Shai Erera)
 
 Other Changes
 ---------------------
@@ -290,9 +570,7 @@ Other Changes
 * SOLR-5502: Added a test for tri-level compositeId routing with documents
   having a "/" in a document id. (Anshum Gupta via Mark Miller)
 
-* SOLR-5539: Admin UI - Remove ability to create/modify files (steffkes)
-
-* SOLR-5533: Improve out of the box support for running Solr on hdfs with 
+* SOLR-5533: Improve out of the box support for running Solr on hdfs with
   SolrCloud. (Mark Miller)
 
 * SOLR-5548: Give DistributedSearchTestCase / JettySolrRunner the ability to 
@@ -318,6 +596,28 @@ Other Changes
 
 * SOLR-5633: HttpShardHandlerFactory should make its http client available to subclasses.
   (Ryan Ernst)
+
+* SOLR-5684: Shutdown SolrServer clients created in BasicDistributedZk2Test and
+  BasicDistributedZkTest. (Tomás Fernández Löbbe via shalin)
+
+* SOLR-5629: SolrIndexSearcher.name should include core name.
+  (Shikhar Bhushan via shalin)
+
+* SOLR-5702: Log config name found for collection at info level.
+  (Christine Poerschke via Mark Miller)
+
+* SOLR-5659: Add test for compositeId ending with an '!'.
+  (Markus Jelsma, Anshum Gupta via shalin)
+
+* SOLR-5700: Improve error handling of remote queries (proxied requests).
+  (Greg Chanan, Steve Davids via Mark Miller)
+
+* SOLR-5585: Raise Collections API timeout to 3 minutes from one minute.
+  (Mark Miller)
+
+* SOLR-5257: Improved error/warn messages when Update XML contains unexpected XML nodes
+  (Vitaliy Zhovtyuk, hossman)
+
 
 ==================  4.6.1  ==================
 

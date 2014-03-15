@@ -104,7 +104,7 @@ public abstract class AbstractSpatialFieldType<T extends SpatialStrategy> extend
     }
 
     //Solr expects us to remove the parameters we've used.
-    MapListener<String, String> argsWrap = new MapListener<String, String>(args);
+    MapListener<String, String> argsWrap = new MapListener<>(args);
     ctx = SpatialContextFactory.makeSpatialContext(argsWrap, schema.getResourceLoader().getClassLoader());
     args.keySet().removeAll(argsWrap.getSeenKeys());
 
@@ -144,7 +144,7 @@ public abstract class AbstractSpatialFieldType<T extends SpatialStrategy> extend
       return Collections.emptyList();
     }
 
-    List<StorableField> result = new ArrayList<StorableField>();
+    List<StorableField> result = new ArrayList<>();
     if (field.indexed()) {
       T strategy = getStrategy(field.getName());
       result.addAll(Arrays.asList(strategy.createIndexableFields(shape)));

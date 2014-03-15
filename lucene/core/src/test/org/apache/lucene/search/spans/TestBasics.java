@@ -18,7 +18,6 @@ package org.apache.lucene.search.spans;
  */
 
 import java.io.IOException;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,7 +43,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.English;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -111,7 +110,7 @@ public class TestBasics extends LuceneTestCase {
     directory = newDirectory();
     RandomIndexWriter writer = new RandomIndexWriter(random(), directory,
         newIndexWriterConfig(TEST_VERSION_CURRENT, simplePayloadAnalyzer)
-                                                     .setMaxBufferedDocs(_TestUtil.nextInt(random(), 100, 1000)).setMergePolicy(newLogMergePolicy()));
+                                                     .setMaxBufferedDocs(TestUtil.nextInt(random(), 100, 1000)).setMergePolicy(newLogMergePolicy()));
     //writer.infoStream = System.out;
     for (int i = 0; i < 2000; i++) {
       Document doc = new Document();
@@ -500,7 +499,7 @@ public class TestBasics extends LuceneTestCase {
     snq = new SpanNearQuery(clauses, 0, true);
     pay = new BytesRef(("pos: " + 0).getBytes("UTF-8"));
     pay2 = new BytesRef(("pos: " + 1).getBytes("UTF-8"));
-    list = new ArrayList<byte[]>();
+    list = new ArrayList<>();
     list.add(pay.bytes);
     list.add(pay2.bytes);
     query = new SpanNearPayloadCheckQuery(snq, list);
@@ -514,7 +513,7 @@ public class TestBasics extends LuceneTestCase {
     pay = new BytesRef(("pos: " + 0).getBytes("UTF-8"));
     pay2 = new BytesRef(("pos: " + 1).getBytes("UTF-8"));
     BytesRef pay3 = new BytesRef(("pos: " + 2).getBytes("UTF-8"));
-    list = new ArrayList<byte[]>();
+    list = new ArrayList<>();
     list.add(pay.bytes);
     list.add(pay2.bytes);
     list.add(pay3.bytes);
@@ -541,7 +540,7 @@ public class TestBasics extends LuceneTestCase {
     query = new SpanPositionRangeQuery(oneThousHunThree, 0, 6);
     checkHits(query, new int[]{1103, 1203,1303,1403,1503,1603,1703,1803,1903});
 
-    Collection<byte[]> payloads = new ArrayList<byte[]>();
+    Collection<byte[]> payloads = new ArrayList<>();
     BytesRef pay = new BytesRef(("pos: " + 0).getBytes("UTF-8"));
     BytesRef pay2 = new BytesRef(("pos: " + 1).getBytes("UTF-8"));
     BytesRef pay3 = new BytesRef(("pos: " + 3).getBytes("UTF-8"));

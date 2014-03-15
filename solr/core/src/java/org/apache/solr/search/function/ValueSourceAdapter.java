@@ -236,16 +236,6 @@ class ValueSourceScorerAdapter extends ValueSourceScorer {
   }
 
   @Override
-  public void score(Collector collector) throws IOException {
-    luceneScorer.score(collector);
-  }
-
-  @Override
-  public boolean score(Collector collector, int max, int firstDocID) throws IOException {
-    return luceneScorer.score(collector, max, firstDocID);
-  }
-
-  @Override
   public Weight getWeight() {
     return luceneScorer.getWeight();
   }

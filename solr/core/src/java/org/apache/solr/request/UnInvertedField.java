@@ -32,6 +32,7 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
@@ -276,7 +277,7 @@ public class UnInvertedField extends DocTermOrds {
           // instead of creating a new bitset and inverting.
 
           if (docs instanceof BitDocSet) {
-            OpenBitSet bs = docs.getBits();
+            FixedBitSet bs = ((BitDocSet)docs).getBits().clone();
             bs = bs.clone(); // don't mess with internal obs of BitDocSet
             bs.flip(0, maxDoc);
             docs = new BitDocSet(bs, maxDoc - baseSize);
@@ -538,7 +539,7 @@ public class UnInvertedField extends DocTermOrds {
       }
 
       if (doNegative) {
-        OpenBitSet bs = docs.getBits();
+        FixedBitSet bs = docs.getBits();
         if (docs instanceof BitDocSet) {
           bs = bs.clone(); // don't mess with internal obs of BitDocSet
         }

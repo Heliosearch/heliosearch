@@ -17,7 +17,8 @@
 package org.apache.solr.cloud;
 
 import org.apache.lucene.util.LuceneTestCase.Slow;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.SentinelIntSet;
 import org.apache.solr.CursorPagingTest;
 import org.apache.solr.client.solrj.SolrServer;
@@ -29,7 +30,6 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
-import org.apache.solr.common.SolrInputField;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.params.CommonParams;
@@ -46,7 +46,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -518,13 +517,13 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
   public void doRandomSortsOnLargeIndex() throws Exception {
     final Collection<String> allFieldNames = getAllSortFieldNames();
 
-    final int numInitialDocs = _TestUtil.nextInt(random(),100,200);
-    final int totalDocs = atLeast(5000);
+    final int numInitialDocs = TestUtil.nextInt(random(), 100, 200);
+    final int totalDocs = atLeast(500);
 
     // start with a smallish number of documents, and test that we can do a full walk using a 
     // sort on *every* field in the schema...
 
-    List<SolrInputDocument> initialDocs = new ArrayList<SolrInputDocument>();
+    List<SolrInputDocument> initialDocs = new ArrayList<>();
     for (int i = 1; i <= numInitialDocs; i++) {
       SolrInputDocument doc = CursorPagingTest.buildRandomDocument(i);
       initialDocs.add(doc);
@@ -532,15 +531,11 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     }
     commit();
 
-    log.info("SOLR-5652: Begining Loop over smallish num of docs");
-    final boolean SOLR_5652 = true;
-
     for (String f : allFieldNames) {
       for (String order : new String[] {" asc", " desc"}) {
         String sort = f + order + ("id".equals(f) ? "" : ", id" + order);
-        String rows = "" + _TestUtil.nextInt(random(),13,50);
-        SentinelIntSet ids = assertFullWalkNoDups(SOLR_5652,
-                                                  numInitialDocs,
+        String rows = "" + TestUtil.nextInt(random(), 13, 50);
+        SentinelIntSet ids = assertFullWalkNoDups(numInitialDocs,
                                                   params("q", "*:*",
                                                          "fl","id,"+f,
                                                          "rows",rows,
@@ -573,8 +568,6 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
       }
     }
 
-    log.info("SOLR-5652: Ending Loop over smallish num of docs");
-
     // now add a lot more docs, and test a handful of randomized multi-level sorts
     for (int i = numInitialDocs+1; i <= totalDocs; i++) {
       SolrInputDocument doc = CursorPagingTest.buildRandomDocument(i);
@@ -582,10 +575,10 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     }
     commit();
 
-    final int numRandomSorts = atLeast(5);
+    final int numRandomSorts = atLeast(3);
     for (int i = 0; i < numRandomSorts; i++) {
       final String sort = CursorPagingTest.buildRandomSort(allFieldNames);
-      final String rows = "" + _TestUtil.nextInt(random(),63,113);
+      final String rows = "" + TestUtil.nextInt(random(), 63, 113);
       final String fl = random().nextBoolean() ? "id" : "id,score";
       final boolean matchAll = random().nextBoolean();
       final String q = matchAll ? "*:*" : CursorPagingTest.buildRandomQuery();
@@ -613,7 +606,7 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
     req.setShowSchema(true); 
     NamedList<Object> rsp = controlClient.request(req);
     NamedList<Object> fields = (NamedList) ((NamedList)rsp.get("schema")).get("fields");
-    ArrayList<String> names = new ArrayList<String>(fields.size());
+    ArrayList<String> names = new ArrayList<>(fields.size());
     for (Map.Entry<String,Object> item : fields) {
       names.add(item.getKey());
     }
@@ -710,13 +703,6 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
    * </p>
    */
   public SentinelIntSet assertFullWalkNoDups(int maxSize, SolrParams params) throws Exception {
-    return assertFullWalkNoDups(false, maxSize, params);
-  }
-
-  /** :TODO: refactor method into two arg version once SOLR-5652 is resolved */
-  private SentinelIntSet assertFullWalkNoDups(final boolean verbose, 
-                                              final int maxSize, 
-                                              final SolrParams params) throws Exception {
     SentinelIntSet ids = new SentinelIntSet(maxSize, -1);
     String cursorMark = CURSOR_MARK_START;
     int docsOnThisPage = Integer.MAX_VALUE;
@@ -734,16 +720,6 @@ public class DistribCursorPagingTest extends AbstractFullDistribZkTestBase {
       if (0 == docsOnThisPage) {
         assertEquals("no more docs, but "+CURSOR_MARK_NEXT+" isn't same",
                      cursorMark, nextCursorMark);
-      }
-
-      if (verbose) { // SOLR-5652
-        // SolrDocument is a bit more verbose then we need
-        StringBuilder s = new StringBuilder();
-        for (SolrDocument doc : docs) {
-          s.append(doc.getFieldValuesMap().toString());
-          s.append("; ");
-        }
-        log.info("SOLR-5652: ({}) gave us these docs: {}", p, s);
       }
 
       for (SolrDocument doc : docs) {

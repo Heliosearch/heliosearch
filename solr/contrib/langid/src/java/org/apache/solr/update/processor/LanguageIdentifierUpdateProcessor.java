@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -106,7 +107,7 @@ public abstract class LanguageIdentifierUpdateProcessor extends UpdateRequestPro
         fallbackFields = params.get(FALLBACK_FIELDS).split(",");
       }
       overwrite = params.getBool(OVERWRITE, false);
-      langWhitelist = new HashSet<String>();
+      langWhitelist = new HashSet<>();
       threshold = params.getDouble(THRESHOLD, DOCID_THRESHOLD_DEFAULT);
       if(params.get(LANG_WHITELIST, "").length() > 0) {
         for(String lang : params.get(LANG_WHITELIST, "").split(",")) {
@@ -132,15 +133,15 @@ public abstract class LanguageIdentifierUpdateProcessor extends UpdateRequestPro
       } else {
         mapIndividualFields = mapFields;
       }
-      mapIndividualFieldsSet = new HashSet<String>(Arrays.asList(mapIndividualFields));
+      mapIndividualFieldsSet = new HashSet<>(Arrays.asList(mapIndividualFields));
       // Compile a union of the lists of fields to map
-      allMapFieldsSet = new HashSet<String>(Arrays.asList(mapFields));
+      allMapFieldsSet = new HashSet<>(Arrays.asList(mapFields));
       if(Arrays.equals(mapFields, mapIndividualFields)) {
         allMapFieldsSet.addAll(mapIndividualFieldsSet);
       }
 
       // Normalize detected langcode onto normalized langcode
-      lcMap = new HashMap<String,String>();
+      lcMap = new HashMap<>();
       if(params.get(LCMAP) != null) {
         for(String mapping : params.get(LCMAP).split("[, ]")) {
           String[] keyVal = mapping.split(":");
@@ -153,7 +154,7 @@ public abstract class LanguageIdentifierUpdateProcessor extends UpdateRequestPro
       }
 
       // Language Code mapping
-      mapLcMap = new HashMap<String,String>();
+      mapLcMap = new HashMap<>();
       if(params.get(MAP_LCMAP) != null) {
         for(String mapping : params.get(MAP_LCMAP).split("[, ]")) {
           String[] keyVal = mapping.split(":");
@@ -198,7 +199,7 @@ public abstract class LanguageIdentifierUpdateProcessor extends UpdateRequestPro
    */
   protected SolrInputDocument process(SolrInputDocument doc) {
     String docLang = null;
-    HashSet<String> docLangs = new HashSet<String>();
+    HashSet<String> docLangs = new HashSet<>();
     String fallbackLang = getFallbackLang(doc, fallbackFields, fallbackValue);
 
     if(langField == null || !doc.containsKey(langField) || (doc.containsKey(langField) && overwrite)) {
@@ -291,12 +292,16 @@ public abstract class LanguageIdentifierUpdateProcessor extends UpdateRequestPro
     for (String fieldName : inputFields) {
       log.debug("Appending field "+fieldName);
       if (doc.containsKey(fieldName)) {
-        Object content = doc.getFieldValue(fieldName);
-        if(content instanceof String) {
-          sb.append((String) doc.getFieldValue(fieldName));
-          sb.append(" ");
-        } else {
-          log.warn("Field "+fieldName+" not a String value, not including in detection");
+        Collection<Object> fieldValues = doc.getFieldValues(fieldName);
+        if (fieldValues != null) {
+          for (Object content : fieldValues) {
+            if (content instanceof String) {
+              sb.append((String) content);
+              sb.append(" ");
+            } else {
+              log.warn("Field " + fieldName + " not a String value, not including in detection");
+            }
+          }
         }
       }
     }
@@ -318,7 +323,7 @@ public abstract class LanguageIdentifierUpdateProcessor extends UpdateRequestPro
    * @return a string of the chosen language
    */
   protected String resolveLanguage(String language, String fallbackLang) {
-    List<DetectedLanguage> l = new ArrayList<DetectedLanguage>();
+    List<DetectedLanguage> l = new ArrayList<>();
     l.add(new DetectedLanguage(language, 1.0));
     return resolveLanguage(l, fallbackLang);
   }

@@ -34,7 +34,7 @@ import java.util.List;
 
 
 public class SolrRequestInfo {
-  protected final static ThreadLocal<SolrRequestInfo> threadLocal = new ThreadLocal<SolrRequestInfo>();
+  protected final static ThreadLocal<SolrRequestInfo> threadLocal = new ThreadLocal<>();
 
   protected SolrQueryRequest req;
   protected SolrQueryResponse rsp;
@@ -151,7 +151,7 @@ public class SolrRequestInfo {
     // is this better here, or on SolrQueryRequest?
     synchronized (this) {
       if (closeHooks == null) {
-        closeHooks = new LinkedList<Closeable>();
+        closeHooks = new LinkedList<>();
       }
       // addFirst so we will close in reverse order
       closeHooks.addFirst(hook);

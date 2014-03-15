@@ -498,7 +498,7 @@ public class SpellChecker implements java.io.Closeable {
       final Directory dir = this.spellIndex;
       final IndexWriter writer = new IndexWriter(dir, config);
       IndexSearcher indexSearcher = obtainSearcher();
-      final List<TermsEnum> termsEnums = new ArrayList<TermsEnum>();
+      final List<TermsEnum> termsEnums = new ArrayList<>();
 
       final IndexReader reader = searcher.getIndexReader();
       if (reader.maxDoc() > 0) {
@@ -512,7 +512,7 @@ public class SpellChecker implements java.io.Closeable {
       boolean isEmpty = termsEnums.isEmpty();
 
       try { 
-        BytesRefIterator iter = dict.getWordsIterator();
+        BytesRefIterator iter = dict.getEntryIterator();
         BytesRef currentTerm;
         
         terms: while ((currentTerm = iter.next()) != null) {

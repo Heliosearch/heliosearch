@@ -18,7 +18,7 @@
 package org.apache.solr;
 
 import org.apache.lucene.search.FieldCache;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.LuceneTestCase.Slow;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.request.SolrQueryRequest;
@@ -53,7 +53,7 @@ public class TestRandomFaceting extends SolrTestCaseJ4 {
     model = null;
     indexSize = rand.nextBoolean() ? (rand.nextInt(10) + 1) : (rand.nextInt(100) + 10);
 
-    types = new ArrayList<FldType>();
+    types = new ArrayList<>();
     types.add(new FldType("id",ONE_ONE, new SVal('A','Z',4,4)));
     types.add(new FldType("score_f",ONE_ONE, new FVal(1,100)));
     types.add(new FldType("small_f",ONE_ONE, new FVal(-4,5)));
@@ -87,7 +87,7 @@ public class TestRandomFaceting extends SolrTestCaseJ4 {
     Random rand = random();
     int percent = rand.nextInt(100);
     if (model == null) return;
-    ArrayList<String> ids = new ArrayList<String>(model.size());
+    ArrayList<String> ids = new ArrayList<>(model.size());
     for (Comparable id : model.keySet()) {
       if (rand.nextInt(100) < percent) {
         ids.add(id.toString());
@@ -185,7 +185,7 @@ public class TestRandomFaceting extends SolrTestCaseJ4 {
       if ((ftype.vals instanceof SVal) && rand.nextInt(100) < 20) {
         // validate = false;
         String prefix = ftype.createValue().toString();
-        if (rand.nextInt(100) < 5) prefix =  _TestUtil.randomUnicodeString(rand);
+        if (rand.nextInt(100) < 5) prefix =  TestUtil.randomUnicodeString(rand);
         else if (rand.nextInt(100) < 10) prefix = Character.toString((char)rand.nextInt(256));
         else if (prefix.length() > 0) prefix = prefix.substring(0, rand.nextInt(prefix.length()));
         params.add("facet.prefix", prefix);
@@ -209,7 +209,7 @@ public class TestRandomFaceting extends SolrTestCaseJ4 {
       params.set("facet.field", facet_field);
 
       List<String> methods = multiValued ? multiValuedMethods : singleValuedMethods;
-      List<String> responses = new ArrayList<String>(methods.size());
+      List<String> responses = new ArrayList<>(methods.size());
       for (String method : methods) {
         // params.add("facet.field", "{!key="+method+"}" + ftype.fname);
         // TODO: allow method to be passed on local params?

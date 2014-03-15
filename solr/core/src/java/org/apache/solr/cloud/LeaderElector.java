@@ -161,7 +161,7 @@ public  class LeaderElector {
   // TODO: get this core param out of here
   protected void runIamLeaderProcess(final ElectionContext context, boolean weAreReplacement) throws KeeperException,
       InterruptedException, IOException {
-    context.runLeaderProcess(weAreReplacement);
+    context.runLeaderProcess(weAreReplacement,0);
   }
   
   /**
@@ -212,7 +212,7 @@ public  class LeaderElector {
    * @return int seqs
    */
   private List<Integer> getSeqs(List<String> seqs) {
-    List<Integer> intSeqs = new ArrayList<Integer>(seqs.size());
+    List<Integer> intSeqs = new ArrayList<>(seqs.size());
     for (String seq : seqs) {
       intSeqs.add(getSeq(seq));
     }

@@ -295,7 +295,7 @@ public abstract class FSDirectory extends BaseDirectory {
   @Override
   public void sync(Collection<String> names) throws IOException {
     ensureOpen();
-    Set<String> toSync = new HashSet<String>(names);
+    Set<String> toSync = new HashSet<>(names);
     toSync.retainAll(staleFiles);
 
     for (String name : toSync)
@@ -337,7 +337,7 @@ public abstract class FSDirectory extends BaseDirectory {
   /** For debug output. */
   @Override
   public String toString() {
-    return this.getClass().getName() + "@" + directory + " lockFactory=" + getLockFactory();
+    return this.getClass().getSimpleName() + "@" + directory + " lockFactory=" + getLockFactory();
   }
 
   /**

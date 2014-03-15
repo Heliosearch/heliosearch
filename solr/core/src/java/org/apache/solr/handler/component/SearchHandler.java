@@ -64,7 +64,7 @@ public class SearchHandler extends RequestHandlerBase implements SolrCoreAware ,
 
   protected List<String> getDefaultComponents()
   {
-    ArrayList<String> names = new ArrayList<String>(6);
+    ArrayList<String> names = new ArrayList<>(6);
     names.add( QueryComponent.COMPONENT_NAME );
     names.add( FacetComponent.COMPONENT_NAME );
     names.add( MoreLikeThisComponent.COMPONENT_NAME );
@@ -72,6 +72,7 @@ public class SearchHandler extends RequestHandlerBase implements SolrCoreAware ,
     names.add( StatsComponent.COMPONENT_NAME );
     names.add( DebugComponent.COMPONENT_NAME );
     names.add( AnalyticsComponent.COMPONENT_NAME );
+    names.add( ExpandComponent.COMPONENT_NAME);
     return names;
   }
 
@@ -125,7 +126,7 @@ public class SearchHandler extends RequestHandlerBase implements SolrCoreAware ,
     }
 
     // Build the component list
-    components = new ArrayList<SearchComponent>( list.size() );
+    components = new ArrayList<>( list.size() );
     DebugComponent dbgCmp = null;
     for(String c : list){
       SearchComponent comp = core.getSearchComponent( c );
@@ -236,9 +237,9 @@ public class SearchHandler extends RequestHandlerBase implements SolrCoreAware ,
       // a distributed request
 
       if (rb.outgoing == null) {
-        rb.outgoing = new LinkedList<ShardRequest>();
+        rb.outgoing = new LinkedList<>();
       }
-      rb.finished = new ArrayList<ShardRequest>();
+      rb.finished = new ArrayList<>();
 
       int nextStage = 0;
       do {
@@ -262,13 +263,13 @@ public class SearchHandler extends RequestHandlerBase implements SolrCoreAware ,
             if (sreq.actualShards==ShardRequest.ALL_SHARDS) {
               sreq.actualShards = rb.shards;
             }
-            sreq.responses = new ArrayList<ShardResponse>();
+            sreq.responses = new ArrayList<>();
 
             // TODO: map from shard to address[]
             for (String shard : sreq.actualShards) {
               ModifiableSolrParams params = new ModifiableSolrParams(sreq.params);
               params.remove(ShardParams.SHARDS);      // not a top-level request
-              params.set("distrib", "false");               // not a top-level request
+              params.set(CommonParams.DISTRIB, "false");               // not a top-level request
               params.remove("indent");
               params.remove(CommonParams.HEADER_ECHO_PARAMS);
               params.set(ShardParams.IS_SHARD, true);  // a sub (shard) request
@@ -307,6 +308,10 @@ public class SearchHandler extends RequestHandlerBase implements SolrCoreAware ,
                   throw (SolrException)srsp.getException();
                 } else {
                   throw new SolrException(SolrException.ErrorCode.SERVER_ERROR, srsp.getException());
+                }
+              } else {
+                if(rsp.getResponseHeader().get("partialResults") == null) {
+                  rsp.getResponseHeader().add("partialResults", Boolean.TRUE);
                 }
               }
             }

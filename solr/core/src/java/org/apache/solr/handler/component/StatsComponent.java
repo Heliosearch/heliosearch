@@ -134,8 +134,8 @@ public class StatsComponent extends SearchComponent {
 
     StatsInfo si = rb._statsInfo;
 
-    NamedList<NamedList<Object>> stats = new SimpleOrderedMap<NamedList<Object>>();
-    NamedList<Object> stats_fields = new SimpleOrderedMap<Object>();
+    NamedList<NamedList<Object>> stats = new SimpleOrderedMap<>();
+    NamedList<Object> stats_fields = new SimpleOrderedMap<>();
     stats.add("stats_fields", stats_fields);
     for (String field : si.statsFields.keySet()) {
       NamedList stv = si.statsFields.get(field).getStatsValues();
@@ -172,7 +172,7 @@ class StatsInfo {
   Map<String, StatsValues> statsFields;
 
   void parse(SolrParams params, ResponseBuilder rb) {
-    statsFields = new HashMap<String, StatsValues>();
+    statsFields = new HashMap<>();
 
     String[] statsFs = params.getParams(StatsParams.STATS_FIELD);
     if (statsFs != null) {
@@ -207,13 +207,13 @@ class SimpleStats {
   }
 
   public NamedList<Object> getStatsCounts() throws IOException {
-    NamedList<Object> res = new SimpleOrderedMap<Object>();
+    NamedList<Object> res = new SimpleOrderedMap<>();
     res.add("stats_fields", getStatsFields());
     return res;
   }
 
   public NamedList<Object> getStatsFields() throws IOException {
-    NamedList<Object> res = new SimpleOrderedMap<Object>();
+    NamedList<Object> res = new SimpleOrderedMap<>();
     String[] statsFs = params.getParams(StatsParams.STATS_FIELD);
     boolean isShard = params.getBool(ShardParams.IS_SHARD, false);
     if (null != statsFs) {
@@ -252,7 +252,7 @@ class SimpleStats {
     QueryContext qcontext = QueryContext.newContext(searcher);
     final StatsValues allstats = StatsValuesFactory.createStatsValues(qcontext, sf, calcDistinct);
 
-    List<FieldFacetStats> facetStats = new ArrayList<FieldFacetStats>();
+    List<FieldFacetStats> facetStats = new ArrayList<>();
     for( String facetField : facet ) {
       SchemaField fsf = schema.getField(facetField);
 

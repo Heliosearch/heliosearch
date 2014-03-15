@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.lucene.util.LuceneTestCase.BadApple;
 import org.apache.lucene.util.LuceneTestCase.Slow;
+import org.apache.solr.SolrTestCaseJ4.SuppressSSL;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -47,8 +49,8 @@ import org.junit.BeforeClass;
  * Super basic testing, no shard restarting or anything.
  */
 @Slow
+@SuppressSSL(bugUrl = "https://issues.apache.org/jira/browse/SOLR-5776")
 public class FullSolrCloudDistribCmdsTest extends AbstractFullDistribZkTestBase {
-  
   
   @BeforeClass
   public static void beforeSuperClass() {
@@ -385,7 +387,7 @@ public class FullSolrCloudDistribCmdsTest extends AbstractFullDistribZkTestBase 
         }
       }
     };
-    List<Thread> threads = new ArrayList<Thread>();
+    List<Thread> threads = new ArrayList<>();
 
     int nthreads = random().nextInt(TEST_NIGHTLY ? 4 : 2) + 1;
     for (int i = 0; i < nthreads; i++) {
@@ -438,7 +440,7 @@ public class FullSolrCloudDistribCmdsTest extends AbstractFullDistribZkTestBase 
     long beforeCount = results.getResults().getNumFound();
     int cnt = TEST_NIGHTLY ? 2933 : 313;
     try {
-      suss.setConnectionTimeout(15000);
+      suss.setConnectionTimeout(120000);
       for (int i = 0; i < cnt; i++) {
         index_specific(suss, id, docId++, "text_t", "some text so that it not's negligent work to parse this doc, even though it's still a pretty short doc");
       }

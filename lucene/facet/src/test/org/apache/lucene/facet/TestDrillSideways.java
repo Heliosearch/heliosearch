@@ -32,6 +32,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.facet.DrillSideways.DrillSidewaysResult;
+import org.apache.lucene.facet.sortedset.DefaultSortedSetDocValuesReaderState;
 import org.apache.lucene.facet.sortedset.SortedSetDocValuesFacetField;
 import org.apache.lucene.facet.sortedset.SortedSetDocValuesReaderState;
 import org.apache.lucene.facet.taxonomy.TaxonomyReader;
@@ -61,7 +62,7 @@ import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.InPlaceMergeSorter;
 import org.apache.lucene.util.InfoStream;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 public class TestDrillSideways extends FacetTestCase {
 
@@ -410,7 +411,7 @@ public class TestDrillSideways extends FacetTestCase {
     bChance /= sum;
     cChance /= sum;
 
-    int numDims = _TestUtil.nextInt(random(), 2, 5);
+    int numDims = TestUtil.nextInt(random(), 2, 5);
     //int numDims = 3;
     int numDocs = atLeast(3000);
     //int numDocs = 20;
@@ -421,9 +422,9 @@ public class TestDrillSideways extends FacetTestCase {
     int valueCount = 2;
 
     for(int dim=0;dim<numDims;dim++) {
-      Set<String> values = new HashSet<String>();
+      Set<String> values = new HashSet<>();
       while (values.size() < valueCount) {
-        String s = _TestUtil.randomRealisticUnicodeString(random());
+        String s = TestUtil.randomRealisticUnicodeString(random());
         //String s = _TestUtil.randomString(random());
         if (s.length() > 0) {
           values.add(s);
@@ -433,7 +434,7 @@ public class TestDrillSideways extends FacetTestCase {
       valueCount *= 2;
     }
 
-    List<Doc> docs = new ArrayList<Doc>();
+    List<Doc> docs = new ArrayList<>();
     for(int i=0;i<numDocs;i++) {
       Doc doc = new Doc();
       doc.id = ""+i;
@@ -522,7 +523,7 @@ public class TestDrillSideways extends FacetTestCase {
 
     if (random().nextBoolean()) {
       // Randomly delete a few docs:
-      int numDel = _TestUtil.nextInt(random(), 1, (int) (numDocs*0.05));
+      int numDel = TestUtil.nextInt(random(), 1, (int) (numDocs * 0.05));
       if (VERBOSE) {
         System.out.println("delete " + numDel);
       }
@@ -552,7 +553,7 @@ public class TestDrillSideways extends FacetTestCase {
     IndexSearcher s = newSearcher(r);
     
     if (doUseDV) {
-      sortedSetDVState = new SortedSetDocValuesReaderState(s.getIndexReader());
+      sortedSetDVState = new DefaultSortedSetDocValuesReaderState(s.getIndexReader());
     } else {
       sortedSetDVState = null;
     }
@@ -569,7 +570,7 @@ public class TestDrillSideways extends FacetTestCase {
     for(int iter=0;iter<numIters;iter++) {
 
       String contentToken = random().nextInt(30) == 17 ? null : randomContentToken(true);
-      int numDrillDown = _TestUtil.nextInt(random(), 1, Math.min(4, numDims));
+      int numDrillDown = TestUtil.nextInt(random(), 1, Math.min(4, numDims));
       if (VERBOSE) {
         System.out.println("\nTEST: iter=" + iter + " baseQuery=" + contentToken + " numDrillDown=" + numDrillDown + " useSortedSetDV=" + doUseDV);
       }
@@ -585,7 +586,7 @@ public class TestDrillSideways extends FacetTestCase {
             // Drill down on one value:
             drillDowns[dim] = new String[] {dimValues[dim][random().nextInt(dimValues[dim].length)]};
           } else {
-            int orCount = _TestUtil.nextInt(random(), 1, Math.min(5, dimValues[dim].length));
+            int orCount = TestUtil.nextInt(random(), 1, Math.min(5, dimValues[dim].length));
             drillDowns[dim] = new String[orCount];
             anyMultiValuedDrillDowns |= orCount > 1;
             for(int i=0;i<orCount;i++) {
@@ -644,7 +645,7 @@ public class TestDrillSideways extends FacetTestCase {
               final FixedBitSet bits = new FixedBitSet(maxDoc);
               for(int docID=0;docID < maxDoc;docID++) {
                 // Keeps only the even ids:
-                if ((acceptDocs == null || acceptDocs.get(docID)) && ((Integer.parseInt(context.reader().document(docID).get("id")) & 1) == 0)) {
+                if ((acceptDocs == null || acceptDocs.get(docID)) && (Integer.parseInt(context.reader().document(docID).get("id")) & 1) == 0) {
                   bits.set(docID);
                 }
               }
@@ -688,7 +689,7 @@ public class TestDrillSideways extends FacetTestCase {
       // subScorers are on the same docID:
       if (!anyMultiValuedDrillDowns) {
         // Can only do this test when there are no OR'd
-        // drill-down values, beacuse in that case it's
+        // drill-down values, because in that case it's
         // easily possible for one of the DD terms to be on
         // a future docID:
         new DrillSideways(s, config, tr) {
@@ -709,7 +710,7 @@ public class TestDrillSideways extends FacetTestCase {
         ds = new DrillSideways(s, config, tr) {
             @Override
             protected Facets buildFacetsResult(FacetsCollector drillDowns, FacetsCollector[] drillSideways, String[] drillSidewaysDims) throws IOException {
-              Map<String,Facets> drillSidewaysFacets = new HashMap<String,Facets>();
+              Map<String,Facets> drillSidewaysFacets = new HashMap<>();
               Facets drillDownFacets = getTaxonomyFacetCounts(taxoReader, config, drillDowns);
               if (drillSideways != null) {
                 for(int i=0;i<drillSideways.length;i++) {
@@ -732,7 +733,7 @@ public class TestDrillSideways extends FacetTestCase {
       DrillSidewaysResult actual = ds.search(ddq, filter, null, numDocs, sort, true, true);
 
       TopDocs hits = s.search(baseQuery, numDocs);
-      Map<String,Float> scores = new HashMap<String,Float>();
+      Map<String,Float> scores = new HashMap<>();
       for(ScoreDoc sd : hits.scoreDocs) {
         scores.put(s.doc(sd.doc).get("id"), sd.score);
       }
@@ -846,7 +847,7 @@ public class TestDrillSideways extends FacetTestCase {
                                                         String[][] dimValues, Filter onlyEven) throws Exception {
     int numDims = dimValues.length;
 
-    List<Doc> hits = new ArrayList<Doc>();
+    List<Doc> hits = new ArrayList<>();
     Counters drillDownCounts = new Counters(dimValues);
     Counters[] drillSidewaysCounts = new Counters[dimValues.length];
     for(int dim=0;dim<numDims;dim++) {
@@ -908,7 +909,7 @@ public class TestDrillSideways extends FacetTestCase {
       }
     }
 
-    Map<String,Integer> idToDocID = new HashMap<String,Integer>();
+    Map<String,Integer> idToDocID = new HashMap<>();
     for(int i=0;i<s.getIndexReader().maxDoc();i++) {
       idToDocID.put(s.doc(i).get("id"), i);
     }
@@ -955,7 +956,7 @@ public class TestDrillSideways extends FacetTestCase {
     }
 
     for(int dim=0;dim<expected.counts.length;dim++) {
-      int topN = random().nextBoolean() ? dimValues[dim].length : _TestUtil.nextInt(random(), 1, dimValues[dim].length);
+      int topN = random().nextBoolean() ? dimValues[dim].length : TestUtil.nextInt(random(), 1, dimValues[dim].length);
       FacetResult fr = actual.facets.getTopChildren(topN, "dim"+dim);
       if (VERBOSE) {
         System.out.println("    dim" + dim + " topN=" + topN + " (vs " + dimValues[dim].length + " unique values)");
@@ -963,7 +964,7 @@ public class TestDrillSideways extends FacetTestCase {
       }
 
       int idx = 0;
-      Map<String,Integer> actualValues = new HashMap<String,Integer>();
+      Map<String,Integer> actualValues = new HashMap<>();
 
       if (fr != null) {
         for(LabelAndValue labelValue : fr.labelValues) {

@@ -23,9 +23,12 @@ import java.io.IOException;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
 
+/**
+ * @lucene.experimental
+ */
 public abstract class CustomBufferedIndexInput extends IndexInput {
   
-  public static final int BUFFER_SIZE = 1024;
+  public static final int BUFFER_SIZE = 32768;
   
   private int bufferSize = BUFFER_SIZE;
   

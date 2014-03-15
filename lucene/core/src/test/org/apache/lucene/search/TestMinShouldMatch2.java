@@ -42,7 +42,7 @@ import org.apache.lucene.search.similarities.Similarity.SimWeight;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -107,7 +107,7 @@ public class TestMinShouldMatch2 extends LuceneTestCase {
   private static void addSome(Document doc, String values[]) {
     List<String> list = Arrays.asList(values);
     Collections.shuffle(list, random());
-    int howMany = _TestUtil.nextInt(random(), 1, list.size());
+    int howMany = TestUtil.nextInt(random(), 1, list.size());
     for (int i = 0; i < howMany; i++) {
       doc.add(new StringField("field", list.get(i), Field.Store.NO));
       doc.add(new SortedSetDocValuesField("dv", new BytesRef(list.get(i))));
@@ -126,7 +126,7 @@ public class TestMinShouldMatch2 extends LuceneTestCase {
     if (slow) {
       return new SlowMinShouldMatchScorer(weight, reader, searcher);
     } else {
-      return weight.scorer(reader.getContext(), true, false, null);
+      return weight.scorer(reader.getContext(), null);
     }
   }
   
@@ -194,7 +194,7 @@ public class TestMinShouldMatch2 extends LuceneTestCase {
   
   /** test next with giant bq of all terms with varying minShouldMatch */
   public void testNextAllTerms() throws Exception {
-    List<String> termsList = new ArrayList<String>();
+    List<String> termsList = new ArrayList<>();
     termsList.addAll(Arrays.asList(commonTerms));
     termsList.addAll(Arrays.asList(mediumTerms));
     termsList.addAll(Arrays.asList(rareTerms));
@@ -209,7 +209,7 @@ public class TestMinShouldMatch2 extends LuceneTestCase {
   
   /** test advance with giant bq of all terms with varying minShouldMatch */
   public void testAdvanceAllTerms() throws Exception {
-    List<String> termsList = new ArrayList<String>();
+    List<String> termsList = new ArrayList<>();
     termsList.addAll(Arrays.asList(commonTerms));
     termsList.addAll(Arrays.asList(mediumTerms));
     termsList.addAll(Arrays.asList(rareTerms));
@@ -226,7 +226,7 @@ public class TestMinShouldMatch2 extends LuceneTestCase {
   
   /** test next with varying numbers of terms with varying minShouldMatch */
   public void testNextVaryingNumberOfTerms() throws Exception {
-    List<String> termsList = new ArrayList<String>();
+    List<String> termsList = new ArrayList<>();
     termsList.addAll(Arrays.asList(commonTerms));
     termsList.addAll(Arrays.asList(mediumTerms));
     termsList.addAll(Arrays.asList(rareTerms));
@@ -243,7 +243,7 @@ public class TestMinShouldMatch2 extends LuceneTestCase {
   
   /** test advance with varying numbers of terms with varying minShouldMatch */
   public void testAdvanceVaryingNumberOfTerms() throws Exception {
-    List<String> termsList = new ArrayList<String>();
+    List<String> termsList = new ArrayList<>();
     termsList.addAll(Arrays.asList(commonTerms));
     termsList.addAll(Arrays.asList(mediumTerms));
     termsList.addAll(Arrays.asList(rareTerms));
@@ -273,7 +273,7 @@ public class TestMinShouldMatch2 extends LuceneTestCase {
     final SortedSetDocValues dv;
     final int maxDoc;
 
-    final Set<Long> ords = new HashSet<Long>();
+    final Set<Long> ords = new HashSet<>();
     final SimScorer[] sims;
     final int minNrShouldMatch;
     

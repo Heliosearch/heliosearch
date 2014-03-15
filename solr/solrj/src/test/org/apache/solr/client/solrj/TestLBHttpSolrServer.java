@@ -99,7 +99,7 @@ public class TestLBHttpSolrServer extends SolrTestCaseJ4 {
   }
 
   private void addDocs(SolrInstance solrInstance) throws IOException, SolrServerException {
-    List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
+    List<SolrInputDocument> docs = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       SolrInputDocument doc = new SolrInputDocument();
       doc.addField("id", i);
@@ -135,7 +135,7 @@ public class TestLBHttpSolrServer extends SolrTestCaseJ4 {
     LBHttpSolrServer lbHttpSolrServer = new LBHttpSolrServer(httpClient, s);
     lbHttpSolrServer.setAliveCheckInterval(500);
     SolrQuery solrQuery = new SolrQuery("*:*");
-    Set<String> names = new HashSet<String>();
+    Set<String> names = new HashSet<>();
     QueryResponse resp = null;
     for (String value : s) {
       resp = lbHttpSolrServer.query(solrQuery);
@@ -259,7 +259,7 @@ public class TestLBHttpSolrServer extends SolrTestCaseJ4 {
     }
 
     public String getUrl() {
-      return "http://127.0.0.1:" + port + "/solr";
+      return buildUrl(port, "/solr");
     }
 
     public String getSchemaFile() {
@@ -314,7 +314,7 @@ public class TestLBHttpSolrServer extends SolrTestCaseJ4 {
     }
 
     public void startJetty() throws Exception {
-      jetty = new JettySolrRunner(getHomeDir(), "/solr", port, "bad_solrconfig.xml", null);
+      jetty = new JettySolrRunner(getHomeDir(), "/solr", port, "bad_solrconfig.xml", null, true, null, sslConfig);
       System.setProperty("solr.data.dir", getDataDir());
       jetty.start();
       int newPort = jetty.getLocalPort();

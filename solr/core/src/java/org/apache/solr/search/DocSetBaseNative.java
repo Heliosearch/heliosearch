@@ -24,19 +24,13 @@ import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.Bits;
-import org.apache.lucene.util.OpenBitSet;
+import org.apache.lucene.util.FixedBitSet;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.common.SolrException;
-import org.apache.solr.core.Diagnostics;
-import org.apache.solr.core.HS;
 import org.apache.solr.core.RefCount;
 import org.apache.solr.core.SolrCore;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** A base class that may be useful for implementing DocSets */
@@ -237,17 +231,17 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   /**
    * Inefficient base implementation.
-   *
-   * @see org.apache.solr.search.BitDocSet#getBits
    */
   @Override
-  public OpenBitSet getBits() {
-    OpenBitSet bits = new OpenBitSet();
+  public FixedBitSet getBits() {
+    FixedBitSet bits = new FixedBitSet(64);
     for (DocIterator iter = iterator(); iter.hasNext();) {
-      bits.set(iter.nextDoc());
+      int nextDoc = iter.nextDoc();
+      bits = FixedBitSet.ensureCapacity(bits, nextDoc);
+      bits.set(nextDoc);
     }
     return bits;
-  };
+  }
 
   @Override
   public DocSet intersection(DocSet other) {
@@ -258,7 +252,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
     }
 
     // Default... handle with bitsets.
-    OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
     newbits.and(other.getBits());
     return new BitDocSetNative(newbits);
   }
@@ -280,8 +274,10 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
     if (other instanceof BitDocSetNative) {
       return other.union(this);
     }
-    OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
-    newbits.or(other.getBits());
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
+    FixedBitSet otherbits = other.getBits();
+    newbits = FixedBitSet.ensureCapacity(newbits, otherbits.length());
+    newbits.or(otherbits);
     return new BitDocSetNative(newbits);
   }
 
@@ -303,7 +299,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public DocSet andNot(DocSet other) {
-    OpenBitSet newbits = (OpenBitSet)(this.getBits().clone());
+    FixedBitSet newbits = (FixedBitSet)(this.getBits().clone());
     newbits.andNot(other.getBits());
     return new BitDocSetNative(newbits);
   }
@@ -315,7 +311,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
   @Override
   public Filter getTopFilter() {
-    final OpenBitSet bs = getBits();
+    final FixedBitSet bs = getBits();
 
     return new Filter() {
       @Override
@@ -359,7 +355,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
 
               @Override
               public long cost() {
-                return bs.capacity();
+                return bs.length();
               }
             };
           }
@@ -381,10 +377,10 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
   }
 
   @Override
-  public void setBitsOn(OpenBitSet target) {
+  public void setBitsOn(FixedBitSet target) {
     DocIterator iter = iterator();
     while (iter.hasNext()) {
-      target.fastSet(iter.nextDoc());
+      target.set(iter.nextDoc());
     }
   }
 
@@ -393,6 +389,14 @@ public abstract class DocSetBaseNative implements RefCount, DocSet {
     DocIterator iter = iterator();
     while (iter.hasNext()) {
       target.fastSet(iter.nextDoc());
+    }
+  }
+
+  @Override
+  public void addAllTo(DocSet target) {
+    DocIterator iter = iterator();
+    while (iter.hasNext()) {
+      target.add(iter.nextDoc());
     }
   }
 

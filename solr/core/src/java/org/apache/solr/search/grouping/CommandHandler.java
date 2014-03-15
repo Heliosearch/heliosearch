@@ -23,6 +23,7 @@ import org.apache.lucene.search.MultiCollector;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TimeLimitingCollector;
 import org.apache.lucene.search.TotalHitCountCollector;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.search.BitDocSet;
@@ -170,8 +171,8 @@ public class CommandHandler implements AutoCloseable {
     }
 
     int maxDoc = searcher.maxDoc();
-    long[] bits = termAllGroupHeadsCollector.retrieveGroupHeads(maxDoc).getBits();
-    return new BitDocSet(new OpenBitSet(bits, bits.length));
+    FixedBitSet fbs = termAllGroupHeadsCollector.retrieveGroupHeads(maxDoc);
+    return new BitDocSet(fbs);
   }
 
   private DocSet computeDocSet(Query query, ProcessedFilter filter, List<Collector> collectors) throws IOException {

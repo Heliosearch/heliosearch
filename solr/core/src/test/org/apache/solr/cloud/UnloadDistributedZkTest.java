@@ -24,6 +24,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.solr.SolrTestCaseJ4.SuppressSSL;
 import org.apache.lucene.util.LuceneTestCase.Slow;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServer;
@@ -45,6 +46,7 @@ import org.junit.BeforeClass;
  * work as expected.
  */
 @Slow
+@SuppressSSL(bugUrl = "https://issues.apache.org/jira/browse/SOLR-5776")
 public class UnloadDistributedZkTest extends BasicDistributedZkTest {
   
   @BeforeClass
@@ -268,8 +270,8 @@ public class UnloadDistributedZkTest extends BasicDistributedZkTest {
     zkStateReader.getLeaderRetry("unloadcollection", "shard1", 15000);
     
     addClient = new HttpSolrServer(url2 + "/unloadcollection2");
-    addClient.setConnectionTimeout(15000);
-    addClient.setSoTimeout(30000);
+    addClient.setConnectionTimeout(30000);
+    addClient.setSoTimeout(90000);
     
     // add a few docs while the leader is down
     for (int x = 101; x < 200; x++) {

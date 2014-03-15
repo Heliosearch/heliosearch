@@ -46,8 +46,8 @@ import org.apache.lucene.util.ToStringUtils;
  */
 public class PhraseQuery extends Query {
   private String field;
-  private ArrayList<Term> terms = new ArrayList<Term>(4);
-  private ArrayList<Integer> positions = new ArrayList<Integer>(4);
+  private ArrayList<Term> terms = new ArrayList<>(4);
+  private ArrayList<Integer> positions = new ArrayList<>(4);
   private int maxPosition = 0;
   private int slop = 0;
 
@@ -68,7 +68,12 @@ public class PhraseQuery extends Query {
     results are sorted by exactness.
 
     <p>The slop is zero by default, requiring exact matches.*/
-  public void setSlop(int s) { slop = s; }
+  public void setSlop(int s) {
+    if (s < 0) {
+      throw new IllegalArgumentException("slop value cannot be negative");
+    }
+    slop = s; 
+  }
   /** Returns the slop.  See setSlop(). */
   public int getSlop() { return slop; }
 
@@ -240,8 +245,7 @@ public class PhraseQuery extends Query {
     }
 
     @Override
-    public Scorer scorer(AtomicReaderContext context, boolean scoreDocsInOrder,
-        boolean topScorer, Bits acceptDocs) throws IOException {
+    public Scorer scorer(AtomicReaderContext context, Bits acceptDocs) throws IOException {
       assert !terms.isEmpty();
       final AtomicReader reader = context.reader();
       final Bits liveDocs = acceptDocs;
@@ -300,7 +304,7 @@ public class PhraseQuery extends Query {
 
     @Override
     public Explanation explain(AtomicReaderContext context, int doc) throws IOException {
-      Scorer scorer = scorer(context, true, false, context.reader().getLiveDocs());
+      Scorer scorer = scorer(context, context.reader().getLiveDocs());
       if (scorer != null) {
         int newDoc = scorer.advance(doc);
         if (newDoc == doc) {

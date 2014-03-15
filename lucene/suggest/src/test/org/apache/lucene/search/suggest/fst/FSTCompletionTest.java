@@ -157,9 +157,9 @@ public class FSTCompletionTest extends LuceneTestCase {
     FSTCompletionLookup lookup = new FSTCompletionLookup(10, true);
     
     Random r = random();
-    List<Input> keys = new ArrayList<Input>();
+    List<Input> keys = new ArrayList<>();
     for (int i = 0; i < 5000; i++) {
-      keys.add(new Input(_TestUtil.randomSimpleString(r), -1));
+      keys.add(new Input(TestUtil.randomSimpleString(r), -1));
     }
 
     lookup.build(new InputArrayIterator(keys));
@@ -168,7 +168,7 @@ public class FSTCompletionTest extends LuceneTestCase {
     // are.
     Long previous = null; 
     for (Input tf : keys) {
-      Long current = ((Number)lookup.get(_TestUtil.bytesToCharSequence(tf.term, random()))).longValue();
+      Long current = ((Number)lookup.get(TestUtil.bytesToCharSequence(tf.term, random()))).longValue();
       if (previous != null) {
         assertEquals(previous, current);
       }
@@ -181,9 +181,10 @@ public class FSTCompletionTest extends LuceneTestCase {
 
     FSTCompletionLookup lookup = new FSTCompletionLookup();
     lookup.build(new InputArrayIterator(input));
+    assertEquals(input.size(), lookup.getCount());
     for (Input tf : input) {
-      assertNotNull("Not found: " + tf.term.toString(), lookup.get(_TestUtil.bytesToCharSequence(tf.term, random())));
-      assertEquals(tf.term.utf8ToString(), lookup.lookup(_TestUtil.bytesToCharSequence(tf.term, random()), true, 1).get(0).key.toString());
+      assertNotNull("Not found: " + tf.term.toString(), lookup.get(TestUtil.bytesToCharSequence(tf.term, random())));
+      assertEquals(tf.term.utf8ToString(), lookup.lookup(TestUtil.bytesToCharSequence(tf.term, random()), true, 1).get(0).key.toString());
     }
 
     List<LookupResult> result = lookup.lookup(stringToCharSequence("wit"), true, 5);
@@ -198,7 +199,7 @@ public class FSTCompletionTest extends LuceneTestCase {
   }
 
   public void testRandom() throws Exception {
-    List<Input> freqs = new ArrayList<Input>();
+    List<Input> freqs = new ArrayList<>();
     Random rnd = random();
     for (int i = 0; i < 2500 + rnd.nextInt(2500); i++) {
       int weight = rnd.nextInt(100); 
@@ -220,7 +221,7 @@ public class FSTCompletionTest extends LuceneTestCase {
   }
 
   private CharSequence stringToCharSequence(String prefix) {
-    return _TestUtil.stringToCharSequence(prefix, random());
+    return TestUtil.stringToCharSequence(prefix, random());
   }
 
   private void assertMatchEquals(List<Completion> res, String... expected) {

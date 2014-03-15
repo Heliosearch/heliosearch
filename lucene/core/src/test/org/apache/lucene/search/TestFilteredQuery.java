@@ -37,7 +37,7 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.DocIdBitSet;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 /**
  * FilteredQuery JUnit tests.
@@ -375,7 +375,6 @@ public class TestFilteredQuery extends LuceneTestCase {
   public void testRewrite() throws Exception {
     assertRewrite(new FilteredQuery(new TermQuery(new Term("field", "one")), new PrefixFilter(new Term("field", "o")), randomFilterStrategy()), FilteredQuery.class);
     assertRewrite(new FilteredQuery(new PrefixQuery(new Term("field", "one")), new PrefixFilter(new Term("field", "o")), randomFilterStrategy()), FilteredQuery.class);
-    assertRewrite(new FilteredQuery(new MatchAllDocsQuery(), new PrefixFilter(new Term("field", "o")), randomFilterStrategy()), ConstantScoreQuery.class);
   }
   
   public void testGetFilterStrategy() {
@@ -386,14 +385,14 @@ public class TestFilteredQuery extends LuceneTestCase {
   
   private static FilteredQuery.FilterStrategy randomFilterStrategy(Random random, final boolean useRandomAccess) {
     if (useRandomAccess) {
-      return  new FilteredQuery.RandomAccessFilterStrategy() {
+      return new FilteredQuery.RandomAccessFilterStrategy() {
         @Override
         protected boolean useRandomAccess(Bits bits, int firstFilterDoc) {
-          return useRandomAccess;
+          return true;
         }
       };
     }
-    return _TestUtil.randomFilterStrategy(random);
+    return TestUtil.randomFilterStrategy(random);
   }
   
   /*

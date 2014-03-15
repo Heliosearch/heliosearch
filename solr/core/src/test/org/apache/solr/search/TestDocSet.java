@@ -40,8 +40,7 @@ import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.OpenBitSet;
-import org.apache.lucene.util.OpenBitSetIterator;
+import org.apache.lucene.util.FixedBitSet;
 
 /**
  *
@@ -63,27 +62,27 @@ public class TestDocSet extends LuceneTestCase {
     rand = random();
   }
   
-  public OpenBitSet getRandomSet(int sz, int bitsToSet) {
-    OpenBitSet bs = new OpenBitSet(sz);
+  public FixedBitSet getRandomSet(int sz, int bitsToSet) {
+    FixedBitSet bs = new FixedBitSet(sz);
     if (sz==0) return bs;
     for (int i=0; i<bitsToSet; i++) {
-      bs.fastSet(rand.nextInt(sz));
+      bs.set(rand.nextInt(sz));
     }
     return bs;
   }
 
-  public DocSet getHashDocSet(OpenBitSet bs) {
+  public DocSet getHashDocSet(FixedBitSet bs) {
     int[] docs = new int[(int)bs.cardinality()];
-    OpenBitSetIterator iter = new OpenBitSetIterator(bs);
+    FixedBitSet.FixedBitSetIterator iter = new FixedBitSet.FixedBitSetIterator(bs);
     for (int i=0; i<docs.length; i++) {
       docs[i] = iter.nextDoc();
     }
     return new HashDocSet(docs,0,docs.length);
   }
 
-  public DocSet getIntDocSet(OpenBitSet bs) {
+  public DocSet getIntDocSet(FixedBitSet bs) {
     int[] docs = new int[(int)bs.cardinality()];
-    OpenBitSetIterator iter = new OpenBitSetIterator(bs);
+    FixedBitSet.FixedBitSetIterator iter = new FixedBitSet.FixedBitSetIterator(bs);
     for (int i=0; i<docs.length; i++) {
       docs[i] = iter.nextDoc();
     }
@@ -91,18 +90,18 @@ public class TestDocSet extends LuceneTestCase {
   }
 
 
-  public DocSet getIntDocSetNative(OpenBitSet bs) {
+  public DocSet getIntDocSetNative(FixedBitSet bs) {
     int[] docs = new int[(int)bs.cardinality()];
-    OpenBitSetIterator iter = new OpenBitSetIterator(bs);
+    FixedBitSet.FixedBitSetIterator iter = new FixedBitSet.FixedBitSetIterator(bs);
     for (int i=0; i<docs.length; i++) {
       docs[i] = iter.nextDoc();
     }
     return new SortedIntDocSetNative(docs);
   }
 
-  public DocSet getBitDocSetNative(OpenBitSet bs) {
-    BitDocSetNative set = new BitDocSetNative((int)bs.capacity());
-    OpenBitSetIterator iter = new OpenBitSetIterator(bs);
+  public DocSet getBitDocSetNative(FixedBitSet bs) {
+    BitDocSetNative set = new BitDocSetNative((int)bs.length());
+    FixedBitSet.FixedBitSetIterator iter = new FixedBitSet.FixedBitSetIterator(bs);
     for (;;) {
       int doc = iter.nextDoc();
       if (doc == DocIdSetIterator.NO_MORE_DOCS) break;
@@ -112,27 +111,27 @@ public class TestDocSet extends LuceneTestCase {
   }
 
 
-  public DocSet getSmallSet(OpenBitSet obs) {
+  public DocSet getSmallSet(FixedBitSet obs) {
     return getIntDocSet(obs);
   }
 
-  public DocSet getBigSet(OpenBitSet obs) {
+  public DocSet getBigSet(FixedBitSet obs) {
     return getBitDocSet(obs);
   }
 
 
-  public DocSet getBitDocSet(OpenBitSet bs) {
+  public DocSet getBitDocSet(FixedBitSet bs) {
     return new BitDocSet(bs);
   }
 
-  public DocSet getDocSlice(OpenBitSet bs) {
+  public DocSet getDocSlice(FixedBitSet bs) {
     int len = (int)bs.cardinality();
     int[] arr = new int[len+5];
     arr[0]=10; arr[1]=20; arr[2]=30; arr[arr.length-1]=1; arr[arr.length-2]=2;
     int offset = 3;
     int end = offset + len;
 
-    OpenBitSetIterator iter = new OpenBitSetIterator(bs);
+    FixedBitSet.FixedBitSetIterator iter = new FixedBitSet.FixedBitSetIterator(bs);
     // put in opposite order... DocLists are not ordered.
     for (int i=end-1; i>=offset; i--) {
       arr[i] = iter.nextDoc();
@@ -142,7 +141,7 @@ public class TestDocSet extends LuceneTestCase {
   }
 
 
-  public DocSet getDocSet(OpenBitSet bs) {
+  public DocSet getDocSet(FixedBitSet bs) {
     switch(rand.nextInt(10)) {
       case 0: return getHashDocSet(bs);
 
@@ -162,7 +161,7 @@ public class TestDocSet extends LuceneTestCase {
   }
 
   // types of docsets that can be a filter
-  public DocSet getFilterDocSet(OpenBitSet bs) {
+  public DocSet getFilterDocSet(FixedBitSet bs) {
     switch(rand.nextInt(10)) {
       case 0: return getBigSet(bs);
       case 1: return getBigSet(bs);
@@ -180,7 +179,7 @@ public class TestDocSet extends LuceneTestCase {
   }
 
 
-  public void checkEqual(OpenBitSet bs, DocSet set) {
+  public void checkEqual(FixedBitSet bs, DocSet set) {
     for (int i=0; i<set.size(); i++) {
       assertEquals(bs.get(i), set.exists(i));
     }
@@ -208,8 +207,8 @@ public class TestDocSet extends LuceneTestCase {
   protected void doSingle(int maxSize) {
     int sz = rand.nextInt(maxSize+1);
     int sz2 = rand.nextInt(maxSize);
-    OpenBitSet bs1 = getRandomSet(sz, rand.nextInt(sz2+1));
-    OpenBitSet bs2 = getRandomSet(sz, rand.nextInt(sz2+1));
+    FixedBitSet bs1 = getRandomSet(sz, rand.nextInt(sz2+1));
+    FixedBitSet bs2 = getRandomSet(sz, rand.nextInt(sz2+1));
 
     DocSet test1 = getDocSet(bs1);
     DocSet test2 = getDocSet(bs2);
@@ -220,7 +219,7 @@ public class TestDocSet extends LuceneTestCase {
     test2.decref();
   }
 
-  protected void doSingle(OpenBitSet bs1, OpenBitSet bs2, DocSet test1, DocSet test2) {
+  protected void doSingle(FixedBitSet bs1, FixedBitSet bs2, DocSet test1, DocSet test2) {
     DocSet a1 = new BitDocSet(bs1);
     DocSet a2 = new BitDocSet(bs2);
 
@@ -230,10 +229,10 @@ public class TestDocSet extends LuceneTestCase {
     iter(a1,test1);
     iter(a2,test2);
 
-    OpenBitSet a_and = (OpenBitSet) bs1.clone(); a_and.and(bs2);
-    OpenBitSet a_or = (OpenBitSet) bs1.clone(); a_or.or(bs2);
-    // OpenBitSet a_xor = (OpenBitSet)bs1.clone(); a_xor.xor(bs2);
-    OpenBitSet a_andn = (OpenBitSet) bs1.clone(); a_andn.andNot(bs2);
+    FixedBitSet a_and = (FixedBitSet) bs1.clone(); a_and.and(bs2);
+    FixedBitSet a_or = (FixedBitSet) bs1.clone(); a_or.or(bs2);
+    // FixedBitSet a_xor = (FixedBitSet)bs1.clone(); a_xor.xor(bs2);
+    FixedBitSet a_andn = (FixedBitSet) bs1.clone(); a_andn.andNot(bs2);
 
     if (intersect) {
       DocSet result1 = test1.intersection(test2);
@@ -275,7 +274,7 @@ public class TestDocSet extends LuceneTestCase {
   }
 
   public DocSet getRandomDocSet(int n, int maxDoc) {
-    OpenBitSet obs = new OpenBitSet(maxDoc);
+    FixedBitSet obs = new FixedBitSet(maxDoc);
     int[] a = new int[n];
     for (int i=0; i<n; i++) {
       for(;;) {
@@ -342,7 +341,7 @@ public class TestDocSet extends LuceneTestCase {
   }
   ***/
 
-  public static int smallSetType = 0;  // 0==sortedint, 1==hash, 2==openbitset
+  public static int smallSetType = 0;  // 0==sortedint, 1==hash, 2==FixedBitSet
   public static int smallSetCuttoff=3000;
 
   /***
@@ -587,7 +586,7 @@ public class TestDocSet extends LuceneTestCase {
 
   public void doFilterTest(IndexReader reader) throws IOException {
     IndexReaderContext topLevelContext = reader.getContext();
-    OpenBitSet bs = getRandomSet(reader.maxDoc(), rand.nextInt(reader.maxDoc()+1));
+    FixedBitSet bs = getRandomSet(reader.maxDoc(), rand.nextInt(reader.maxDoc()+1));
     DocSet a = new BitDocSet(bs);
     DocSet b = getFilterDocSet(bs);
 

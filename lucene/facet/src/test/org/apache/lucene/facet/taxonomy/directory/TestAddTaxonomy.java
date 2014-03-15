@@ -12,7 +12,7 @@ import org.apache.lucene.facet.taxonomy.directory.DirectoryTaxonomyWriter.Memory
 import org.apache.lucene.facet.taxonomy.directory.DirectoryTaxonomyWriter.OrdinalMap;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.IOUtils;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -74,7 +74,7 @@ public class TestAddTaxonomy extends FacetTestCase {
   
   private OrdinalMap randomOrdinalMap() throws IOException {
     if (random().nextBoolean()) {
-      return new DiskOrdinalMap(_TestUtil.createTempFile("taxoMap", "", TEMP_DIR));
+      return new DiskOrdinalMap(TestUtil.createTempFile("taxoMap", "", TEMP_DIR));
     } else {
       return new MemoryOrdinalMap();
     }
@@ -160,8 +160,8 @@ public class TestAddTaxonomy extends FacetTestCase {
     Random random = random();
     int numTests = atLeast(3);
     for (int i = 0; i < numTests; i++) {
-      dotest(_TestUtil.nextInt(random, 2, 100), 
-             _TestUtil.nextInt(random, 100, 1000));
+      dotest(TestUtil.nextInt(random, 2, 100),
+             TestUtil.nextInt(random, 100, 1000));
     }
   }
   
@@ -229,7 +229,7 @@ public class TestAddTaxonomy extends FacetTestCase {
     DirectoryTaxonomyReader dtr = new DirectoryTaxonomyReader(dest);
     // +2 to account for the root category + "a"
     assertEquals(numCategories + 2, dtr.getSize());
-    HashSet<FacetLabel> categories = new HashSet<FacetLabel>();
+    HashSet<FacetLabel> categories = new HashSet<>();
     for (int i = 1; i < dtr.getSize(); i++) {
       FacetLabel cat = dtr.getPath(i);
       assertTrue("category " + cat + " already existed", categories.add(cat));

@@ -26,7 +26,7 @@ public class TestWAH8DocIdSet extends BaseDocIdSetTestCase<WAH8DocIdSet> {
 
   @Override
   public WAH8DocIdSet copyOf(BitSet bs, int length) throws IOException {
-    final int indexInterval = _TestUtil.nextInt(random(), 8, 256);
+    final int indexInterval = TestUtil.nextInt(random(), 8, 256);
     final WAH8DocIdSet.Builder builder = new WAH8DocIdSet.Builder().setIndexInterval(indexInterval);
     for (int i = bs.nextSetBit(0); i != -1; i = bs.nextSetBit(i + 1)) {
       builder.add(i);
@@ -42,13 +42,13 @@ public class TestWAH8DocIdSet extends BaseDocIdSetTestCase<WAH8DocIdSet> {
   }
 
   public void testUnion() throws IOException {
-    final int numBits = _TestUtil.nextInt(random(), 100, 1 << 20);
-    final int numDocIdSets = _TestUtil.nextInt(random(), 0, 4);
-    final List<BitSet> fixedSets = new ArrayList<BitSet>(numDocIdSets);
+    final int numBits = TestUtil.nextInt(random(), 100, 1 << 20);
+    final int numDocIdSets = TestUtil.nextInt(random(), 0, 4);
+    final List<BitSet> fixedSets = new ArrayList<>(numDocIdSets);
     for (int i = 0; i < numDocIdSets; ++i) {
       fixedSets.add(randomSet(numBits, random().nextFloat() / 16));
     }
-    final List<WAH8DocIdSet> compressedSets = new ArrayList<WAH8DocIdSet>(numDocIdSets);
+    final List<WAH8DocIdSet> compressedSets = new ArrayList<>(numDocIdSets);
     for (BitSet set : fixedSets) {
       compressedSets.add(copyOf(set, numBits));
     }
@@ -64,13 +64,13 @@ public class TestWAH8DocIdSet extends BaseDocIdSetTestCase<WAH8DocIdSet> {
   }
 
   public void testIntersection() throws IOException {
-    final int numBits = _TestUtil.nextInt(random(), 100, 1 << 20);
-    final int numDocIdSets = _TestUtil.nextInt(random(), 1, 4);
-    final List<BitSet> fixedSets = new ArrayList<BitSet>(numDocIdSets);
+    final int numBits = TestUtil.nextInt(random(), 100, 1 << 20);
+    final int numDocIdSets = TestUtil.nextInt(random(), 1, 4);
+    final List<BitSet> fixedSets = new ArrayList<>(numDocIdSets);
     for (int i = 0; i < numDocIdSets; ++i) {
       fixedSets.add(randomSet(numBits, random().nextFloat()));
     }
-    final List<WAH8DocIdSet> compressedSets = new ArrayList<WAH8DocIdSet>(numDocIdSets);
+    final List<WAH8DocIdSet> compressedSets = new ArrayList<>(numDocIdSets);
     for (BitSet set : fixedSets) {
       compressedSets.add(copyOf(set, numBits));
     }

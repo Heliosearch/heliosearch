@@ -56,6 +56,7 @@ public class ResponseBuilder
   public SolrQueryResponse rsp;
   public boolean doHighlights;
   public boolean doFacets;
+  public boolean doExpand;
   public boolean doStats;
   public boolean doTerms;
 
@@ -158,6 +159,7 @@ public class ResponseBuilder
   // returned sequence.
   // Only valid after STAGE_EXECUTE_QUERY has completed.
 
+  public boolean onePassDistributedQuery;
 
   public FacetComponent.FacetInfo _facetInfo;
   /* private... components that don't own these shouldn't use them */
@@ -167,12 +169,12 @@ public class ResponseBuilder
   SimpleOrderedMap<List<NamedList<Object>>> _pivots;
 
   // Context fields for grouping
-  public final Map<String, Collection<SearchGroup<BytesRef>>> mergedSearchGroups = new HashMap<String, Collection<SearchGroup<BytesRef>>>();
-  public final Map<String, Integer> mergedGroupCounts = new HashMap<String, Integer>();
-  public final Map<String, Map<SearchGroup<BytesRef>, Set<String>>> searchGroupToShards = new HashMap<String, Map<SearchGroup<BytesRef>, Set<String>>>();
-  public final Map<String, TopGroups<BytesRef>> mergedTopGroups = new HashMap<String, TopGroups<BytesRef>>();
-  public final Map<String, QueryCommandResult> mergedQueryCommandResults = new HashMap<String, QueryCommandResult>();
-  public final Map<Object, SolrDocument> retrievedDocuments = new HashMap<Object, SolrDocument>();
+  public final Map<String, Collection<SearchGroup<BytesRef>>> mergedSearchGroups = new HashMap<>();
+  public final Map<String, Integer> mergedGroupCounts = new HashMap<>();
+  public final Map<String, Map<SearchGroup<BytesRef>, Set<String>>> searchGroupToShards = new HashMap<>();
+  public final Map<String, TopGroups<BytesRef>> mergedTopGroups = new HashMap<>();
+  public final Map<String, QueryCommandResult> mergedQueryCommandResults = new HashMap<>();
+  public final Map<Object, SolrDocument> retrievedDocuments = new HashMap<>();
   public int totalHitCount; // Hit count used when distributed grouping is performed.
   // Used for timeAllowed parameter. First phase elapsed time is subtracted from the time allowed for the second phase.
   public int firstPhaseElapsedTime;
@@ -184,14 +186,14 @@ public class ResponseBuilder
   public void addDebugInfo( String name, Object val )
   {
     if( debugInfo == null ) {
-      debugInfo = new SimpleOrderedMap<Object>();
+      debugInfo = new SimpleOrderedMap<>();
     }
     debugInfo.add( name, val );
   }
 
   public void addDebug(Object val, String... path) {
     if( debugInfo == null ) {
-      debugInfo = new SimpleOrderedMap<Object>();
+      debugInfo = new SimpleOrderedMap<>();
     }
 
     NamedList<Object> target = debugInfo;
@@ -199,7 +201,7 @@ public class ResponseBuilder
       String elem = path[i];
       NamedList<Object> newTarget = (NamedList<Object>)debugInfo.get(elem);
       if (newTarget == null) {
-        newTarget = new SimpleOrderedMap<Object>();
+        newTarget = new SimpleOrderedMap<>();
         target.add(elem, newTarget);
       }
       target = newTarget;

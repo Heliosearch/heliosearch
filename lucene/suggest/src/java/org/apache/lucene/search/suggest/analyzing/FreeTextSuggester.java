@@ -20,18 +20,6 @@ package org.apache.lucene.search.suggest.analyzing;
 // TODO
 //   - test w/ syns
 //   - add pruning of low-freq ngrams?
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-//import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.AnalyzerWrapper;
@@ -56,28 +44,39 @@ import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.suggest.InputIterator;
 import org.apache.lucene.search.suggest.Lookup;
-import org.apache.lucene.search.suggest.Sort;
 import org.apache.lucene.store.ByteArrayDataInput;
 import org.apache.lucene.store.DataInput;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.InputStreamDataInput;
-import org.apache.lucene.store.OutputStreamDataOutput;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.IntsRef;
+import org.apache.lucene.util.OfflineSorter;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.lucene.util.Version;
 import org.apache.lucene.util.fst.Builder;
+import org.apache.lucene.util.fst.FST;
 import org.apache.lucene.util.fst.FST.Arc;
 import org.apache.lucene.util.fst.FST.BytesReader;
-import org.apache.lucene.util.fst.FST;
 import org.apache.lucene.util.fst.Outputs;
 import org.apache.lucene.util.fst.PositiveIntOutputs;
-import org.apache.lucene.util.fst.Util.MinResult;
 import org.apache.lucene.util.fst.Util;
+import org.apache.lucene.util.fst.Util.Result;
+import org.apache.lucene.util.fst.Util.TopResults;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+
+//import java.io.PrintWriter;
 
 /**
  * Builds an ngram model from the text sent to {@link
@@ -153,6 +152,10 @@ public class FreeTextSuggester extends Lookup {
   private final int grams;
 
   private final byte separator;
+
+  /** Number of entries the lookup was built with */
+  private long count = 0;
+
   /** The default character used to join multiple tokens
    *  into a single ngram token.  The input tokens produced
    *  by the analyzer must not contain this character. */
@@ -287,7 +290,7 @@ public class FreeTextSuggester extends Lookup {
     }
 
     String prefix = getClass().getSimpleName();
-    File directory = Sort.defaultTempDir();
+    File directory = OfflineSorter.defaultTempDir();
     // TODO: messy ... java7 has Files.createTempDirectory
     // ... but 4.x is java6:
     File tempIndexPath = null;
@@ -320,6 +323,7 @@ public class FreeTextSuggester extends Lookup {
     IndexReader reader = null;
 
     boolean success = false;
+    count = 0;
     try {
       while (true) {
         BytesRef surfaceForm = iterator.next();
@@ -328,6 +332,7 @@ public class FreeTextSuggester extends Lookup {
         }
         field.setStringValue(surfaceForm.utf8ToString());
         writer.addDocument(doc);
+        count++;
       }
       reader = DirectoryReader.open(writer, false);
 
@@ -340,7 +345,7 @@ public class FreeTextSuggester extends Lookup {
       TermsEnum termsEnum = terms.iterator(null);
 
       Outputs<Long> outputs = PositiveIntOutputs.getSingleton();
-      Builder<Long> builder = new Builder<Long>(FST.INPUT_TYPE.BYTE1, outputs);
+      Builder<Long> builder = new Builder<>(FST.INPUT_TYPE.BYTE1, outputs);
 
       IntsRef scratchInts = new IntsRef();
       while (true) {
@@ -397,31 +402,31 @@ public class FreeTextSuggester extends Lookup {
   }
 
   @Override
-  public boolean store(OutputStream output) throws IOException {
-    DataOutput out = new OutputStreamDataOutput(output);
-    CodecUtil.writeHeader(out, CODEC_NAME, VERSION_CURRENT);
-    out.writeByte(separator);
-    out.writeVInt(grams);
-    out.writeVLong(totTokens);
-    fst.save(out);
+  public boolean store(DataOutput output) throws IOException {
+    CodecUtil.writeHeader(output, CODEC_NAME, VERSION_CURRENT);
+    output.writeVLong(count);
+    output.writeByte(separator);
+    output.writeVInt(grams);
+    output.writeVLong(totTokens);
+    fst.save(output);
     return true;
   }
 
   @Override
-  public boolean load(InputStream input) throws IOException {
-    DataInput in = new InputStreamDataInput(input);
-    CodecUtil.checkHeader(in, CODEC_NAME, VERSION_START, VERSION_START);
-    byte separatorOrig = in.readByte();
+  public boolean load(DataInput input) throws IOException {
+    CodecUtil.checkHeader(input, CODEC_NAME, VERSION_START, VERSION_START);
+    count = input.readVLong();
+    byte separatorOrig = input.readByte();
     if (separatorOrig != separator) {
       throw new IllegalStateException("separator=" + separator + " is incorrect: original model was built with separator=" + separatorOrig);
     }
-    int gramsOrig = in.readVInt();
+    int gramsOrig = input.readVInt();
     if (gramsOrig != grams) {
       throw new IllegalStateException("grams=" + grams + " is incorrect: original model was built with grams=" + gramsOrig);
     }
-    totTokens = in.readVLong();
+    totTokens = input.readVLong();
 
-    fst = new FST<Long>(in, PositiveIntOutputs.getSingleton());
+    fst = new FST<>(input, PositiveIntOutputs.getSingleton());
 
     return true;
   }
@@ -436,6 +441,11 @@ public class FreeTextSuggester extends Lookup {
     }
   }
 
+  @Override
+  public long getCount() {
+    return count;
+  }
+  
   private int countGrams(BytesRef token) {
     int count = 1;
     for(int i=0;i<token.length;i++) {
@@ -519,7 +529,7 @@ public class FreeTextSuggester extends Lookup {
         lastTokens[0] = new BytesRef();
       }
       
-      Arc<Long> arc = new Arc<Long>();
+      Arc<Long> arc = new Arc<>();
       
       BytesReader bytesReader = fst.getBytesReader();
       
@@ -527,12 +537,12 @@ public class FreeTextSuggester extends Lookup {
       // results, return that; else, fallback:
       double backoff = 1.0;
       
-      List<LookupResult> results = new ArrayList<LookupResult>(num);
+      List<LookupResult> results = new ArrayList<>(num);
       
       // We only add a given suffix once, from the highest
       // order model that saw it; for subsequent lower order
       // models we skip it:
-      final Set<BytesRef> seen = new HashSet<BytesRef>();
+      final Set<BytesRef> seen = new HashSet<>();
       
       for(int gram=grams-1;gram>=0;gram--) {
         BytesRef token = lastTokens[gram];
@@ -603,7 +613,7 @@ public class FreeTextSuggester extends Lookup {
         CharsRef spare = new CharsRef();
         
         // complete top-N
-        MinResult<Long> completions[] = null;
+        TopResults<Long> completions = null;
         try {
           
           // Because we store multiple models in one FST
@@ -650,6 +660,7 @@ public class FreeTextSuggester extends Lookup {
           searcher.addStartPaths(arc, prefixOutput, true, new IntsRef());
           
           completions = searcher.search();
+          assert completions.isComplete;
         } catch (IOException bogus) {
           throw new RuntimeException(bogus);
         }
@@ -660,7 +671,7 @@ public class FreeTextSuggester extends Lookup {
         //System.out.println("    " + completions.length + " completions");
         
         nextCompletion:
-          for (MinResult<Long> completion : completions) {
+          for (Result<Long> completion : completions) {
             token.length = prefixLength;
             // append suffix
             Util.toBytesRef(completion.input, suffix);

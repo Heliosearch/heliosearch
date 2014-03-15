@@ -20,7 +20,6 @@ package org.apache.lucene.index;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.document.Document;
@@ -30,7 +29,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LineFileDocs;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 /**
  * Compares one codec against another
@@ -63,9 +62,12 @@ public class TestDuelingCodecs extends LuceneTestCase {
     long seed = random().nextLong();
 
     // must use same seed because of random payloads, etc
-    Analyzer leftAnalyzer = new MockAnalyzer(new Random(seed));
-    Analyzer rightAnalyzer = new MockAnalyzer(new Random(seed));
-    
+    int maxTermLength = TestUtil.nextInt(random(), 1, IndexWriter.MAX_TERM_LENGTH);
+    MockAnalyzer leftAnalyzer = new MockAnalyzer(new Random(seed));
+    leftAnalyzer.setMaxTokenLength(maxTermLength);
+    MockAnalyzer rightAnalyzer = new MockAnalyzer(new Random(seed));
+    rightAnalyzer.setMaxTokenLength(maxTermLength);
+
     // but these can be different
     // TODO: this turns this into a really big test of Multi*, is that what we want?
     IndexWriterConfig leftConfig = newIndexWriterConfig(TEST_VERSION_CURRENT, leftAnalyzer);
@@ -92,8 +94,8 @@ public class TestDuelingCodecs extends LuceneTestCase {
     rightWriter.close();
     
     // check that our readers are valid
-    _TestUtil.checkReader(leftReader);
-    _TestUtil.checkReader(rightReader);
+    TestUtil.checkReader(leftReader);
+    TestUtil.checkReader(rightReader);
     
     info = "left: " + leftCodec.toString() + " / right: " + rightCodec.toString();
   }

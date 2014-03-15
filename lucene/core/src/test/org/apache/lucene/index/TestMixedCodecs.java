@@ -26,7 +26,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 public class TestMixedCodecs extends LuceneTestCase {
 
@@ -56,7 +56,7 @@ public class TestMixedCodecs extends LuceneTestCase {
           w.close();
         }
         w = new RandomIndexWriter(random(), dir, iwc);
-        docsLeftInThisSegment = _TestUtil.nextInt(random(), 10, 100);
+        docsLeftInThisSegment = TestUtil.nextInt(random(), 10, 100);
       }
       final Document doc = new Document();
       doc.add(newStringField("id", String.valueOf(docUpto), Field.Store.YES));
@@ -70,7 +70,7 @@ public class TestMixedCodecs extends LuceneTestCase {
     }
 
     // Random delete half the docs:
-    final Set<Integer> deleted = new HashSet<Integer>();
+    final Set<Integer> deleted = new HashSet<>();
     while(deleted.size() < NUM_DOCS/2) {
       final Integer toDelete = random().nextInt(NUM_DOCS);
       if (!deleted.contains(toDelete)) {

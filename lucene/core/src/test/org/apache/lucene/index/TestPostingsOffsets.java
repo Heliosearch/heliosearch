@@ -44,7 +44,7 @@ import org.apache.lucene.util.English;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
-import org.apache.lucene.util._TestUtil;
+import org.apache.lucene.util.TestUtil;
 
 // TODO: we really need to test indexingoffsets, but then getting only docs / docs + freqs.
 // not all codecs store prx separate...
@@ -183,7 +183,7 @@ public class TestPostingsOffsets extends LuceneTestCase {
     int numSkippingTests = atLeast(50);
     
     for (int j = 0; j < numSkippingTests; j++) {
-      int num = _TestUtil.nextInt(random(), 100, Math.min(numDocs-1, 999));
+      int num = TestUtil.nextInt(random(), 100, Math.min(numDocs - 1, 999));
       DocsAndPositionsEnum dp = MultiFields.getTermPositionsEnum(reader, null, "numbers", new BytesRef("hundred"));
       int doc = dp.advance(num);
       assertEquals(num, doc);
@@ -220,7 +220,7 @@ public class TestPostingsOffsets extends LuceneTestCase {
 
   public void testRandom() throws Exception {
     // token -> docID -> tokens
-    final Map<String,Map<Integer,List<Token>>> actualTokens = new HashMap<String,Map<Integer,List<Token>>>();
+    final Map<String,Map<Integer,List<Token>>> actualTokens = new HashMap<>();
 
     Directory dir = newDirectory();
     RandomIndexWriter w = new RandomIndexWriter(random(), dir, iwc);
@@ -242,7 +242,7 @@ public class TestPostingsOffsets extends LuceneTestCase {
     for(int docCount=0;docCount<numDocs;docCount++) {
       Document doc = new Document();
       doc.add(new IntField("id", docCount, Field.Store.YES));
-      List<Token> tokens = new ArrayList<Token>();
+      List<Token> tokens = new ArrayList<>();
       final int numTokens = atLeast(100);
       //final int numTokens = atLeast(20);
       int pos = -1;
