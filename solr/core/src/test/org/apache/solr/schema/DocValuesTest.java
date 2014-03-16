@@ -19,6 +19,7 @@ package org.apache.solr.schema;
 
 import java.io.IOException;
 
+import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.FieldInfo.DocValuesType;
 import org.apache.lucene.index.FieldInfos;
@@ -29,6 +30,7 @@ import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.util.RefCounted;
 import org.junit.BeforeClass;
 
+@SuppressCodecs("Lucene3x")
 public class DocValuesTest extends SolrTestCaseJ4 {
 
   @BeforeClass
