@@ -24,6 +24,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
+import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.MapSolrParams;
 import org.apache.solr.common.params.StatsParams;
@@ -38,7 +39,7 @@ import org.junit.BeforeClass;
 /**
  * Statistics Component Test
  */
-public class StatsComponentTest extends AbstractSolrTestCase {
+public class StatsComponentTest extends SolrTestCaseJ4 {
 
   @BeforeClass
   public static void beforeClass() throws Exception {

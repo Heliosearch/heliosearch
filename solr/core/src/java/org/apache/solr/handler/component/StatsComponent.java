@@ -292,6 +292,8 @@ class SimpleStats {
       res.add("stats_fields", getStatsFields());
     } catch (SyntaxError e) {
       throw new SolrException(ErrorCode.BAD_REQUEST, e);
+    } finally {
+      close();
     }
 
     return res;
@@ -383,4 +385,10 @@ class SimpleStats {
     return allstats.getStatsValues();
   }
 
+
+  public void close() {
+    if (base != docs) {
+      base.decref();
+    }
+  }
 }
