@@ -71,6 +71,9 @@ New Features
   CollapsingQParserPlugin. (Joel Bernstein)
 
 
+* SOLR-3177: Enable tagging and excluding filters in StatsComponent via the
+  localParams syntax. (Mathias H., Nikolai Luthman, Vitaliy Zhovtyuk, shalin)
+
 Bug Fixes
 ----------------------
 
@@ -116,6 +119,15 @@ Bug Fixes
 
 * SOLR-5861: Recovery should not set onlyIfLeaderActive=true for slice in 'recovery'
   state. (shalin)
+
+* SOLR-5867: OverseerCollectionProcessor isn't properly generating https urls in some
+  cases. (Steve Davids via shalin)
+
+* SOLR-5866: UpdateShardHandler needs to use the system default scheme registry to
+  properly handle https via javax.net.ssl.* properties. (Steve Davids via shalin)
+
+* SOLR-5550: shards.info is not returned by a short circuited distributed query.
+  (Timothy Potter, shalin)
 
 Optimizations
 ----------------------
@@ -170,6 +182,9 @@ Other Changes
 
 * SOLR-5853: The createCollection methods in the test framework now reports
   result of operation in the returned CollectionAdminResponse (janhoy)
+
+* SOLR-5838: Relative SolrHome Path Bug At AbstractFullDistribZkTestBase.
+  (Furkan KAMACI via shalin)
 
 ==================  4.7.0 ==================
 

@@ -496,9 +496,10 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     String path = SolrResourceLoader.normalizeDir(new File(".").getAbsolutePath());
     String base = new File(solrHome.getPath()).getAbsolutePath();
     
-    if (base.startsWith("."));
-    base.replaceFirst("\\.", new File(".").getName());
-    
+    if (base.startsWith(".")) {
+      base = base.replaceFirst("\\.", new File(".").getName());
+    }
+
     if (path.endsWith(File.separator + ".")) {
       path = path.substring(0, path.length() - 2);
     }
@@ -507,7 +508,7 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     
     StringBuilder p = new StringBuilder();
     for (int i = 0; i < splits - 2; i++) {
-      p.append(".." + File.separator);
+      p.append("..").append(File.separator);
     }   
     
     String prefix = FilenameUtils.getPrefix(path);
@@ -1516,7 +1517,19 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
       Thread.sleep(2000);
     } while (retry);
   }
-  
+
+  void doQuery(String expectedDocs, String... queryParams) throws Exception {
+    Set<String> expectedIds = new HashSet<>( StrUtils.splitSmart(expectedDocs, ",", true) );
+
+    QueryResponse rsp = cloudClient.query(params(queryParams));
+    Set<String> obtainedIds = new HashSet<>();
+    for (SolrDocument doc : rsp.getResults()) {
+      obtainedIds.add((String) doc.get("id"));
+    }
+
+    assertEquals(expectedIds, obtainedIds);
+  }
+
   @Override
   @After
   public void tearDown() throws Exception {
