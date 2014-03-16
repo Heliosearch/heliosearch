@@ -351,6 +351,133 @@ public class SimpleFacetsHS {
     ENUM, FC, FCS;
   }
 
+  public NamedList<? extends Object> getFieldFacets(String field, DocSet base) throws IOException {
+    int offset = params.getFieldInt(field, FacetParams.FACET_OFFSET, 0);
+    int limit = params.getFieldInt(field, FacetParams.FACET_LIMIT, 10);
+
+    if (limit == 0) return new NamedList<Integer>();
+    Integer mincount = params.getFieldInt(field, FacetParams.FACET_MINCOUNT);
+    if (mincount==null) {
+      Boolean zeros = params.getFieldBool(field, FacetParams.FACET_ZEROS);
+      // mincount = (zeros!=null && zeros) ? 0 : 1;
+      mincount = (zeros!=null && !zeros) ? 1 : 0;
+      // current default is to include zeros.
+    }
+    boolean missing = params.getFieldBool(field, FacetParams.FACET_MISSING, false);
+    // default to sorting if there is a limit.
+    String sort = params.getFieldParam(field, FacetParams.FACET_SORT, limit>0 ? FacetParams.FACET_SORT_COUNT : FacetParams.FACET_SORT_INDEX);
+    String prefix = params.getFieldParam(field,FacetParams.FACET_PREFIX);
+
+
+    // facet.stat=sum(price)
+    // facet.stat={!key=totprice)sum(price)
+    // facet.stat.totprice=sum(price)
+    // what about directives to use long, double, float, etc?
+    // what about directives for missing values?   avg()... should it include missing values or not?
+
+    // f.xxx.facet.stat.avg = 10
+
+
+
+
+
+    NamedList<Integer> counts;
+    SchemaField sf = searcher.getSchema().getField(field);
+    FieldType ft = sf.getType();
+
+    // determine what type of faceting method to use
+    final String methodStr = params.getFieldParam(field, FacetParams.FACET_METHOD);
+    FacetMethod method = null;
+    if (FacetParams.FACET_METHOD_enum.equals(methodStr)) {
+      method = FacetMethod.ENUM;
+    } else if (FacetParams.FACET_METHOD_fcs.equals(methodStr)) {
+      method = FacetMethod.FCS;
+    } else if (FacetParams.FACET_METHOD_fc.equals(methodStr)) {
+      method = FacetMethod.FC;
+    }
+
+    if (method == FacetMethod.ENUM && TrieField.getMainValuePrefix(ft) != null) {
+      // enum can't deal with trie fields that index several terms per value
+      method = sf.multiValued() ? FacetMethod.FC : FacetMethod.FCS;
+    }
+
+    if (method == null && ft instanceof BoolField) {
+      // Always use filters for booleans... we know the number of values is very small.
+      method = FacetMethod.ENUM;
+    }
+
+    final boolean multiToken = sf.multiValued() || ft.multiValuedFieldCache();
+
+    if (method == null && ft.getNumericType() != null && !sf.multiValued()) {
+      // the per-segment approach is optimal for numeric field types since there
+      // are no global ords to merge and no need to create an expensive
+      // top-level reader
+      method = FacetMethod.FCS;
+    }
+
+    if (ft.getNumericType() != null && sf.hasDocValues()) {
+      // only fcs is able to leverage the numeric field caches
+      method = FacetMethod.FCS;
+    }
+
+    if (method == null) {
+      // TODO: default to per-segment or not?
+      method = FacetMethod.FC;
+    }
+
+    if (method == FacetMethod.FCS && multiToken) {
+      // only fc knows how to deal with multi-token fields
+      method = FacetMethod.FC;
+    }
+
+    if (method == FacetMethod.ENUM && sf.hasDocValues()) {
+      // only fc can handle docvalues types
+      method = FacetMethod.FC;
+    }
+
+    if (params.getFieldBool(field, GroupParams.GROUP_FACET, false)) {
+      counts = getGroupedCounts(searcher, base, field, multiToken, offset,limit, mincount, missing, sort, prefix);
+    } else {
+      assert method != null;
+      switch (method) {
+        case ENUM:
+          assert TrieField.getMainValuePrefix(ft) == null;
+          counts = getFacetTermEnumCounts(searcher, base, field, offset, limit, mincount,missing,sort,prefix);
+          break;
+        case FCS:
+          assert !multiToken;
+          if (ft.getNumericType() != null && !sf.multiValued()) {
+            // force numeric faceting
+            if (prefix != null && !prefix.isEmpty()) {
+              throw new SolrException(ErrorCode.BAD_REQUEST, FacetParams.FACET_PREFIX + " is not supported on numeric types");
+            }
+            counts = NumericFacets.getCounts(searcher, base, field, offset, limit, mincount, missing, sort);
+          } else {
+            PerSegmentSingleValuedFaceting ps = new PerSegmentSingleValuedFaceting(searcher, base, field, offset,limit, mincount, missing, sort, prefix);
+            Executor executor = threads == 0 ? directExecutor : facetExecutor;
+            ps.setNumThreads(threads);
+            counts = ps.getFacetCounts(executor);
+          }
+          break;
+        case FC:
+          if (sf.hasDocValues()) {
+            counts = DocValuesFacets.getCounts(searcher, base, field, offset,limit, mincount, missing, sort, prefix);
+          } else if (multiToken || TrieField.getMainValuePrefix(ft) != null) {
+            UnInvertedField uif = UnInvertedField.getUnInvertedField(field, searcher);
+            counts = uif.getCounts(searcher, base, offset, limit, mincount,missing,sort,prefix);
+          } else {
+            counts = getFieldCacheCounts(searcher, base, field, offset,limit, mincount, missing, sort, prefix);
+          }
+          break;
+        default:
+          throw new AssertionError();
+      }
+    }
+
+    return counts;
+  }
+
+
   public NamedList<Integer> getTermCounts(String field, DocSet base) throws IOException {
     int offset = params.getFieldInt(field, FacetParams.FACET_OFFSET, 0);
     int limit = params.getFieldInt(field, FacetParams.FACET_LIMIT, 10);

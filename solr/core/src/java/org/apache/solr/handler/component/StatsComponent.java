@@ -387,7 +387,7 @@ class SimpleStats {
 
 
   public void close() {
-    if (base != docs) {
+    if (base != null && base != docs) {
       base.decref();
     }
   }
