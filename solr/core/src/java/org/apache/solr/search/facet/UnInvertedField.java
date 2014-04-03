@@ -1,3 +1,5 @@
+package org.apache.solr.search.facet;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -15,14 +17,8 @@
  * limitations under the License.
  */
 
-package org.apache.solr.request;
-
-import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.lucene.index.AtomicReader;
+import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DocTermOrds;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.Term;
@@ -32,6 +28,7 @@ import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.FixedBitSet;
+import org.apache.lucene.util.PriorityQueue;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.FacetParams;
@@ -44,9 +41,25 @@ import org.apache.solr.handler.component.StatsValuesFactory;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.schema.TrieField;
-import org.apache.solr.search.*;
+import org.apache.solr.search.BitDocSet;
+import org.apache.solr.search.BitDocSetNative;
+import org.apache.solr.search.DocIterator;
+import org.apache.solr.search.DocSet;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.SolrCache;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.facet.SimpleFacetStats.Slot;
 import org.apache.solr.util.LongPriorityQueue;
 import org.apache.solr.util.PrimUtils;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -78,7 +91,7 @@ import org.apache.solr.util.PrimUtils;
  *   much like Lucene's own internal term index).
  *
  */
-class UnInvertedField extends DocTermOrds {
+public class UnInvertedField extends DocTermOrds {
   private static int TNUM_OFFSET=2;
 
   static class TopTerm {
@@ -212,6 +225,84 @@ class UnInvertedField extends DocTermOrds {
   public int getNumTerms() {
     return numTermsInField;
   }
+
+
+  public class DocToTerm implements Closeable {
+    private final DocSet[] bigTermSets;
+    private final int[] bigTermNums;
+
+    public DocToTerm() throws IOException {
+      bigTermSets = new DocSet[bigTerms.size()];
+      bigTermNums = new int[bigTerms.size()];
+      int i=0;
+      for (TopTerm tt : bigTerms.values()) {
+        bigTermSets[i] = searcher.getDocSet(new TermQuery(new Term(field, tt.term)));
+        bigTermNums[i] = tt.termNum;
+        i++;
+      }
+    }
+
+    public void getTerms(int doc, Callback target) throws IOException {
+      if (bigTermSets != null) {
+        for (int i=0; i<bigTermSets.length; i++) {
+          if (bigTermSets[i].exists(doc)) {
+            target.call( bigTermNums[i] );
+          }
+        }
+      }
+
+      getNonBigTerms(doc, target);
+    }
+
+    public void getNonBigTerms(int doc, Callback target) {
+      if (termInstances > 0) {
+        int code = index[doc];
+
+        if ((code & 0xff)==1) {
+          int pos = code>>>8;
+          int whichArray = (doc >>> 16) & 0xff;
+          byte[] arr = tnums[whichArray];
+          int tnum = 0;
+          for(;;) {
+            int delta = 0;
+            for(;;) {
+              byte b = arr[pos++];
+              delta = (delta << 7) | (b & 0x7f);
+              if ((b & 0x80) == 0) break;
+            }
+            if (delta == 0) break;
+            tnum += delta - TNUM_OFFSET;
+            target.call(tnum);
+          }
+        } else {
+          int tnum = 0;
+          int delta = 0;
+          for (;;) {
+            delta = (delta << 7) | (code & 0x7f);
+            if ((code & 0x80)==0) {
+              if (delta==0) break;
+              tnum += delta - TNUM_OFFSET;
+              target.call(tnum);
+              delta = 0;
+            }
+            code >>>= 8;
+          }
+        }
+      }
+    }
+
+    @Override
+    public void close() throws IOException {
+      for (DocSet set : bigTermSets) {
+        set.decref();
+      }
+    }
+  }
+
+  public interface Callback {
+    public void call(int termNum);
+  }
+
 
   public NamedList<Integer> getCounts(SolrIndexSearcher searcher, DocSet baseDocs, int offset, int limit, Integer mincount, boolean missing, String sort, String prefix) throws IOException {
     use.incrementAndGet();
@@ -469,13 +560,251 @@ class UnInvertedField extends DocTermOrds {
 
     if (missing) {
       // TODO: a faster solution for this?
-      res.add(null, org.apache.solr.search.facet.SimpleFacets.getFieldMissingCount(searcher, baseDocs, field));
+      res.add(null, SimpleFacets.getFieldMissingCount(searcher, baseDocs, field));
     }
 
     //System.out.println("  res=" + res);
 
     return res;
   }
+
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  public SimpleOrderedMap<Object> getCounts(final SimpleFacetStats facetStats, DocSet baseDocs, int offset, int limit, int mincount, boolean missing, String prefix, boolean unique) throws IOException {
+    use.incrementAndGet();
+
+    SchemaField sf = searcher.getSchema().getField(field);
+    FieldType ft = sf.getType();
+
+    SimpleOrderedMap<Object> res = new SimpleOrderedMap<>();
+
+    DocSet docs = baseDocs;
+    int baseSize = docs.size();
+    int maxDoc = searcher.maxDoc();
+    int uniqueTerms = 0;
+
+    try {
+
+      //System.out.println("GET COUNTS field=" + field + " baseSize=" + baseSize + " minCount=" + mincount + " maxDoc=" + maxDoc + " numTermsInField=" + numTermsInField);
+      if (baseSize >= mincount) {
+
+        final int[] index = this.index;
+        // tricky: we add more more element than we need because we will reuse this array later
+        // for ordering term ords before converting to term labels.
+        final int[] counts = new int[numTermsInField + 1];
+
+        //
+        // If there is prefix, find it's start and end term numbers
+        //
+        int startTerm = 0;
+        int endTerm = numTermsInField;  // one past the end
+
+        TermsEnum te = getOrdTermsEnum(searcher.getAtomicReader());
+        if (te != null && prefix != null && prefix.length() > 0) {
+          final BytesRef prefixBr = new BytesRef(prefix);
+          if (te.seekCeil(prefixBr) == TermsEnum.SeekStatus.END) {
+            startTerm = numTermsInField;
+          } else {
+            startTerm = (int) te.ord();
+          }
+          prefixBr.append(UnicodeUtil.BIG_TERM);
+          if (te.seekCeil(prefixBr) == TermsEnum.SeekStatus.END) {
+            endTerm = numTermsInField;
+          } else {
+            endTerm = (int) te.ord();
+          }
+        }
+
+
+        int nDocs = baseDocs.size();
+        int nTerms = endTerm - startTerm;  // TODO: handle 0
+
+
+        facetStats.createAccs(nDocs, nTerms);
+
+
+        for (TopTerm tt : bigTerms.values()) {
+          if (tt.termNum >= startTerm && tt.termNum < endTerm) {
+            // handle the biggest terms
+            try ( DocSet intersection = searcher.getDocSet(new TermQuery(new Term(field, tt.term)), docs); )
+            {
+              int collected = facetStats.collect(tt.termNum, intersection);
+              if (collected > 0) {
+                uniqueTerms++;
+              }
+            }
+          }
+        }
+
+        if (termInstances > 0) {
+
+          final List<AtomicReaderContext> leaves = searcher.getIndexReader().leaves();
+          final Iterator<AtomicReaderContext> ctxIt = leaves.iterator();
+          AtomicReaderContext ctx = null;
+          int segBase = 0;
+          int segMax;
+          int adjustedMax = 0;
+
+          DocIterator iter = docs.iterator();
+          while (iter.hasNext()) {
+            int doc = iter.nextDoc();
+
+            if (doc >= adjustedMax) {
+              do {
+                ctx = ctxIt.next();
+                if (ctx == null) {
+                  // should be impossible
+                  throw new RuntimeException("INTERNAL FACET ERROR");
+                }
+                segBase = ctx.docBase;
+                segMax = ctx.reader().maxDoc();
+                adjustedMax = segBase + segMax;
+              } while (doc >= adjustedMax);
+              assert doc >= ctx.docBase;
+              facetStats.setNextReader(ctx);
+            }
+            int segDoc = doc - segBase;
+
+
+
+            //System.out.println("iter doc=" + doc);
+            int code = index[doc];
+
+            if ((code & 0xff)==1) {
+              //System.out.println("  ptr");
+              int pos = code>>>8;
+              int whichArray = (doc >>> 16) & 0xff;
+              byte[] arr = tnums[whichArray];
+              int tnum = 0;
+              for(;;) {
+                int delta = 0;
+                for(;;) {
+                  byte b = arr[pos++];
+                  delta = (delta << 7) | (b & 0x7f);
+                  if ((b & 0x80) == 0) break;
+                }
+                if (delta == 0) break;
+                tnum += delta - TNUM_OFFSET;
+                facetStats.collect(tnum, segDoc);
+              }
+            } else {
+              //System.out.println("  inlined");
+              int tnum = 0;
+              int delta = 0;
+              for (;;) {
+                delta = (delta << 7) | (code & 0x7f);
+                if ((code & 0x80)==0) {
+                  if (delta==0) break;
+                  tnum += delta - TNUM_OFFSET;
+                  facetStats.collect(tnum, segDoc);
+                  delta = 0;
+                }
+                code >>>= 8;
+              }
+            }
+          }
+        }
+
+
+
+        // TODO: this is mostly repeated code... figure out how to extract it...
+
+
+        int off=offset;
+        int lim=limit>=0 ? limit : Integer.MAX_VALUE;
+
+        int maxsize = limit>0 ? offset+limit : Integer.MAX_VALUE-1;
+        maxsize = Math.min(maxsize, nTerms);
+
+        PriorityQueue<Slot> queue = new PriorityQueue<Slot>(maxsize) {
+          final SlotAcc acc = facetStats.sortAcc;
+          final int mul = facetStats.sortMul;
+          @Override
+          protected boolean lessThan(Slot a, Slot b) {
+            int cmp = acc.compare(a.slot, b.slot) * mul;
+            return cmp == 0 ? b.slot < a.slot : cmp < 0;
+          }
+        };
+
+        Slot bottom = null;
+        for (int i=startTerm; i<endTerm; i++) {
+          // TODO: screen out mincount?  Other filters on stats?
+
+          if (bottom != null) {
+            if (facetStats.sortAcc.compare(bottom.slot, i) < 0) {
+              bottom.slot = i;
+              bottom = queue.updateTop();
+            }
+          } else {
+            // queue not full
+            Slot s = new Slot();
+            s.slot = i;
+            queue.add(s);
+            if (queue.size() >= maxsize) {
+              bottom = queue.top();
+            }
+          }
+        }
+
+
+        // if we are deep paging, we don't have to order the highest "offset" counts.
+        int collectCount = Math.max(0, queue.size() - off);
+        assert collectCount <= lim;
+        int[] sortedSlots = new int[collectCount];
+        for (int i=collectCount-1; i>=0; i--) {
+          sortedSlots[i] = queue.pop().slot;
+        }
+
+        SimpleOrderedMap<Object> globalStats = new SimpleOrderedMap<>();
+        facetStats.addGlobalStats(globalStats);
+        res.add("stats", globalStats);
+
+        ArrayList bucketList = new ArrayList(collectCount);
+        res.add("buckets", bucketList);
+        for (int slotNum : sortedSlots) {
+          SimpleOrderedMap<Object> bucket = new SimpleOrderedMap<>();
+
+          // get the ord of the slot...
+          int ord = slotNum;
+
+          BytesRef br = getTermValue(te, slotNum);
+          Object val = ft.toObject(sf, br);
+
+          bucket.add("val", val);
+
+          facetStats.addStats(bucket, slotNum);
+
+          bucketList.add(bucket);
+
+          facetStats.addSubFacets(bucket, null, new TermQuery(new Term(field, br.clone())) );  // TODO: missing query...
+        }
+
+
+      }
+    } finally {
+
+    }
+
+    return res;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   /**
    * Collect statistics about the UninvertedField.  Code is very similar to {@link #getCounts(org.apache.solr.search.SolrIndexSearcher, org.apache.solr.search.DocSet, int, int, Integer, boolean, String, String)}
@@ -488,7 +817,7 @@ class UnInvertedField extends DocTermOrds {
    * @param calcDistinct whether distinct values should be collected and counted
    * @param facet One or more fields to facet on.
    * @return The {@link org.apache.solr.handler.component.StatsValues} collected
-   * @throws IOException If there is a low-level I/O error.
+   * @throws java.io.IOException If there is a low-level I/O error.
    */
   public StatsValues getStats(SolrIndexSearcher searcher, DocSet baseDocs, boolean calcDistinct, String[] facet) throws IOException {
     //this function is ripped off nearly wholesale from the getCounts function to use
@@ -700,8 +1029,6 @@ class UnInvertedField extends DocTermOrds {
   //////////////////////////////////////////////////////////////////
 
   public static UnInvertedField getUnInvertedField(String field, SolrIndexSearcher searcher) throws IOException {
-    throw new UnsupportedOperationException();
-    /***
     SolrCache<String,UnInvertedField> cache = searcher.getFieldValueCache();
     if (cache == null) {
       return new UnInvertedField(field, searcher);
@@ -740,6 +1067,5 @@ class UnInvertedField extends DocTermOrds {
     }
 
     return uif;
-     ***/
   }
 }

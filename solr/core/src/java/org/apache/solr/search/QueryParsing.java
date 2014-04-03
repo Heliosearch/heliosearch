@@ -604,9 +604,9 @@ public class QueryParsing {
    * <b>Note: This API is experimental and may change in non backward-compatible ways in the future</b>
    */
   public static class StrParser {
-    String val;
-    int pos;
-    int end;
+    public String val;
+    public int pos;
+    public int end;
 
     public StrParser(String val) {
       this(val, 0, val.length());
@@ -618,19 +618,19 @@ public class QueryParsing {
       this.end = end;
     }
 
-    void eatws() {
+    public void eatws() {
       while (pos < end && Character.isWhitespace(val.charAt(pos))) pos++;
     }
 
-    char ch() {
+    public char ch() {
       return pos < end ? val.charAt(pos) : 0;
     }
 
-    void skip(int nChars) {
+    public void skip(int nChars) {
       pos = Math.max(pos + nChars, end);
     }
 
-    boolean opt(String s) {
+    public boolean opt(String s) {
       eatws();
       int slen = s.length();
       if (val.regionMatches(pos, s, 0, slen)) {
@@ -640,7 +640,7 @@ public class QueryParsing {
       return false;
     }
 
-    boolean opt(char ch) {
+    public boolean opt(char ch) {
       eatws();
       if (pos < end && val.charAt(pos) == ch) {
         pos++;
@@ -650,7 +650,7 @@ public class QueryParsing {
     }
 
 
-    void expect(String s) throws SyntaxError {
+    public void expect(String s) throws SyntaxError {
       eatws();
       int slen = s.length();
       if (val.regionMatches(pos, s, 0, slen)) {
@@ -745,11 +745,11 @@ public class QueryParsing {
     }
 
 
-    String getId() throws SyntaxError {
+    public String getId() throws SyntaxError {
       return getId("Expected identifier");
     }
 
-    String getId(String errMessage) throws SyntaxError {
+    public String getId(String errMessage) throws SyntaxError {
       eatws();
       int id_start = pos;
       char ch;
@@ -798,7 +798,7 @@ public class QueryParsing {
      * Skips leading whitespace and returns whatever sequence of non 
      * whitespace it can find (or hte empty string)
      */
-    String getSimpleString() {
+    public String getSimpleString() {
       eatws();
       int startPos = pos;
       char ch;
@@ -815,7 +815,7 @@ public class QueryParsing {
      * sort direction. (True is desc, False is asc).  
      * Position is advanced to after the comma (or end) when result is non null 
      */
-    Boolean getSortDirection() throws SyntaxError {
+    public Boolean getSortDirection() throws SyntaxError {
       final int startPos = pos;
       final String order = getId(null);
 

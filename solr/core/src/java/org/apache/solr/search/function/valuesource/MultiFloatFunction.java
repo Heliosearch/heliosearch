@@ -37,6 +37,10 @@ public abstract class MultiFloatFunction extends ValueSource {
     this.sources = sources;
   }
 
+  public ValueSource[] getChildren() {
+    return sources;
+  }
+
   abstract protected String name();
 
   abstract protected float func(int doc, FuncValues[] valsArr);

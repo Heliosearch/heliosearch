@@ -30,6 +30,7 @@ import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.params.FacetParams;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.util.RefCounted;
+import org.apache.solr.search.facet.UnInvertedField;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;

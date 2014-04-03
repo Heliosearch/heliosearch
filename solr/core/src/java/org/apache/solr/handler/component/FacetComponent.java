@@ -38,8 +38,7 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.util.StrUtils;
-import org.apache.solr.request.SimpleFacets;
-import org.apache.solr.request.SimpleFacetsHS;
+import org.apache.solr.search.facet.SimpleFacets;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.SyntaxError;
@@ -77,7 +76,7 @@ public class FacetComponent extends SearchComponent
   {
     if (rb.doFacets) {
       SolrParams params = rb.req.getParams();
-      SimpleFacetsHS f = new SimpleFacetsHS(rb.req,
+      SimpleFacets f = new SimpleFacets(rb.req,
               rb.getResults().docSet,
               params,
               rb );
@@ -226,7 +225,8 @@ public class FacetComponent extends SearchComponent
         sreq.params.remove(FacetParams.FACET_LIMIT);
 
         for (DistribFieldFacet dff : fi.facets.values()) {
-          String paramStart = "f." + dff.field + '.';
+          // String paramStart = "f." + dff.field + '.';
+          String paramStart = "f." + dff.getKey() + '.';
           sreq.params.remove(paramStart + FacetParams.FACET_MINCOUNT);
           sreq.params.remove(paramStart + FacetParams.FACET_OFFSET);
 

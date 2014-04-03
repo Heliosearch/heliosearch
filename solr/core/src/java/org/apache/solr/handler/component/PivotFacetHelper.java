@@ -18,7 +18,7 @@
 package org.apache.solr.handler.component;
 
 import org.apache.lucene.util.BytesRef;
-import org.apache.solr.request.SimpleFacetsHS;
+import org.apache.solr.search.facet.SimpleFacets;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.DocSet;
@@ -28,14 +28,12 @@ import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.params.FacetParams;
-import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.FieldType;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TermRangeQuery;
 import org.apache.lucene.index.Term;
-import org.apache.solr.search.SyntaxError;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -47,7 +45,7 @@ import java.util.Map;
 /**
  * @since solr 4.0
  */
-public class PivotFacetHelper extends SimpleFacetsHS
+public class PivotFacetHelper extends SimpleFacets
 {
 
   protected int minMatch;
@@ -67,12 +65,9 @@ public class PivotFacetHelper extends SimpleFacetsHS
       DocSet saveDocs = null;
       try {
         //ex: pivot == "features,cat" or even "{!ex=mytag}features,cat"
-        try {
-          this.parseParams(FacetParams.FACET_PIVOT, pivot);
-          saveDocs = this.docs;
-        } catch (SyntaxError e) {
-          throw new SolrException(ErrorCode.BAD_REQUEST, e);
-        }
+        this.parseParams(FacetParams.FACET_PIVOT, pivot);
+        saveDocs = this.docs;
+
         pivot = facetValue;//facetValue potentially modified from parseParams()
 
         String[] fields = pivot.split(",");

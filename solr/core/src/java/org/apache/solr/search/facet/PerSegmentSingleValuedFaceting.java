@@ -1,3 +1,5 @@
+package org.apache.solr.search.facet;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,12 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.solr.request;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.*;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
@@ -39,6 +35,16 @@ import org.apache.solr.schema.FieldType;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.util.BoundedTreeSet;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.Future;
 
 
 class PerSegmentSingleValuedFaceting {
@@ -210,7 +216,7 @@ class PerSegmentSingleValuedFaceting {
 
     if (missing) {
       if (!hasMissingCount) {
-        missingCount = org.apache.solr.search.facet.SimpleFacets.getFieldMissingCount(searcher, docs, fieldName);
+        missingCount = SimpleFacets.getFieldMissingCount(searcher, docs, fieldName);
       }
       res.add(null, missingCount);
     }
@@ -282,7 +288,6 @@ class PerSegmentSingleValuedFaceting {
   }
 
 }
-
 
 
 abstract class FacetCollector {

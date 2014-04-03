@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.solr.request;
+package org.apache.solr.search.facet;
 
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.DocsEnum;
@@ -31,15 +31,9 @@ import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.util.Bits;
-import org.apache.solr.search.SortedIntDocSetNative;
-import org.apache.solr.search.grouping.AbstractAllGroupHeadsCollector;
-import org.apache.solr.search.grouping.TermAllGroupsCollector;
-import org.apache.solr.search.grouping.TermGroupFacetCollector;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.FixedBitSet;
-import org.apache.lucene.util.OpenBitSet;
 import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
@@ -55,6 +49,8 @@ import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.handler.component.ResponseBuilder;
+import org.apache.solr.request.DocValuesFacets;
+import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.BoolField;
 import org.apache.solr.schema.DateField;
 import org.apache.solr.schema.FieldType;
@@ -73,9 +69,12 @@ import org.apache.solr.search.HashDocSet;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.SolrIndexSearcher;
-import org.apache.solr.search.SortedIntDocSet;
+import org.apache.solr.search.SortedIntDocSetNative;
 import org.apache.solr.search.SyntaxError;
+import org.apache.solr.search.grouping.AbstractAllGroupHeadsCollector;
 import org.apache.solr.search.grouping.GroupingSpecification;
+import org.apache.solr.search.grouping.TermAllGroupsCollector;
+import org.apache.solr.search.grouping.TermGroupFacetCollector;
 import org.apache.solr.util.BoundedTreeSet;
 import org.apache.solr.util.DateMathParser;
 import org.apache.solr.util.DefaultSolrThreadFactory;
@@ -86,7 +85,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -104,7 +105,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * SimpleFacets for Heliosearch
  */
-public class SimpleFacetsHS {
+public class SimpleFacets {
 
   /** The main set of documents all facet counts should be relative to */
   protected DocSet docsOrig;
@@ -115,8 +116,6 @@ public class SimpleFacetsHS {
   protected final SolrQueryRequest req;
   protected final ResponseBuilder rb;
 
-  protected SimpleOrderedMap<Object> facetResponse;
-
   // per-facet values
   protected SolrParams localParams; // localParams on this particular facet command
   protected SolrParams params;      // local+original
@@ -126,128 +125,215 @@ public class SimpleFacetsHS {
   protected String key;             // what name should the results be stored under
   protected int threads;
 
+  public Map<String, List<Subfacet>> subFacets;
+  public List<Query> subQueries;  // queries for the current path within the subfacets...
+  public SimpleFacetStats facetStats;
+  protected SimpleFacets parent;
+
+
   /** refcount of DocSet will not be changed. */
-  public SimpleFacetsHS(SolrQueryRequest req,
-                        DocSet docs,
-                        SolrParams params) {
+  public SimpleFacets(SolrQueryRequest req,
+                      DocSet docs,
+                      SolrParams params) {
     this(req,docs,params,null);
   }
 
   /** refcount of DocSet will not be changed. */
-  public SimpleFacetsHS(SolrQueryRequest req,
-                        DocSet docs,
-                        SolrParams params,
-                        ResponseBuilder rb) {
+  public SimpleFacets(SolrQueryRequest req,
+                      DocSet docs,
+                      SolrParams params,
+                      ResponseBuilder rb) {
     this.req = req;
     this.searcher = req.getSearcher();
     this.docs = this.docsOrig = docs;
     this.params = orig = params;
     this.required = new RequiredSolrParams(params);
     this.rb = rb;
+    this.subFacets = parseSubFacets(params);
   }
 
-  protected void cleanup() {
+
+  public SimpleFacets(SimpleFacets parent, DocSet base) {
+    this.parent = parent;
+    this.req = parent.req;
+    this.searcher = parent.searcher;
+    // this.docsOrig = parent.docsOrig;   // TODO: we'll need "real" original if we ever wanted to do different exclusions in subfacets
+    this.docsOrig = base;
+    this.orig = parent.orig;
+    this.params = parent.params;
+    this.required = parent.required;
+    this.rb = parent.rb;
+    this.subFacets = parent.subFacets;
+    this.subQueries = parent.subQueries;
+  }
+
+  protected void cleanup() throws IOException {
     if (this.docs != null && this.docs != this.docsOrig) {
       this.docs.decref();
       this.docs = null;
     }
+    if (this.facetStats != null) {
+      facetStats.close();
+      facetStats = null;
+    }
   }
 
+  public static class Subfacet {
+    public String parentKey;
+    public String type; // query, range, field
+    public String value;  // the actual field or the query, including possible local params
+  }
 
-  protected void parseParams(String type, String param) throws SyntaxError, IOException {
-    localParams = QueryParsing.getLocalParams(param, req.getParams());
+  protected static Map<String, List<Subfacet>> parseSubFacets(SolrParams params) {
+    Map<String,List<Subfacet>> map = new HashMap<>();
+    Iterator<String> iter = params.getParameterNamesIterator();
+
+    String SUBFACET="subfacet.";
+    while (iter.hasNext()) {
+      String key = iter.next();
+
+      if (key.startsWith(SUBFACET)) {
+        List<String> parts = StrUtils.splitSmart(key, '.');
+        if (parts.size() != 3) {
+          throw new SolrException(ErrorCode.BAD_REQUEST, "expected subfacet parameter name of the form subfacet.mykey.field, got:" + key);
+        }
+        Subfacet sub = new Subfacet();
+        sub.parentKey = parts.get(1);
+        sub.type = parts.get(2);
+        sub.value = params.get(key);
+
+        List<Subfacet> subs = map.get(sub.parentKey);
+        if (subs == null) {
+          subs = new ArrayList<>(1);
+        }
+        subs.add(sub);
+        map.put(sub.parentKey, subs);
+      }
+    }
+
+    return map;
+  }
+
+  protected void setupStats() {
+    // parse stats for this facet
+    String[] stats = params.getFieldParams(key, "facet.stat");
+    List<Subfacet> subs = subFacets.get(key);
+    if (stats != null || subs != null || parent != null) {  // we check for parent != null since we always use the new bucket format for sub-facets
+      facetStats = new SimpleFacetStats(this);
+      facetStats.setStats(stats);
+      facetStats.setSubFacets(subs);
+    } else {
+      facetStats = null;
+    }
+  }
+
+  protected void parseParams(String type, String param) throws IOException {
     docs = docsOrig;
     facetValue = param;
     key = param;
     threads = -1;
 
-    if (localParams == null) {
-      params = orig;
+    try {
+      localParams = QueryParsing.getLocalParams(param, req.getParams());
+
+      if (localParams == null) {
+        params = orig;
+        required = new RequiredSolrParams(params);
+        setupStats();
+        return;
+      }
+
+      params = SolrParams.wrapDefaults(localParams, orig);
       required = new RequiredSolrParams(params);
-      return;
-    }
-    params = SolrParams.wrapDefaults(localParams, orig);
-    required = new RequiredSolrParams(params);
 
-    // remove local params unless it's a query
-    if (type != FacetParams.FACET_QUERY) { // TODO Cut over to an Enum here
-      facetValue = localParams.get(CommonParams.VALUE);
-    }
-
-    // reset set the default key now that localParams have been removed
-    key = facetValue;
-
-    // allow explicit set of the key
-    key = localParams.get(CommonParams.OUTPUT_KEY, key);
-
-    String threadStr = localParams.get(CommonParams.THREADS);
-    if (threadStr != null) {
-      threads = Integer.parseInt(threadStr);
-    }
-
-    // figure out if we need a new base DocSet
-    String excludeStr = localParams.get(CommonParams.EXCLUDE);
-    if (excludeStr == null) return;
-
-    Map<?,?> tagMap = (Map<?,?>)req.getContext().get("tags");
-    if (tagMap != null && rb != null) {
-      List<String> excludeTagList = StrUtils.splitSmart(excludeStr,',');
-
-      IdentityHashMap<Query,Boolean> excludeSet = new IdentityHashMap<Query,Boolean>();
-      for (String excludeTag : excludeTagList) {
-        Object olst = tagMap.get(excludeTag);
-        // tagMap has entries of List<String,List<QParser>>, but subject to change in the future
-        if (!(olst instanceof Collection)) continue;
-        for (Object o : (Collection<?>)olst) {
-          if (!(o instanceof QParser)) continue;
-          QParser qp = (QParser)o;
-          excludeSet.put(qp.getQuery(), Boolean.TRUE);
-        }
-      }
-      if (excludeSet.size() == 0) return;
-
-      List<Query> qlist = new ArrayList<Query>();
-
-      // add the base query
-      if (!excludeSet.containsKey(rb.getQuery())) {
-        qlist.add(rb.getQuery());
+      // remove local params unless it's a query
+      if (type != FacetParams.FACET_QUERY) { // TODO Cut over to an Enum here
+        facetValue = localParams.get(CommonParams.VALUE);
       }
 
-      // add the filters
-      if (rb.getFilters() != null) {
-        for (Query q : rb.getFilters()) {
-          if (!excludeSet.containsKey(q)) {
-            qlist.add(q);
+      // reset set the default key now that localParams have been removed
+      key = facetValue;
+
+      // allow explicit set of the key
+      key = localParams.get(CommonParams.OUTPUT_KEY, key);
+
+      setupStats();
+
+      String threadStr = localParams.get(CommonParams.THREADS);
+      if (threadStr != null) {
+        threads = Integer.parseInt(threadStr);
+      }
+
+      // figure out if we need a new base DocSet
+      String excludeStr = localParams.get(CommonParams.EXCLUDE);
+      if (excludeStr == null) return;
+
+      Map<?,?> tagMap = (Map<?,?>)req.getContext().get("tags");
+      if (tagMap != null && rb != null) {
+        List<String> excludeTagList = StrUtils.splitSmart(excludeStr,',');
+
+        IdentityHashMap<Query,Boolean> excludeSet = new IdentityHashMap<Query,Boolean>();
+        for (String excludeTag : excludeTagList) {
+          Object olst = tagMap.get(excludeTag);
+          // tagMap has entries of List<String,List<QParser>>, but subject to change in the future
+          if (!(olst instanceof Collection)) continue;
+          for (Object o : (Collection<?>)olst) {
+            if (!(o instanceof QParser)) continue;
+            QParser qp = (QParser)o;
+            excludeSet.put(qp.getQuery(), Boolean.TRUE);
           }
         }
-      }
+        if (excludeSet.size() == 0) return;
+
+        List<Query> qlist = new ArrayList<Query>();
+
+        // add the base query
+        if (!excludeSet.containsKey(rb.getQuery())) {
+          qlist.add(rb.getQuery());
+        }
+
+        // add the filters
+        if (rb.getFilters() != null) {
+          for (Query q : rb.getFilters()) {
+            if (!excludeSet.containsKey(q)) {
+              qlist.add(q);
+            }
+          }
+          if (subQueries != null) {
+            qlist.addAll(subQueries);  // constraints for subfacets
+          }
+        }
 
 
-      if (rb.grouping() && rb.getGroupingSpec().isTruncateGroups()) {
-        Grouping grouping = new Grouping(searcher, null, rb.getQueryCommand(), false, 0, false);
-        grouping.setGroupSort(rb.getGroupingSpec().getSortWithinGroup());
-        if (rb.getGroupingSpec().getFields().length > 0) {
-          grouping.addFieldCommand(rb.getGroupingSpec().getFields()[0], req);
-        } else if (rb.getGroupingSpec().getFunctions().length > 0) {
-          grouping.addFunctionCommand(rb.getGroupingSpec().getFunctions()[0], req);
+        if (rb.grouping() && rb.getGroupingSpec().isTruncateGroups()) {
+          Grouping grouping = new Grouping(searcher, null, rb.getQueryCommand(), false, 0, false);
+          grouping.setGroupSort(rb.getGroupingSpec().getSortWithinGroup());
+          if (rb.getGroupingSpec().getFields().length > 0) {
+            grouping.addFieldCommand(rb.getGroupingSpec().getFields()[0], req);
+          } else if (rb.getGroupingSpec().getFunctions().length > 0) {
+            grouping.addFunctionCommand(rb.getGroupingSpec().getFunctions()[0], req);
+          } else {
+            this.docs = searcher.getDocSet(qlist);
+            return;
+          }
+          grouping.getCommands().get(0).prepare();
+          AbstractAllGroupHeadsCollector allGroupHeadsCollector = grouping.getCommands().get(0).createAllGroupCollector();
+          try (DocSet base = searcher.getDocSet(qlist)) {
+            searcher.search(new MatchAllDocsQuery(), base.getTopFilter(), allGroupHeadsCollector);
+            int maxDoc = searcher.maxDoc();
+            FixedBitSet fixedBitSet = allGroupHeadsCollector.retrieveGroupHeads(maxDoc);
+            this.docs = new BitDocSetNative(fixedBitSet);    // HS_TODO: make this more efficient...
+          }
         } else {
-          this.docs = searcher.getDocSet(qlist);
-          return;
-        }
-        grouping.getCommands().get(0).prepare();
-        AbstractAllGroupHeadsCollector allGroupHeadsCollector = grouping.getCommands().get(0).createAllGroupCollector();
-        try (DocSet base = searcher.getDocSet(qlist)) {
-          searcher.search(new MatchAllDocsQuery(), base.getTopFilter(), allGroupHeadsCollector);
-          int maxDoc = searcher.maxDoc();
-          FixedBitSet fixedBitSet = allGroupHeadsCollector.retrieveGroupHeads(maxDoc);
-          this.docs = new BitDocSetNative(fixedBitSet);    // HS_TODO: make this more efficient...
-        }
-      } else {
           // Normal non-grouping path
           this.docs = searcher.getDocSet(qlist);
+        }
       }
-    }
 
+
+    } catch (SyntaxError e) {
+      throw new SolrException(ErrorCode.BAD_REQUEST, e);
+    }
   }
 
 
@@ -267,7 +353,7 @@ public class SimpleFacetsHS {
     if (!params.getBool(FacetParams.FACET,true))
       return null;
 
-    facetResponse = new SimpleOrderedMap<Object>();
+    SimpleOrderedMap<Object> facetResponse = new SimpleOrderedMap<Object>();
     try {
       facetResponse.add("facet_queries", getFacetQueryCounts());
       facetResponse.add("facet_fields", getFacetFieldCounts());
@@ -288,9 +374,9 @@ public class SimpleFacetsHS {
    *
    * @see org.apache.solr.common.params.FacetParams#FACET_QUERY
    */
-  public NamedList<Integer> getFacetQueryCounts() throws IOException,SyntaxError {
+  public NamedList<Object> getFacetQueryCounts() throws IOException,SyntaxError {
 
-    NamedList<Integer> res = new SimpleOrderedMap<Integer>();
+    NamedList<Object> res = new SimpleOrderedMap<Object>();
 
     /* Ignore CommonParams.DF - could have init param facet.query assuming
      * the schema default with query param DF intented to only affect Q.
@@ -303,28 +389,46 @@ public class SimpleFacetsHS {
 
 
     if (null != facetQs && 0 != facetQs.length) {
+
       for (String q : facetQs) {
-        parseParams(FacetParams.FACET_QUERY, q);
-
         try {
-          // TODO: slight optimization would prevent double-parsing of any localParams
-          Query qobj = QParser.getParser(q, null, req).getQuery();
-
-          if (qobj == null) {
-            res.add(key, 0);
-          } else if (params.getBool(GroupParams.GROUP_FACET, false)) {
-            res.add(key, getGroupedFacetQueryCount(qobj));
-          } else {
-            res.add(key, searcher.numDocs(qobj, docs));
-          }
+          getQueryFacet(q, res);
         } finally {
           cleanup();
         }
       }
+
     }
 
     return res;
   }
+
+  // call cleanup after returning
+  void getQueryFacet(String q, NamedList<Object> res) throws IOException {
+    try {
+      parseParams(FacetParams.FACET_QUERY, q);
+
+      // TODO: slight optimization would prevent double-parsing of any localParams
+      Query query = QParser.getParser(q, null, req).getQuery();
+
+      if (query == null) {  // what causes a null query?
+        res.add(key, 0);
+      } else if (params.getBool(GroupParams.GROUP_FACET, false)) {
+        res.add(key, getGroupedFacetQueryCount(query));
+      } else {
+
+        if (facetStats == null) {
+          res.add(key, searcher.numDocs(query, docs));
+        } else {
+          res.add(key, facetStats.getQueryFacet(docs, query) );
+        }
+      }
+
+    } catch (SyntaxError syntaxError) {
+      throw new SolrException(ErrorCode.BAD_REQUEST, "Error parsing query facet: " + q, syntaxError);
+    }
+  }
+
 
   /**
    * Returns a grouped facet count for the facet query
@@ -351,42 +455,51 @@ public class SimpleFacetsHS {
     ENUM, FC, FCS;
   }
 
-  public NamedList<? extends Object> getFieldFacets(String field, DocSet base) throws IOException {
-    int offset = params.getFieldInt(field, FacetParams.FACET_OFFSET, 0);
-    int limit = params.getFieldInt(field, FacetParams.FACET_LIMIT, 10);
+
+  // call cleanup after done
+  public void getFieldFacets(String fieldFacetParam, NamedList<Object> res) throws IOException {
+    parseParams(FacetParams.FACET_FIELD,  fieldFacetParam);
+    String responseKey = this.key;
+    res.add(responseKey, getFieldFacets(responseKey, this.facetValue, docs));
+  }
+
+
+  NamedList<? extends Object> getFieldFacets(String key, String field, DocSet base) throws IOException {
+ //   String f = field;  // the parameter to use for per-field parameters... f.key.facet.limit=10
+    String f = key;  // the parameter to use for per-field parameters... f.key.facet.limit=10
+
+    int offset = params.getFieldInt(f, FacetParams.FACET_OFFSET, 0);
+    int limit = params.getFieldInt(f, FacetParams.FACET_LIMIT, 10);
 
     if (limit == 0) return new NamedList<Integer>();
-    Integer mincount = params.getFieldInt(field, FacetParams.FACET_MINCOUNT);
+    Integer mincount = params.getFieldInt(f, FacetParams.FACET_MINCOUNT);
     if (mincount==null) {
-      Boolean zeros = params.getFieldBool(field, FacetParams.FACET_ZEROS);
+      Boolean zeros = params.getFieldBool(f, FacetParams.FACET_ZEROS);
       // mincount = (zeros!=null && zeros) ? 0 : 1;
       mincount = (zeros!=null && !zeros) ? 1 : 0;
       // current default is to include zeros.
     }
-    boolean missing = params.getFieldBool(field, FacetParams.FACET_MISSING, false);
+    boolean missing = params.getFieldBool(f, FacetParams.FACET_MISSING, false);
     // default to sorting if there is a limit.
-    String sort = params.getFieldParam(field, FacetParams.FACET_SORT, limit>0 ? FacetParams.FACET_SORT_COUNT : FacetParams.FACET_SORT_INDEX);
-    String prefix = params.getFieldParam(field,FacetParams.FACET_PREFIX);
+    String sort = params.getFieldParam(f, FacetParams.FACET_SORT, limit>0 ? FacetParams.FACET_SORT_COUNT : FacetParams.FACET_SORT_INDEX);
+    String prefix = params.getFieldParam(f, FacetParams.FACET_PREFIX);
 
-
-    // facet.stat=sum(price)
-    // facet.stat={!key=totprice)sum(price)
-    // facet.stat.totprice=sum(price)
-    // what about directives to use long, double, float, etc?
-    // what about directives for missing values?   avg()... should it include missing values or not?
-
-    // f.xxx.facet.stat.avg = 10
-
-
-
-
-
-    NamedList<Integer> counts;
     SchemaField sf = searcher.getSchema().getField(field);
     FieldType ft = sf.getType();
 
+    if (facetStats != null) {
+      facetStats.setSort(sort);
+      if (!(sf.multiValued() || ft.multiValuedFieldCache())) {
+        return facetStats.getFieldCacheCounts(docs, field, offset, limit, mincount, missing, prefix);
+      } else {
+        return facetStats.getUninvertedCounts(docs, field, offset, limit, mincount, missing, prefix, false);
+      }
+    }
+
+    NamedList<Integer> counts;
+
     // determine what type of faceting method to use
-    final String methodStr = params.getFieldParam(field, FacetParams.FACET_METHOD);
+    final String methodStr = params.getFieldParam(f, FacetParams.FACET_METHOD);
     FacetMethod method = null;
     if (FacetParams.FACET_METHOD_enum.equals(methodStr)) {
       method = FacetMethod.ENUM;
@@ -435,7 +548,7 @@ public class SimpleFacetsHS {
       method = FacetMethod.FC;
     }
 
-    if (params.getFieldBool(field, GroupParams.GROUP_FACET, false)) {
+    if (params.getFieldBool(f, GroupParams.GROUP_FACET, false)) {
       counts = getGroupedCounts(searcher, base, field, multiToken, offset,limit, mincount, missing, sort, prefix);
     } else {
       assert method != null;
@@ -461,7 +574,7 @@ public class SimpleFacetsHS {
           break;
         case FC:
           if (sf.hasDocValues()) {
-            counts = DocValuesFacets.getCounts(searcher, base, field, offset,limit, mincount, missing, sort, prefix);
+            counts = DocValuesFacets.getCounts(searcher, base, field, offset, limit, mincount, missing, sort, prefix);
           } else if (multiToken || TrieField.getMainValuePrefix(ft) != null) {
             UnInvertedField uif = UnInvertedField.getUnInvertedField(field, searcher);
             counts = uif.getCounts(searcher, base, offset, limit, mincount,missing,sort,prefix);
@@ -478,6 +591,7 @@ public class SimpleFacetsHS {
   }
 
 
+  // Currently only called from pivots!
   public NamedList<Integer> getTermCounts(String field, DocSet base) throws IOException {
     int offset = params.getFieldInt(field, FacetParams.FACET_OFFSET, 0);
     int limit = params.getFieldInt(field, FacetParams.FACET_LIMIT, 10);
@@ -661,8 +775,7 @@ public class SimpleFacetsHS {
    * @see #getFacetTermEnumCounts
    */
   @SuppressWarnings("unchecked")
-  public NamedList<Object> getFacetFieldCounts()
-      throws IOException, SyntaxError {
+  public NamedList<Object> getFacetFieldCounts() throws IOException, SyntaxError {
 
     NamedList<Object> res = new SimpleOrderedMap<Object>();
     String[] facetFs = params.getParams(FacetParams.FACET_FIELD);
@@ -670,13 +783,15 @@ public class SimpleFacetsHS {
       return res;
     }
 
+    boolean doLocally = true;
+
     // Passing a negative number for FACET_THREADS implies an unlimited number of threads is acceptable.
     // Also, a subtlety of directExecutor is that no matter how many times you "submit" a job, it's really
     // just a method call in that it's run by the calling thread.
     int maxThreads = req.getParams().getInt(FacetParams.FACET_THREADS, 0);
     Executor executor = maxThreads == 0 ? directExecutor : facetExecutor;
-    final Semaphore semaphore = new Semaphore((maxThreads <= 0) ? Integer.MAX_VALUE : maxThreads);
-    List<Future<NamedList>> futures = new ArrayList<Future<NamedList>>(facetFs.length);
+    final Semaphore semaphore = doLocally ? null : new Semaphore((maxThreads <= 0) ? Integer.MAX_VALUE : maxThreads);
+    List<Future<NamedList>> futures = doLocally ? null : new ArrayList<Future<NamedList>>(facetFs.length);
 
     List<DocSet> toFree = new ArrayList<DocSet>();
 
@@ -690,6 +805,17 @@ public class SimpleFacetsHS {
         final DocSet workerBase = this.docs;
         if (workerBase != this.docsOrig) toFree.add(workerBase);
 
+        // do locally
+        if (doLocally) {
+          if(termList != null) {
+            res.add(workerKey, getListedTermCounts(workerFacetValue, termList, workerBase));
+          } else {
+            // result.add(workerKey, getTermCounts(workerFacetValue, workerBase));
+            res.add(workerKey, getFieldFacets(workerKey, workerFacetValue, workerBase));
+          }
+          continue;
+        }
+
         Callable<NamedList> callable = new Callable<NamedList>() {
           @Override
           public NamedList call() throws Exception {
@@ -698,7 +824,8 @@ public class SimpleFacetsHS {
               if(termList != null) {
                 result.add(workerKey, getListedTermCounts(workerFacetValue, termList, workerBase));
               } else {
-                result.add(workerKey, getTermCounts(workerFacetValue, workerBase));
+                // result.add(workerKey, getTermCounts(workerFacetValue, workerBase));
+                result.add(workerKey, getFieldFacets(workerKey, workerFacetValue, workerBase));
               }
               return result;
             } catch (SolrException se) {
@@ -718,11 +845,13 @@ public class SimpleFacetsHS {
         futures.add(runnableFuture);
       }//facetFs loop
 
-      //Loop over futures to get the values. The order is the same as facetFs but shouldn't matter.
-      for (Future<NamedList> future : futures) {
-        res.addAll(future.get());
+      if (!doLocally) {
+        //Loop over futures to get the values. The order is the same as facetFs but shouldn't matter.
+        for (Future<NamedList> future : futures) {
+          res.addAll(future.get());
+        }
+        assert semaphore.availablePermits() >= maxThreads;
       }
-      assert semaphore.availablePermits() >= maxThreads;
     } catch (InterruptedException e) {
       throw new SolrException(ErrorCode.SERVER_ERROR,
           "Error while processing facet fields: InterruptedException", e);
@@ -1300,15 +1429,14 @@ public class SimpleFacetsHS {
     return resOuter;
   }
 
-  void getFacetRangeCounts(String facetRange, NamedList<Object> resOuter)
-      throws IOException, SyntaxError {
-
-    final IndexSchema schema = searcher.getSchema();
+  // call cleanup after finished
+  void getFacetRangeCounts(String facetRange, NamedList<Object> resOuter) throws IOException {
 
     parseParams(FacetParams.FACET_RANGE, facetRange);
-    String f = facetValue;
+    String field = facetValue;
 
-    final SchemaField sf = schema.getField(f);
+    final IndexSchema schema = searcher.getSchema();
+    final SchemaField sf = schema.getField(field);
     final FieldType ft = sf.getType();
 
     RangeEndpointCalculator<?> calc = null;
@@ -1332,7 +1460,7 @@ public class SimpleFacetsHS {
         default:
           throw new SolrException
               (ErrorCode.BAD_REQUEST,
-                  "Unable to range facet on tried field of unexpected type:" + f);
+                  "Unable to range facet on tried field of unexpected type:" + field);
       }
     } else if (ft instanceof DateField) {
       calc = new DateRangeEndpointCalculator(sf, null);
@@ -1350,17 +1478,26 @@ public class SimpleFacetsHS {
               "Unable to range facet on field:" + sf);
     }
 
-    resOuter.add(key, getFacetRangeCounts(sf, (RangeEndpointCalculator)calc));    // redundant cast helps intellij to resolve
+    resOuter.add(key, getFacetRangeCounts(key, sf, (RangeEndpointCalculator)calc));    // redundant cast helps intellij to resolve
   }
 
-  private <T extends Comparable<T>> NamedList getFacetRangeCounts
-    (final SchemaField sf,
-     final RangeEndpointCalculator<T> calc) throws IOException {
+  private <T extends Comparable<T>> NamedList getFacetRangeCounts(String key, final SchemaField sf, final RangeEndpointCalculator<T> calc) throws IOException {
 
-    final String f = sf.getName();
-    final NamedList<Object> res = new SimpleOrderedMap<Object>();
-    final NamedList<Integer> counts = new NamedList<Integer>();
-    res.add("counts", counts);
+    final String f = key; // what to use for per-facet params... f.key.facet.offset=...
+    final String field = sf.getName();
+    final NamedList<Object> res = new SimpleOrderedMap<>();
+
+    List<SimpleOrderedMap<Object>> buckets = null;
+    NamedList<Integer> counts = null;
+
+    if (facetStats != null) {
+      buckets = new ArrayList<>();
+      res.add("buckets", buckets);
+    } else {
+      counts = new NamedList<>();
+      res.add("counts", counts);
+    }
+
 
     final T start = calc.getValue(required.getFieldParam(f,FacetParams.FACET_RANGE_START));
     // not final, hardend may change this
@@ -1415,10 +1552,14 @@ public class SimpleFacetsHS {
       final String lowS = calc.formatValue(low);
       final String highS = calc.formatValue(high);
 
-      final int count = rangeCount(sf, lowS, highS,
-                                   includeLower,includeUpper);
-      if (count >= minCount) {
-        counts.add(lowS, count);
+      if (buckets == null) {
+        final int count = rangeCount(sf, lowS, highS,
+                                     includeLower,includeUpper);
+        if (count >= minCount) {
+          counts.add(lowS, count);
+        }
+      } else {
+        buckets.add( rangeStats(lowS, facetStats, minCount, sf, lowS, highS, includeLower, includeUpper) );
       }
 
       low = high;
@@ -1450,35 +1591,50 @@ public class SimpleFacetsHS {
         if (all || others.contains(FacetRangeOther.BEFORE)) {
           // include upper bound if "outer" or if first gap doesn't already include it
           res.add(FacetRangeOther.BEFORE.toString(),
-                  rangeCount(sf,null,startS,
-                             false,
-                             (include.contains(FacetRangeInclude.OUTER) ||
-                              (! (include.contains(FacetRangeInclude.LOWER) ||
-                                  include.contains(FacetRangeInclude.EDGE))))));
+                  rangeObj(null, facetStats, 0, sf, null, startS,
+                      false,
+                      (include.contains(FacetRangeInclude.OUTER) ||
+                          (!(include.contains(FacetRangeInclude.LOWER) ||
+                              include.contains(FacetRangeInclude.EDGE))))));
 
         }
         if (all || others.contains(FacetRangeOther.AFTER)) {
           // include lower bound if "outer" or if last gap doesn't already include it
           res.add(FacetRangeOther.AFTER.toString(),
-                  rangeCount(sf,endS,null,
-                             (include.contains(FacetRangeInclude.OUTER) ||
-                              (! (include.contains(FacetRangeInclude.UPPER) ||
-                                  include.contains(FacetRangeInclude.EDGE)))),
-                             false));
+              rangeObj(null, facetStats, 0, sf, endS, null,
+                  (include.contains(FacetRangeInclude.OUTER) ||
+                      (!(include.contains(FacetRangeInclude.UPPER) ||
+                          include.contains(FacetRangeInclude.EDGE)))),
+                  false));
         }
         if (all || others.contains(FacetRangeOther.BETWEEN)) {
          res.add(FacetRangeOther.BETWEEN.toString(),
-                 rangeCount(sf,startS,endS,
-                            (include.contains(FacetRangeInclude.LOWER) ||
-                             include.contains(FacetRangeInclude.EDGE)),
-                            (include.contains(FacetRangeInclude.UPPER) ||
-                             include.contains(FacetRangeInclude.EDGE))));
+             rangeObj(null, facetStats, 0, sf, startS, endS,
+                 (include.contains(FacetRangeInclude.LOWER) ||
+                     include.contains(FacetRangeInclude.EDGE)),
+                 (include.contains(FacetRangeInclude.UPPER) ||
+                     include.contains(FacetRangeInclude.EDGE))));
 
         }
       }
     }
     return res;
   }
+
+  // returns an Integer or SimpleOrderedMap
+  protected Object rangeObj(Object label, SimpleFacetStats stats, int mincount, SchemaField sf, String low, String high, boolean iLow, boolean iHigh) throws IOException {
+    if (stats == null) {
+      return rangeCount(sf, low, high, iLow, iHigh);
+    } else {
+      return rangeStats(label, stats, mincount, sf, low, high, iLow, iHigh);
+    }
+  }
+
+  protected SimpleOrderedMap<Object> rangeStats(Object label, SimpleFacetStats stats, int mincount,SchemaField sf, String low, String high, boolean iLow, boolean iHigh) throws IOException {
+    Query rangeQ = sf.getType().getRangeQuery(null, sf, low, high, iLow, iHigh);
+    SimpleOrderedMap<Object> bucket = stats.getRangeBucket(docs, rangeQ, label, sf, low, high, iLow, iHigh);
+    return bucket;
+   }
 
   /**
    * Macro for getting the numDocs of range over docs

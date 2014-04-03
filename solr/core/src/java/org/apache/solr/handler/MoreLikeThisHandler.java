@@ -44,7 +44,7 @@ import org.apache.solr.common.util.ContentStream;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.SolrCore;
-import org.apache.solr.request.SimpleFacetsHS;
+import org.apache.solr.search.facet.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.IndexSchema;
@@ -207,7 +207,7 @@ public class MoreLikeThisHandler extends RequestHandlerBase
         rsp.add( "facet_counts", null );
       }
       else {
-        SimpleFacetsHS f = new SimpleFacetsHS(req, mltDocs.docSet, params );
+        SimpleFacets f = new SimpleFacets(req, mltDocs.docSet, params );
         rsp.add( "facet_counts", f.getFacetCounts() );
       }
     }

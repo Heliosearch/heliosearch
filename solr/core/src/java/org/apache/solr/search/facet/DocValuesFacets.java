@@ -1,4 +1,4 @@
-package org.apache.solr.request;
+package org.apache.solr.search.facet;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,9 +16,6 @@ package org.apache.solr.request;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import java.io.IOException;
-import java.util.List;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.MultiDocValues.MultiSortedDocValues;
@@ -40,6 +37,9 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.util.LongPriorityQueue;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Computes term facets for docvalues field (single or multivalued).
@@ -224,7 +224,7 @@ public class DocValuesFacets {
   static NamedList<Integer> finalize(NamedList<Integer> res, SolrIndexSearcher searcher, SchemaField schemaField, DocSet docs, int missingCount, boolean missing) throws IOException {
     if (missing) {
       if (missingCount < 0) {
-        missingCount = org.apache.solr.search.facet.SimpleFacets.getFieldMissingCount(searcher, docs, schemaField.getName());
+        missingCount = SimpleFacets.getFieldMissingCount(searcher, docs, schemaField.getName());
       }
       res.add(null, missingCount);
     }

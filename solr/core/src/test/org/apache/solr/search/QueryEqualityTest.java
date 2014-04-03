@@ -869,5 +869,14 @@ public class QueryEqualityTest extends SolrTestCaseJ4 {
   }
 
 
+  public void testFuncHS() throws Exception {
+    assertFuncEquals("avg(foo_i)", "avg(foo_i)");
+    assertFuncEquals("sum(foo_i)", "sum(foo_i)");
+    assertFuncEquals("count(foo_i)", "count(foo_i)");
+    assertFuncEquals("unique(foo_i)", "unique(foo_i)");
+    assertFuncEquals("sumsq(foo_i)", "sumsq(foo_i)");
+    assertFuncEquals("stdev(foo_i)", "stdev(foo_i)");
+    assertFuncEquals("multistat(foo_i)", "multistat(foo_i)");
+  }
 
 }

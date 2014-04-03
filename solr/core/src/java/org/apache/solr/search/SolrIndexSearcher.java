@@ -101,7 +101,7 @@ import org.apache.solr.core.SolrInfoMBean;
 import org.apache.solr.request.LocalSolrQueryRequest;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestInfo;
-import org.apache.solr.request.UnInvertedField;
+import org.apache.solr.search.facet.UnInvertedField;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;

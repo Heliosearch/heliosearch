@@ -42,6 +42,8 @@ import org.apache.solr.schema.*;
 
 import org.apache.solr.search.function.CollapseScoreFunction;
 import org.apache.solr.search.function.distance.*;
+import org.apache.solr.search.facet.SimpleAggValueSource;
+import org.apache.solr.search.facet.StrAggValueSource;
 import org.apache.solr.util.plugin.NamedListInitializedPlugin;
 
 import java.io.IOException;
@@ -231,6 +233,10 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
         List<ValueSource> sources = fp.parseValueSourceList();
+        if (sources.size()==1) {
+          // assume aggregation operation
+          return new SimpleAggValueSource("sum", sources.get(0));
+        }
         return new SumFloatFunction(sources.toArray(new ValueSource[sources.size()]));
       }
     });
@@ -782,6 +788,50 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
         return new DefFunction(fp.parseValueSourceList());
+      }
+    });
+
+    // aggregation operations
+
+    addParser("count", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new StrAggValueSource("count", fp.parseArg());
+      }
+    });
+
+    addParser("unique", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new StrAggValueSource("unique", fp.parseArg());
+      }
+    });
+
+    addParser("avg", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new SimpleAggValueSource("avg", fp.parseValueSource());
+      }
+    });
+
+    addParser("sumsq", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new SimpleAggValueSource("sumsq", fp.parseValueSource());
+      }
+    });
+
+    addParser("stdev", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new SimpleAggValueSource("stdev", fp.parseValueSource());
+      }
+    });
+
+    addParser("multistat", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new SimpleAggValueSource("multistat", fp.parseValueSource());
       }
     });
 
