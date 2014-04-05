@@ -86,6 +86,7 @@ public abstract class FieldValues extends ValueSource {
 
     context.setTopValues(this, entry);
 
+    entry.uses.incrementAndGet(); // only increment if it wasn't in our context
     return entry;
   }
 

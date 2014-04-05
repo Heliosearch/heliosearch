@@ -27,6 +27,7 @@ import org.noggit.JSONUtil;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 
 public abstract class TopValues extends RefCountBase {
@@ -35,6 +36,7 @@ public abstract class TopValues extends RefCountBase {
   protected LeafValues[] leafValues;
   protected volatile int nSegs;  // number of segments instantiated
   protected int carriedOver;    // number of segments carried over
+  protected AtomicLong uses = new AtomicLong();
 
   // top terms?
 
@@ -104,6 +106,7 @@ public abstract class TopValues extends RefCountBase {
     // fieldValues.field.addInfo(sfMap);
     // map.put("field", sfMap);
     map.put("field", fieldValues.getFieldName());
+    map.put("uses", uses.get());
     map.put("class", this.getClass().getSimpleName());
     map.put("refcount", getRefCount());
     map.put("numSegments", nSegs);
