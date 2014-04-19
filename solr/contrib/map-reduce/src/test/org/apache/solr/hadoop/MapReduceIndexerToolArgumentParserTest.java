@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -55,7 +56,7 @@ public class MapReduceIndexerToolArgumentParserTest extends SolrTestCaseJ4 {
     
   private static final Logger LOG = LoggerFactory.getLogger(MapReduceIndexerToolArgumentParserTest.class);
   
-  private static final File solrHomeDirectory = new File(TEMP_DIR, MorphlineGoLiveMiniMRTest.class.getName());
+  private final File solrHomeDirectory = createTempDir();
   
   @BeforeClass
   public static void beforeClass() {
@@ -191,7 +192,7 @@ public class MapReduceIndexerToolArgumentParserTest extends SolrTestCaseJ4 {
   public void testArgsParserHelp() throws UnsupportedEncodingException  {
     String[] args = new String[] { "--help" };
     assertEquals(new Integer(0), parser.parseArgs(args, conf, opts));
-    String helpText = new String(bout.toByteArray(), "UTF-8");
+    String helpText = new String(bout.toByteArray(), StandardCharsets.UTF_8);
     assertTrue(helpText.contains("MapReduce batch job driver that "));
     assertTrue(helpText.contains("bin/hadoop command"));
     assertEquals(0, berr.toByteArray().length);
@@ -458,9 +459,9 @@ public class MapReduceIndexerToolArgumentParserTest extends SolrTestCaseJ4 {
   
   private void assertArgumentParserException(String[] args) throws UnsupportedEncodingException {
     assertEquals("should have returned fail code", new Integer(1), parser.parseArgs(args, conf, opts));
-    assertEquals("no sys out expected:" + new String(bout.toByteArray(), "UTF-8"), 0, bout.toByteArray().length);
+    assertEquals("no sys out expected:" + new String(bout.toByteArray(), StandardCharsets.UTF_8), 0, bout.toByteArray().length);
     String usageText;
-    usageText = new String(berr.toByteArray(), "UTF-8");
+    usageText = new String(berr.toByteArray(), StandardCharsets.UTF_8);
 
     assertTrue("should start with usage msg \"usage: hadoop \":" + usageText, usageText.startsWith("usage: hadoop "));
   }

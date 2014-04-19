@@ -25,7 +25,6 @@ import org.apache.lucene.spatial.prefix.tree.Cell;
 import org.apache.lucene.spatial.prefix.tree.SpatialPrefixTree;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.StringHelper;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -60,9 +59,7 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
   public boolean equals(Object o) {
     if (!super.equals(o)) return false;//checks getClass == o.getClass & instanceof
 
-    AbstractVisitingPrefixTreeFilter that = (AbstractVisitingPrefixTreeFilter) o;
-
-    if (prefixGridScanLevel != that.prefixGridScanLevel) return false;
+    //Ignore prefixGridScanLevel as it is merely a tuning parameter.
 
     return true;
   }
@@ -70,7 +67,6 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
   @Override
   public int hashCode() {
     int result = super.hashCode();
-    result = 31 * result + prefixGridScanLevel;
     return result;
   }
 
@@ -90,7 +86,7 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
    * method then it's short-circuited until it finds one, at which point
    * {@link #visit(org.apache.lucene.spatial.prefix.tree.Cell)} is called. At
    * some depths, of the tree, the algorithm switches to a scanning mode that
-   * finds calls {@link #visitScanned(org.apache.lucene.spatial.prefix.tree.Cell)}
+   * calls {@link #visitScanned(org.apache.lucene.spatial.prefix.tree.Cell)}
    * for each leaf cell found.
    *
    * @lucene.internal
@@ -120,7 +116,7 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
     protected final boolean hasIndexedLeaves;//if false then we can skip looking for them
 
     private VNode curVNode;//current pointer, derived from query shape
-    private BytesRef curVNodeTerm = new BytesRef();//curVNode.cell's term.
+    private BytesRef curVNodeTerm = new BytesRef();//curVNode.cell's term, without leaf
     private Cell scanCell;
 
     private BytesRef thisTerm;//the result of termsEnum.term()
@@ -174,8 +170,7 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
         }
 
         //Seek to curVNode's cell (or skip if termsEnum has moved beyond)
-        curVNodeTerm.bytes = curVNode.cell.getTokenBytes();
-        curVNodeTerm.length = curVNodeTerm.bytes.length;
+        curVNode.cell.getTokenBytesNoLeaf(curVNodeTerm);
         int compare = termsEnum.getComparator().compare(thisTerm, curVNodeTerm);
         if (compare > 0) {
           // leap frog (termsEnum is beyond where we would otherwise seek)
@@ -218,7 +213,7 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
       if (hasIndexedLeaves && cell.getLevel() != 0) {
         //If the next indexed term just adds a leaf marker ('+') to cell,
         // then add all of those docs
-        assert StringHelper.startsWith(thisTerm, curVNodeTerm);
+        assert curVNode.cell.isWithin(curVNodeTerm, thisTerm);
         scanCell = grid.getCell(thisTerm.bytes, thisTerm.offset, thisTerm.length, scanCell);
         if (scanCell.getLevel() == cell.getLevel() && scanCell.isLeaf()) {
           visitLeaf(scanCell);
@@ -268,15 +263,17 @@ public abstract class AbstractVisitingPrefixTreeFilter extends AbstractPrefixTre
      */
     protected void scan(int scanDetailLevel) throws IOException {
       for (;
-           thisTerm != null && StringHelper.startsWith(thisTerm, curVNodeTerm);
+           thisTerm != null && curVNode.cell.isWithin(curVNodeTerm, thisTerm);
            thisTerm = termsEnum.next()) {
         scanCell = grid.getCell(thisTerm.bytes, thisTerm.offset, thisTerm.length, scanCell);
 
         int termLevel = scanCell.getLevel();
-        if (termLevel > scanDetailLevel)
-          continue;
-        if (termLevel == scanDetailLevel || scanCell.isLeaf()) {
-          visitScanned(scanCell);
+        if (termLevel < scanDetailLevel) {
+          if (scanCell.isLeaf())
+            visitScanned(scanCell);
+        } else if (termLevel == scanDetailLevel) {
+          if (!scanCell.isLeaf())//LUCENE-5529
+            visitScanned(scanCell);
         }
       }//term loop
     }

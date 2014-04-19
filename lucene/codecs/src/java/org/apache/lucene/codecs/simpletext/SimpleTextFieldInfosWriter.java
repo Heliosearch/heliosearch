@@ -132,6 +132,7 @@ public class SimpleTextFieldInfosWriter extends FieldInfosWriter {
           }
         }
       }
+      SimpleTextUtil.writeChecksum(out, scratch);
       success = true;
     } finally {
       if (success) {

@@ -55,7 +55,7 @@ public class SimpleTextSegmentInfoWriter extends SegmentInfoWriter {
     si.addFile(segFileName);
 
     boolean success = false;
-    IndexOutput output = dir.createOutput(segFileName,  ioContext);
+    IndexOutput output = dir.createOutput(segFileName, ioContext);
 
     try {
       BytesRef scratch = new BytesRef();
@@ -103,6 +103,8 @@ public class SimpleTextSegmentInfoWriter extends SegmentInfoWriter {
           SimpleTextUtil.writeNewline(output);
         }
       }
+      
+      SimpleTextUtil.writeChecksum(output, scratch);
       success = true;
     } finally {
       if (!success) {

@@ -26,8 +26,9 @@ import org.apache.solr.response.TextResponseWriter;
 
 import java.io.IOException;
 /**
- *
+ * @deprecated this class will be removed in 5.0 - use {@link TrieIntField} instead
  */
+@Deprecated
 public class BCDIntField extends PrimitiveFieldType {
   @Override
   public SortField getSortField(SchemaField field,boolean reverse) {
@@ -64,6 +65,16 @@ public class BCDIntField extends PrimitiveFieldType {
   @Override
   public void write(TextResponseWriter writer, String name, IndexableField f) throws IOException {
     writer.writeInt(name,toExternal(f));
+  }
+
+  @Override
+  public Object marshalSortValue(Object value) {
+    return marshalStringSortValue(value);
+  }
+
+  @Override
+  public Object unmarshalSortValue(Object value) {
+    return unmarshalStringSortValue(value);
   }
 }
 

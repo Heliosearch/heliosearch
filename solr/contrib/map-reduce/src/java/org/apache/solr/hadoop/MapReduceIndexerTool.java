@@ -31,6 +31,7 @@ import java.io.Writer;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,7 +83,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.kitesdk.morphline.base.Fields;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteStreams;
 
@@ -322,11 +322,12 @@ public class MapReduceIndexerTool extends Configured implements Tool {
       Argument reducersArg = parser.addArgument("--reducers")
         .metavar("INTEGER")
         .type(Integer.class)
-        .choices(new RangeArgumentChoice(-1, Integer.MAX_VALUE)) // TODO: also support X% syntax where X is an integer
+        .choices(new RangeArgumentChoice(-2, Integer.MAX_VALUE)) // TODO: also support X% syntax where X is an integer
         .setDefault(-1)
         .help("Tuning knob that indicates the number of reducers to index into. " +
+            "0 is reserved for a mapper-only feature that may ship in a future release. " +
             "-1 indicates use all reduce slots available on the cluster. " +
-            "0 indicates use one reducer per output shard, which disables the mtree merge MR algorithm. " +
+            "-2 indicates use one reducer per output shard, which disables the mtree merge MR algorithm. " +
             "The mtree merge MR algorithm improves scalability by spreading load " +
             "(in particular CPU load) among a number of parallel reducers that can be much larger than the number " +
             "of solr shards expected by the user. It can be seen as an extension of concurrent lucene merges " +
@@ -511,6 +512,9 @@ public class MapReduceIndexerTool extends Configured implements Tool {
       opts.collection = ns.getString(collectionArg.getDest());
 
       try {
+        if (opts.reducers == 0) {
+          throw new ArgumentParserException("--reducers must not be zero", parser); 
+        }
         verifyGoLiveArgs(opts, parser);
       } catch (ArgumentParserException e) {
         parser.handleError(e);
@@ -606,8 +610,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
   
   /** API for Java clients; visible for testing; may become a public API eventually */
   int run(Options options) throws Exception {
-
-    if ("local".equals(getConf().get("mapred.job.tracker"))) {
+    if (getConf().getBoolean("isMR1", false) && "local".equals(getConf().get("mapred.job.tracker"))) {
       throw new IllegalStateException(
         "Running with LocalJobRunner (i.e. all of Hadoop inside a single JVM) is not supported " +
         "because LocalJobRunner does not (yet) implement the Hadoop Distributed Cache feature, " +
@@ -884,11 +887,14 @@ public class MapReduceIndexerTool extends Configured implements Tool {
     //reducers = job.getCluster().getClusterStatus().getReduceSlotCapacity(); // Yarn only      
     LOG.info("Cluster reports {} reduce slots", reducers);
 
-    if (options.reducers == 0) {
+    if (options.reducers == -2) {
       reducers = options.shards;
     } else if (options.reducers == -1) {
       reducers = Math.min(reducers, realMappers); // no need to use many reducers when using few mappers
     } else {
+      if (options.reducers == 0) {
+        throw new IllegalStateException("Illegal zero reducers");
+      }
       reducers = options.reducers;
     }
     reducers = Math.max(reducers, options.shards);
@@ -918,15 +924,15 @@ public class MapReduceIndexerTool extends Configured implements Tool {
     FileSystem fs = fullInputList.getFileSystem(conf);
     FSDataOutputStream out = fs.create(fullInputList);
     try {
-      Writer writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
+      Writer writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
       
       for (Path inputFile : inputFiles) {
         FileSystem inputFileFs = inputFile.getFileSystem(conf);
         if (inputFileFs.exists(inputFile)) {
           PathFilter pathFilter = new PathFilter() {      
             @Override
-            public boolean accept(Path path) {
-              return !path.getName().startsWith("."); // ignore "hidden" files and dirs
+            public boolean accept(Path path) { // ignore "hidden" files and dirs
+              return !(path.getName().startsWith(".") || path.getName().startsWith("_")); 
             }
           };
           numFiles += addInputFilesRecursively(inputFile, writer, inputFileFs, pathFilter);
@@ -943,7 +949,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
           in = inputList.getFileSystem(conf).open(inputList);
         }
         try {
-          BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+          BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
           String line;
           while ((line = reader.readLine()) != null) {
             writer.write(line + "\n");
@@ -982,7 +988,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
   
   private void randomizeFewInputFiles(FileSystem fs, Path outputStep2Dir, Path fullInputList) throws IOException {    
     List<String> lines = new ArrayList();
-    BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(fullInputList), "UTF-8"));
+    BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(fullInputList), StandardCharsets.UTF_8));
     try {
       String line;
       while ((line = reader.readLine()) != null) {
@@ -995,7 +1001,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
     Collections.shuffle(lines, new Random(421439783L)); // constant seed for reproducability
     
     FSDataOutputStream out = fs.create(new Path(outputStep2Dir, FULL_INPUT_LIST));
-    Writer writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
+    Writer writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
     try {
       for (String line : lines) {
         writer.write(line + "\n");
@@ -1084,7 +1090,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
      * like this:
      * 
      * ... caused by compilation failed: mfm:///MyJavaClass1.java:2: package
-     * com.cloudera.cdk.morphline.api does not exist
+     * org.kitesdk.morphline.api does not exist
      */
     LOG.trace("dryRun: java.class.path: {}", System.getProperty("java.class.path"));
     String fullClassPath = "";
@@ -1129,7 +1135,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
    * turnaround during trial & debug sessions
    */
   private void dryRun(MorphlineMapRunner runner, FileSystem fs, Path fullInputList) throws IOException {    
-    BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(fullInputList), "UTF-8"));
+    BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(fullInputList), StandardCharsets.UTF_8));
     try {
       String line;
       while ((line = reader.readLine()) != null) {
@@ -1148,7 +1154,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
     int numFiles = 0;
     FSDataOutputStream out = fs.create(fullInputList);
     try {
-      Writer writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
+      Writer writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
       for (FileStatus stat : dirs) {
         LOG.debug("Adding path {}", stat.getPath());
         Path dir = new Path(stat.getPath(), "data/index");
@@ -1257,7 +1263,7 @@ public class MapReduceIndexerTool extends Configured implements Tool {
       byte[] bytes = ByteStreams.toByteArray(in);
       in.close();
       Preconditions.checkArgument(bytes.length > 0);
-      int solrShard = Integer.parseInt(new String(bytes, Charsets.UTF_8));
+      int solrShard = Integer.parseInt(new String(bytes, StandardCharsets.UTF_8));
       if (!delete(solrShardNumberFile, false, fs)) {
         return false;
       }

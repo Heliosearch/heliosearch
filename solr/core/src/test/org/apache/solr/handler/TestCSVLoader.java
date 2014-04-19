@@ -29,6 +29,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -41,7 +42,6 @@ public class TestCSVLoader extends SolrTestCaseJ4 {
   }
 
   String filename;
-  String def_charset = "UTF-8";
   File file;
 
   @Override
@@ -50,7 +50,7 @@ public class TestCSVLoader extends SolrTestCaseJ4 {
     // if you override setUp or tearDown, you better call
     // the super classes version
     super.setUp();
-    File tempDir = TestUtil.getTempDir("TestCSVLoader");
+    File tempDir = createTempDir("TestCSVLoader");
     file = new File(tempDir, "solr_tmp.csv");
     filename = file.getPath();
     cleanup();
@@ -66,12 +66,8 @@ public class TestCSVLoader extends SolrTestCaseJ4 {
   }
 
   void makeFile(String contents) {
-    makeFile(contents,def_charset);
-  }
-
-  void makeFile(String contents, String charset) {
     try {
-      Writer out = new OutputStreamWriter(new FileOutputStream(filename), charset);
+      Writer out = new OutputStreamWriter(new FileOutputStream(filename), StandardCharsets.UTF_8);
       out.write(contents);
       out.close();
     } catch (Exception e) {

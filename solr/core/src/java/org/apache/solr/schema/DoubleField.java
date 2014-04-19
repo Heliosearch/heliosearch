@@ -44,7 +44,10 @@ import org.apache.solr.search.QParser;
  * </p>
  * 
  * @see TrieDoubleField
+ *
+ * @deprecated this class will be removed in 5.0 - use {@link TrieDoubleField} instead
  */
+@Deprecated
 public class DoubleField extends PrimitiveFieldType implements DoubleValueFieldType {
 
   private static final FieldCache.DoubleParser PARSER = new FieldCache.DoubleParser() {

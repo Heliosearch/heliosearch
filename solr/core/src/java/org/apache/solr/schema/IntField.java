@@ -43,7 +43,10 @@ import java.io.IOException;
  * </p>
  * 
  * @see TrieIntField
+ *
+ * @deprecated this class will be removed in 5.0 - use {@link TrieIntField} instead
  */
+@Deprecated
 public class IntField extends PrimitiveFieldType implements IntValueFieldType {
 
   private static final FieldCache.IntParser PARSER = new FieldCache.IntParser() {

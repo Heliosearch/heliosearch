@@ -32,6 +32,8 @@ import com.google.common.collect.Maps;
 import junit.framework.Assert;
 
 import org.apache.lucene.util.TestUtil;
+import org.apache.solr.SolrTestCaseJ4.SuppressSSL;
+import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.impl.BinaryResponseParser;
 import org.apache.solr.client.solrj.impl.ConcurrentUpdateSolrServer;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
@@ -68,6 +70,7 @@ import org.slf4j.LoggerFactory;
  *
  * @since solr 1.3
  */
+@SuppressSSL
 abstract public class SolrExampleTests extends SolrExampleTestsBase
 {
   private static Logger log = LoggerFactory.getLogger(SolrExampleTests.class);
@@ -215,6 +218,7 @@ abstract public class SolrExampleTests extends SolrExampleTestsBase
       QueryResponse rsp = client.query(q);
       assertNotNull(rsp.getResponse().get("mode"));
       assertNotNull(rsp.getResponse().get("lucene"));
+      client.shutdown();
     }
   }
 
@@ -539,6 +543,11 @@ abstract public class SolrExampleTests extends SolrExampleTestsBase
     
     SolrDocumentList out = rsp.getResults();
     assertEquals(2, out.getNumFound());
+    if (!(server1 instanceof EmbeddedSolrServer)) {
+      /* Do not shutdown in case of using EmbeddedSolrServer, 
+       * as that would shutdown the CoreContainer */
+      server1.shutdown();
+    }
   }
   
  @Test
@@ -617,7 +626,7 @@ abstract public class SolrExampleTests extends SolrExampleTestsBase
     server.commit();
     assertNumFound( "*:*", 0 ); // make sure it got in
 
-    String f = "val_pi";
+    String f = "val_i";
     
     int i=0;               // 0   1   2   3   4   5   6   7   8   9 
     int[] nums = new int[] { 23, 26, 38, 46, 55, 63, 77, 84, 92, 94 };

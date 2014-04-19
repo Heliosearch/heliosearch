@@ -54,7 +54,13 @@ final class SegmentMerger {
 
   // note, just like in codec apis Directory 'dir' is NOT the same as segmentInfo.dir!!
   SegmentMerger(List<AtomicReader> readers, SegmentInfo segmentInfo, InfoStream infoStream, Directory dir, int termIndexInterval,
-                MergeState.CheckAbort checkAbort, FieldInfos.FieldNumbers fieldNumbers, IOContext context) throws IOException {
+                MergeState.CheckAbort checkAbort, FieldInfos.FieldNumbers fieldNumbers, IOContext context, boolean validate) throws IOException {
+    // validate incoming readers
+    if (validate) {
+      for (AtomicReader reader : readers) {
+        reader.checkIntegrity();
+      }
+    }
     mergeState = new MergeState(readers, segmentInfo, infoStream, checkAbort);
     directory = dir;
     this.termIndexInterval = termIndexInterval;
@@ -164,7 +170,7 @@ final class SegmentMerger {
               NumericDocValues values = reader.getNumericDocValues(field.name);
               Bits bits = reader.getDocsWithField(field.name);
               if (values == null) {
-                values = NumericDocValues.EMPTY;
+                values = DocValues.EMPTY_NUMERIC;
                 bits = new Bits.MatchNoBits(reader.maxDoc());
               }
               toMerge.add(values);
@@ -178,7 +184,7 @@ final class SegmentMerger {
               BinaryDocValues values = reader.getBinaryDocValues(field.name);
               Bits bits = reader.getDocsWithField(field.name);
               if (values == null) {
-                values = BinaryDocValues.EMPTY;
+                values = DocValues.EMPTY_BINARY;
                 bits = new Bits.MatchNoBits(reader.maxDoc());
               }
               toMerge.add(values);
@@ -190,7 +196,7 @@ final class SegmentMerger {
             for (AtomicReader reader : mergeState.readers) {
               SortedDocValues values = reader.getSortedDocValues(field.name);
               if (values == null) {
-                values = SortedDocValues.EMPTY;
+                values = DocValues.EMPTY_SORTED;
               }
               toMerge.add(values);
             }
@@ -200,7 +206,7 @@ final class SegmentMerger {
             for (AtomicReader reader : mergeState.readers) {
               SortedSetDocValues values = reader.getSortedSetDocValues(field.name);
               if (values == null) {
-                values = SortedSetDocValues.EMPTY;
+                values = DocValues.EMPTY_SORTED_SET;
               }
               toMerge.add(values);
             }
@@ -231,7 +237,7 @@ final class SegmentMerger {
           for (AtomicReader reader : mergeState.readers) {
             NumericDocValues norms = reader.getNormValues(field.name);
             if (norms == null) {
-              norms = NumericDocValues.EMPTY;
+              norms = DocValues.EMPTY_NUMERIC;
             }
             toMerge.add(norms);
             docsWithField.add(new Bits.MatchAllBits(reader.maxDoc()));

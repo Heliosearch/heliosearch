@@ -32,7 +32,7 @@ import org.apache.lucene.util.BytesRef;
 
 class SimpleTextFieldsWriter extends FieldsConsumer {
   
-  private final IndexOutput out;
+  private IndexOutput out;
   private final BytesRef scratch = new BytesRef(10);
 
   final static BytesRef END          = new BytesRef("END");
@@ -177,11 +177,15 @@ class SimpleTextFieldsWriter extends FieldsConsumer {
 
   @Override
   public void close() throws IOException {
-    try {
-      write(END);
-      newline();
-    } finally {
-      out.close();
+    if (out != null) {
+      try {
+        write(END);
+        newline();
+        SimpleTextUtil.writeChecksum(out, scratch);
+      } finally {
+        out.close();
+        out = null;
+      }
     }
   }
 }

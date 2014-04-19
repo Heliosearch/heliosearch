@@ -17,9 +17,13 @@ package org.apache.solr.handler.admin;
  * limitations under the License.
  */
 
-import com.carrotsearch.randomizedtesting.rules.SystemPropertiesRestoreRule;
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.util.LuceneTestCase;
+import org.apache.lucene.util.TestUtil;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.CoreAdminParams;
@@ -36,9 +40,7 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
+import com.carrotsearch.randomizedtesting.rules.SystemPropertiesRestoreRule;
 
 public class CoreMergeIndexesAdminHandlerTest extends SolrTestCaseJ4 {
   
@@ -73,19 +75,13 @@ public class CoreMergeIndexesAdminHandlerTest extends SolrTestCaseJ4 {
 
   @Test
   public void testMergeIndexesCoreAdminHandler() throws Exception {
-    final File workDir = new File(TEMP_DIR, this.getClass().getName());
-
-    if (workDir.exists()) {
-      FileUtils.deleteDirectory(workDir);
-    }
-    assertTrue("Failed to mkdirs workDir", workDir.mkdirs());
+    final File workDir = createTempDir();
 
     final CoreContainer cores = h.getCoreContainer();
 
     final CoreAdminHandler admin = new CoreAdminHandler(cores);
 
-    SolrCore core = cores.getCore("collection1");
-    try {
+    try (SolrCore core = cores.getCore("collection1")) {
       FailingDirectoryFactory dirFactory = (FailingDirectoryFactory)core.getDirectoryFactory();
 
       try {
@@ -106,11 +102,6 @@ public class CoreMergeIndexesAdminHandlerTest extends SolrTestCaseJ4 {
         unIgnoreException(FAILING_MSG);
       }
       dirFactory.fail = false;
-    } finally {
-      core.close();
     }
-
-    // cleanup
-    FileUtils.deleteDirectory(workDir);
   }
 }

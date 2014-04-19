@@ -473,7 +473,7 @@ public class TestControlledRealTimeReopenThread extends ThreadedIndexingAndSearc
     String content = builder.toString();
 
     final SnapshotDeletionPolicy sdp = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-    final Directory dir = new NRTCachingDirectory(newFSDirectory(TestUtil.getTempDir("nrt")), 5, 128);
+    final Directory dir = new NRTCachingDirectory(newFSDirectory(createTempDir("nrt")), 5, 128);
     IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_46,
                                                      new MockAnalyzer(random()));
     config.setIndexDeletionPolicy(sdp);
@@ -500,7 +500,7 @@ public class TestControlledRealTimeReopenThread extends ThreadedIndexingAndSearc
                 for (String name : ic.getFileNames()) {
                   //distribute, and backup
                   //System.out.println(names);
-                  assertTrue(dir.fileExists(name));
+                  assertTrue(slowFileExists(dir, name));
                 }
               } catch (Exception e) {
                 throw new RuntimeException(e);

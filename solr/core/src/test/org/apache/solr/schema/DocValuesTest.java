@@ -19,16 +19,17 @@ package org.apache.solr.schema;
 
 import java.io.IOException;
 
-import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.FieldInfo.DocValuesType;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.solr.search.function.FuncValues;
+import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.util.RefCounted;
 import org.junit.BeforeClass;
+import java.io.IOException;
 
 @SuppressCodecs("Lucene3x")
 public class DocValuesTest extends SolrTestCaseJ4 {
@@ -46,8 +47,7 @@ public class DocValuesTest extends SolrTestCaseJ4 {
   public void testDocValues() throws IOException {
     assertU(adoc("id", "1"));
     assertU(commit());
-    SolrCore core = h.getCoreInc();
-    try {
+    try (SolrCore core = h.getCoreInc()) {
       final RefCounted<SolrIndexSearcher> searcherRef = core.openNewSearcher(true, true);
       final SolrIndexSearcher searcher = searcherRef.get();
       try {
@@ -86,8 +86,6 @@ public class DocValuesTest extends SolrTestCaseJ4 {
       } finally {
         searcherRef.decref();
       }
-    } finally {
-      core.close();
     }
   }
 

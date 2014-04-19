@@ -49,7 +49,7 @@ class SimpleTextDocValuesWriter extends DocValuesConsumer {
   final static BytesRef NUMVALUES = new BytesRef("  numvalues ");
   final static BytesRef ORDPATTERN = new BytesRef("  ordpattern ");
   
-  final IndexOutput data;
+  IndexOutput data;
   final BytesRef scratch = new BytesRef();
   final int numDocs;
   private final Set<String> fieldsSeen = new HashSet<>(); // for asserting
@@ -389,18 +389,22 @@ class SimpleTextDocValuesWriter extends DocValuesConsumer {
   
   @Override
   public void close() throws IOException {
-    boolean success = false;
-    try {
-      assert !fieldsSeen.isEmpty();
-      // TODO: sheisty to do this here?
-      SimpleTextUtil.write(data, END);
-      SimpleTextUtil.writeNewline(data);
-      success = true;
-    } finally {
-      if (success) {
-        IOUtils.close(data);
-      } else {
-        IOUtils.closeWhileHandlingException(data);
+    if (data != null) {
+      boolean success = false;
+      try {
+        assert !fieldsSeen.isEmpty();
+        // TODO: sheisty to do this here?
+        SimpleTextUtil.write(data, END);
+        SimpleTextUtil.writeNewline(data);
+        SimpleTextUtil.writeChecksum(data, scratch);
+        success = true;
+      } finally {
+        if (success) {
+          IOUtils.close(data);
+        } else {
+          IOUtils.closeWhileHandlingException(data);
+        }
+        data = null;
       }
     }
   }

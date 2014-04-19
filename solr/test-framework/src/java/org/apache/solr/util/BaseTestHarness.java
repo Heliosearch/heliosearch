@@ -21,16 +21,19 @@ import org.apache.solr.common.util.XML;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 abstract public class BaseTestHarness {
   private static final ThreadLocal<DocumentBuilder> builderTL = new ThreadLocal<>();
@@ -79,7 +82,7 @@ abstract public class BaseTestHarness {
     Document document = null;
     try {
       document = getXmlDocumentBuilder().parse(new ByteArrayInputStream
-          (xml.getBytes("UTF-8")));
+          (xml.getBytes(StandardCharsets.UTF_8)));
     } catch (UnsupportedEncodingException e1) {
       throw new RuntimeException("Totally weird UTF-8 exception", e1);
     } catch (IOException e2) {
@@ -95,6 +98,24 @@ abstract public class BaseTestHarness {
       }
     }
     return null;
+  }
+
+  public static Object evaluateXPath(String xml, String xpath, QName returnType)
+    throws XPathExpressionException, SAXException {
+    if (null == xpath) return null;
+
+    Document document = null;
+    try {
+      document = getXmlDocumentBuilder().parse(new ByteArrayInputStream
+          (xml.getBytes("UTF-8")));
+    } catch (UnsupportedEncodingException e1) {
+      throw new RuntimeException("Totally weird UTF-8 exception", e1);
+    } catch (IOException e2) {
+      throw new RuntimeException("Totally weird io exception", e2);
+    }
+
+    xpath = xpath.trim();
+    return getXpath().evaluate(xpath.trim(), document, returnType);
   }
 
   /**

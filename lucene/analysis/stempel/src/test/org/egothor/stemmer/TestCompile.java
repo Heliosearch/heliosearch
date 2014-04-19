@@ -65,17 +65,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.StringTokenizer;
 
-import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 
 public class TestCompile extends LuceneTestCase {
   
   public void testCompile() throws Exception {
-    File dir = TestUtil.getTempDir("testCompile");
+    File dir = createTempDir("testCompile");
     dir.mkdirs();
     InputStream input = getClass().getResourceAsStream("testRules.txt");
     File output = new File(dir, "testRules.txt");
@@ -91,7 +91,7 @@ public class TestCompile extends LuceneTestCase {
   }
   
   public void testCompileBackwards() throws Exception {
-    File dir = TestUtil.getTempDir("testCompile");
+    File dir = createTempDir("testCompile");
     dir.mkdirs();
     InputStream input = getClass().getResourceAsStream("testRules.txt");
     File output = new File(dir, "testRules.txt");
@@ -107,7 +107,7 @@ public class TestCompile extends LuceneTestCase {
   }
   
   public void testCompileMulti() throws Exception {
-    File dir = TestUtil.getTempDir("testCompile");
+    File dir = createTempDir("testCompile");
     dir.mkdirs();
     InputStream input = getClass().getResourceAsStream("testRules.txt");
     File output = new File(dir, "testRules.txt");
@@ -139,7 +139,7 @@ public class TestCompile extends LuceneTestCase {
   private static void assertTrie(Trie trie, String file, boolean usefull,
       boolean storeorig) throws Exception {
     LineNumberReader in = new LineNumberReader(new BufferedReader(
-        new InputStreamReader(new FileInputStream(file), IOUtils.CHARSET_UTF_8)));
+        new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)));
     
     for (String line = in.readLine(); line != null; line = in.readLine()) {
       try {

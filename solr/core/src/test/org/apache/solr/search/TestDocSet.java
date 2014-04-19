@@ -497,6 +497,10 @@ public class TestDocSet extends LuceneTestCase {
       @Override
       public void document(int doc, StoredFieldVisitor visitor) {
       }
+
+      @Override
+      public void checkIntegrity() throws IOException {
+      }
     };
   }
 

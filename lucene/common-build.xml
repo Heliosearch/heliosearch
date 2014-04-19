@@ -50,8 +50,8 @@
   <property name="Name" value="Lucene"/>
   
   <property name="name" value="${ant.project.name}"/>
-  <property name="tests.luceneMatchVersion" value="4.8"/>
-  <property name="dev.version.base" value="4.8"/>
+  <property name="tests.luceneMatchVersion" value="4.9"/>
+  <property name="dev.version.base" value="4.9"/>
   <property name="dev.version.suffix" value="SNAPSHOT"/>
   <property name="dev.version" value="${dev.version.base}-${dev.version.suffix}"/>
   <property name="version" value="${dev.version}"/>
@@ -111,6 +111,7 @@
   <property name="tests.loggingfile" location="${common.dir}/tools/junit4/logging.properties"/>
   <property name="tests.nightly" value="false" />
   <property name="tests.weekly" value="false" />
+  <property name="tests.monster" value="false" />
   <property name="tests.slow" value="true" />
   <property name="tests.cleanthreads.sysprop" value="perMethod"/>
   <property name="tests.asserts.gracious" value="false"/>
@@ -820,6 +821,7 @@
     <attribute name="threadNum" default="1"/>
     <attribute name="tests.nightly" default="${tests.nightly}"/>
     <attribute name="tests.weekly" default="${tests.weekly}"/>
+    <attribute name="tests.monster" default="${tests.monster}"/>
     <attribute name="tests.slow" default="${tests.slow}"/>
     <attribute name="tests.multiplier" default="${tests.multiplier}"/>
       
@@ -951,6 +953,8 @@
             <sysproperty key="tests.nightly" value="@{tests.nightly}"/>
               <!-- set whether or not weekly tests should run -->
             <sysproperty key="tests.weekly" value="@{tests.weekly}"/>
+            <!-- set whether or not monster tests should run -->
+            <sysproperty key="tests.monster" value="@{tests.monster}"/>
               <!-- set whether or not slow tests should run -->
             <sysproperty key="tests.slow" value="@{tests.slow}"/>
               
@@ -970,7 +974,7 @@
             <sysproperty key="java.security.manager" value="org.apache.lucene.util.TestSecurityManager" />
             <sysproperty key="java.security.policy" file="${common.dir}/tools/junit4/tests.policy" />
 
-            <sysproperty key="lucene.version" value="${dev.version}"/>
+            <sysproperty key="lucene.version" value="${version}"/>
 
             <sysproperty key="jetty.testMode" value="1"/>
             <sysproperty key="jetty.insecurerandom" value="1"/>
@@ -991,6 +995,10 @@
                 <propertyref prefix="tests.jettyConnector" />
                 <propertyref prefix="tests.disableHdfs" />
                 <propertyref prefix="tests.filter" />
+                <propertyref prefix="tests.leavetmpdir" />
+                <propertyref prefix="tests.leaveTemporary" />
+                <propertyref prefix="tests.leavetemporary" />
+                <propertyref prefix="solr.test.leavetmpdir" />
             </syspropertyset>
 
             <!-- Pass randomized settings to the forked JVM. -->
@@ -1239,9 +1247,11 @@ ant -Dtests.timestamps=on ...
 # Override forked JVM file.encoding
 ant -Dtests.file.encoding=XXX ...
 
-# Don't remove temporary files under slave directories, even if
-# the test passes.
+# Don't remove any temporary files under slave directories, even if
+# the test passes (any of the following props):
 ant -Dtests.leaveTemporary=true
+ant -Dtests.leavetmpdir=true
+ant -Dsolr.test.leavetmpdir=true
 
 # Do *not* filter stack traces emitted to the console.
 ant -Dtests.filterstacks=false
@@ -2173,7 +2183,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
 
   <!-- JFlex task -->
   <target name="-install-jflex" unless="jflex.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="de.jflex" module="jflex" revision="1.5.0"
+    <ivy:cachepath organisation="de.jflex" module="jflex" revision="1.5.1"
                    inline="true" conf="default" transitive="true" pathid="jflex.classpath"/>
     <taskdef name="jflex" classname="jflex.anttask.JFlexTask" classpathref="jflex.classpath"/>
     <property name="jflex.loaded" value="true"/>
@@ -2181,7 +2191,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
 
   <!-- GROOVY scripting engine for ANT tasks -->
   <target name="resolve-groovy" unless="groovy.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="org.codehaus.groovy" module="groovy-all" revision="2.2.1"
+    <ivy:cachepath organisation="org.codehaus.groovy" module="groovy-all" revision="2.2.2"
       inline="true" conf="default" type="jar" transitive="true" pathid="groovy.classpath"/>
     <taskdef name="groovy"
       classname="org.codehaus.groovy.ant.Groovy"
@@ -2196,7 +2206,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
   <property name="forbidden-rue-excludes" value=""/>
   
   <target name="-install-forbidden-apis" unless="forbidden-apis.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="de.thetaphi" module="forbiddenapis" revision="1.4"
+    <ivy:cachepath organisation="de.thetaphi" module="forbiddenapis" revision="1.4.1"
       inline="true" conf="default" transitive="true" pathid="forbidden-apis.classpath"/>
     <taskdef name="forbidden-apis" classname="de.thetaphi.forbiddenapis.AntTask" classpathref="forbidden-apis.classpath"/>
     <property name="forbidden-apis.loaded" value="true"/>
@@ -2251,7 +2261,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
   <!-- PEGDOWN macro: Before using depend on the target "resolve-pegdown,resolve-groovy" -->
   
   <target name="resolve-pegdown" unless="pegdown.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="org.pegdown" module="pegdown" revision="1.4.1"
+    <ivy:cachepath organisation="org.pegdown" module="pegdown" revision="1.4.2"
       inline="true" conf="default" transitive="true" pathid="pegdown.classpath"/>
     <property name="pegdown.loaded" value="true"/>
   </target>
@@ -2411,7 +2421,7 @@ The following arguments can be provided to ant to alter its behaviour and target
 
         <junit4:pickseed property="pitest.seed" />
 
-        <property name="pitest.sysprops" value="-Dlucene.version=${dev.version},-Dtest.seed=${pitest.seed},-Djava.security.manager=org.apache.lucene.util.TestSecurityManager,-Djava.security.policy=${common.dir}/tools/junit4/tests.policy,-Djava.io.tmpdir=${tests.workDir},-Djunit4.childvm.cwd=${tests.workDir},-Djunit4.tempDir=${tests.workDir}" />
+        <property name="pitest.sysprops" value="-Dlucene.version=${version},-Dtest.seed=${pitest.seed},-Djava.security.manager=org.apache.lucene.util.TestSecurityManager,-Djava.security.policy=${common.dir}/tools/junit4/tests.policy,-Djava.io.tmpdir=${tests.workDir},-Djunit4.childvm.cwd=${tests.workDir},-Djunit4.tempDir=${tests.workDir}" />
 
         <pitest
             classPath="pitest.classpath"

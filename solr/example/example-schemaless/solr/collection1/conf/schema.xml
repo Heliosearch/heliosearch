@@ -63,7 +63,6 @@
             (int, float, boolean, string...)
      -->
 
-  <fields>
     <!-- Valid attributes for fields:
      name: mandatory - the name for the field
      type: mandatory - the name of a field type from the 
@@ -151,7 +150,6 @@
     <dynamicField name="*_td" type="tdouble" indexed="true"  stored="true"/>
     <dynamicField name="*_tdt" type="tdate"  indexed="true"  stored="true"/>
 
-    <dynamicField name="*_pi"  type="pint"    indexed="true"  stored="true"/>
     <dynamicField name="*_c"   type="currency" indexed="true"  stored="true"/>
 
     <dynamicField name="ignored_*" type="ignored" multiValued="true"/>
@@ -168,7 +166,6 @@
         unknown fields to the schema. --> 
     <!--dynamicField name="*" type="ignored" multiValued="true" /-->
    
-  </fields>
 
 
   <!-- Field to use to determine and enforce document uniqueness. 
@@ -232,7 +229,7 @@
   <!-- copy name to alphaNameSort, a field designed for sorting by name -->
   <!-- <copyField source="name" dest="alphaNameSort"/> -->
  
-  <types>
+
     <!-- field type definitions. The "name" attribute is
        just a label to be used by field definitions.  The "class"
        attribute and any other attributes determine the real
@@ -331,21 +328,6 @@
 
     <!--Binary data type. The data should be sent/retrieved in as Base64 encoded Strings -->
     <fieldtype name="binary" class="solr.BinaryField"/>
-
-    <!--
-      Note:
-      These should only be used for compatibility with existing indexes (created with lucene or older Solr versions).
-      Use Trie based fields instead. As of Solr 3.5 and 4.x, Trie based fields support sortMissingFirst/Last
-      
-      Plain numeric field types that store and index the text
-      value verbatim (and hence don't correctly support range queries, since the
-      lexicographic ordering isn't equal to the numeric ordering)
-    -->
-    <fieldType name="pint" class="solr.IntField"/>
-    <fieldType name="plong" class="solr.LongField"/>
-    <fieldType name="pfloat" class="solr.FloatField"/>
-    <fieldType name="pdouble" class="solr.DoubleField"/>
-    <fieldType name="pdate" class="solr.DateField" sortMissingLast="true"/>
 
     <!-- The "RandomSortField" is not used to store or search any
          data.  You can declare fields of this type it in your schema
@@ -1056,7 +1038,6 @@
       </analyzer>
     </fieldType>
 
-  </types>
   
   <!-- Similarity is the scoring routine for each document vs. a query.
        A custom Similarity or SimilarityFactory may be specified here, but 

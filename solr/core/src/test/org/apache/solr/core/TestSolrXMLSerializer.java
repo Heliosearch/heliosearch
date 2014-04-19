@@ -17,15 +17,18 @@ package org.apache.solr.core;
  * limitations under the License.
  */
 
-import org.apache.commons.io.FileUtils;
-import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.TestUtil;
-import org.apache.solr.core.SolrXMLSerializer.SolrCoreXMLDef;
-import org.apache.solr.core.SolrXMLSerializer.SolrXMLDef;
-import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.xml.sax.SAXException;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -34,20 +37,19 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.lucene.util.TestUtil;
+import org.apache.solr.SolrTestCaseJ4;
+import org.apache.solr.core.SolrXMLSerializer.SolrCoreXMLDef;
+import org.apache.solr.core.SolrXMLSerializer.SolrXMLDef;
+import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.xml.sax.SAXException;
 
 
-public class TestSolrXMLSerializer extends LuceneTestCase {
+public class TestSolrXMLSerializer extends SolrTestCaseJ4 {
   private static final XPathFactory xpathFactory = XPathFactory.newInstance();
   private static final String defaultCoreNameKey = "defaultCoreName";
   private static final String defaultCoreNameVal = "collection1";
@@ -71,21 +73,19 @@ public class TestSolrXMLSerializer extends LuceneTestCase {
         sharedLibVal, adminPathKey, adminPathVal, shareSchemaKey,
         shareSchemaVal, instanceDirKey, instanceDirVal);
     
-    Writer w = new StringWriter();
+    StringWriter w = new StringWriter();
     try {
       serializer.persist(w, solrXMLDef);
     } finally {
       w.close();
     }
     
-    assertResults(((StringWriter) w).getBuffer().toString().getBytes("UTF-8"));
-    
-    // again with default file
-    File tmpFile = TestUtil.createTempFile("solr.xml", null, TEMP_DIR);
-    
-    serializer.persistFile(tmpFile, solrXMLDef);
+    assertResults(w.toString().getBytes(StandardCharsets.UTF_8));
 
-    assertResults(FileUtils.readFileToString(tmpFile, "UTF-8").getBytes("UTF-8"));
+    // again with default file
+    File tmpFile = new File(createTempDir(), "solr.xml");
+    serializer.persistFile(tmpFile, solrXMLDef);
+    assertResults(FileUtils.readFileToByteArray(tmpFile));
     tmpFile.delete();
   }
 

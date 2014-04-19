@@ -286,7 +286,7 @@ public class DirectoryTaxonomyWriter implements TaxonomyWriter {
     // :Post-Release-Update-Version.LUCENE_XY:
     // Make sure we use a MergePolicy which always merges adjacent segments and thus
     // keeps the doc IDs ordered as well (this is crucial for the taxonomy index).
-    return new IndexWriterConfig(Version.LUCENE_48,
+    return new IndexWriterConfig(Version.LUCENE_49,
         null).setOpenMode(openMode).setMergePolicy(
         new LogByteSizeMergePolicy());
   }
@@ -942,10 +942,12 @@ public class DirectoryTaxonomyWriter implements TaxonomyWriter {
         map[origordinal] = newordinal;
       }
       in.close();
+
       // Delete the temporary file, which is no longer needed.
       if (!tmpfile.delete()) {
         tmpfile.deleteOnExit();
       }
+
       return map;
     }
   }

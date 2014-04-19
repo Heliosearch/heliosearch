@@ -27,6 +27,7 @@ import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.DocValuesProducer;
 import org.apache.lucene.index.BinaryDocValues;
 import org.apache.lucene.index.CorruptIndexException;
+import org.apache.lucene.index.DocValues;
 import org.apache.lucene.index.DocsAndPositionsEnum;
 import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.FieldInfo;
@@ -38,6 +39,7 @@ import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.store.ByteArrayDataInput;
+import org.apache.lucene.store.ChecksumIndexInput;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
@@ -65,6 +67,7 @@ class Lucene42DocValuesProducer extends DocValuesProducer {
   private final Map<Integer,BinaryEntry> binaries;
   private final Map<Integer,FSTEntry> fsts;
   private final IndexInput data;
+  private final int version;
   
   // ram instances we have already loaded
   private final Map<Integer,NumericDocValues> numericInstances = 
@@ -90,16 +93,16 @@ class Lucene42DocValuesProducer extends DocValuesProducer {
   
   static final int VERSION_START = 0;
   static final int VERSION_GCD_COMPRESSION = 1;
-  static final int VERSION_CURRENT = VERSION_GCD_COMPRESSION;
+  static final int VERSION_CHECKSUM = 2;
+  static final int VERSION_CURRENT = VERSION_CHECKSUM;
     
   Lucene42DocValuesProducer(SegmentReadState state, String dataCodec, String dataExtension, String metaCodec, String metaExtension) throws IOException {
     maxDoc = state.segmentInfo.getDocCount();
     String metaName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, metaExtension);
     // read in the entries from the metadata file.
-    IndexInput in = state.directory.openInput(metaName, state.context);
+    ChecksumIndexInput in = state.directory.openChecksumInput(metaName, state.context);
     boolean success = false;
     ramBytesUsed = new AtomicLong(RamUsageEstimator.shallowSizeOfInstance(getClass()));
-    final int version;
     try {
       version = CodecUtil.checkHeader(in, metaCodec, 
                                       VERSION_START,
@@ -109,6 +112,12 @@ class Lucene42DocValuesProducer extends DocValuesProducer {
       fsts = new HashMap<>();
       readFields(in, state.fieldInfos);
 
+      if (version >= VERSION_CHECKSUM) {
+        CodecUtil.checkFooter(in);
+      } else {
+        CodecUtil.checkEOF(in);
+      }
+      
       success = true;
     } finally {
       if (success) {
@@ -196,6 +205,13 @@ class Lucene42DocValuesProducer extends DocValuesProducer {
     return ramBytesUsed.get();
   }
   
+  @Override
+  public void checkIntegrity() throws IOException {
+    if (version >= VERSION_CHECKSUM) {
+      CodecUtil.checksumEntireFile(data);
+    }
+  }
+
   private NumericDocValues loadNumeric(FieldInfo field) throws IOException {
     NumericEntry entry = numerics.get(field.number);
     data.seek(entry.offset);
@@ -366,7 +382,7 @@ class Lucene42DocValuesProducer extends DocValuesProducer {
   public SortedSetDocValues getSortedSet(FieldInfo field) throws IOException {
     final FSTEntry entry = fsts.get(field.number);
     if (entry.numOrds == 0) {
-      return SortedSetDocValues.EMPTY; // empty FST!
+      return DocValues.EMPTY_SORTED_SET; // empty FST!
     }
     FST<Long> instance;
     synchronized(this) {
@@ -455,7 +471,7 @@ class Lucene42DocValuesProducer extends DocValuesProducer {
   @Override
   public Bits getDocsWithField(FieldInfo field) throws IOException {
     if (field.getDocValuesType() == FieldInfo.DocValuesType.SORTED_SET) {
-      return new SortedSetDocsWithField(getSortedSet(field), maxDoc);
+      return DocValues.docsWithValue(getSortedSet(field), maxDoc);
     } else {
       return new Bits.MatchAllBits(maxDoc);
     }

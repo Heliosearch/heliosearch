@@ -17,6 +17,41 @@ package org.apache.solr.cloud;
  * limitations under the License.
  */
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.solr.client.solrj.impl.HttpSolrServer;
+import org.apache.solr.client.solrj.request.CoreAdminRequest.WaitForState;
+import org.apache.solr.common.SolrException;
+import org.apache.solr.common.SolrException.ErrorCode;
+import org.apache.solr.common.cloud.BeforeReconnect;
+import org.apache.solr.common.cloud.ClusterState;
+import org.apache.solr.common.cloud.DefaultConnectionStrategy;
+import org.apache.solr.common.cloud.DocCollection;
+import org.apache.solr.common.cloud.OnReconnect;
+import org.apache.solr.common.cloud.Replica;
+import org.apache.solr.common.cloud.Slice;
+import org.apache.solr.common.cloud.SolrZkClient;
+import org.apache.solr.common.cloud.ZkCmdExecutor;
+import org.apache.solr.common.cloud.ZkCoreNodeProps;
+import org.apache.solr.common.cloud.ZkNodeProps;
+import org.apache.solr.common.cloud.ZkStateReader;
+import org.apache.solr.common.cloud.ZooKeeperException;
+import org.apache.solr.common.params.CollectionParams;
+import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.common.util.URLUtil;
+import org.apache.solr.core.CoreContainer;
+import org.apache.solr.core.CoreDescriptor;
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.handler.component.ShardHandler;
+import org.apache.solr.update.UpdateLog;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
+import org.apache.zookeeper.KeeperException.SessionExpiredException;
+import org.apache.zookeeper.data.Stat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -39,40 +74,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.solr.client.solrj.impl.HttpSolrServer;
-import org.apache.solr.client.solrj.request.CoreAdminRequest.WaitForState;
-import org.apache.solr.common.SolrException;
-import org.apache.solr.common.SolrException.ErrorCode;
-import org.apache.solr.common.cloud.BeforeReconnect;
-import org.apache.solr.common.cloud.ClusterState;
-import org.apache.solr.common.cloud.DefaultConnectionStrategy;
-import org.apache.solr.common.cloud.DocCollection;
-import org.apache.solr.common.cloud.OnReconnect;
-import org.apache.solr.common.cloud.Replica;
-import org.apache.solr.common.cloud.Slice;
-import org.apache.solr.common.cloud.SolrZkClient;
-import org.apache.solr.common.cloud.ZkCmdExecutor;
-import org.apache.solr.common.cloud.ZkCoreNodeProps;
-import org.apache.solr.common.cloud.ZkNodeProps;
-import org.apache.solr.common.cloud.ZkStateReader;
-import org.apache.solr.common.cloud.ZooKeeperException;
-import org.apache.solr.common.params.SolrParams;
-import org.apache.solr.common.util.URLUtil;
-import org.apache.solr.core.CoreContainer;
-import org.apache.solr.core.CoreDescriptor;
-import org.apache.solr.core.SolrCore;
-import org.apache.solr.handler.component.ShardHandler;
-import org.apache.solr.update.UpdateLog;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.NoNodeException;
-import org.apache.zookeeper.KeeperException.SessionExpiredException;
-import org.apache.zookeeper.data.Stat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Handle ZooKeeper interactions.
  * 
@@ -92,6 +93,10 @@ public final class ZkController {
   
   private final DistributedQueue overseerJobQueue;
   private final DistributedQueue overseerCollectionQueue;
+
+  private final DistributedMap overseerRunningMap;
+  private final DistributedMap overseerCompletedMap;
+  private final DistributedMap overseerFailureMap;
   
   public static final String CONFIGS_ZKNODE = "/configs";
 
@@ -279,6 +284,9 @@ public final class ZkController {
     
     this.overseerJobQueue = Overseer.getInQueue(zkClient);
     this.overseerCollectionQueue = Overseer.getCollectionQueue(zkClient);
+    this.overseerRunningMap = Overseer.getRunningMap(zkClient);
+    this.overseerCompletedMap = Overseer.getCompletedMap(zkClient);
+    this.overseerFailureMap = Overseer.getFailureMap(zkClient);
     cmdExecutor = new ZkCmdExecutor(zkClientTimeout);
     leaderElector = new LeaderElector(zkClient);
     zkStateReader = new ZkStateReader(zkClient);
@@ -291,17 +299,9 @@ public final class ZkController {
   public int getLeaderVoteWait() {
     return leaderVoteWait;
   }
-
-  public void forceOverSeer(){
-    try {
-      zkClient.delete("/overseer_elect/leader",-1, true);
-      log.info("Forcing me to be leader  {} ", getBaseUrl());
-      overseerElector.getContext().runLeaderProcess(true, Overseer.STATE_UPDATE_DELAY + 100);
-    } catch (Exception e) {
-      throw new SolrException(ErrorCode.SERVER_ERROR, " Error becoming overseer ",e);
-
-    }
-
+  
+  public int getLeaderConflictResolveWait() {
+    return leaderConflictResolveWait;
   }
 
   private void registerAllCoresAsDown(
@@ -546,7 +546,7 @@ public final class ZkController {
       adminPath = cc.getAdminPath();
       
       overseerElector = new LeaderElector(zkClient);
-      this.overseer = new Overseer(shardHandler, adminPath, zkStateReader);
+      this.overseer = new Overseer(shardHandler, adminPath, zkStateReader, this);
       ElectionContext context = new OverseerElectionContext(zkClient, overseer, getNodeName());
       overseerElector.setup(context);
       overseerElector.joinElection(context, false);
@@ -790,13 +790,9 @@ public final class ZkController {
     String ourUrl = ZkCoreNodeProps.getCoreUrl(baseUrl, coreName);
     log.info("We are " + ourUrl + " and leader is " + leaderUrl);
     boolean isLeader = leaderUrl.equals(ourUrl);
-    
 
-    SolrCore core = null;
-    try {
-      core = cc.getCore(desc.getName());
+    try (SolrCore core = cc.getCore(desc.getName())) {
 
- 
       // recover from local transaction log and wait for it to complete before
       // going active
       // TODO: should this be moved to another thread? To recoveryStrat?
@@ -825,12 +821,7 @@ public final class ZkController {
           publish(desc, ZkStateReader.ACTIVE);
         }
       }
-    } finally {
-      if (core != null) {
-        core.close();
-      }
     }
-
     
     // make sure we have an update cluster state right away
     zkStateReader.updateClusterState(true);
@@ -1016,16 +1007,10 @@ public final class ZkController {
    */
   public void publish(final CoreDescriptor cd, final String state, boolean updateLastState, boolean forcePublish) throws KeeperException, InterruptedException {
     if (!forcePublish) {
-      SolrCore core = cc.getCore(cd.getName());
-      if (core == null) {
-        return;
-      }
-      try {
-        if (core.isClosed()) {
+      try (SolrCore core = cc.getCore(cd.getName())) {
+        if (core == null || core.isClosed()) {
           return;
         }
-      } finally {
-        core.close();
       }
     }
     String collection = cd.getCloudDescriptor().getCollectionName();
@@ -1119,7 +1104,7 @@ public final class ZkController {
     zkClient.printLayoutToStdOut();
   }
 
-  public void createCollectionZkNode(CloudDescriptor cd) throws KeeperException, InterruptedException {
+  public void createCollectionZkNode(CloudDescriptor cd) {
     String collection = cd.getCollectionName();
     
     log.info("Check for collection zkNode:" + collection);
@@ -1192,9 +1177,14 @@ public final class ZkController {
       
     } catch (KeeperException e) {
       // its okay if another beats us creating the node
-      if (e.code() != KeeperException.Code.NODEEXISTS) {
-        throw e;
+      if (e.code() == KeeperException.Code.NODEEXISTS) {
+        return;
       }
+      throw new SolrException(ErrorCode.SERVER_ERROR, "Error creating collection node in Zookeeper", e);
+    }
+    catch (InterruptedException e) {
+      Thread.interrupted();
+      throw new SolrException(ErrorCode.SERVER_ERROR, "Error creating collection node in Zookeeper", e);
     }
     
   }
@@ -1583,6 +1573,18 @@ public final class ZkController {
   public DistributedQueue getOverseerCollectionQueue() {
     return overseerCollectionQueue;
   }
+
+  public DistributedMap getOverseerRunningMap() {
+    return overseerRunningMap;
+  }
+
+  public DistributedMap getOverseerCompletedMap() {
+    return overseerCompletedMap;
+  }
+
+  public DistributedMap getOverseerFailureMap() {
+    return overseerFailureMap;
+  }
   
   public int getClientTimeout() {
     return clientTimeout;
@@ -1612,7 +1614,7 @@ public final class ZkController {
       return hostName + ':' + hostPort + '_' + 
         URLEncoder.encode(trimLeadingAndTrailingSlashes(hostContext), "UTF-8");
     } catch (UnsupportedEncodingException e) {
-      throw new IllegalStateException("JVM Does not seem to support UTF-8", e);
+      throw new Error("JVM Does not seem to support UTF-8", e);
     }
   }
   
@@ -1641,6 +1643,32 @@ public final class ZkController {
       throw new SolrException(ErrorCode.SERVER_ERROR, "Unable to rejoin election", e);
     }
 
+  }
+
+  public void checkOverseerDesignate() {
+    try {
+      byte[] data = zkClient.getData(ZkStateReader.ROLES, null, new Stat(), true);
+      if(data ==null) return;
+      Map roles = (Map) ZkStateReader.fromJSON(data);
+      if(roles ==null) return;
+      List nodeList= (List) roles.get("overseer");
+      if(nodeList == null) return;
+      if(nodeList.contains(getNodeName())){
+        ZkNodeProps props = new ZkNodeProps(Overseer.QUEUE_OPERATION, CollectionParams.CollectionAction.ADDROLE.toString().toLowerCase(Locale.ROOT),
+            "node", getNodeName(),
+            "role", "overseer");
+        log.info("Going to add role {} ",props);
+        getOverseerCollectionQueue().offer(ZkStateReader.toJSON(props));
+      }
+    } catch (NoNodeException nne){
+      return;
+    } catch (Exception e) {
+      log.warn("could not readd the overseer designate ",e);
+    }
+  }
+
+  CoreContainer getCoreContainer(){
+    return cc;
   }
 
 }

@@ -33,7 +33,6 @@ import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.TestUtil;
 import org.junit.Test;
 
 import com.carrotsearch.randomizedtesting.generators.RandomPicks;
@@ -357,7 +356,7 @@ public class TestNumericDocValuesUpdates extends LuceneTestCase {
     SortedSetDocValues ssdv = r.getSortedSetDocValues("ssdv");
     BytesRef scratch = new BytesRef();
     for (int i = 0; i < r.maxDoc(); i++) {
-      assertEquals(17, ndv.get(0));
+      assertEquals(17, ndv.get(i));
       bdv.get(i, scratch);
       assertEquals(new BytesRef(Integer.toString(i)), scratch);
       sdv.get(i, scratch);

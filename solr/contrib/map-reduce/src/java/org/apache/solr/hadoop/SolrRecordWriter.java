@@ -157,7 +157,7 @@ class SolrRecordWriter<K, V> extends RecordWriter<K, V> {
     System.setProperty("solr.lock.type", "hdfs"); 
     System.setProperty("solr.hdfs.nrtcachingdirectory", "false");
     System.setProperty("solr.hdfs.blockcache.enabled", "false");
-    System.setProperty("solr.autoCommit.maxTime", "-1");
+    System.setProperty("solr.autoCommit.maxTime", "600000");
     System.setProperty("solr.autoSoftCommit.maxTime", "-1");
     
     CoreContainer container = new CoreContainer(loader);
@@ -238,7 +238,7 @@ class SolrRecordWriter<K, V> extends RecordWriter<K, V> {
         } catch (InterruptedException e) {
           exitValue = "interrupted";
         }
-        System.err.format("Exit value of 'ls -lR' is %s%n", exitValue);
+        System.err.format(Locale.ENGLISH, "Exit value of 'ls -lR' is %s%n", exitValue);
       }
       if (unpackedDir.getName().equals(SolrOutputFormat.getZipName(conf))) {
         LOG.info("Using this unpacked directory as solr home: {}", unpackedDir);

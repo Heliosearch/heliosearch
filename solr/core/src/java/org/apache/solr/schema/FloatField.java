@@ -43,7 +43,10 @@ import java.io.IOException;
  * </p>
  * 
  * @see TrieFloatField
+ *
+ * @deprecated this class will be removed in 5.0 - use {@link TrieFloatField} instead
  */
+@Deprecated
 public class FloatField extends PrimitiveFieldType implements FloatValueFieldType {
 
   private static final FieldCache.FloatParser PARSER = new FieldCache.FloatParser() {

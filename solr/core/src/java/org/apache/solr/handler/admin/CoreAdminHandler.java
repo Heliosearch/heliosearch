@@ -17,21 +17,8 @@
 
 package org.apache.solr.handler.admin;
 
-import static org.apache.solr.common.cloud.DocCollection.DOC_ROUTER;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.Future;
-
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.lucene.index.DirectoryReader;
@@ -55,6 +42,7 @@ import org.apache.solr.common.params.CoreAdminParams.CoreAdminAction;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.params.UpdateParams;
+import org.apache.solr.common.util.ExecutorUtil;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.CloseHook;
@@ -75,14 +63,30 @@ import org.apache.solr.update.SplitIndexCommand;
 import org.apache.solr.update.UpdateLog;
 import org.apache.solr.update.processor.UpdateRequestProcessor;
 import org.apache.solr.update.processor.UpdateRequestProcessorChain;
+import org.apache.solr.util.DefaultSolrThreadFactory;
 import org.apache.solr.util.NumberUtils;
 import org.apache.solr.util.RefCounted;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static org.apache.solr.common.cloud.DocCollection.DOC_ROUTER;
 
 /**
  *
@@ -91,6 +95,24 @@ import com.google.common.collect.Lists;
 public class CoreAdminHandler extends RequestHandlerBase {
   protected static Logger log = LoggerFactory.getLogger(CoreAdminHandler.class);
   protected final CoreContainer coreContainer;
+  protected static HashMap<String, Map<String, TaskObject>> requestStatusMap =
+      new HashMap<String,Map<String, TaskObject>>();
+
+  protected ExecutorService parallelExecutor = null;
+
+  protected static int MAX_TRACKED_REQUESTS = 100;
+  public static String RUNNING = "running";
+  public static String COMPLETED = "completed";
+  public static String FAILED = "failed";
+  public static String RESPONSE = "Response";
+  public static String RESPONSE_STATUS = "STATUS";
+  public static String RESPONSE_MESSAGE = "msg";
+
+  static {
+    requestStatusMap.put(RUNNING, Collections.synchronizedMap(new LinkedHashMap<String, TaskObject>()));
+    requestStatusMap.put(COMPLETED, Collections.synchronizedMap(new LinkedHashMap<String, TaskObject>()));
+    requestStatusMap.put(FAILED, Collections.synchronizedMap(new LinkedHashMap<String, TaskObject>()));
+  }
 
   public CoreAdminHandler() {
     super();
@@ -136,6 +158,18 @@ public class CoreAdminHandler extends RequestHandlerBase {
               "Core container instance missing");
     }
     //boolean doPersist = false;
+    String taskId = req.getParams().get("async");
+    TaskObject taskObject = new TaskObject(taskId);
+
+    if(taskId != null) {
+      // Put the tasks into the maps for tracking
+      if (getMap(RUNNING).containsKey(taskId) || getMap(COMPLETED).containsKey(taskId) || getMap(FAILED).containsKey(taskId)) {
+        throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+            "Duplicate request with the same requestid found.");
+      }
+
+      addTask(RUNNING, taskObject);
+    }
 
     // Pick the action
     SolrParams params = req.getParams();
@@ -147,6 +181,19 @@ public class CoreAdminHandler extends RequestHandlerBase {
         this.handleCustomAction(req, rsp);
       }
     }
+
+    if (taskId == null) {
+      handleRequestInternal(req, rsp, action);
+    } else {
+      ParallelCoreAdminHandlerThread parallelHandlerThread = new ParallelCoreAdminHandlerThread(req, rsp, action, taskObject);
+      if(parallelExecutor == null || parallelExecutor.isShutdown())
+        parallelExecutor = Executors.newFixedThreadPool(50,
+                  new DefaultSolrThreadFactory("parallelCoreAdminExecutor"));
+        parallelExecutor.execute(parallelHandlerThread);
+    }
+  }
+
+  protected void handleRequestInternal(SolrQueryRequest req, SolrQueryResponse rsp, CoreAdminAction action) throws Exception {
     if (action != null) {
       switch (action) {
         case CREATE: {
@@ -199,17 +246,17 @@ public class CoreAdminHandler extends RequestHandlerBase {
           this.handleWaitForStateAction(req, rsp);
           break;
         }
-        
+
         case REQUESTRECOVERY: {
           this.handleRequestRecoveryAction(req, rsp);
           break;
         }
-        
+
         case REQUESTSYNCSHARD: {
           this.handleRequestSyncAction(req, rsp);
           break;
         }
-        
+
         // todo : Can this be done by the regular RecoveryStrategy route?
         case REQUESTAPPLYUPDATES: {
           this.handleRequestApplyUpdatesAction(req, rsp);
@@ -219,13 +266,15 @@ public class CoreAdminHandler extends RequestHandlerBase {
           this.handleRequestBufferUpdatesAction(req, rsp);
           break;
         }
+        case REQUESTSTATUS: {
+          this.handleRequestActionStatus(req, rsp);
+          break;
+        }
         case OVERSEEROP:{
           ZkController zkController = coreContainer.getZkController();
           if(zkController != null){
-            String op = req.getParams().get("op");
-            if("leader".equals(op)){
-              zkController.forceOverSeer();
-            } else if ("rejoin".equals(op)) zkController.rejoinOverseerElection();
+           String op = req.getParams().get("op");
+           if ("rejoin".equals(op)) zkController.rejoinOverseerElection();
           }
           break;
         }
@@ -240,7 +289,7 @@ public class CoreAdminHandler extends RequestHandlerBase {
     rsp.setHttpCaching(false);
   }
 
-  
+
   /**
    * Handle the core admin SPLIT action.
    */
@@ -435,6 +484,7 @@ public class CoreAdminHandler extends RequestHandlerBase {
       .put(CoreAdminParams.SCHEMA, CoreDescriptor.CORE_SCHEMA)
       .put(CoreAdminParams.DATA_DIR, CoreDescriptor.CORE_DATADIR)
       .put(CoreAdminParams.ULOG_DIR, CoreDescriptor.CORE_ULOGDIR)
+      .put(CoreAdminParams.CONFIGSET, CoreDescriptor.CORE_CONFIGSET)
       .put(CoreAdminParams.LOAD_ON_STARTUP, CoreDescriptor.CORE_LOADONSTARTUP)
       .put(CoreAdminParams.TRANSIENT, CoreDescriptor.CORE_TRANSIENT)
       .put(CoreAdminParams.SHARD, CoreDescriptor.CORE_SHARD)
@@ -450,11 +500,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
 
     String name = checkNotEmpty(params.get(CoreAdminParams.NAME),
         "Missing parameter [" + CoreAdminParams.NAME + "]");
-    String instancedir = params.get(CoreAdminParams.INSTANCE_DIR);
-    if (StringUtils.isEmpty(instancedir)) {
-      instancedir = name; // will be resolved later against solr.home
-      //instancedir = container.getSolrHome() + "/" + name;
-    }
 
     Properties coreProps = new Properties();
     for (String param : paramToProp.keySet()) {
@@ -471,6 +516,14 @@ public class CoreAdminHandler extends RequestHandlerBase {
       String propName = param.substring(CoreAdminParams.PROPERTY_PREFIX.length());
       String propValue = params.get(param);
       coreProps.setProperty(propName, propValue);
+    }
+
+    String instancedir = params.get(CoreAdminParams.INSTANCE_DIR);
+    if (StringUtils.isEmpty(instancedir) && coreProps.getProperty(CoreAdminParams.INSTANCE_DIR) != null) {
+      instancedir = coreProps.getProperty(CoreAdminParams.INSTANCE_DIR);
+    } else if (StringUtils.isEmpty(instancedir)){
+      instancedir = name; // will be resolved later against solr.home
+      //instancedir = container.getSolrHome() + "/" + name;
     }
 
     return new CoreDescriptor(container, name, instancedir, coreProps, params);
@@ -755,6 +808,28 @@ public class CoreAdminHandler extends RequestHandlerBase {
   }
 
   /**
+   * Handle "REQUESTSTATUS" action
+   */
+  protected void handleRequestActionStatus(SolrQueryRequest req, SolrQueryResponse rsp) {
+    SolrParams params = req.getParams();
+    String requestId = params.get(CoreAdminParams.REQUESTID);
+    log.info("Checking request status for : " + requestId);
+
+    if (mapContainsTask(RUNNING, requestId)) {
+      rsp.add(RESPONSE_STATUS, RUNNING);
+    } else if(mapContainsTask(COMPLETED, requestId)) {
+      rsp.add(RESPONSE_STATUS, COMPLETED);
+      rsp.add(RESPONSE, getMap(COMPLETED).get(requestId).getRspObject());
+    } else if(mapContainsTask(FAILED, requestId)) {
+      rsp.add(RESPONSE_STATUS, FAILED);
+      rsp.add(RESPONSE, getMap(FAILED).get(requestId).getRspObject());
+    } else {
+      rsp.add(RESPONSE_STATUS, "notfound");
+      rsp.add(RESPONSE_MESSAGE, "No task found in running, completed or failed tasks");
+    }
+  }
+
+  /**
    * Handle "SWAP" action
    */
   protected void handleSwapAction(SolrQueryRequest req, SolrQueryResponse rsp) {
@@ -778,9 +853,8 @@ public class CoreAdminHandler extends RequestHandlerBase {
         if (cname == null) {
           cname = "";
         }
-        SolrCore core = null;
-        try {
-          core = coreContainer.getCore(cname);
+        try (SolrCore core = coreContainer.getCore(cname)) {
+
           if (core != null) {
             // try to publish as recovering right away
             try {
@@ -798,11 +872,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
             core.getUpdateHandler().getSolrCoreState().doRecovery(coreContainer, core.getCoreDescriptor());
           } else {
             SolrException.log(log, "Could not find core to call recovery:" + cname);
-          }
-        } finally {
-          // no recoveryStrat close for now
-          if (core != null) {
-            core.close();
           }
         }
       }
@@ -825,10 +894,10 @@ public class CoreAdminHandler extends RequestHandlerBase {
     if (cname == null) {
       throw new IllegalArgumentException(CoreAdminParams.CORE + " is required");
     }
-    SolrCore core = null;
+
     SyncStrategy syncStrategy = null;
-    try {
-      core = coreContainer.getCore(cname);
+    try (SolrCore core = coreContainer.getCore(cname)) {
+
       if (core != null) {
         syncStrategy = new SyncStrategy(core.getCoreDescriptor().getCoreContainer());
         
@@ -864,9 +933,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
       }
     } finally {
       // no recoveryStrat close for now
-      if (core != null) {
-        core.close();
-      }
       if (syncStrategy != null) {
         syncStrategy.close();
       }
@@ -894,13 +960,12 @@ public class CoreAdminHandler extends RequestHandlerBase {
     log.info("Going to wait for coreNodeName: " + coreNodeName + ", state: " + waitForState
         + ", checkLive: " + checkLive + ", onlyIfLeader: " + onlyIfLeader);
 
+    int maxTries = 0; 
     String state = null;
     boolean live = false;
     int retry = 0;
     while (true) {
-      SolrCore core = null;
-      try {
-        core = coreContainer.getCore(cname);
+      try (SolrCore core = coreContainer.getCore(cname)) {
         if (core == null && retry == 30) {
           throw new SolrException(ErrorCode.BAD_REQUEST, "core not found:"
               + cname);
@@ -917,9 +982,24 @@ public class CoreAdminHandler extends RequestHandlerBase {
           CloudDescriptor cloudDescriptor = core.getCoreDescriptor()
               .getCloudDescriptor();
           
-          if (retry == 15 || retry == 60) {
+          if (retry % 15 == 0) {
+            if (retry > 0 && log.isInfoEnabled())
+              log.info("After " + retry + " seconds, core " + cname + " (" +
+                  cloudDescriptor.getShardId() + " of " +
+                  cloudDescriptor.getCollectionName() + ") still does not have state: " +
+                  waitForState + "; forcing ClusterState update from ZooKeeper");
+            
             // force a cluster state update
             coreContainer.getZkController().getZkStateReader().updateClusterState(true);
+          }
+
+          if (maxTries == 0) {
+            // wait long enough for the leader conflict to work itself out plus a little extra
+            int conflictWaitMs = coreContainer.getZkController().getLeaderConflictResolveWait();
+            maxTries = (int) Math.round(conflictWaitMs / 1000) + 3;
+            log.info("Will wait a max of " + maxTries + " seconds to see " + cname + " (" +
+                cloudDescriptor.getShardId() + " of " +
+                cloudDescriptor.getCollectionName() + ") have state: " + waitForState);
           }
           
           ClusterState clusterState = coreContainer.getZkController()
@@ -949,13 +1029,28 @@ public class CoreAdminHandler extends RequestHandlerBase {
             }
           }
         }
-        
-        if (retry++ == 120) {
+
+        if (retry++ == maxTries) {
+          String collection = null;
+          String leaderInfo = null;
+          String shardId = null;
+          try {
+            CloudDescriptor cloudDescriptor =
+                core.getCoreDescriptor().getCloudDescriptor();
+            collection = cloudDescriptor.getCollectionName();
+            shardId = cloudDescriptor.getShardId();
+            leaderInfo = coreContainer.getZkController().
+                getZkStateReader().getLeaderUrl(collection, shardId, 0);
+          } catch (Exception exc) {
+            leaderInfo = "Not available due to: " + exc;
+          }
+
           throw new SolrException(ErrorCode.BAD_REQUEST,
               "I was asked to wait on state " + waitForState + " for "
-                  + nodeName
+                  + shardId + " in " + collection + " on " + nodeName
                   + " but I still do not see the requested state. I see state: "
-                  + state + " live:" + live);
+                  + state + " live:" + live + " leader from ZK: " + leaderInfo
+          );
         }
         
         if (coreContainer.isShutDown()) {
@@ -966,7 +1061,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
         // solrcloud_debug
         if (log.isDebugEnabled()) {
           try {
-            ;
             LocalSolrQueryRequest r = new LocalSolrQueryRequest(core,
                 new ModifiableSolrParams());
             CommitUpdateCommand commitCmd = new CommitUpdateCommand(r, false);
@@ -990,10 +1084,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
             throw new SolrException(ErrorCode.SERVER_ERROR, null, e);
           }
         }
-      } finally {
-        if (core != null) {
-          core.close();
-        }
       }
       Thread.sleep(1000);
     }
@@ -1005,9 +1095,10 @@ public class CoreAdminHandler extends RequestHandlerBase {
   private void handleRequestApplyUpdatesAction(SolrQueryRequest req, SolrQueryResponse rsp) {
     SolrParams params = req.getParams();
     String cname = params.get(CoreAdminParams.NAME, "");
-    SolrCore core = coreContainer.getCore(cname);
     log.info("Applying buffered updates on core: " + cname);
-    try {
+    try (SolrCore core = coreContainer.getCore(cname)) {
+      if (core == null)
+        throw new SolrException(ErrorCode.BAD_REQUEST, "Core [" + cname + "] not found");
       UpdateLog updateLog = core.getUpdateHandler().getUpdateLog();
       if (updateLog.getState() != UpdateLog.State.BUFFERING)  {
         throw new SolrException(ErrorCode.SERVER_ERROR, "Core " + cname + " not in buffering state");
@@ -1037,8 +1128,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
         throw new SolrException(ErrorCode.SERVER_ERROR, "Could not apply buffered updates", e);
     } finally {
       if (req != null) req.close();
-      if (core != null)
-        core.close();
     }
     
   }
@@ -1046,9 +1135,11 @@ public class CoreAdminHandler extends RequestHandlerBase {
   private void handleRequestBufferUpdatesAction(SolrQueryRequest req, SolrQueryResponse rsp) {
     SolrParams params = req.getParams();
     String cname = params.get(CoreAdminParams.NAME, "");
-    SolrCore core = coreContainer.getCore(cname);
     log.info("Starting to buffer updates on core:" + cname);
-    try {
+
+    try (SolrCore core = coreContainer.getCore(cname)) {
+      if (core == null)
+        throw new SolrException(ErrorCode.BAD_REQUEST, "Core [" + cname + "] does not exist");
       UpdateLog updateLog = core.getUpdateHandler().getUpdateLog();
       if (updateLog.getState() != UpdateLog.State.ACTIVE)  {
         throw new SolrException(ErrorCode.SERVER_ERROR, "Core " + cname + " not in active state");
@@ -1063,8 +1154,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
         throw new SolrException(ErrorCode.SERVER_ERROR, "Could not start buffering updates", e);
     } finally {
       if (req != null) req.close();
-      if (core != null)
-        core.close();
     }
   }
 
@@ -1096,9 +1185,8 @@ public class CoreAdminHandler extends RequestHandlerBase {
         info.add("isLoaded", "false");
       }
     } else {
-      SolrCore core = cores.getCore(cname);
-      if (core != null) {
-        try {
+      try (SolrCore core = cores.getCore(cname)) {
+        if (core != null) {
           info.add("name", core.getName());
           info.add("isDefaultCore", core.getName().equals(cores.getDefaultCoreName()));
           info.add("instanceDir", normalizePath(core.getResourceLoader().getInstanceDir()));
@@ -1119,8 +1207,6 @@ public class CoreAdminHandler extends RequestHandlerBase {
               searcher.decref();
             }
           }
-        } finally {
-          core.close();
         }
       }
     }
@@ -1171,5 +1257,124 @@ public class CoreAdminHandler extends RequestHandlerBase {
   @Override
   public String getSource() {
     return "$URL$";
+  }
+
+  /**
+   * Class to implement multi-threaded CoreAdminHandler behaviour.
+   * This accepts all of the context from handleRequestBody.
+   */
+  protected class ParallelCoreAdminHandlerThread implements Runnable {
+    SolrQueryRequest req;
+    SolrQueryResponse rsp;
+    CoreAdminAction action;
+    TaskObject taskObject;
+
+    public ParallelCoreAdminHandlerThread (SolrQueryRequest req, SolrQueryResponse rsp,
+                                           CoreAdminAction action, TaskObject taskObject){
+      this.req = req;
+      this.rsp = rsp;
+      this.action = action;
+      this.taskObject = taskObject;
+    }
+
+    public void run() {
+      boolean exceptionCaught = false;
+      try {
+        handleRequestInternal(req, rsp, action);
+        taskObject.setRspObject(rsp);
+      } catch (Exception e) {
+        exceptionCaught = true;
+        taskObject.setRspObjectFromException(e);
+      } finally {
+        removeTask("running", taskObject.taskId);
+        if(exceptionCaught) {
+          addTask("failed", taskObject, true);
+        } else
+          addTask("completed", taskObject, true);
+      }
+
+    }
+
+  }
+
+  /**
+   * Helper class to manage the tasks to be tracked.
+   * This contains the taskId, request and the response (if available).
+   */
+  private class TaskObject {
+    String taskId;
+    String rspInfo;
+
+    public TaskObject(String taskId) {
+      this.taskId = taskId;
+    }
+
+    public String getRspObject() {
+      return rspInfo;
+    }
+
+    public void setRspObject(SolrQueryResponse rspObject) {
+      this.rspInfo = rspObject.getToLogAsString("TaskId: " + this.taskId + " ");
+    }
+
+    public void setRspObjectFromException(Exception e) {
+      this.rspInfo = e.getMessage();
+    }
+  }
+
+  /**
+   * Helper method to add a task to a tracking map.
+   */
+  protected void addTask(String map, TaskObject o, boolean limit) {
+    if(limit && getMap(map).size() == MAX_TRACKED_REQUESTS) {
+      String key = getMap(map).entrySet().iterator().next().getKey();
+      getMap(map).remove(key);
+    }
+    addTask(map, o);
+  }
+
+
+  protected void addTask(String map, TaskObject o) {
+    synchronized (getMap(map)) {
+      getMap(map).put(o.taskId, o);
+    }
+  }
+
+  /**
+   * Helper method to remove a task from a tracking map.
+   */
+  protected void removeTask(String map, String taskId) {
+    synchronized (getMap(map)) {
+      getMap(map).remove(taskId);
+    }
+  }
+
+  /**
+   * Helper method to check if a map contains a taskObject with the given taskId.
+   */
+  protected boolean mapContainsTask(String map, String taskId) {
+    return getMap(map).containsKey(taskId);
+  }
+
+  /**
+   * Helper method to get a TaskObject given a map and a taskId.
+   */
+  protected TaskObject getTask(String map, String taskId) {
+    return getMap(map).get(taskId);
+  }
+
+  /**
+   * Helper method to get a request status map given the name.
+   */
+  private Map<String, TaskObject> getMap(String map) {
+    return requestStatusMap.get(map);
+  }
+
+  /**
+   * Method to ensure shutting down of the ThreadPool Executor.
+   */
+  public void shutdown() {
+    if (parallelExecutor != null && !parallelExecutor.isShutdown())
+      ExecutorUtil.shutdownAndAwaitTermination(parallelExecutor);
   }
 }

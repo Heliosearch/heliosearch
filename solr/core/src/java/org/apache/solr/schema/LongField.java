@@ -43,7 +43,10 @@ import java.util.Map;
  * </p>
  * 
  * @see TrieLongField
+ *
+ * @deprecated this class will be removed in 5.0 - use {@link TrieLongField} instead
  */
+@Deprecated
 public class LongField extends PrimitiveFieldType implements LongValueFieldType {
 
   private static final FieldCache.LongParser PARSER = new FieldCache.LongParser() {

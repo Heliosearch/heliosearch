@@ -20,6 +20,8 @@ package org.apache.lucene.search.suggest;
 
 import java.io.*;
 import java.util.Comparator;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 import org.apache.lucene.search.spell.Dictionary;
 import org.apache.lucene.util.BytesRef;
@@ -102,7 +104,7 @@ public class FileDictionary implements Dictionary {
    * NOTE: content is treated as UTF-8
    */
   public FileDictionary(InputStream dictFile, String fieldDelimiter) {
-    in = new BufferedReader(IOUtils.getDecodingReader(dictFile, IOUtils.CHARSET_UTF_8));
+    in = new BufferedReader(IOUtils.getDecodingReader(dictFile, StandardCharsets.UTF_8));
     this.fieldDelimiter = fieldDelimiter;
   }
 
@@ -214,6 +216,16 @@ public class FileDictionary implements Dictionary {
       } catch (NumberFormatException e) {
         curWeight = (long)Double.parseDouble(weight);
       }
+    }
+
+    @Override
+    public Set<BytesRef> contexts() {
+      return null;
+    }
+
+    @Override
+    public boolean hasContexts() {
+      return false;
     }
   }
 

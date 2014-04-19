@@ -30,12 +30,11 @@ public class MockUTF16TermAttributeImpl extends CharTermAttributeImpl {
   static final Charset charset = Charset.forName("UTF-16LE");
   
   @Override
-  public int fillBytesRef() {
+  public void fillBytesRef() {
     BytesRef bytes = getBytesRef();
     byte[] utf16 = toString().getBytes(charset);
     bytes.bytes = utf16;
     bytes.offset = 0;
     bytes.length = utf16.length;
-    return bytes.hashCode();
   }
 }

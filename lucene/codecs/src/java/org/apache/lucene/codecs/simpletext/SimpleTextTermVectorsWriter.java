@@ -178,6 +178,7 @@ public class SimpleTextTermVectorsWriter extends TermVectorsWriter {
     }
     write(END);
     newLine();
+    SimpleTextUtil.writeChecksum(out, scratch);
   }
   
   @Override

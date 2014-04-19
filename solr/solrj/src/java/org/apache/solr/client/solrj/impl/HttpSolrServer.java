@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -28,6 +29,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -40,6 +45,7 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.params.ClientPNames;
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.entity.ContentType;
@@ -68,11 +74,12 @@ import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.ContentStream;
 import org.apache.solr.common.util.NamedList;
+import org.apache.solr.common.util.SolrjNamedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HttpSolrServer extends SolrServer {
-  private static final String UTF_8 = "UTF-8";
+  private static final String UTF_8 = StandardCharsets.UTF_8.name();
   private static final String DEFAULT_PATH = "/select";
   private static final long serialVersionUID = -946812319974801896L;
   
@@ -203,6 +210,49 @@ public class HttpSolrServer extends SolrServer {
     return executeMethod(createMethod(request),processor);
   }
   
+  /**
+   * @lucene.experimental
+   */
+  public static class HttpUriRequestResponse {
+    public HttpUriRequest httpUriRequest;
+    public Future<NamedList<Object>> future;
+  }
+  
+  /**
+   * @lucene.experimental
+   */
+  public HttpUriRequestResponse httpUriRequest(final SolrRequest request)
+      throws SolrServerException, IOException {
+    ResponseParser responseParser = request.getResponseParser();
+    if (responseParser == null) {
+      responseParser = parser;
+    }
+    return httpUriRequest(request, responseParser);
+  }
+  
+  /**
+   * @lucene.experimental
+   */
+  public HttpUriRequestResponse httpUriRequest(final SolrRequest request, final ResponseParser processor) throws SolrServerException, IOException {
+    HttpUriRequestResponse mrr = new HttpUriRequestResponse();
+    final HttpRequestBase method = createMethod(request);
+    ExecutorService pool = Executors.newFixedThreadPool(1, new SolrjNamedThreadFactory("httpUriRequest"));
+    try {
+      mrr.future = pool.submit(new Callable<NamedList<Object>>(){
+
+        @Override
+        public NamedList<Object> call() throws Exception {
+          return executeMethod(method, processor);
+        }});
+ 
+    } finally {
+      pool.shutdown();
+    }
+    assert method != null;
+    mrr.httpUriRequest = method;
+    return mrr;
+  }
+  
   protected HttpRequestBase createMethod(final SolrRequest request) throws IOException, SolrServerException {
     HttpRequestBase method = null;
     InputStream is = null;
@@ -286,7 +336,7 @@ public class HttpSolrServer extends SolrServer {
                 if (vals != null) {
                   for (String v : vals) {
                     if (isMultipart) {
-                      parts.add(new FormBodyPart(p, new StringBody(v, Charset.forName("UTF-8"))));
+                      parts.add(new FormBodyPart(p, new StringBody(v, StandardCharsets.UTF_8)));
                     } else {
                       postParams.add(new BasicNameValuePair(p, v));
                     }
@@ -320,7 +370,7 @@ public class HttpSolrServer extends SolrServer {
                 post.setEntity(entity);
               } else {
                 //not using multipart
-                post.setEntity(new UrlEncodedFormEntity(postParams, "UTF-8"));
+                post.setEntity(new UrlEncodedFormEntity(postParams, StandardCharsets.UTF_8));
               }
 
               method = post;

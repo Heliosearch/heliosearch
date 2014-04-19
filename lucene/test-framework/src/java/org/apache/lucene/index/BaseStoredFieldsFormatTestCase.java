@@ -18,6 +18,7 @@ package org.apache.lucene.index;
  */
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -56,8 +57,6 @@ import org.apache.lucene.store.MMapDirectory;
 import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.store.MockDirectoryWrapper.Throttling;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.TestUtil;
 
 import com.carrotsearch.randomizedtesting.generators.RandomInts;
@@ -69,28 +68,16 @@ import com.carrotsearch.randomizedtesting.generators.RandomPicks;
  * uses it and extend this class and override {@link #getCodec()}.
  * @lucene.experimental
  */
-public abstract class BaseStoredFieldsFormatTestCase extends LuceneTestCase {
-  private Codec savedCodec;
-
-  /**
-   * Returns the Codec to run tests against
-   */
-  protected abstract Codec getCodec();
+public abstract class BaseStoredFieldsFormatTestCase extends BaseIndexFileFormatTestCase {
 
   @Override
-  public void setUp() throws Exception {
-    super.setUp();
-    // set the default codec, so adding test cases to this isn't fragile
-    savedCodec = Codec.getDefault();
-    Codec.setDefault(getCodec());
+  protected void addRandomFields(Document d) {
+    final int numValues = random().nextInt(3);
+    for (int i = 0; i < numValues; ++i) {
+      d.add(new StoredField("f", TestUtil.randomSimpleString(random(), 100)));
+    }
   }
 
-  @Override
-  public void tearDown() throws Exception {
-    Codec.setDefault(savedCodec); // restore
-    super.tearDown();
-  }
-  
   public void testRandomStoredFields() throws IOException {
     Directory dir = newDirectory();
     Random rand = random();
@@ -351,7 +338,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends LuceneTestCase {
     ft.freeze();
 
     final String string = TestUtil.randomSimpleString(random(), 50);
-    final byte[] bytes = string.getBytes("UTF-8");
+    final byte[] bytes = string.getBytes(StandardCharsets.UTF_8);
     final long l = random().nextBoolean() ? random().nextInt(42) : random().nextLong();
     final int i = random().nextBoolean() ? random().nextInt(42) : random().nextInt();
     final float f = random().nextFloat();
@@ -598,7 +585,7 @@ public abstract class BaseStoredFieldsFormatTestCase extends LuceneTestCase {
     // for this test we force a FS dir
     // we can't just use newFSDirectory, because this test doesn't really index anything.
     // so if we get NRTCachingDir+SimpleText, we make massive stored fields and OOM (LUCENE-4484)
-    Directory dir = new MockDirectoryWrapper(random(), new MMapDirectory(TestUtil.getTempDir("testBigDocuments")));
+    Directory dir = new MockDirectoryWrapper(random(), new MMapDirectory(createTempDir("testBigDocuments")));
     IndexWriterConfig iwConf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     iwConf.setMaxBufferedDocs(RandomInts.randomIntBetween(random(), 2, 30));
     RandomIndexWriter iw = new RandomIndexWriter(random(), dir, iwConf);
@@ -660,4 +647,30 @@ public abstract class BaseStoredFieldsFormatTestCase extends LuceneTestCase {
     iw.close();
     dir.close();
   }
+
+  public void testBulkMergeWithDeletes() throws IOException {
+    final int numDocs = atLeast(200);
+    Directory dir = newDirectory();
+    RandomIndexWriter w = new RandomIndexWriter(random(), dir, newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setMergePolicy(NoMergePolicy.COMPOUND_FILES));
+    for (int i = 0; i < numDocs; ++i) {
+      Document doc = new Document();
+      doc.add(new StringField("id", Integer.toString(i), Store.YES));
+      doc.add(new StoredField("f", TestUtil.randomSimpleString(random())));
+      w.addDocument(doc);
+    }
+    final int deleteCount = TestUtil.nextInt(random(), 5, numDocs);
+    for (int i = 0; i < deleteCount; ++i) {
+      final int id = random().nextInt(numDocs);
+      w.deleteDocuments(new Term("id", Integer.toString(id)));
+    }
+    w.commit();
+    w.close();
+    w = new RandomIndexWriter(random(), dir);
+    w.forceMerge(TestUtil.nextInt(random(), 1, 3));
+    w.commit();
+    w.close();
+    TestUtil.checkIndex(dir);
+    dir.close();
+  }
+
 }

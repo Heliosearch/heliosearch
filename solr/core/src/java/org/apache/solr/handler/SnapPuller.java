@@ -16,28 +16,8 @@
  */
 package org.apache.solr.handler;
 
-import static org.apache.lucene.util.IOUtils.CHARSET_UTF_8;
-import static org.apache.solr.handler.ReplicationHandler.ALIAS;
-import static org.apache.solr.handler.ReplicationHandler.CHECKSUM;
-import static org.apache.solr.handler.ReplicationHandler.CMD_DETAILS;
-import static org.apache.solr.handler.ReplicationHandler.CMD_GET_FILE;
-import static org.apache.solr.handler.ReplicationHandler.CMD_GET_FILE_LIST;
-import static org.apache.solr.handler.ReplicationHandler.CMD_INDEX_VERSION;
-import static org.apache.solr.handler.ReplicationHandler.COMMAND;
-import static org.apache.solr.handler.ReplicationHandler.COMPRESSION;
-import static org.apache.solr.handler.ReplicationHandler.CONF_FILES;
-import static org.apache.solr.handler.ReplicationHandler.CONF_FILE_SHORT;
-import static org.apache.solr.handler.ReplicationHandler.EXTERNAL;
-import static org.apache.solr.handler.ReplicationHandler.FILE;
-import static org.apache.solr.handler.ReplicationHandler.FILE_STREAM;
-import static org.apache.solr.handler.ReplicationHandler.GENERATION;
-import static org.apache.solr.handler.ReplicationHandler.INTERNAL;
-import static org.apache.solr.handler.ReplicationHandler.MASTER_URL;
-import static org.apache.solr.handler.ReplicationHandler.NAME;
-import static org.apache.solr.handler.ReplicationHandler.OFFSET;
-import static org.apache.solr.handler.ReplicationHandler.SIZE;
-
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,6 +26,8 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.NoSuchFileException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,22 +58,23 @@ import org.apache.http.client.HttpClient;
 import org.apache.lucene.index.IndexCommit;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpClientUtil;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
 import org.apache.solr.client.solrj.request.QueryRequest;
-import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
+import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.ExecutorUtil;
 import org.apache.solr.common.util.FastInputStream;
 import org.apache.solr.common.util.NamedList;
-import org.apache.solr.core.DirectoryFactory;
 import org.apache.solr.core.DirectoryFactory.DirContext;
+import org.apache.solr.core.DirectoryFactory;
 import org.apache.solr.core.IndexDeletionPolicyWrapper;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.ReplicationHandler.FileInfo;
@@ -107,6 +90,26 @@ import org.apache.solr.util.RefCounted;
 import org.eclipse.jetty.util.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.solr.handler.ReplicationHandler.ALIAS;
+import static org.apache.solr.handler.ReplicationHandler.CHECKSUM;
+import static org.apache.solr.handler.ReplicationHandler.CMD_DETAILS;
+import static org.apache.solr.handler.ReplicationHandler.CMD_GET_FILE;
+import static org.apache.solr.handler.ReplicationHandler.CMD_GET_FILE_LIST;
+import static org.apache.solr.handler.ReplicationHandler.CMD_INDEX_VERSION;
+import static org.apache.solr.handler.ReplicationHandler.COMMAND;
+import static org.apache.solr.handler.ReplicationHandler.COMPRESSION;
+import static org.apache.solr.handler.ReplicationHandler.CONF_FILES;
+import static org.apache.solr.handler.ReplicationHandler.CONF_FILE_SHORT;
+import static org.apache.solr.handler.ReplicationHandler.EXTERNAL;
+import static org.apache.solr.handler.ReplicationHandler.FILE;
+import static org.apache.solr.handler.ReplicationHandler.FILE_STREAM;
+import static org.apache.solr.handler.ReplicationHandler.GENERATION;
+import static org.apache.solr.handler.ReplicationHandler.INTERNAL;
+import static org.apache.solr.handler.ReplicationHandler.MASTER_URL;
+import static org.apache.solr.handler.ReplicationHandler.NAME;
+import static org.apache.solr.handler.ReplicationHandler.OFFSET;
+import static org.apache.solr.handler.ReplicationHandler.SIZE;
 
 /**
  * <p/> Provides functionality of downloading changed index files as well as config files and a timer for scheduling fetches from the
@@ -251,7 +254,7 @@ public class SnapPuller {
       
       rsp = server.request(req);
     } catch (SolrServerException e) {
-      throw new SolrException(ErrorCode.SERVER_ERROR, e.getMessage());
+      throw new SolrException(ErrorCode.SERVER_ERROR, e.getMessage(), e);
     } finally {
       server.shutdown();
     }
@@ -601,7 +604,7 @@ public class SnapPuller {
       }
 
       final IndexOutput out = dir.createOutput(REPLICATION_PROPERTIES, DirectoryFactory.IOCONTEXT_NO_CACHE);
-      Writer outFile = new OutputStreamWriter(new PropertiesOutputStream(out), CHARSET_UTF_8);
+      Writer outFile = new OutputStreamWriter(new PropertiesOutputStream(out), StandardCharsets.UTF_8);
       try {
         props.store(outFile, "Replication details");
         dir.sync(Collections.singleton(REPLICATION_PROPERTIES));
@@ -763,7 +766,7 @@ public class SnapPuller {
       LOG.debug("Download files to dir: " + Arrays.asList(indexDir.listAll()));
     }
     for (Map<String,Object> file : filesToDownload) {
-      if (!indexDir.fileExists((String) file.get(NAME))
+      if (!slowFileExists(indexDir, (String) file.get(NAME))
           || downloadCompleteIndex) {
         dirFileFetcher = new DirectoryFileFetcher(tmpIndexDir, file,
             (String) file.get(NAME), false, latestGeneration);
@@ -777,6 +780,19 @@ public class SnapPuller {
     }
   }
 
+  /** Returns true if the file exists (can be opened), false
+   *  if it cannot be opened, and (unlike Java's
+   *  File.exists) throws IOException if there's some
+   *  unexpected error. */
+  private static boolean slowFileExists(Directory dir, String fileName) throws IOException {
+    try {
+      dir.openInput(fileName, IOContext.DEFAULT).close();
+      return true;
+    } catch (NoSuchFileException | FileNotFoundException e) {
+      return false;
+    }
+  }  
+
   /**
    * All the files which are common between master and slave must have same size else we assume they are
    * not compatible (stale).
@@ -786,7 +802,7 @@ public class SnapPuller {
    */
   private boolean isIndexStale(Directory dir) throws IOException {
     for (Map<String, Object> file : filesToDownload) {
-      if (dir.fileExists((String) file.get(NAME))
+      if (slowFileExists(dir, (String) file.get(NAME))
               && dir.fileLength((String) file.get(NAME)) != (Long) file.get(SIZE)) {
         LOG.warn("File " + file.get(NAME) + " expected to be " + file.get(SIZE)
             + " while it is " + dir.fileLength((String) file.get(NAME)));
@@ -806,7 +822,7 @@ public class SnapPuller {
     LOG.debug("Moving file: {}", fname);
     boolean success = false;
     try {
-      if (indexDir.fileExists(fname)) {
+      if (slowFileExists(indexDir, fname)) {
         LOG.info("Skipping move file - it already exists:" + fname);
         return true;
       }
@@ -883,9 +899,8 @@ public class SnapPuller {
       File oldFile = new File(confDir, file.getPath().substring(tmpconfDir.getPath().length(), file.getPath().length()));
       if (!oldFile.getParentFile().exists()) {
         status = oldFile.getParentFile().mkdirs();
-        if (status) {
-        } else {
-          throw new SolrException(SolrException.ErrorCode.SERVER_ERROR,
+        if (!status) {
+          throw new SolrException(ErrorCode.SERVER_ERROR,
                   "Unable to mkdirs: " + oldFile.getParentFile());
         }
       }
@@ -893,9 +908,8 @@ public class SnapPuller {
         File backupFile = new File(oldFile.getPath() + "." + getDateAsStr(new Date(oldFile.lastModified())));
         if (!backupFile.getParentFile().exists()) {
           status = backupFile.getParentFile().mkdirs();
-          if (status) {
-          } else {
-            throw new SolrException(SolrException.ErrorCode.SERVER_ERROR,
+          if (!status) {
+            throw new SolrException(ErrorCode.SERVER_ERROR,
                     "Unable to mkdirs: " + backupFile.getParentFile());
           }
         }
@@ -906,9 +920,8 @@ public class SnapPuller {
         }
       }
       status = file.renameTo(oldFile);
-      if (status) {
-      } else {
-        throw new SolrException(SolrException.ErrorCode.SERVER_ERROR,
+      if (!status) {
+        throw new SolrException(ErrorCode.SERVER_ERROR,
                 "Unable to rename: " + file + " to: " + oldFile);
       }
     }
@@ -927,12 +940,12 @@ public class SnapPuller {
     Directory dir = null;
     try {
       dir = solrCore.getDirectoryFactory().get(solrCore.getDataDir(), DirContext.META_DATA, solrCore.getSolrConfig().indexConfig.lockType);
-      if (dir.fileExists(SnapPuller.INDEX_PROPERTIES)){
+      if (slowFileExists(dir, SnapPuller.INDEX_PROPERTIES)){
         final IndexInput input = dir.openInput(SnapPuller.INDEX_PROPERTIES, DirectoryFactory.IOCONTEXT_NO_CACHE);
   
         final InputStream is = new PropertiesInputStream(input);
         try {
-          p.load(new InputStreamReader(is, CHARSET_UTF_8));
+          p.load(new InputStreamReader(is, StandardCharsets.UTF_8));
         } catch (Exception e) {
           LOG.error("Unable to load " + SnapPuller.INDEX_PROPERTIES, e);
         } finally {
@@ -948,7 +961,7 @@ public class SnapPuller {
       p.put("index", tmpIdxDirName);
       Writer os = null;
       try {
-        os = new OutputStreamWriter(new PropertiesOutputStream(out), CHARSET_UTF_8);
+        os = new OutputStreamWriter(new PropertiesOutputStream(out), StandardCharsets.UTF_8);
         p.store(os, SnapPuller.INDEX_PROPERTIES);
         dir.sync(Collections.singleton(INDEX_PROPERTIES));
       } catch (Exception e) {

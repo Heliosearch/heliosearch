@@ -16,22 +16,17 @@
  */
 package org.apache.solr.search;
 
-import org.apache.solr.SolrTestCaseJ4;
-import org.apache.solr.common.util.NamedList;
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.schema.SchemaField;
-import org.apache.solr.schema.IndexSchema;
-import org.apache.solr.schema.ManagedIndexSchema;
-
-import org.apache.lucene.util.TestUtil;
-
-import org.apache.commons.io.FileUtils;
-
 import java.io.File;
 import java.util.Collections;
 
-import org.junit.BeforeClass;
+import org.apache.commons.io.FileUtils;
+import org.apache.solr.SolrTestCaseJ4;
+import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.schema.IndexSchema;
+import org.apache.solr.schema.ManagedIndexSchema;
+import org.apache.solr.schema.SchemaField;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
 
 /**
  * Requests to open a new searcher w/o any underlying change to the index exposed 
@@ -54,8 +49,7 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
    */
   @BeforeClass
   private static void setupTempDirAndCoreWithManagedSchema() throws Exception {
-    createTempDir();
-    solrHome = new File(TEMP_DIR, TestSearcherReuse.class.getSimpleName());
+    solrHome = createTempDir();
     solrHome = solrHome.getAbsoluteFile();
 
     File confDir = new File(solrHome, confPath);
@@ -72,8 +66,7 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
   }
 
   @AfterClass
-  private static void deleteCoreAndTempSolrHomeDirectory() throws Exception {
-    FileUtils.deleteDirectory(solrHome);
+  private static void afterClass() throws Exception {
     solrHome = null;
   }
 
@@ -105,7 +98,7 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
     try {
       // we make no index changes in this block, so the searcher should always be the same
       // NOTE: we *have* to call getSearcher() in advance, it's a delayed binding
-      final SolrIndexSearcher expectedSearcher = baseReq.getSearcher();
+      final SolrIndexSearcher expectedSearcher = getMainSearcher(baseReq);
 
       assertU(commit());
       assertSearcherHasNotChanged(expectedSearcher);
@@ -137,7 +130,8 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
     beforeReq = req("q","foo");
     try {
       // NOTE: we *have* to call getSearcher() in advance: delayed binding
-      SolrIndexSearcher before = beforeReq.getSearcher();
+      SolrIndexSearcher before = getMainSearcher(beforeReq);
+
       assertU(delI("1"));
       assertU(commit());
       assertSearcherHasChanged(before);
@@ -148,7 +142,8 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
     beforeReq = req("q","foo");
     try {
       // NOTE: we *have* to call getSearcher() in advance: delayed binding
-      SolrIndexSearcher before = beforeReq.getSearcher();
+      SolrIndexSearcher before = getMainSearcher(beforeReq);
+
       assertU(adoc("id", "0"));
       assertU(commit());
       assertSearcherHasChanged(before);
@@ -159,7 +154,8 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
     beforeReq = req("q","foo");
     try {
       // NOTE: we *have* to call getSearcher() in advance: delayed binding
-      SolrIndexSearcher before = beforeReq.getSearcher();
+      SolrIndexSearcher before = getMainSearcher(beforeReq);
+
       assertU(delQ("id:[0 TO 5]"));
       assertU(commit());
       assertSearcherHasChanged(before);
@@ -170,7 +166,7 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
     beforeReq = req("q","foo");
     try {
       // NOTE: we *have* to call getSearcher() in advance: delayed binding
-      SolrIndexSearcher before = beforeReq.getSearcher();
+      SolrIndexSearcher before = getMainSearcher(beforeReq);
 
       // create a new field & add it.
       assertTrue("schema not mutable", beforeReq.getSchema().isMutable());
@@ -194,7 +190,7 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
       SolrQueryRequest afterReq = req("q","foo");
       try {
         assertSame(newSchema, afterReq.getSchema());
-        assertSame(newSchema, afterReq.getSearcher().getSchema());
+        assertSame(newSchema, getMainSearcher(afterReq).getSchema());
       } finally {
         afterReq.close();
       }
@@ -204,7 +200,26 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
     }
 
   }
-  
+ 
+  /**
+   * Helper method to get the searcher from a request, and assert that it's the main searcher
+   */
+  public static SolrIndexSearcher getMainSearcher(SolrQueryRequest req) {
+    SolrIndexSearcher s = req.getSearcher();
+    assertMainSearcher(s);
+    return s;
+  }
+
+  /**
+   * Sanity check that we didn't get a realtime (non-caching) searcher
+   */
+  public static void assertMainSearcher(SolrIndexSearcher s) {
+    assertTrue("Searcher isn't 'main': " + s.toString(),
+               // TODO brittle, better solution?
+               s.toString().contains(" main{"));
+    assertTrue("Searcher is non-caching", s.isCachingEnabled());
+  }
+ 
   /**
    * Given an existing searcher, creates a new SolrRequest, and verifies that the 
    * searcher in that request is <b>not</b> the same as the previous searcher -- 
@@ -213,7 +228,7 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
   public static void assertSearcherHasChanged(SolrIndexSearcher previous) {
     SolrQueryRequest req = req("*:*");
     try {
-      SolrIndexSearcher newSearcher = req.getSearcher();
+      SolrIndexSearcher newSearcher = getMainSearcher(req);
       assertNotSame(previous, newSearcher);
     } finally {
       req.close();
@@ -228,7 +243,8 @@ public class TestSearcherReuse extends SolrTestCaseJ4 {
   public static void assertSearcherHasNotChanged(SolrIndexSearcher expected) {
     SolrQueryRequest req = req("*:*");
     try {
-      assertSame(expected, req.getSearcher());
+      SolrIndexSearcher newSearcher = getMainSearcher(req);
+      assertSame(expected, newSearcher);
     } finally {
       req.close();
     }

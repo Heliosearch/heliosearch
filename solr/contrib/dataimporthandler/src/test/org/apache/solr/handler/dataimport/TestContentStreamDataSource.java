@@ -16,6 +16,9 @@
  */
 package org.apache.solr.handler.dataimport;
 
+import java.io.File;
+import java.util.List;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.solr.client.solrj.embedded.JettySolrRunner;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
@@ -25,13 +28,9 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.UpdateParams;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.File;
-import java.util.List;
 
 /**
  * Test for ContentStreamDataSource
@@ -58,7 +57,6 @@ public class TestContentStreamDataSource extends AbstractDataImportHandlerTestCa
   @After
   public void tearDown() throws Exception {
     jetty.stop();
-    instance.tearDown();
     super.tearDown();
   }
 
@@ -79,6 +77,7 @@ public class TestContentStreamDataSource extends AbstractDataImportHandlerTestCa
     SolrDocument doc = results.get(0);
     assertEquals("1", doc.getFieldValue("id"));
     assertEquals("Hello C1", ((List)doc.getFieldValue("desc")).get(0));
+    solrServer.shutdown();
   }
 
   @Test
@@ -100,6 +99,7 @@ public class TestContentStreamDataSource extends AbstractDataImportHandlerTestCa
       qres = solrServer.query(queryAll);
       results = qres.getResults();
       if (2 == results.getNumFound()) {
+        solrServer.shutdown();
         return;
       }
       Thread.sleep(500);
@@ -149,12 +149,7 @@ public class TestContentStreamDataSource extends AbstractDataImportHandlerTestCa
 
 
     public void setUp() throws Exception {
-
-      File home = new File(TEMP_DIR,
-              getClass().getName() + "-" + System.currentTimeMillis());
-
-
-      homeDir = new File(home, "inst");
+      homeDir = createTempDir("inst");
       dataDir = new File(homeDir + "/collection1", "data");
       confDir = new File(homeDir + "/collection1", "conf");
 
@@ -172,9 +167,6 @@ public class TestContentStreamDataSource extends AbstractDataImportHandlerTestCa
       FileUtils.copyFile(getFile(CONF_DIR + "dataconfig-contentstream.xml"), f);
     }
 
-    public void tearDown() throws Exception {
-      recurseDelete(homeDir);
-    }
   }
 
   private JettySolrRunner createJetty(SolrInstance instance) throws Exception {

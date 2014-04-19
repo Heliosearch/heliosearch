@@ -68,59 +68,11 @@ public abstract class DocValuesProducer implements Closeable {
   public abstract long ramBytesUsed();
   
   /** 
-   * A simple implementation of {@link DocValuesProducer#getDocsWithField} that 
-   * returns {@code true} if a document has an ordinal &gt;= 0
+   * Checks consistency of this producer
    * <p>
-   * Codecs can choose to use this (or implement it more efficiently another way), but
-   * in most cases a Bits is unnecessary anyway: users can check this as they go.
+   * Note that this may be costly in terms of I/O, e.g. 
+   * may involve computing a checksum value against large data files.
+   * @lucene.internal
    */
-  public static class SortedDocsWithField implements Bits {
-    final SortedDocValues in;
-    final int maxDoc;
-    
-    /** Creates a {@link Bits} returning true if the document has a value */
-    public SortedDocsWithField(SortedDocValues in, int maxDoc) {
-      this.in = in;
-      this.maxDoc = maxDoc;
-    }
-    
-    @Override
-    public boolean get(int index) {
-      return in.getOrd(index) >= 0;
-    }
-
-    @Override
-    public int length() {
-      return maxDoc;
-    }
-  }
-  
-  /** 
-   * A simple implementation of {@link DocValuesProducer#getDocsWithField} that 
-   * returns {@code true} if a document has any ordinals.
-   * <p>
-   * Codecs can choose to use this (or implement it more efficiently another way), but
-   * in most cases a Bits is unnecessary anyway: users can check this as they go.
-   */
-  public static class SortedSetDocsWithField implements Bits {
-    final SortedSetDocValues in;
-    final int maxDoc;
-    
-    /** Creates a {@link Bits} returning true if the document has a value */
-    public SortedSetDocsWithField(SortedSetDocValues in, int maxDoc) {
-      this.in = in;
-      this.maxDoc = maxDoc;
-    }
-    
-    @Override
-    public boolean get(int index) {
-      in.setDocument(index);
-      return in.nextOrd() != SortedSetDocValues.NO_MORE_ORDS;
-    }
-
-    @Override
-    public int length() {
-      return maxDoc;
-    }
-  }
+  public abstract void checkIntegrity() throws IOException;
 }

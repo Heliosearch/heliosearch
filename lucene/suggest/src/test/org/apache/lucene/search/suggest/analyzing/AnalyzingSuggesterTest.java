@@ -921,7 +921,7 @@ public class AnalyzingSuggesterTest extends LuceneTestCase {
     assertEquals(3, results.get(2).value);
 
     // Try again after save/load:
-    File tmpDir = TestUtil.getTempDir("AnalyzingSuggesterTest");
+    File tmpDir = createTempDir("AnalyzingSuggesterTest");
     tmpDir.mkdir();
 
     File path = new File(tmpDir, "suggester");
@@ -983,7 +983,7 @@ public class AnalyzingSuggesterTest extends LuceneTestCase {
     assertEquals(5, results.get(1).value);
 
     // Try again after save/load:
-    File tmpDir = TestUtil.getTempDir("AnalyzingSuggesterTest");
+    File tmpDir = createTempDir("AnalyzingSuggesterTest");
     tmpDir.mkdir();
 
     File path = new File(tmpDir, "suggester");
@@ -1053,7 +1053,7 @@ public class AnalyzingSuggesterTest extends LuceneTestCase {
     assertEquals(5, results.get(1).value);
 
     // Try again after save/load:
-    File tmpDir = TestUtil.getTempDir("AnalyzingSuggesterTest");
+    File tmpDir = createTempDir("AnalyzingSuggesterTest");
     tmpDir.mkdir();
 
     File path = new File(tmpDir, "suggester");
@@ -1192,9 +1192,9 @@ public class AnalyzingSuggesterTest extends LuceneTestCase {
     }
   }
 
-  public final <T> Iterable<T> shuffle(T...values) {
-    final List<T> asList = new ArrayList<>(values.length);
-    for (T value : values) {
+  static final Iterable<Input> shuffle(Input...values) {
+    final List<Input> asList = new ArrayList<>(values.length);
+    for (Input value : values) {
       asList.add(value);
     }
     Collections.shuffle(asList, random());

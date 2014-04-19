@@ -18,6 +18,7 @@ package org.apache.lucene.index;
  */
 
 import org.apache.lucene.util.*;
+import org.apache.lucene.util.LuceneTestCase.Monster;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.store.*;
 import org.apache.lucene.search.*;
@@ -51,14 +52,15 @@ import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 // disk (but, should run successfully).  Best to run w/
 // -Dtests.codec=Standard, and w/ plenty of RAM, eg:
 //
-//   ant test -Dtest.slow=true -Dtests.heapsize=8g
+//   ant test -Dtests.monster=true -Dtests.heapsize=8g
 //
 //   java -server -Xmx8g -d64 -cp .:lib/junit-4.10.jar:./build/classes/test:./build/classes/test-framework:./build/classes/java -Dlucene.version=4.0-dev -Dtests.directory=MMapDirectory -DtempDir=build -ea org.junit.runner.JUnitCore org.apache.lucene.index.Test2BTerms
 //
 @SuppressCodecs({ "SimpleText", "Memory", "Direct" })
+@Monster("very slow, use 8g heap")
 public class Test2BTerms extends LuceneTestCase {
 
-  private final static int TOKEN_LEN = 10;
+  private final static int TOKEN_LEN = 5;
 
   private final static BytesRef bytes = new BytesRef(TOKEN_LEN);
 
@@ -68,6 +70,7 @@ public class Test2BTerms extends LuceneTestCase {
     private int tokenCount;
     public final List<BytesRef> savedTerms = new ArrayList<>();
     private int nextSave;
+    private long termCounter;
     private final Random random;
 
     public MyTokenStream(Random random, int tokensPerDoc) {
@@ -81,10 +84,16 @@ public class Test2BTerms extends LuceneTestCase {
     
     @Override
     public boolean incrementToken() {
+      clearAttributes();
       if (tokenCount >= tokensPerDoc) {
         return false;
       }
-      random.nextBytes(bytes.bytes);
+      int shift = 32;
+      for(int i=0;i<5;i++) {
+        bytes.bytes[i] = (byte) ((termCounter >> shift) & 0xFF);
+        shift -= 8;
+      }
+      termCounter++;
       tokenCount++;
       if (--nextSave == 0) {
         savedTerms.add(BytesRef.deepCopyOf(bytes));
@@ -101,8 +110,8 @@ public class Test2BTerms extends LuceneTestCase {
 
     private final static class MyTermAttributeImpl extends AttributeImpl implements TermToBytesRefAttribute {
       @Override
-      public int fillBytesRef() {
-        return bytes.hashCode();
+      public void fillBytesRef() {
+        // no-op: the bytes was already filled by our owner's incrementToken
       }
       
       @Override
@@ -152,7 +161,6 @@ public class Test2BTerms extends LuceneTestCase {
     }
   }
 
-  @Ignore("Very slow. Enable manually by removing @Ignore.")
   public void test2BTerms() throws IOException {
 
     if ("Lucene3x".equals(Codec.getDefault().getName())) {
@@ -165,7 +173,7 @@ public class Test2BTerms extends LuceneTestCase {
 
     List<BytesRef> savedTerms = null;
 
-    BaseDirectoryWrapper dir = newFSDirectory(TestUtil.getTempDir("2BTerms"));
+    BaseDirectoryWrapper dir = newFSDirectory(createTempDir("2BTerms"));
     //MockDirectoryWrapper dir = newFSDirectory(new File("/p/lucene/indices/2bindex"));
     if (dir instanceof MockDirectoryWrapper) {
       ((MockDirectoryWrapper)dir).setThrottling(MockDirectoryWrapper.Throttling.NEVER);

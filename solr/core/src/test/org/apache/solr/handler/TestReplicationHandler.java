@@ -28,11 +28,12 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Set;
-import java.util.Date;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -44,6 +45,7 @@ import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.SimpleFSDirectory;
+import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.LuceneTestCase.Slow;
 import org.apache.solr.BaseDistributedSearchTestCase;
 import org.apache.solr.SolrTestCaseJ4;
@@ -52,16 +54,16 @@ import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.JettySolrRunner;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
-import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.client.solrj.request.QueryRequest;
+import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.UpdateResponse;
-import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
+import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.params.ModifiableSolrParams;
+import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.core.CachingDirectoryFactory;
@@ -74,7 +76,6 @@ import org.apache.solr.util.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -143,6 +144,8 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     slave.tearDown();
     masterJetty = slaveJetty = null;
     master = slave = null;
+    masterClient.shutdown();
+    slaveClient.shutdown();
     masterClient = slaveClient = null;
   }
 
@@ -344,6 +347,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
       try { 
         if (repeater != null) repeater.tearDown();
       } catch (Exception e) { /* :NOOP: */ }
+      if (repeaterClient != null) repeaterClient.shutdown();
     }
   }
 
@@ -536,6 +540,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     masterJetty.stop();
 
     masterJetty = createJetty(master);
+    masterClient.shutdown();
     masterClient = createNewSolrServer(masterJetty.getLocalPort());
 
     slave.setTestPort(masterJetty.getLocalPort());
@@ -554,6 +559,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     assertFalse(slaveXsltDir.exists());
 
     slaveJetty = createJetty(slave);
+    slaveClient.shutdown();
     slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
 
     //add a doc with new field and commit on master to trigger snappull from slave.
@@ -631,6 +637,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     slave.copyConfigFile(CONF_DIR + "solrconfig-slave1.xml", "solrconfig.xml");
     slaveJetty.stop();
     slaveJetty = createJetty(slave);
+    slaveClient.shutdown();
     slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
 
     masterClient.deleteByQuery("*:*");
@@ -778,12 +785,14 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
       slave.copyConfigFile(CONF_DIR +slaveSchema, "schema.xml");
       slaveJetty.stop();
       slaveJetty = createJetty(slave);
+      slaveClient.shutdown();
       slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
 
       master.copyConfigFile(CONF_DIR + "solrconfig-master3.xml",
           "solrconfig.xml");
       masterJetty.stop();
       masterJetty = createJetty(master);
+      masterClient.shutdown();
       masterClient = createNewSolrServer(masterJetty.getLocalPort());
       
       masterClient.deleteByQuery("*:*");
@@ -898,6 +907,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     slave.copyConfigFile(CONF_DIR + "solrconfig-slave1.xml", "solrconfig.xml");
     slaveJetty.stop();
     slaveJetty = createJetty(slave);
+    slaveClient.shutdown();
     slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
 
     try {
@@ -906,6 +916,9 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
       repeater.copyConfigFile(CONF_DIR + "solrconfig-repeater.xml",
           "solrconfig.xml");
       repeaterJetty = createJetty(repeater);
+      if (repeaterClient != null) {
+        repeaterClient.shutdown();
+      }
       repeaterClient = createNewSolrServer(repeaterJetty.getLocalPort());
       
       for (int i = 0; i < 3; i++)
@@ -1039,6 +1052,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     masterJetty.stop();
 
     masterJetty = createJetty(master);
+    masterClient.shutdown();
     masterClient = createNewSolrServer(masterJetty.getLocalPort());
     
     for (int i = 0; i < nDocs; i++)
@@ -1056,6 +1070,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
 
     //start slave
     slaveJetty = createJetty(slave);
+    slaveClient.shutdown();
     slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
 
     //get docs from slave and check if number is equal to master
@@ -1089,6 +1104,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
       masterJetty.stop();
       
       masterJetty = createJetty(master);
+      masterClient.shutdown();
       masterClient = createNewSolrServer(masterJetty.getLocalPort());
       
       for (int i = 0; i < nDocs; i++)
@@ -1114,6 +1130,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
       
       // start slave
       slaveJetty = createJetty(slave);
+      slaveClient.shutdown();
       slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
       
       // get docs from slave and check if number is equal to master
@@ -1147,6 +1164,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     masterJetty.stop();
 
     masterJetty = createJetty(master);
+    masterClient.shutdown();
     masterClient = createNewSolrServer(masterJetty.getLocalPort());
 
     masterClient.deleteByQuery("*:*");
@@ -1164,6 +1182,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
 
     //start slave
     slaveJetty = createJetty(slave);
+    slaveClient.shutdown();
     slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
     
     //get docs from slave and check if number is equal to master
@@ -1244,6 +1263,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
     masterJetty.stop();
 
     masterJetty = createJetty(master);
+    masterClient.shutdown();
     masterClient = createNewSolrServer(masterJetty.getLocalPort());
 
     slave.setTestPort(masterJetty.getLocalPort());
@@ -1251,6 +1271,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
 
     slaveJetty.stop();
     slaveJetty = createJetty(slave);
+    slaveClient.shutdown();
     slaveClient = createNewSolrServer(slaveJetty.getLocalPort());
 
     slaveClient.deleteByQuery("*:*");
@@ -1304,6 +1325,7 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
                           "solrconfig.xml");
 
     masterJetty = createJetty(master);
+    masterClient.shutdown();
     masterClient = createNewSolrServer(masterJetty.getLocalPort());
 
     nDocs--;
@@ -1452,8 +1474,8 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
    * character copy of file using UTF-8. If port is non-null, will be substituted any time "TEST_PORT" is found.
    */
   private static void copyFile(File src, File dst, Integer port, boolean internalCompression) throws IOException {
-    BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(src), "UTF-8"));
-    Writer out = new OutputStreamWriter(new FileOutputStream(dst), "UTF-8");
+    BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(src), StandardCharsets.UTF_8));
+    Writer out = new OutputStreamWriter(new FileOutputStream(dst), StandardCharsets.UTF_8);
 
     for (String line = in.readLine(); null != line; line = in.readLine()) {
 
@@ -1574,10 +1596,9 @@ public class TestReplicationHandler extends SolrTestCaseJ4 {
       System.setProperty("solr.test.sys.prop1", "propone");
       System.setProperty("solr.test.sys.prop2", "proptwo");
 
-      File home = new File(TEMP_DIR, 
+      File home = new File(dataDir, 
                            getClass().getName() + "-" + 
                            System.currentTimeMillis());
-                           
 
       homeDir = new File(home, name);
       dataDir = new File(homeDir + "/collection1", "data");

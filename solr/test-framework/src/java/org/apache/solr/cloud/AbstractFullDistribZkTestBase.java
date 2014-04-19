@@ -284,8 +284,7 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     // System.clearProperty(ZkStateReader.NUM_SHARDS_PROP);
     System.setProperty(ZkStateReader.NUM_SHARDS_PROP, "1");
 
-    File controlJettyDir = new File(TEMP_DIR,
-            getClass().getName() + "-controljetty-" + System.currentTimeMillis());
+    File controlJettyDir = createTempDir();
     setupJettySolrHome(controlJettyDir);
 
     controlJetty = createJetty(controlJettyDir, testDir + "/control/data");  // don't pass shard name... let it default to "shard1"
@@ -361,8 +360,9 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     for (int i = 1; i <= numJettys; i++) {
       if (sb.length() > 0) sb.append(',');
       int cnt = this.jettyIntCntr.incrementAndGet();
-      File jettyDir = new File(TEMP_DIR,
-          getClass().getName() + "-jetty" + cnt + "-" + System.currentTimeMillis());
+
+      File jettyDir = createTempDir();
+
       jettyDir.mkdirs();
       setupJettySolrHome(jettyDir);
       log.info("create jetty " + i); 
@@ -418,7 +418,6 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
 
 
   protected SolrServer startCloudJetty(String collection, String shard) throws Exception {
-
     // TODO: use the collection string!!!!
     collection = DEFAULT_COLLECTION;
 
@@ -426,8 +425,8 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
 
 
     int cnt = this.jettyIntCntr.incrementAndGet();
-      File jettyDir = new File(TEMP_DIR,
-          getClass().getName() + "-jetty" + cnt + "-" + System.currentTimeMillis());
+
+      File jettyDir = createTempDir("jetty");
       jettyDir.mkdirs();
       org.apache.commons.io.FileUtils.copyDirectory(new File(getSolrHome()), jettyDir);
       JettySolrRunner j = createJetty(jettyDir, testDir + "/jetty" + cnt, shard, "solrconfig.xml", null);
@@ -1138,27 +1137,23 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     Set<SolrDocument> onlyInB = new HashSet<>(setB);
     onlyInB.removeAll(setA);
 
-    if (onlyInA.size() > 0) {
-      for (SolrDocument doc : onlyInA) {
-        if (!addFails.contains(doc.getFirstValue("id"))) {
-          legal = false;
-        } else {
-          System.err.println("###### Only in " + aName + ": " + onlyInA
-              + ", but this is expected because we found an add fail for "
-              + doc.getFirstValue("id"));
-        }
+    for (SolrDocument doc : onlyInA) {
+      if (!addFails.contains(doc.getFirstValue("id"))) {
+        legal = false;
+      } else {
+        System.err.println("###### Only in " + aName + ": " + onlyInA
+            + ", but this is expected because we found an add fail for "
+            + doc.getFirstValue("id"));
       }
-      
     }
-    if (onlyInB.size() > 0) {
-      for (SolrDocument doc : onlyInB) {
-        if (!deleteFails.contains(doc.getFirstValue("id"))) {
-          legal = false;
-        } else {
-          System.err.println("###### Only in " + bName + ": " + onlyInB
-              + ", but this is expected because we found a delete fail for "
-              + doc.getFirstValue("id"));
-        }
+      
+    for (SolrDocument doc : onlyInB) {
+      if (!deleteFails.contains(doc.getFirstValue("id"))) {
+        legal = false;
+      } else {
+        System.err.println("###### Only in " + bName + ": " + onlyInB
+            + ", but this is expected because we found a delete fail for "
+            + doc.getFirstValue("id"));
       }
     }
     
@@ -1294,7 +1289,6 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
   
   protected boolean compareResults(long controlDocs, long cloudClientDocs, Set<String> addFails, Set<String> deleteFails)
       throws SolrServerException {
-    boolean shouldFail = false;
     SolrParams q;
     SolrDocumentList controlDocList;
     SolrDocumentList cloudDocList;
@@ -1343,7 +1337,7 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
       log.error("controlClient :" + a + "\n\tcloudClient :" + b);
     }
     
-    return shouldFail;
+    return true;
   }
   
   protected SolrServer getClient(String nodeName) {
@@ -1510,7 +1504,43 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
       }
       
       if (failMessage != null) {
-        retry  = true;
+        log.info("shard inconsistency - waiting ...");
+        retry = true;
+      } else {
+        retry = false;
+      }
+      cnt++;
+      if (cnt > 20) break;
+      Thread.sleep(2000);
+    } while (retry);
+  }
+  
+  
+  public void waitForNoShardInconsistency() throws Exception {
+    log.info("Wait for no shard inconsistency");
+    int cnt = 0;
+    boolean retry = false;
+    do {
+      try {
+        commit();
+      } catch (Throwable t) {
+        t.printStackTrace();
+        // we don't care if this commit fails on some nodes
+      }
+      
+      updateMappingsFromZk(jettys, clients);
+      
+      Set<String> theShards = shardToJetty.keySet();
+      String failMessage = null;
+      for (String shard : theShards) {
+        failMessage = checkShardConsistency(shard, true, false);
+      }
+      
+      if (failMessage != null) {
+        log.info("shard inconsistency - waiting ...");
+        retry = true;
+      } else {
+        retry = false;
       }
       cnt++;
       if (cnt > 20) break;
@@ -1619,8 +1649,12 @@ public abstract class AbstractFullDistribZkTestBase extends AbstractDistribZkTes
     CollectionAdminResponse res = new CollectionAdminResponse();
     if (client == null) {
       final String baseUrl = getBaseUrl((HttpSolrServer) clients.get(clientIndex));
-
-      res.setResponse(createNewSolrServer("", baseUrl).request(request));
+      SolrServer server = createNewSolrServer("", baseUrl);
+      try {
+        res.setResponse(server.request(request));
+      } finally {
+        if (server != null) server.shutdown();
+      }
     } else {
       res.setResponse(client.request(request));
     }

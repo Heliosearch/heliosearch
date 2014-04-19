@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -1684,7 +1685,7 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
       } catch (CorruptIndexException ex) {
         // Exceptions are fine - we are running out of file handlers here
         continue;
-      } catch (FileNotFoundException ex) {
+      } catch (FileNotFoundException | NoSuchFileException ex) {
         continue;
       }
       failure.clearDoFail();
@@ -1789,6 +1790,8 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
         if (defaultCodecSupportsDocValues()) {
           doc.add(new NumericDocValuesField("f", 1L));
           doc.add(new NumericDocValuesField("cf", 2L));
+          doc.add(new BinaryDocValuesField("bf", TestBinaryDocValuesUpdates.toBytes(1L)));
+          doc.add(new BinaryDocValuesField("bcf", TestBinaryDocValuesUpdates.toBytes(2L)));
         }
         w.addDocument(doc);
       }
@@ -1814,8 +1817,18 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
               if (VERBOSE) {
                 System.out.println("  update id=" + (docBase+i) + " to value " + value);
               }
-              w.updateNumericDocValue(new Term("id", Integer.toString(docBase + i)), "f", value);
-              w.updateNumericDocValue(new Term("id", Integer.toString(docBase + i)), "cf", value * 2);
+              if (random().nextBoolean()) { // update only numeric field
+                w.updateNumericDocValue(new Term("id", Integer.toString(docBase + i)), "f", value);
+                w.updateNumericDocValue(new Term("id", Integer.toString(docBase + i)), "cf", value * 2);
+              } else if (random().nextBoolean()) {
+                w.updateBinaryDocValue(new Term("id", Integer.toString(docBase + i)), "bf", TestBinaryDocValuesUpdates.toBytes(value));
+                w.updateBinaryDocValue(new Term("id", Integer.toString(docBase + i)), "bcf", TestBinaryDocValuesUpdates.toBytes(value * 2));
+              } else {
+                w.updateNumericDocValue(new Term("id", Integer.toString(docBase + i)), "f", value);
+                w.updateNumericDocValue(new Term("id", Integer.toString(docBase + i)), "cf", value * 2);
+                w.updateBinaryDocValue(new Term("id", Integer.toString(docBase + i)), "bf", TestBinaryDocValuesUpdates.toBytes(value));
+                w.updateBinaryDocValue(new Term("id", Integer.toString(docBase + i)), "bcf", TestBinaryDocValuesUpdates.toBytes(value * 2));
+              }
             }
             
             // sometimes do both deletes and updates
@@ -1890,13 +1903,18 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
       }
       assertEquals(docCount-deleteCount, r.numDocs());
       if (defaultCodecSupportsDocValues()) {
+        BytesRef scratch = new BytesRef();
         for (AtomicReaderContext context : r.leaves()) {
-          Bits liveDocs = context.reader().getLiveDocs();
-          NumericDocValues f = context.reader().getNumericDocValues("f");
-          NumericDocValues cf = context.reader().getNumericDocValues("cf");
-          for (int i = 0; i < context.reader().maxDoc(); i++) {
+          AtomicReader reader = context.reader();
+          Bits liveDocs = reader.getLiveDocs();
+          NumericDocValues f = reader.getNumericDocValues("f");
+          NumericDocValues cf = reader.getNumericDocValues("cf");
+          BinaryDocValues bf = reader.getBinaryDocValues("bf");
+          BinaryDocValues bcf = reader.getBinaryDocValues("bcf");
+          for (int i = 0; i < reader.maxDoc(); i++) {
             if (liveDocs == null || liveDocs.get(i)) {
               assertEquals("doc=" + (docBase + i), cf.get(i), f.get(i) * 2);
+              assertEquals("doc=" + (docBase + i), TestBinaryDocValuesUpdates.getValue(bcf, i, scratch), TestBinaryDocValuesUpdates.getValue(bf, i, scratch) * 2);
             }
           }
         }
@@ -1927,5 +1945,135 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
 
     dir.close();
   }
+  
+  public void testExceptionDuringRollback() throws Exception {
+    // currently: fail in two different places
+    final String messageToFailOn = random().nextBoolean() ? 
+        "rollback: done finish merges" : "rollback before checkpoint";
+    
+    // infostream that throws exception during rollback
+    InfoStream evilInfoStream = new InfoStream() {
+      @Override
+      public void message(String component, String message) {
+        if (messageToFailOn.equals(message)) {
+          throw new RuntimeException("BOOM!");
+        }
+      }
 
+      @Override
+      public boolean isEnabled(String component) {
+        return true;
+      }
+      
+      @Override
+      public void close() throws IOException {}
+    };
+    
+    Directory dir = newMockDirectory(); // we want to ensure we don't leak any locks or file handles
+    IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
+    iwc.setInfoStream(evilInfoStream);
+    IndexWriter iw = new IndexWriter(dir, iwc);
+    Document doc = new Document();
+    for (int i = 0; i < 10; i++) {
+      iw.addDocument(doc);
+    }
+    iw.commit();
+
+    iw.addDocument(doc);
+    
+    // pool readers
+    DirectoryReader r = DirectoryReader.open(iw, false);
+
+    // sometimes sneak in a pending commit: we don't want to leak a file handle to that segments_N
+    if (random().nextBoolean()) {
+      iw.prepareCommit();
+    }
+    
+    try {
+      iw.rollback();
+      fail();
+    } catch (RuntimeException expected) {
+      assertEquals("BOOM!", expected.getMessage());
+    }
+    
+    r.close();
+    
+    // even though we hit exception: we are closed, no locks or files held, index in good state
+    assertTrue(iw.isClosed());
+    assertFalse(IndexWriter.isLocked(dir));
+    
+    r = DirectoryReader.open(dir);
+    assertEquals(10, r.maxDoc());
+    r.close();
+    
+    // no leaks
+    dir.close();
+  }
+  
+  public void testRandomExceptionDuringRollback() throws Exception {
+    // fail in random places on i/o
+    final int numIters = RANDOM_MULTIPLIER * 75;
+    for (int iter = 0; iter < numIters; iter++) {
+      MockDirectoryWrapper dir = newMockDirectory();
+      dir.failOn(new MockDirectoryWrapper.Failure() {
+        
+        @Override
+        public void eval(MockDirectoryWrapper dir) throws IOException {
+          boolean maybeFail = false;
+          StackTraceElement[] trace = new Exception().getStackTrace();
+          
+          for (int i = 0; i < trace.length; i++) {
+            if ("rollbackInternal".equals(trace[i].getMethodName())) {
+              maybeFail = true;
+              break;
+            }
+          }
+          
+          if (maybeFail && random().nextInt(10) == 0) {
+            if (VERBOSE) {
+              System.out.println("TEST: now fail; thread=" + Thread.currentThread().getName() + " exc:");
+              new Throwable().printStackTrace(System.out);
+            }
+            throw new FakeIOException();
+          }
+        }
+      });
+      
+      IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
+      IndexWriter iw = new IndexWriter(dir, iwc);
+      Document doc = new Document();
+      for (int i = 0; i < 10; i++) {
+        iw.addDocument(doc);
+      }
+      iw.commit();
+      
+      iw.addDocument(doc);
+      
+      // pool readers
+      DirectoryReader r = DirectoryReader.open(iw, false);
+      
+      // sometimes sneak in a pending commit: we don't want to leak a file handle to that segments_N
+      if (random().nextBoolean()) {
+        iw.prepareCommit();
+      }
+      
+      try {
+        iw.rollback();
+      } catch (FakeIOException expected) {
+      }
+      
+      r.close();
+      
+      // even though we hit exception: we are closed, no locks or files held, index in good state
+      assertTrue(iw.isClosed());
+      assertFalse(IndexWriter.isLocked(dir));
+      
+      r = DirectoryReader.open(dir);
+      assertEquals(10, r.maxDoc());
+      r.close();
+      
+      // no leaks
+      dir.close();
+    }
+  }
 }

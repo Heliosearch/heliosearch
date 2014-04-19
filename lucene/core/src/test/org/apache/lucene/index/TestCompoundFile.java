@@ -42,7 +42,7 @@ public class TestCompoundFile extends LuceneTestCase
     @Override
     public void setUp() throws Exception {
        super.setUp();
-       File file = TestUtil.getTempDir("testIndex");
+       File file = createTempDir("testIndex");
        // use a simple FSDir here, to be sure to have SimpleFSInputs
        dir = new SimpleFSDirectory(file,null);
     }
@@ -682,12 +682,6 @@ public class TestCompoundFile extends LuceneTestCase
     createSequenceFile(newDir, "d1", (byte) 0, 15);
     IndexOutput out = csw.createOutput("d.xyz", newIOContext(random()));
     out.writeInt(0);
-    try {
-      newDir.copy(csw, "d1", "d1", newIOContext(random()));
-      fail("file does already exist");
-    } catch (IllegalArgumentException e) {
-      //
-    }
     out.close();
     assertEquals(1, csw.listAll().length);
     assertEquals("d.xyz", csw.listAll()[0]);
@@ -775,7 +769,7 @@ public class TestCompoundFile extends LuceneTestCase
   // when reading a CFS with many subs:
   public void testManySubFiles() throws IOException {
 
-    final Directory d = newFSDirectory(TestUtil.getTempDir("CFSManySubFiles"));
+    final Directory d = newFSDirectory(createTempDir("CFSManySubFiles"));
     final int FILE_COUNT = atLeast(500);
 
     for(int fileIdx=0;fileIdx<FILE_COUNT;fileIdx++) {

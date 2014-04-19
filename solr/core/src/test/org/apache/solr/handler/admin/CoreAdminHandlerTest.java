@@ -17,7 +17,9 @@
 
 package org.apache.solr.handler.admin;
 
-import com.carrotsearch.randomizedtesting.rules.SystemPropertiesRestoreRule;
+import java.io.File;
+import java.util.Map;
+
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.solr.SolrTestCaseJ4;
@@ -39,8 +41,7 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
-import java.io.File;
-import java.util.Map;
+import com.carrotsearch.randomizedtesting.rules.SystemPropertiesRestoreRule;
 
 public class CoreAdminHandlerTest extends SolrTestCaseJ4 {
   
@@ -58,12 +59,8 @@ public class CoreAdminHandlerTest extends SolrTestCaseJ4 {
   public void testCreateWithSysVars() throws Exception {
     useFactory(null); // I require FS-based indexes for this test.
 
-    final File workDir = new File(TEMP_DIR, getCoreName());
+    final File workDir = createTempDir(getCoreName());
 
-    if (workDir.exists()) {
-      FileUtils.deleteDirectory(workDir);
-    }
-    assertTrue("Failed to mkdirs workDir", workDir.mkdirs());
     String coreName = "with_sys_vars";
     File instDir = new File(workDir, coreName);
     File subHome = new File(instDir, "conf");
@@ -125,34 +122,20 @@ public class CoreAdminHandlerTest extends SolrTestCaseJ4 {
     assertTrue("Should have found index dir at " + test.getAbsolutePath(), test.exists());
     test = new File(test,"segments.gen");
     assertTrue("Should have found segments.gen at " + test.getAbsolutePath(), test.exists());
-
-    // Cleanup
-    FileUtils.deleteDirectory(workDir);
-
   }
 
   @Test
   public void testCoreAdminHandler() throws Exception {
-    final File workDir = new File(TEMP_DIR, this.getClass().getName());
-
-    if (workDir.exists()) {
-      FileUtils.deleteDirectory(workDir);
-    }
-    assertTrue("Failed to mkdirs workDir", workDir.mkdirs());
+    final File workDir = createTempDir();
     
     final CoreContainer cores = h.getCoreContainer();
 
     final CoreAdminHandler admin = new CoreAdminHandler(cores);
 
-    String instDir = null;
-    {
-      SolrCore template = null;
-      try {
-        template = cores.getCore("collection1");
-        instDir = template.getCoreDescriptor().getInstanceDir();
-      } finally {
-        if (null != template) template.close();
-      }
+    String instDir;
+    try (SolrCore template = cores.getCore("collection1")) {
+      assertNotNull(template);
+      instDir = template.getCoreDescriptor().getInstanceDir();
     }
     
     final File instDirFile = new File(instDir);
@@ -222,14 +205,11 @@ public class CoreAdminHandlerTest extends SolrTestCaseJ4 {
                
     // :TODO: because of SOLR-3665 we can't ask for status from all cores
 
-    // cleanup
-    FileUtils.deleteDirectory(workDir);
-
   }
 
   @Test
   public void testDeleteInstanceDir() throws Exception  {
-    File solrHomeDirectory = new File(TEMP_DIR, getClass().getName() + "-corex-"
+    File solrHomeDirectory = new File(initCoreDataDir, getClass().getName() + "-corex-"
         + System.currentTimeMillis());
     solrHomeDirectory.mkdirs();
     copySolrHomeToTemp(solrHomeDirectory, "corex", true);
@@ -270,7 +250,6 @@ public class CoreAdminHandlerTest extends SolrTestCaseJ4 {
       if (!runner.isStopped())  {
         runner.stop();
       }
-      recurseDelete(solrHomeDirectory);
     }
   }
 

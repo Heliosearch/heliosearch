@@ -50,6 +50,7 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -206,32 +207,16 @@ public class Dictionary {
     return lookup(words, word, offset, length);
   }
 
-  /**
-   * Looks up HunspellAffix prefixes that have an append that matches the String created from the given char array, offset and length
-   *
-   * @param word Char array to generate the String from
-   * @param offset Offset in the char array that the String starts at
-   * @param length Length from the offset that the String is
-   * @return List of HunspellAffix prefixes with an append that matches the String, or {@code null} if none are found
-   */
+  // only for testing
   IntsRef lookupPrefix(char word[], int offset, int length) {
     return lookup(prefixes, word, offset, length);
   }
 
-  /**
-   * Looks up HunspellAffix suffixes that have an append that matches the String created from the given char array, offset and length
-   *
-   * @param word Char array to generate the String from
-   * @param offset Offset in the char array that the String starts at
-   * @param length Length from the offset that the String is
-   * @return List of HunspellAffix suffixes with an append that matches the String, or {@code null} if none are found
-   */
+  // only for testing
   IntsRef lookupSuffix(char word[], int offset, int length) {
     return lookup(suffixes, word, offset, length);
   }
   
-  // TODO: this is pretty stupid, considering how the stemming algorithm works
-  // we can speed it up to be significantly faster!
   IntsRef lookup(FST<IntsRef> fst, char word[], int offset, int length) {
     if (fst == null) {
       return null;
@@ -395,6 +380,7 @@ public class Dictionary {
     String args[] = header.split("\\s+");
 
     boolean crossProduct = args[2].equals("Y");
+    boolean isSuffix = conditionPattern == SUFFIX_CONDITION_REGEX_PATTERN;
     
     int numLines = Integer.parseInt(args[3]);
     affixData = ArrayUtil.grow(affixData, (currentAffix << 3) + (numLines << 3));
@@ -478,8 +464,8 @@ public class Dictionary {
         appendFlags = NOFLAGS;
       }
       
-      final int hashCode = encodeFlagsWithHash(scratch, appendFlags);
-      int appendFlagsOrd = flagLookup.add(scratch, hashCode);
+      encodeFlags(scratch, appendFlags);
+      int appendFlagsOrd = flagLookup.add(scratch);
       if (appendFlagsOrd < 0) {
         // already exists in our hash
         appendFlagsOrd = (-appendFlagsOrd)-1;
@@ -498,6 +484,10 @@ public class Dictionary {
       if (needsInputCleaning) {
         CharSequence cleaned = cleanInput(affixArg, sb);
         affixArg = cleaned.toString();
+      }
+      
+      if (isSuffix) {
+        affixArg = new StringBuilder(affixArg).reverse().toString();
       }
       
       List<Character> list = affixes.get(affixArg);
@@ -674,7 +664,7 @@ public class Dictionary {
             int flagSep = line.lastIndexOf(FLAG_SEPARATOR);
             if (flagSep == -1) {
               CharSequence cleansed = cleanInput(line, sb);
-              writer.write(cleansed.toString().getBytes(IOUtils.CHARSET_UTF_8));
+              writer.write(cleansed.toString().getBytes(StandardCharsets.UTF_8));
             } else {
               String text = line.substring(0, flagSep);
               CharSequence cleansed = cleanInput(text, sb);
@@ -683,10 +673,10 @@ public class Dictionary {
                 sb.append(cleansed);
               }
               sb.append(line.substring(flagSep));
-              writer.write(sb.toString().getBytes(IOUtils.CHARSET_UTF_8));
+              writer.write(sb.toString().getBytes(StandardCharsets.UTF_8));
             }
           } else {
-            writer.write(line.getBytes(IOUtils.CHARSET_UTF_8));
+            writer.write(line.getBytes(StandardCharsets.UTF_8));
           }
         }
       }
@@ -784,8 +774,8 @@ public class Dictionary {
       if (cmp < 0) {
         throw new IllegalArgumentException("out of order: " + entry + " < " + currentEntry);
       } else {
-        final int hashCode = encodeFlagsWithHash(flagsScratch, wordForm);
-        int ord = flagLookup.add(flagsScratch, hashCode);
+        encodeFlags(flagsScratch, wordForm);
+        int ord = flagLookup.add(flagsScratch);
         if (ord < 0) {
           // already exists in our hash
           ord = (-ord)-1;
@@ -827,18 +817,16 @@ public class Dictionary {
     return flags;
   }
   
-  static int encodeFlagsWithHash(BytesRef b, char flags[]) {
-    int hash = 0;
+  static void encodeFlags(BytesRef b, char flags[]) {
     int len = flags.length << 1;
     b.grow(len);
     b.length = len;
     int upto = b.offset;
     for (int i = 0; i < flags.length; i++) {
       int flag = flags[i];
-      hash = 31*hash + (b.bytes[upto++] = (byte) ((flag >> 8) & 0xff));
-      hash = 31*hash + (b.bytes[upto++] = (byte) (flag & 0xff));
+      b.bytes[upto++] = (byte) ((flag >> 8) & 0xff);
+      b.bytes[upto++] = (byte) (flag & 0xff);
     }
-    return hash;
   }
 
   private void parseAlias(String line) {

@@ -81,6 +81,16 @@ public class TrieDateField extends DateField implements DateValueFieldType {
     return wrappedField.toObject(sf, term);
   }
 
+  @Override
+  public Object marshalSortValue(Object value) {
+    return value;
+  }
+
+  @Override
+  public Object unmarshalSortValue(Object value) {
+    return value;
+  }
+
   /**
    * @return the precisionStep used to index values into the field
    */

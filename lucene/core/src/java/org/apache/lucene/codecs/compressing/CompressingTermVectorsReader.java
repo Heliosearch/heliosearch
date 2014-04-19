@@ -28,6 +28,7 @@ import static org.apache.lucene.codecs.compressing.CompressingTermVectorsWriter.
 import static org.apache.lucene.codecs.compressing.CompressingTermVectorsWriter.VECTORS_INDEX_EXTENSION;
 import static org.apache.lucene.codecs.compressing.CompressingTermVectorsWriter.VERSION_CURRENT;
 import static org.apache.lucene.codecs.compressing.CompressingTermVectorsWriter.VERSION_START;
+import static org.apache.lucene.codecs.compressing.CompressingTermVectorsWriter.VERSION_CHECKSUM;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -49,6 +50,7 @@ import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.ByteArrayDataInput;
+import org.apache.lucene.store.ChecksumIndexInput;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
@@ -71,6 +73,7 @@ public final class CompressingTermVectorsReader extends TermVectorsReader implem
   private final FieldInfos fieldInfos;
   final CompressingStoredFieldsIndexReader indexReader;
   final IndexInput vectorsStream;
+  private final int version;
   private final int packedIntsVersion;
   private final CompressionMode compressionMode;
   private final Decompressor decompressor;
@@ -90,6 +93,7 @@ public final class CompressingTermVectorsReader extends TermVectorsReader implem
     this.chunkSize = reader.chunkSize;
     this.numDocs = reader.numDocs;
     this.reader = new BlockPackedReaderIterator(vectorsStream, packedIntsVersion, BLOCK_SIZE, 0);
+    this.version = reader.version;
     this.closed = false;
   }
 
@@ -101,15 +105,22 @@ public final class CompressingTermVectorsReader extends TermVectorsReader implem
     boolean success = false;
     fieldInfos = fn;
     numDocs = si.getDocCount();
-    IndexInput indexStream = null;
+    ChecksumIndexInput indexStream = null;
     try {
       // Load the index into memory
       final String indexStreamFN = IndexFileNames.segmentFileName(segment, segmentSuffix, VECTORS_INDEX_EXTENSION);
-      indexStream = d.openInput(indexStreamFN, context);
+      indexStream = d.openChecksumInput(indexStreamFN, context);
       final String codecNameIdx = formatName + CODEC_SFX_IDX;
-      CodecUtil.checkHeader(indexStream, codecNameIdx, VERSION_START, VERSION_CURRENT);
+      version = CodecUtil.checkHeader(indexStream, codecNameIdx, VERSION_START, VERSION_CURRENT);
       assert CodecUtil.headerLength(codecNameIdx) == indexStream.getFilePointer();
       indexReader = new CompressingStoredFieldsIndexReader(indexStream, si);
+      
+      if (version >= VERSION_CHECKSUM) {
+        indexStream.readVLong(); // the end of the data file
+        CodecUtil.checkFooter(indexStream);
+      } else {
+        CodecUtil.checkEOF(indexStream);
+      }
       indexStream.close();
       indexStream = null;
 
@@ -117,7 +128,10 @@ public final class CompressingTermVectorsReader extends TermVectorsReader implem
       final String vectorsStreamFN = IndexFileNames.segmentFileName(segment, segmentSuffix, VECTORS_EXTENSION);
       vectorsStream = d.openInput(vectorsStreamFN, context);
       final String codecNameDat = formatName + CODEC_SFX_DAT;
-      CodecUtil.checkHeader(vectorsStream, codecNameDat, VERSION_START, VERSION_CURRENT);
+      int version2 = CodecUtil.checkHeader(vectorsStream, codecNameDat, VERSION_START, VERSION_CURRENT);
+      if (version != version2) {
+        throw new CorruptIndexException("Version mismatch between stored fields index and data: " + version + " != " + version2);
+      }
       assert CodecUtil.headerLength(codecNameDat) == vectorsStream.getFilePointer();
 
       packedIntsVersion = vectorsStream.readVInt();
@@ -143,6 +157,10 @@ public final class CompressingTermVectorsReader extends TermVectorsReader implem
 
   int getPackedIntsVersion() {
     return packedIntsVersion;
+  }
+  
+  int getVersion() {
+    return version;
   }
 
   CompressingStoredFieldsIndexReader getIndex() {
@@ -1050,6 +1068,13 @@ public final class CompressingTermVectorsReader extends TermVectorsReader implem
   @Override
   public long ramBytesUsed() {
     return indexReader.ramBytesUsed();
+  }
+  
+  @Override
+  public void checkIntegrity() throws IOException {
+    if (version >= VERSION_CHECKSUM) {
+      CodecUtil.checksumEntireFile(vectorsStream);
+    }
   }
 
 }

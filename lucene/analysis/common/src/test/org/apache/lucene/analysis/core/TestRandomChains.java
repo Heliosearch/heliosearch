@@ -79,7 +79,6 @@ import org.apache.lucene.analysis.payloads.PayloadEncoder;
 import org.apache.lucene.analysis.snowball.TestSnowball;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.synonym.SynonymMap;
-import org.apache.lucene.analysis.th.ThaiWordFilter;
 import org.apache.lucene.analysis.util.CharArrayMap;
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.analysis.wikipedia.WikipediaTokenizer;
@@ -146,9 +145,7 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
           CachingTokenFilter.class,
           // Not broken: we forcefully add this, so we shouldn't
           // also randomly pick it:
-          ValidatingTokenFilter.class,
-          // broken!
-          WordDelimiterFilter.class)) {
+          ValidatingTokenFilter.class)) {
         for (Constructor<?> ctor : c.getConstructors()) {
           brokenConstructors.put(ctor, ALWAYS);
         }
@@ -169,15 +166,15 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
           // TODO: it seems to mess up offsets!?
           WikipediaTokenizer.class,
           // TODO: doesn't handle graph inputs
-          ThaiWordFilter.class,
-          // TODO: doesn't handle graph inputs
           CJKBigramFilter.class,
           // TODO: doesn't handle graph inputs (or even look at positionIncrement)
           HyphenatedWordsFilter.class,
           // TODO: LUCENE-4983
           CommonGramsFilter.class,
           // TODO: doesn't handle graph inputs
-          CommonGramsQueryFilter.class)) {
+          CommonGramsQueryFilter.class,
+          // TODO: probably doesnt handle graph inputs, too afraid to try
+          WordDelimiterFilter.class)) {
         for (Constructor<?> ctor : c.getConstructors()) {
           brokenOffsetsConstructors.put(ctor, ALWAYS);
         }
@@ -307,7 +304,7 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
         // TODO: could cause huge ram usage to use full int range for some filters
         // (e.g. allocate enormous arrays)
         // return Integer.valueOf(random.nextInt());
-        return Integer.valueOf(TestUtil.nextInt(random, -100, 100));
+        return Integer.valueOf(TestUtil.nextInt(random, -50, 50));
       }
     });
     put(char.class, new ArgProducer() {
@@ -707,7 +704,7 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
         */
         descr.append("\n  ");
         descr.append(ctor.getDeclaringClass().getName());
-        String params = Arrays.toString(args);
+        String params = Arrays.deepToString(args);
         params = params.substring(1, params.length()-1);
         descr.append("(").append(params).append(")");
         return instance;
@@ -914,7 +911,7 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
   }
   
   public void testRandomChains() throws Throwable {
-    int numIterations = atLeast(10);
+    int numIterations = atLeast(20);
     Random random = random();
     for (int i = 0; i < numIterations; i++) {
       MockRandomAnalyzer a = new MockRandomAnalyzer(random.nextLong());
@@ -922,7 +919,26 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
         System.out.println("Creating random analyzer:" + a);
       }
       try {
-        checkRandomData(random, a, 200, 20, false,
+        checkRandomData(random, a, 500*RANDOM_MULTIPLIER, 20, false,
+                        false /* We already validate our own offsets... */);
+      } catch (Throwable e) {
+        System.err.println("Exception from random analyzer: " + a);
+        throw e;
+      }
+    }
+  }
+  
+  // we might regret this decision...
+  public void testRandomChainsWithLargeStrings() throws Throwable {
+    int numIterations = atLeast(20);
+    Random random = random();
+    for (int i = 0; i < numIterations; i++) {
+      MockRandomAnalyzer a = new MockRandomAnalyzer(random.nextLong());
+      if (VERBOSE) {
+        System.out.println("Creating random analyzer:" + a);
+      }
+      try {
+        checkRandomData(random, a, 50*RANDOM_MULTIPLIER, 80, false,
                         false /* We already validate our own offsets... */);
       } catch (Throwable e) {
         System.err.println("Exception from random analyzer: " + a);

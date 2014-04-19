@@ -17,7 +17,6 @@
 
 package org.apache.solr.cloud.hdfs;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -62,10 +61,7 @@ public class StressHdfsTest extends BasicDistributedZkTest {
   
   @BeforeClass
   public static void setupClass() throws Exception {
-
-    dfsCluster = HdfsTestUtil.setupClass(new File(TEMP_DIR,
-        HdfsBasicDistributedZk2Test.class.getName() + "_"
-            + System.currentTimeMillis()).getAbsolutePath());
+    dfsCluster = HdfsTestUtil.setupClass(createTempDir().getAbsolutePath());
     System.setProperty("solr.hdfs.home", dfsCluster.getURI().toString() + "/solr");
   }
   
@@ -100,28 +96,34 @@ public class StressHdfsTest extends BasicDistributedZkTest {
     }
 
     if (testRestartIntoSafeMode) {
-      createCollection(DELETE_DATA_DIR_COLLECTION, 1, 1, 1);
-      
-      waitForRecoveriesToFinish(DELETE_DATA_DIR_COLLECTION, false);
-      
-      ChaosMonkey.stop(jettys.get(0));
-      
-      // enter safe mode and restart a node
-      NameNodeAdapter.enterSafeMode(dfsCluster.getNameNode(), false);
-      
-      int rnd = LuceneTestCase.random().nextInt(10000);
       Timer timer = new Timer();
-      timer.schedule(new TimerTask() {
+      
+      try {
+        createCollection(DELETE_DATA_DIR_COLLECTION, 1, 1, 1);
         
-        @Override
-        public void run() {
-          NameNodeAdapter.leaveSafeMode(dfsCluster.getNameNode());
-        }
-      }, rnd);
-      
-      ChaosMonkey.start(jettys.get(0));
-      
-      waitForRecoveriesToFinish(DELETE_DATA_DIR_COLLECTION, false);
+        waitForRecoveriesToFinish(DELETE_DATA_DIR_COLLECTION, false);
+        
+        ChaosMonkey.stop(jettys.get(0));
+        
+        // enter safe mode and restart a node
+        NameNodeAdapter.enterSafeMode(dfsCluster.getNameNode(), false);
+        
+        int rnd = LuceneTestCase.random().nextInt(10000);
+        
+        timer.schedule(new TimerTask() {
+          
+          @Override
+          public void run() {
+            NameNodeAdapter.leaveSafeMode(dfsCluster.getNameNode());
+          }
+        }, rnd);
+        
+        ChaosMonkey.start(jettys.get(0));
+        
+        waitForRecoveriesToFinish(DELETE_DATA_DIR_COLLECTION, false);
+      } finally {
+        timer.cancel();
+      }
     }
   }
 
@@ -176,8 +178,7 @@ public class StressHdfsTest extends BasicDistributedZkTest {
         NamedList<Object> response = c.query(
             new SolrQuery().setRequestHandler("/admin/system")).getResponse();
         NamedList<Object> coreInfo = (NamedList<Object>) response.get("core");
-        String dataDir = (String) ((NamedList<Object>) coreInfo
-            .get("directory")).get("data");
+        String dataDir = (String) ((NamedList<Object>) coreInfo.get("directory")).get("data");
         dataDirs.add(dataDir);
       } finally {
         c.shutdown();

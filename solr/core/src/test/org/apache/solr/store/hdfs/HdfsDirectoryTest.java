@@ -17,7 +17,6 @@ package org.apache.solr.store.hdfs;
  * limitations under the License.
  */
 
-import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Random;
@@ -58,10 +57,7 @@ public class HdfsDirectoryTest extends SolrTestCaseJ4 {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
-    createTempDir();
-    dfsCluster = HdfsTestUtil.setupClass(TEMP_DIR.getAbsolutePath()
-        + File.separator + HdfsDirectoryTest.class.getName() + "_hdfsdir-"
-        + System.currentTimeMillis());
+    dfsCluster = HdfsTestUtil.setupClass(createTempDir().getAbsolutePath());
   }
   
   @AfterClass
@@ -77,7 +73,7 @@ public class HdfsDirectoryTest extends SolrTestCaseJ4 {
     Configuration conf = new Configuration();
     conf.set("dfs.permissions.enabled", "false");
     
-    directory = new HdfsDirectory(new Path(dfsCluster.getURI().toString() + dataDir.getAbsolutePath() + "/hdfs"), conf);
+    directory = new HdfsDirectory(new Path(dfsCluster.getURI().toString() + createTempDir().getAbsolutePath() + "/hdfs"), conf);
     
     random = random();
   }
@@ -118,10 +114,10 @@ public class HdfsDirectoryTest extends SolrTestCaseJ4 {
     assertEquals(12345, input1.readInt());
     input1.close();
 
-    assertFalse(directory.fileExists("testing.test.other"));
-    assertTrue(directory.fileExists("testing.test"));
+    assertFalse(slowFileExists(directory, "testing.test.other"));
+    assertTrue(slowFileExists(directory, "testing.test"));
     directory.deleteFile("testing.test");
-    assertFalse(directory.fileExists("testing.test"));
+    assertFalse(slowFileExists(directory, "testing.test"));
   }
   
   @Test

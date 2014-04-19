@@ -17,22 +17,24 @@
 
 package org.apache.solr.handler.admin;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Properties;
+
 import org.apache.commons.io.FileUtils;
-import org.apache.lucene.util.IOUtils;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.CoreAdminParams;
+import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.CorePropertiesLocator;
 import org.apache.solr.response.SolrQueryResponse;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Properties;
+import java.nio.charset.StandardCharsets;
 
 public class CoreAdminCreateDiscoverTest extends SolrTestCaseJ4 {
 
@@ -48,11 +50,7 @@ public class CoreAdminCreateDiscoverTest extends SolrTestCaseJ4 {
   public static void beforeClass() throws Exception {
     useFactory(null); // I require FS-based indexes for this test.
 
-    solrHomeDirectory = new File(TEMP_DIR, "solrHome/" + CoreAdminCreateDiscoverTest.getClassName());
-    if (solrHomeDirectory.exists()) {
-      FileUtils.deleteDirectory(solrHomeDirectory);
-    }
-    assertTrue("Failed to mkdirs workDir", solrHomeDirectory.mkdirs());
+    solrHomeDirectory = createTempDir();
 
     setupNoCoreTest(solrHomeDirectory, null);
 
@@ -62,9 +60,6 @@ public class CoreAdminCreateDiscoverTest extends SolrTestCaseJ4 {
   @AfterClass
   public static void afterClass() throws Exception {
     admin = null; // Release it or the test harness complains.
-    if (solrHomeDirectory.exists()) {
-      FileUtils.deleteDirectory(solrHomeDirectory);
-    }
   }
 
   private static void setupCore(String coreName, boolean blivet) throws IOException {
@@ -114,7 +109,7 @@ public class CoreAdminCreateDiscoverTest extends SolrTestCaseJ4 {
     File propFile = new File(solrHomeDirectory, coreSysProps + "/" + CorePropertiesLocator.PROPERTIES_FILENAME);
     FileInputStream is = new FileInputStream(propFile);
     try {
-      props.load(new InputStreamReader(is, IOUtils.CHARSET_UTF_8));
+      props.load(new InputStreamReader(is, StandardCharsets.UTF_8));
     } finally {
       org.apache.commons.io.IOUtils.closeQuietly(is);
     }
@@ -193,6 +188,43 @@ public class CoreAdminCreateDiscoverTest extends SolrTestCaseJ4 {
   }
 
   @Test
+  public void testInstanceDirAsPropertyParam() throws Exception {
+
+    setupCore("testInstanceDirAsPropertyParam-XYZ", true);
+
+    // make sure workDir is different even if core name is used as instanceDir
+    File workDir = new File(solrHomeDirectory, "testInstanceDirAsPropertyParam-XYZ");
+    File data = new File(workDir, "data");
+
+    // Create one core
+    SolrQueryResponse resp = new SolrQueryResponse();
+    admin.handleRequestBody
+        (req(CoreAdminParams.ACTION,
+                CoreAdminParams.CoreAdminAction.CREATE.toString(),
+                CoreAdminParams.NAME, "testInstanceDirAsPropertyParam",
+                "property.instanceDir", workDir.getAbsolutePath(),
+                CoreAdminParams.CONFIG, "solrconfig_ren.xml",
+                CoreAdminParams.SCHEMA, "schema_ren.xml",
+                CoreAdminParams.DATA_DIR, data.getAbsolutePath()),
+            resp);
+    assertNull("Exception on create", resp.getException());
+
+    resp = new SolrQueryResponse();
+    admin.handleRequestBody
+        (req(CoreAdminParams.ACTION,
+                CoreAdminParams.CoreAdminAction.STATUS.toString(),
+                CoreAdminParams.CORE, "testInstanceDirAsPropertyParam"),
+            resp);
+    NamedList status = (NamedList) resp.getValues().get("status");
+    assertNotNull(status);
+    NamedList coreProps = (NamedList) status.get("testInstanceDirAsPropertyParam");
+    assertNotNull(status);
+    String instanceDir = (String) coreProps.get("instanceDir");
+    assertNotNull(instanceDir);
+    assertEquals("Instance dir does not match param given in property.instanceDir syntax", workDir.getAbsolutePath(), new File(instanceDir).getAbsolutePath());
+  }
+
+  @Test
   public void testCreateSavesRegProps() throws Exception {
 
     setupCore(coreNormal, true);
@@ -219,7 +251,7 @@ public class CoreAdminCreateDiscoverTest extends SolrTestCaseJ4 {
     File propFile = new File(solrHomeDirectory, coreNormal + "/" + CorePropertiesLocator.PROPERTIES_FILENAME);
     FileInputStream is = new FileInputStream(propFile);
     try {
-      props.load(new InputStreamReader(is, IOUtils.CHARSET_UTF_8));
+      props.load(new InputStreamReader(is, StandardCharsets.UTF_8));
     } finally {
       org.apache.commons.io.IOUtils.closeQuietly(is);
     }

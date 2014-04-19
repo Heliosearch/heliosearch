@@ -17,16 +17,32 @@
 
 package org.apache.solr.core;
 
+import static org.hamcrest.core.Is.is;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import com.carrotsearch.randomizedtesting.rules.SystemPropertiesRestoreRule;
-import com.google.common.base.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.lucene.util.IOUtils;
+import org.apache.lucene.util.LuceneTestCase;
+import org.apache.lucene.util.TestUtil;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.params.CoreAdminParams;
 import org.apache.solr.handler.admin.CoreAdminHandler;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.util.TestHarness;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
@@ -37,39 +53,30 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.hamcrest.core.Is.is;
+import com.google.common.base.Charsets;
+import java.nio.charset.StandardCharsets;
 
 public class TestSolrXmlPersistence extends SolrTestCaseJ4 {
 
-  private File solrHomeDirectory = new File(TEMP_DIR, this.getClass().getName());
+  private File solrHomeDirectory = createTempDir();
 
   @Rule
   public TestRule solrTestRules =
       RuleChain.outerRule(new SystemPropertiesRestoreRule());
 
+  @Before
+  public void setupTest() {
+    solrHomeDirectory = createTempDir(LuceneTestCase.getTestClass().getSimpleName());
+  }
 
   private CoreContainer init(String solrXmlString, String... subDirs) throws Exception {
-
-    createTempDir();
-    solrHomeDirectory = dataDir;
 
     for (String s : subDirs) {
       copyMinConf(new File(solrHomeDirectory, s));
     }
 
     File solrXml = new File(solrHomeDirectory, "solr.xml");
-    FileUtils.write(solrXml, solrXmlString, IOUtils.CHARSET_UTF_8.toString());
+    FileUtils.write(solrXml, solrXmlString, IOUtils.UTF_8);
 
     final CoreContainer cores = createCoreContainer(solrHomeDirectory.getAbsolutePath(), solrXmlString);
     return cores;
@@ -92,9 +99,6 @@ public class TestSolrXmlPersistence extends SolrTestCaseJ4 {
       origMatchesPersist(cc, SOLR_XML_LOTS_SYSVARS);
     } finally {
       cc.shutdown();
-      if (solrHomeDirectory.exists()) {
-        FileUtils.deleteDirectory(solrHomeDirectory);
-      }
     }
   }
 
@@ -253,9 +257,6 @@ public class TestSolrXmlPersistence extends SolrTestCaseJ4 {
       origMatchesPersist(cc, SOLR_XML_MINIMAL);
     } finally {
       cc.shutdown();
-      if (solrHomeDirectory.exists()) {
-        FileUtils.deleteDirectory(solrHomeDirectory);
-      }
     }
   }
 
@@ -393,10 +394,6 @@ public class TestSolrXmlPersistence extends SolrTestCaseJ4 {
 
     } finally {
       cc.shutdown();
-      if (solrHomeDirectory.exists()) {
-        FileUtils.deleteDirectory(solrHomeDirectory);
-      }
-
     }
   }
 
@@ -405,20 +402,15 @@ public class TestSolrXmlPersistence extends SolrTestCaseJ4 {
 
     String defXml = FileUtils.readFileToString(
         new File(SolrTestCaseJ4.TEST_HOME(), "solr.xml"),
-        Charsets.UTF_8.toString());
+        StandardCharsets.UTF_8.name());
     final CoreContainer cores = init(defXml, "collection1");
     SolrXMLCoresLocator.NonPersistingLocator locator
         = (SolrXMLCoresLocator.NonPersistingLocator) cores.getCoresLocator();
 
-    String instDir = null;
-    {
-      SolrCore template = null;
-      try {
-        template = cores.getCore("collection1");
-        instDir = template.getCoreDescriptor().getRawInstanceDir();
-      } finally {
-        if (null != template) template.close();
-      }
+    String instDir;
+    try (SolrCore template = cores.getCore("collection1")) {
+      assertNotNull(template);
+      instDir = template.getCoreDescriptor().getRawInstanceDir();
     }
 
     final File instDirFile = new File(cores.getSolrHome(), instDir);
@@ -513,7 +505,7 @@ public class TestSolrXmlPersistence extends SolrTestCaseJ4 {
   }
 
   private String[] getAllNodes(String xmlString) throws ParserConfigurationException, IOException, SAXException {
-    return getAllNodes(new ByteArrayInputStream(xmlString.getBytes(Charsets.UTF_8)));
+    return getAllNodes(new ByteArrayInputStream(xmlString.getBytes(StandardCharsets.UTF_8)));
   }
 
   /*

@@ -16,8 +16,12 @@ package org.apache.solr.cloud;
  * the License.
  */
 
-import com.carrotsearch.randomizedtesting.rules.SystemPropertiesRestoreRule;
-import com.google.common.base.Charsets;
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.SolrException;
@@ -32,11 +36,7 @@ import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.nio.charset.Charset;
+import com.carrotsearch.randomizedtesting.rules.SystemPropertiesRestoreRule;
 
 public class SolrXmlInZkTest extends SolrTestCaseJ4 {
 
@@ -51,8 +51,6 @@ public class SolrXmlInZkTest extends SolrTestCaseJ4 {
 
   private ZkStateReader reader;
 
-  private static int PORT = 7000;
-
   private ConfigSolr cfg;
 
   @Before
@@ -61,9 +59,9 @@ public class SolrXmlInZkTest extends SolrTestCaseJ4 {
   }
 
   private void setUpZkAndDiskXml(boolean toZk, boolean leaveOnLocal) throws Exception {
-
-    createTempDir();
-    File solrHome = new File(dataDir, "home");
+    File tmpDir = createTempDir();
+    recurseDelete(tmpDir);
+    File solrHome = new File(tmpDir, "home");
     copyMinConf(new File(solrHome, "myCollect"));
     if (leaveOnLocal) {
       FileUtils.copyFile(new File(SolrTestCaseJ4.TEST_HOME(), "solr-stress-new.xml"), new File(solrHome, "solr.xml"));
@@ -76,7 +74,7 @@ public class SolrXmlInZkTest extends SolrTestCaseJ4 {
 
     System.setProperty("zkClientTimeout", "8000");
 
-    zkDir = dataDir.getAbsolutePath() + File.separator
+    zkDir = tmpDir.getAbsolutePath() + File.separator
         + "zookeeper" + System.currentTimeMillis() + "/server1/data";
     zkServer = new ZkTestServer(zkDir);
     zkServer.run();
@@ -87,7 +85,7 @@ public class SolrXmlInZkTest extends SolrTestCaseJ4 {
     zkClient = new SolrZkClient(zkServer.getZkAddress(), AbstractZkTestCase.TIMEOUT);
 
     if (toZk) {
-      zkClient.makePath("solr.xml", XML_FOR_ZK.getBytes(Charsets.UTF_8), true);
+      zkClient.makePath("solr.xml", XML_FOR_ZK.getBytes(StandardCharsets.UTF_8), true);
     }
 
     zkClient.close();
@@ -172,8 +170,7 @@ public class SolrXmlInZkTest extends SolrTestCaseJ4 {
   @Test
   public void testHardCodedSolrXml() throws IOException {
     SolrResourceLoader loader = null;
-    final File solrHome = new File(TEMP_DIR,
-        SolrXmlInZkTest.getClassName() + File.separator + "testHardCodedSolrXml");
+    final File solrHome = createTempDir("testHardCodedSolrXml");
     try {
       loader = new SolrResourceLoader(solrHome.getAbsolutePath());
       ConfigSolr.fromSolrHome(loader, solrHome.getAbsolutePath());

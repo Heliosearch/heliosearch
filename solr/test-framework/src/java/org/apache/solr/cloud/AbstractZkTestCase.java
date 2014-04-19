@@ -35,7 +35,8 @@ import org.slf4j.LoggerFactory;
  * Base test class for ZooKeeper tests.
  */
 public abstract class AbstractZkTestCase extends SolrTestCaseJ4 {
-
+  private static final String ZOOKEEPER_FORCE_SYNC = "zookeeper.forceSync";
+  
   static final int TIMEOUT = 10000;
 
   private static final boolean DEBUG = false;
@@ -62,15 +63,14 @@ public abstract class AbstractZkTestCase extends SolrTestCaseJ4 {
 
   @BeforeClass
   public static void azt_beforeClass() throws Exception {
-    createTempDir();
-    zkDir = dataDir.getAbsolutePath() + File.separator
-        + "zookeeper/server1/data";
+    zkDir = createTempDir("zkData").getAbsolutePath();
     zkServer = new ZkTestServer(zkDir);
     zkServer.run();
     
     System.setProperty("solrcloud.skip.autorecovery", "true");
     System.setProperty("zkHost", zkServer.getZkAddress());
     System.setProperty("jetty.port", "0000");
+    System.setProperty(ZOOKEEPER_FORCE_SYNC, "false");
     
     buildZooKeeper(zkServer.getZkHost(), zkServer.getZkAddress(), SOLRHOME,
         "solrconfig.xml", "schema.xml");
@@ -152,14 +152,13 @@ public abstract class AbstractZkTestCase extends SolrTestCaseJ4 {
     System.clearProperty("solr.test.sys.prop2");
     System.clearProperty("solrcloud.skip.autorecovery");
     System.clearProperty("jetty.port");
+    System.clearProperty(ZOOKEEPER_FORCE_SYNC);
 
-    zkServer.shutdown();
-
-    zkServer = null;
+    if (zkServer != null) {
+      zkServer.shutdown();
+      zkServer = null;
+    }
     zkDir = null;
-    
-    // wait just a bit for any zk client threads to outlast timeout
-    Thread.sleep(2000);
   }
 
   protected void printLayout(String zkHost) throws Exception {

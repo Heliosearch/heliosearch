@@ -66,6 +66,18 @@ public class ComplexPhraseQueryParser extends QueryParser {
 
   private boolean isPass2ResolvingPhrases;
 
+  private boolean inOrder = true;
+
+  /**
+   * When <code>inOrder</code> is true, the search terms must
+   * exists in the documents as the same order as in query.
+   *
+   * @param inOrder parameter to choose between ordered or un-ordered proximity search
+   */
+  public void setInOrder(final boolean inOrder) {
+    this.inOrder = inOrder;
+  }
+
   private ComplexPhraseQuery currentPhraseQuery = null;
 
   public ComplexPhraseQueryParser(Version matchVersion, String f, Analyzer a) {
@@ -74,7 +86,7 @@ public class ComplexPhraseQueryParser extends QueryParser {
 
   @Override
   protected Query getFieldQuery(String field, String queryText, int slop) {
-    ComplexPhraseQuery cpq = new ComplexPhraseQuery(field, queryText, slop);
+    ComplexPhraseQuery cpq = new ComplexPhraseQuery(field, queryText, slop, inOrder);
     complexPhrases.add(cpq); // add to list of phrases to be parsed once
     // we
     // are through with this pass
@@ -202,26 +214,38 @@ public class ComplexPhraseQueryParser extends QueryParser {
 
     int slopFactor;
 
+    private final boolean inOrder;
+
     private Query contents;
 
     public ComplexPhraseQuery(String field, String phrasedQueryStringContents,
-        int slopFactor) {
+        int slopFactor, boolean inOrder) {
       super();
       this.field = field;
       this.phrasedQueryStringContents = phrasedQueryStringContents;
       this.slopFactor = slopFactor;
+      this.inOrder = inOrder;
     }
 
     // Called by ComplexPhraseQueryParser for each phrase after the main
     // parse
     // thread is through
-    protected void parsePhraseElements(QueryParser qp) throws ParseException {
+    protected void parsePhraseElements(ComplexPhraseQueryParser qp) throws ParseException {
       // TODO ensure that field-sensitivity is preserved ie the query
       // string below is parsed as
       // field+":("+phrasedQueryStringContents+")"
       // but this will need code in rewrite to unwrap the first layer of
       // boolean query
-      contents = qp.parse(phrasedQueryStringContents);
+
+      String oldDefaultParserField = qp.field;
+      try {
+        //temporarily set the QueryParser to be parsing the default field for this phrase e.g author:"fred* smith"
+        qp.field = this.field;
+        contents = qp.parse(phrasedQueryStringContents);
+      }
+      finally {
+        qp.field = oldDefaultParserField;
+      }
     }
 
     @Override
@@ -280,7 +304,7 @@ public class ComplexPhraseQueryParser extends QueryParser {
       }
       if (numNegatives == 0) {
         // The simple case - no negative elements in phrase
-        return new SpanNearQuery(allSpanClauses, slopFactor, true);
+        return new SpanNearQuery(allSpanClauses, slopFactor, inOrder);
       }
       // Complex case - we have mixed positives and negatives in the
       // sequence.
@@ -302,11 +326,11 @@ public class ComplexPhraseQueryParser extends QueryParser {
         // need to increase slop factor based on gaps introduced by
         // negatives
         include = new SpanNearQuery(includeClauses, slopFactor + numNegatives,
-            true);
+            inOrder);
       }
       // Use sequence of positive and negative values as the exclude.
       SpanNearQuery exclude = new SpanNearQuery(allSpanClauses, slopFactor,
-          true);
+          inOrder);
       SpanNotQuery snot = new SpanNotQuery(include, exclude);
       return snot;
     }

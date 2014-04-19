@@ -908,6 +908,7 @@ public class QueryComponent extends SearchComponent
         numFound += docs.getNumFound();
 
         NamedList sortFieldValues = (NamedList)(srsp.getSolrResponse().getResponse().get("sort_values"));
+        NamedList unmarshalledSortFieldValues = unmarshalSortValues(ss, sortFieldValues, schema);
 
         // go through every doc in this response, construct a ShardDoc, and
         // put it in the priority queue so it can be ordered.
@@ -944,7 +945,7 @@ public class QueryComponent extends SearchComponent
             }
           }
 
-          shardDoc.sortFieldValues = unmarshalSortValues(ss, sortFieldValues, schema);
+          shardDoc.sortFieldValues = unmarshalledSortFieldValues;
 
           queue.insertWithOverflow(shardDoc);
         } // end for-each-doc-in-response

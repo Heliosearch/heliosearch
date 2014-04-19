@@ -55,7 +55,7 @@ public class LeaderElectionTest extends SolrTestCaseJ4 {
   
   @BeforeClass
   public static void beforeClass() {
-    createTempDir();
+
   }
   
   @AfterClass
@@ -66,8 +66,7 @@ public class LeaderElectionTest extends SolrTestCaseJ4 {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    String zkDir = dataDir.getAbsolutePath() + File.separator
-        + "zookeeper/server1/data";
+    String zkDir = createTempDir("zkData").getAbsolutePath();;
     
     server = new ZkTestServer(zkDir);
     server.setTheTickTime(1000);

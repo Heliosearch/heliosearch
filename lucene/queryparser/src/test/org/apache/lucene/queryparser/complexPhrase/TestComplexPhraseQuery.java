@@ -37,16 +37,19 @@ import org.apache.lucene.util.LuceneTestCase;
 public class TestComplexPhraseQuery extends LuceneTestCase {
   Directory rd;
   Analyzer analyzer;
-  
-  DocData docsContent[] = { new DocData("john smith", "1"),
-      new DocData("johathon smith", "2"),
-      new DocData("john percival smith", "3"),
-      new DocData("jackson waits tom", "4") };
+  DocData docsContent[] = {
+      new DocData("john smith", "1", "developer"),
+      new DocData("johathon smith", "2", "developer"),
+      new DocData("john percival smith", "3", "designer"),
+      new DocData("jackson waits tom", "4", "project manager")
+  };
 
   private IndexSearcher searcher;
   private IndexReader reader;
 
   String defaultFieldName = "name";
+
+  boolean inOrder = true;
 
   public void testComplexPhrases() throws Exception {
     checkMatches("\"john smith\"", "1"); // Simple multi-term still works
@@ -71,8 +74,20 @@ public class TestComplexPhraseQuery extends LuceneTestCase {
     checkBadQuery("\"jo* \"smith\" \""); // phrases inside phrases is bad
   }
 
+
+  public void testUnOrderedProximitySearches() throws Exception {
+
+    inOrder = true;
+    checkMatches("\"smith jo*\"~2", ""); // ordered proximity produces empty set
+
+    inOrder = false;
+    checkMatches("\"smith jo*\"~2", "1,2,3"); // un-ordered proximity
+
+  }
+
   private void checkBadQuery(String qString) {
-    QueryParser qp = new ComplexPhraseQueryParser(TEST_VERSION_CURRENT, defaultFieldName, analyzer);
+    ComplexPhraseQueryParser qp = new ComplexPhraseQueryParser(TEST_VERSION_CURRENT, defaultFieldName, analyzer);
+    qp.setInOrder(inOrder);
     Throwable expected = null;
     try {
       qp.parse(qString);
@@ -85,7 +100,8 @@ public class TestComplexPhraseQuery extends LuceneTestCase {
 
   private void checkMatches(String qString, String expectedVals)
       throws Exception {
-    QueryParser qp = new ComplexPhraseQueryParser(TEST_VERSION_CURRENT, defaultFieldName, analyzer);
+    ComplexPhraseQueryParser qp = new ComplexPhraseQueryParser(TEST_VERSION_CURRENT, defaultFieldName, analyzer);
+    qp.setInOrder(inOrder);
     qp.setFuzzyPrefixLength(1); // usually a good idea
 
     Query q = qp.parse(qString);
@@ -110,7 +126,19 @@ public class TestComplexPhraseQuery extends LuceneTestCase {
     assertEquals(qString + " missing some matches ", 0, expecteds.size());
 
   }
-
+  
+  public void testFieldedQuery() throws Exception {
+    checkMatches("name:\"john smith\"", "1");
+    checkMatches("name:\"j*   smyth~\"", "1,2");
+    checkMatches("role:\"developer\"", "1,2");
+    checkMatches("role:\"p* manager\"", "4");
+    checkMatches("role:de*", "1,2,3");
+    checkMatches("name:\"j* smyth~\"~5", "1,2,3");
+    checkMatches("role:\"p* manager\" AND name:jack*", "4");
+    checkMatches("+role:developer +name:jack*", "");
+    checkMatches("name:\"john smith\"~2 AND role:designer AND id:3", "3");
+  }
+  
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -122,6 +150,7 @@ public class TestComplexPhraseQuery extends LuceneTestCase {
       Document doc = new Document();
       doc.add(newTextField("name", docsContent[i].name, Field.Store.YES));
       doc.add(newTextField("id", docsContent[i].id, Field.Store.YES));
+      doc.add(newTextField("role", docsContent[i].role, Field.Store.YES));
       w.addDocument(doc);
     }
     w.close();
@@ -140,11 +169,14 @@ public class TestComplexPhraseQuery extends LuceneTestCase {
     String name;
 
     String id;
+    
+    String role;
 
-    public DocData(String name, String id) {
+    public DocData(String name, String id, String role) {
       super();
       this.name = name;
       this.id = id;
+      this.role = role;
     }
   }
 

@@ -17,6 +17,10 @@ package org.apache.lucene.search.suggest.analyzing;
  * limitations under the License.
  */
 
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.util.CharArraySet;
@@ -25,11 +29,6 @@ import org.apache.lucene.search.suggest.InputArrayIterator;
 import org.apache.lucene.search.suggest.Lookup;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.TestUtil;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 
 public class BlendedInfixSuggesterTest extends LuceneTestCase {
 
@@ -45,7 +44,7 @@ public class BlendedInfixSuggesterTest extends LuceneTestCase {
         new Input("star wars: episode v - the empire strikes back", 8, payload)
     };
 
-    File tempDir = TestUtil.getTempDir("BlendedInfixSuggesterTest");
+    File tempDir = createTempDir("BlendedInfixSuggesterTest");
 
     Analyzer a = new StandardAnalyzer(TEST_VERSION_CURRENT, CharArraySet.EMPTY_SET);
     BlendedInfixSuggester suggester = new BlendedInfixSuggester(TEST_VERSION_CURRENT, newFSDirectory(tempDir), a, a,
@@ -84,7 +83,7 @@ public class BlendedInfixSuggesterTest extends LuceneTestCase {
         new Input("top of the lake", w, pl)
     };
 
-    File tempDir = TestUtil.getTempDir("BlendedInfixSuggesterTest");
+    File tempDir = createTempDir("BlendedInfixSuggesterTest");
     Analyzer a = new StandardAnalyzer(TEST_VERSION_CURRENT, CharArraySet.EMPTY_SET);
 
     // BlenderType.LINEAR is used by default (remove position*10%)
@@ -125,7 +124,7 @@ public class BlendedInfixSuggesterTest extends LuceneTestCase {
         new Input("the returned", 10, ret),
     };
 
-    File tempDir = TestUtil.getTempDir("BlendedInfixSuggesterTest");
+    File tempDir = createTempDir("BlendedInfixSuggesterTest");
     Analyzer a = new StandardAnalyzer(TEST_VERSION_CURRENT, CharArraySet.EMPTY_SET);
 
     // if factor is small, we don't get the expected element
@@ -136,12 +135,12 @@ public class BlendedInfixSuggesterTest extends LuceneTestCase {
 
 
     // we don't find it for in the 2 first
-    assertEquals(2, suggester.lookup("the", 2, true, false).size());
+    assertEquals(2, suggester.lookup("the", null, 2, true, false).size());
     long w0 = getInResults(suggester, "the", ret, 2);
     assertTrue(w0 < 0);
 
     // but it's there if we search for 3 elements
-    assertEquals(3, suggester.lookup("the", 3, true, false).size());
+    assertEquals(3, suggester.lookup("the", null, 3, true, false).size());
     long w1 = getInResults(suggester, "the", ret, 3);
     assertTrue(w1 > 0);
 
@@ -175,7 +174,7 @@ public class BlendedInfixSuggesterTest extends LuceneTestCase {
         new Input("the returned", 10, ret),
     };
 
-    File tempDir = TestUtil.getTempDir("BlendedInfixSuggesterTest");
+    File tempDir = createTempDir("BlendedInfixSuggesterTest");
     Analyzer a = new StandardAnalyzer(TEST_VERSION_CURRENT, CharArraySet.EMPTY_SET);
 
     // if factor is small, we don't get the expected element
@@ -185,7 +184,7 @@ public class BlendedInfixSuggesterTest extends LuceneTestCase {
     suggester.build(new InputArrayIterator(keys));
 
 
-    List<Lookup.LookupResult> responses = suggester.lookup("the", 4, true, false);
+    List<Lookup.LookupResult> responses = suggester.lookup("the", null, 4, true, false);
 
     for (Lookup.LookupResult response : responses) {
       System.out.println(response);
@@ -196,7 +195,7 @@ public class BlendedInfixSuggesterTest extends LuceneTestCase {
 
   private static long getInResults(BlendedInfixSuggester suggester, String prefix, BytesRef payload, int num) throws IOException {
 
-    List<Lookup.LookupResult> responses = suggester.lookup(prefix, num, true, false);
+    List<Lookup.LookupResult> responses = suggester.lookup(prefix, null, num, true, false);
 
     for (Lookup.LookupResult response : responses) {
       if (response.payload.equals(payload)) {
