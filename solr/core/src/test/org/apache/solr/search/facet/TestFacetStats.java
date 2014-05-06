@@ -50,7 +50,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum(num_d)"
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/cat_s=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
+        ,"facets/cat_s=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
     );
 
     // sort asc
@@ -59,7 +59,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum(num_d)"
         ,"facet.sort", "x asc"
     )
-        ,"facet_counts/facet_fields/cat_s=={'stats':{'x':3.0}, 'buckets':[{'val':'B','x':-3.0},{'val':'A','x':6.0}] }"
+        ,"facets/cat_s=={'stats':{'x':3.0}, 'buckets':[{'val':'B','x':-3.0},{'val':'A','x':6.0}] }"
     );
 
     // test two
@@ -69,7 +69,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "y:avg(num_d)"
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/cat_s=={'stats':{'x':3.0,'y':0.6}, 'buckets':[{'val':'A','x':6.0,'y':3.0},{'val':'B','x':-3.0,'y':-1.0}] }"
+        ,"facets/cat_s=={'stats':{'x':3.0,'y':0.6}, 'buckets':[{'val':'A','x':6.0,'y':3.0},{'val':'B','x':-3.0,'y':-1.0}] }"
     );
 
     // bool field, sort desc
@@ -78,8 +78,18 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum(num_d)"
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/val_b=={ 'stats':{ 'x':-5.0}, 'buckets':[{ 'val':true, 'x':4.0}, { 'val':false, 'x':-9.0}]} "
+        ,"facets/val_b=={ 'stats':{ 'x':-5.0}, 'buckets':[{ 'val':true, 'x':4.0}, { 'val':false, 'x':-9.0}]} "
     );
+
+    /*** TODO - finish facet.version support
+    // test facet.version
+    assertJQ(req("q","*:*", "rows","0", "facet","true"
+            ,"facet.field","cat_s"
+            ,"facet.version","2"
+        )
+        ,"facets/cat_s=={'stats':{'x':3.0,'y':0.6}, 'buckets':[{'val':'A','x':6.0,'y':3.0},{'val':'B','x':-3.0,'y':-1.0}] }"
+    );
+    ***/
 
   }
 
@@ -183,7 +193,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum"+ call(n1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
     );
 
     // test offset
@@ -193,7 +203,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.sort", "x desc"
         ,"facet.offset", "1"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[ {'val':'B','x':-3.0}] }"
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[ {'val':'B','x':-3.0}] }"
     );
 
     // test limit
@@ -203,7 +213,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.sort", "x desc"
         ,"facet.limit", "1"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[ {'val':'A','x':6.0} ] }"
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[ {'val':'A','x':6.0} ] }"
     );
 
     // test no limit
@@ -213,7 +223,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.sort", "x desc"
         ,"facet.limit", "-1"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
     );
 
     // sort index order
@@ -222,7 +232,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum"+ call(n1)
         ,"facet.sort", "index"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0},{'val':'B','x':-3.0}] }"
     );
 
     // sort asc
@@ -231,7 +241,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum"+ call(n1)
         ,"facet.sort", "x asc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'B','x':-3.0},{'val':'A','x':6.0}] }"
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'B','x':-3.0},{'val':'A','x':6.0}] }"
     );
 
     // test multiple
@@ -241,7 +251,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "y:avg"+ call(n1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0,'y':0.6}, 'buckets':[{'val':'A','x':6.0,'y':3.0},{'val':'B','x':-3.0,'y':-1.0}] }"
+        ,"facets/s1=={'stats':{'x':3.0,'y':0.6}, 'buckets':[{'val':'A','x':6.0,'y':3.0},{'val':'B','x':-3.0,'y':-1.0}] }"
     );
 
     // test including count
@@ -251,7 +261,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "count"
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0, 'count':5}, 'buckets':[{'val':'A','x':6.0, 'count':2},{'val':'B','x':-3.0, 'count':3}] }"
+        ,"facets/s1=={'stats':{'x':3.0, 'count':5}, 'buckets':[{'val':'A','x':6.0, 'count':2},{'val':'B','x':-3.0, 'count':3}] }"
     );
 
     // test as part of a bigger function
@@ -260,7 +270,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum(mul" + call(n1,"10") + ")"
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':30.0}, 'buckets':[{'val':'A','x':60.0},{'val':'B','x':-30.0}] }"
+        ,"facets/s1=={'stats':{'x':30.0}, 'buckets':[{'val':'A','x':60.0},{'val':'B','x':-30.0}] }"
     );
 
     // sort by count
@@ -269,7 +279,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "count"  // special case... support bare "count" like we support bare facet.sort=count
         ,"facet.sort", "count desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'count':5}, 'buckets':[{'val':'B','count':3},{'val':'A','count':2}] }"
+        ,"facets/s1=={'stats':{'count':5}, 'buckets':[{'val':'B','count':3},{'val':'A','count':2}] }"
     );
 
     // count asc
@@ -278,7 +288,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "count"  // special case... support bare "count" like we support bare facet.sort=count
         ,"facet.sort", "count asc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'count':5}, 'buckets':[{'val':'A','count':2},{'val':'B','count':3}] }"
+        ,"facets/s1=={'stats':{'count':5}, 'buckets':[{'val':'A','count':2},{'val':'B','count':3}] }"
     );
 
     // default sort is by count, and it will be added to the bucket as well if not specified
@@ -286,7 +296,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.field", "{!key=s1}" + s1
         ,"facet.stat", "x:sum"+ call(n1)
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0, 'count':5}, 'buckets':[ {'val':'B','x':-3.0, 'count':3}, {'val':'A','x':6.0, 'count':2}] }"
+        ,"facets/s1=={'stats':{'x':3.0, 'count':5}, 'buckets':[ {'val':'B','x':-3.0, 'count':3}, {'val':'A','x':6.0, 'count':2}] }"
     );
 
     // default label is the function
@@ -295,7 +305,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.field", "{!key=s1}" + s1
         ,"facet.stat", "sum"+call(n1)
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{"+label+":3.0, 'count':5}, 'buckets':[ {'val':'B',"+label+":-3.0, 'count':3}, {'val':'A',"+label+":6.0, 'count':2}] }"
+        ,"facets/s1=={'stats':{"+label+":3.0, 'count':5}, 'buckets':[ {'val':'B',"+label+":-3.0, 'count':3}, {'val':'A',"+label+":6.0, 'count':2}] }"
     );
 
     // faceting on multivalued field
@@ -304,7 +314,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum"+ call(n1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':18.0}, 'buckets':[{'val':'Y','x':12.0},{'val':'X','x':6.0}] }"
+        ,"facets/s1=={'stats':{'x':18.0}, 'buckets':[{'val':'Y','x':12.0},{'val':'X','x':6.0}] }"
     );
 
 
@@ -315,7 +325,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.sort", "x desc"
         ,"subfacet.s1.query", "{!key=q}"+ss1+":X"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0, 'q':{'x':4.0}},{'val':'B','x':-3.0, 'q':{'x':2.0}}] }"
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[{'val':'A','x':6.0, 'q':{'x':4.0}},{'val':'B','x':-3.0, 'q':{'x':2.0}}] }"
     );
 
     // subfacet field multi-valued
@@ -325,7 +335,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.sort", "x desc"
         ,"subfacet.s1.field", "{!key=f}"+ss1
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':3.0}, 'buckets':[" +
+        ,"facets/s1=={'stats':{'x':3.0}, 'buckets':[" +
             "{'val':'A','x':6.0, " +
               "'f':{'stats':{ 'x':10.0}, 'buckets':[{'val':'Y','x':6.0},{'val':'X','x':4.0}]} }" +
            ",{'val':'B','x':-3.0, " +
@@ -339,7 +349,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"f.s1.facet.sort", "x desc"
         ,"subfacet.s1.field", "{!key=f}"+s1
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':18.0}, 'buckets':[" +
+        ,"facets/s1=={'stats':{'x':18.0}, 'buckets':[" +
         "{'val':'Y','x':12.0, " +
         "'f':{'stats':{ 'count':4}, 'buckets':[{'val':'A','count':2},{'val':'B','count':2}]} }" +
         ",{'val':'X','x':6.0, " +
@@ -355,7 +365,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
          ,"subfacet.s1.range", "{!key=r}"+n1
         ,"f.r.facet.range.start", "-5",   "f.r.facet.range.start","-10", "f.r.facet.range.end","5", "f.r.facet.range.gap","5", "f.r.facet.range.other","all"
         )
-        ,"facet_counts/facet_fields/s1=={ 'stats':{ 'x':3.0}, 'buckets':[" +
+        ,"facets/s1=={ 'stats':{ 'x':3.0}, 'buckets':[" +
               "{ 'val':'A', 'x':6.0, 'r':{ 'buckets':[{ 'val':'-5.0', 'x':0.0}, { 'val':'0.0', 'x':6.0}], 'gap':5.0, 'start':-5.0, 'end':5.0, 'before':{ 'x':0.0}, 'after':{ 'x':0.0}, 'between':{ 'x':6.0}}}, " +
               "{ 'val':'B', 'x':-3.0, 'r':{ 'buckets':[{ 'val':'-5.0', 'x':-5.0}, { 'val':'0.0', 'x':0.0}], 'gap':5.0, 'start':-5.0, 'end':5.0, 'before':{ 'x':-9.0}, 'after':{ 'x':11.0}, 'between':{ 'x':-5.0}}}]} "
       );
@@ -368,7 +378,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
           ,"facet.stat", "x:sum"+ call(n1)
           ,"facet.sort", "x desc"
       )
-          ,"facet_counts/facet_ranges/r== { 'buckets':[{ 'val':'-5.0', 'x':-5.0, 's':{ 'stats':{ 'x':-5.0}, 'buckets':[{ 'val':'X', 'x':0.0}, { 'val':'Y', 'x':-5.0}]}}, " +
+          ,"facets/r== { 'buckets':[{ 'val':'-5.0', 'x':-5.0, 's':{ 'stats':{ 'x':-5.0}, 'buckets':[{ 'val':'X', 'x':0.0}, { 'val':'Y', 'x':-5.0}]}}, " +
                                                        "{ 'val':'0.0', 'x':6.0, 's':{ 'stats':{ 'x':10.0}, 'buckets':[{ 'val':'Y', 'x':6.0}, { 'val':'X', 'x':4.0}]}}]," +
                                                        " 'gap':5.0, 'start':-5.0, 'end':5.0, " +
                                                        " 'before':{ 'x':-9.0, 's':{ 'stats':{ 'x':-9.0}, 'buckets':[{ 'val':'Y', 'x':0.0}, { 'val':'X', 'x':-9.0}]}}," +
@@ -391,8 +401,9 @@ public class TestFacetStats extends SolrTestCaseJ4 {
           ,"facet.stat", "u:unique" + call(s1)
           ,"facet.sort", "x desc"
           ,"facet.limit", "1"  // cut down on the size of the response
+          ,"facet.mincount", "0"
       )
-          ,"facet_counts/facet_ranges/r=={ 'buckets':[" +
+          ,"facets/r=={ 'buckets':[" +
               "{ 'val':'-10.0', 'x':-14.0, 'u':1, 'q':{ 'x':-9.0, 'u':1, 'f3':{ 'stats':{ 'x':-9.0, 'u':1}, 'buckets':[{ 'val':'Y', 'x':0.0, 'u':0}]}}, " +
                 "'s':{ 'stats':{ 'x':-14.0, 'u':1}, 'buckets':[{ 'val':'A', 'x':0.0, 'u':0, 'q2':{ 'x':0.0, 'u':0}, " +
                   "'f2':{ 'stats':{ 'x':0.0, 'u':0}, 'buckets':[{ 'val':'X', 'x':0.0, 'u':0}]}}]}}, " +
@@ -423,7 +434,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:unique"+ call(ss1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':2}, 'buckets':[{'val':'A','x':2},{'val':'B','x':2}] }"
+        ,"facets/s1=={'stats':{'x':2}, 'buckets':[{'val':'A','x':2},{'val':'B','x':2}] }"
     );
 
     // multi-valued unique
@@ -432,7 +443,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:unique"+ call(ss1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':2}, 'buckets':[{'val':'A','x':2},{'val':'B','x':1}] }"
+        ,"facets/s1=={'stats':{'x':2}, 'buckets':[{'val':'A','x':2},{'val':'B','x':1}] }"
     );
 
     // single_valued unique
@@ -441,7 +452,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:unique"+ call(s1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':2}, 'buckets':[{'val':'X','x':2},{'val':'Y','x':2}] }"
+        ,"facets/s1=={'stats':{'x':2}, 'buckets':[{'val':'X','x':2},{'val':'Y','x':2}] }"
     );
 
     // single_valued unique
@@ -450,7 +461,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:unique"+ call(s1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':2}, 'buckets':[{'val':'X','x':2},{'val':'Y','x':1}] }"
+        ,"facets/s1=={'stats':{'x':2}, 'buckets':[{'val':'X','x':2},{'val':'Y','x':1}] }"
     );
 
     // multi-valued unique (on id_ss, to ensure we exercise non-big terms)
@@ -459,7 +470,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:unique"+ call("id_ss")
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={'stats':{'x':5}, 'buckets':[{'val':'B','x':3},{'val':'A','x':2}] }"
+        ,"facets/s1=={'stats':{'x':5}, 'buckets':[{'val':'B','x':3},{'val':'A','x':2}] }"
     );
 
     // multi-valued facet (on id_ss, to ensure we exercise non-big terms)
@@ -468,7 +479,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "x:sum"+ call(n1)
         ,"facet.sort", "x desc"
     )
-        ,"facet_counts/facet_fields/s1=={ 'stats':{ 'x':3.0}, 'buckets':[{ 'val':'5', 'x':11.0}, { 'val':'1', 'x':4.0}, { 'val':'4', 'x':2.0}, { 'val':'3', 'x':0.0}, { 'val':'6', 'x':-5.0}, { 'val':'2', 'x':-9.0}]}"
+        ,"facets/s1=={ 'stats':{ 'x':3.0}, 'buckets':[{ 'val':'5', 'x':11.0}, { 'val':'1', 'x':4.0}, { 'val':'4', 'x':2.0}, { 'val':'3', 'x':0.0}, { 'val':'6', 'x':-5.0}, { 'val':'2', 'x':-9.0}]}"
     );
 
     // min, max
@@ -478,7 +489,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "max:max"+ call(n1)
         ,"facet.sort", "max desc"
     )
-        ,"facet_counts/facet_fields/s1=={ 'stats':{ 'min':-9.0, 'max':11.0}, 'buckets':[{ 'val':'B', 'min':-9.0, 'max':11.0}, { 'val':'A', 'min':2.0, 'max':4.0}]}"
+        ,"facets/s1=={ 'stats':{ 'min':-9.0, 'max':11.0}, 'buckets':[{ 'val':'B', 'min':-9.0, 'max':11.0}, { 'val':'A', 'min':2.0, 'max':4.0}]}"
     );
 
     // min,max with missing values
@@ -486,13 +497,13 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.query", "{!key=q}id:(1 3)"  // min of 4.0, null should be 4.0
         ,"facet.stat", "min:min"+ call(n1)
     )
-        ,"facet_counts/facet_queries/q=={'min':4.0}"
+        ,"facets/q=={'min':4.0}"
     );
     assertJQ(req("q","*:*", "rows","0", "facet","true"
         ,"facet.query", "{!key=q}id:(2 3)"   // max of -9.0, null should be -9.0
         ,"facet.stat", "max:max"+ call(n1)
     )
-        ,"facet_counts/facet_queries/q=={'max':-9.0}"
+        ,"facets/q=={'max':-9.0}"
     );
 
     assertJQ(req("q","*:*", "rows","0", "facet","true"
@@ -500,7 +511,7 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facet.stat", "sumsq:sumsq"+ call(n1)
         ,"facet.sort", "sumsq desc"
     )
-        ,"facet_counts/facet_fields/s1=={ 'stats':{ 'sumsq':247.0}, 'buckets':[{ 'val':'B', 'sumsq':227.0}, { 'val':'A', 'sumsq':20.0}]} "
+        ,"facets/s1=={ 'stats':{ 'sumsq':247.0}, 'buckets':[{ 'val':'B', 'sumsq':227.0}, { 'val':'A', 'sumsq':20.0}]} "
     );
 
   }

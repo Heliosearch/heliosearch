@@ -115,6 +115,7 @@ public class SimpleFacets {
   protected final SolrIndexSearcher searcher;
   protected final SolrQueryRequest req;
   protected final ResponseBuilder rb;
+  protected int version;
 
   // per-facet values
   protected SolrParams localParams; // localParams on this particular facet command
@@ -225,6 +226,9 @@ public class SimpleFacets {
     } else {
       facetStats = null;
     }
+
+    version = facetStats != null || parent != null ? 2 : 1;  // default facet version is 2 if there are stats or subs
+    params.getFieldInt(key, "facet.version", version);
   }
 
   protected void parseParams(String type, String param) throws IOException {
@@ -258,6 +262,8 @@ public class SimpleFacets {
       key = localParams.get(CommonParams.OUTPUT_KEY, key);
 
       setupStats();
+
+
 
       String threadStr = localParams.get(CommonParams.THREADS);
       if (threadStr != null) {
@@ -336,17 +342,54 @@ public class SimpleFacets {
     }
   }
 
+  public void addFacets() {
+    SimpleOrderedMap<Object> facet_counts = new SimpleOrderedMap<>();   // version < 2
+    SimpleOrderedMap<Object> facets = new SimpleOrderedMap<>();         // version >= 2
 
-  /**
-   * Looks at various Params to determining if any simple Facet Constraint count
-   * computations are desired.
-   *
-   * @see #getFacetQueryCounts
-   * @see #getFacetFieldCounts
-   * @see #getFacetRangeCounts
-   * @see org.apache.solr.common.params.FacetParams#FACET
-   * @return a NamedList of Facet Count info or null
-   */
+    try {
+      NamedList<Object> facet_queries = new SimpleOrderedMap<>();
+      getFacetQueryCounts(facets, facet_queries);
+
+      NamedList<Object> facet_fields = new SimpleOrderedMap<>();
+      getFacetFieldCounts(facets, facet_fields);
+
+      NamedList<Object> facet_ranges = new SimpleOrderedMap<>();
+      getFacetRangeCounts(facets, facet_ranges);
+
+      // old style only for facet.date
+      NamedList<Object> facet_dates = getFacetDateCounts();
+
+      if (facet_queries.size() + facet_fields.size() + facet_dates.size() + facet_ranges.size() > 0 || facets.size()==0) {
+        // we also add this empty info if there are no v2 facets since distrib search testing expects this empty facet info
+        facet_counts.add("facet_queries", facet_queries);
+        facet_counts.add("facet_fields", facet_fields);
+        facet_counts.add("facet_dates", facet_dates);
+        facet_counts.add("facet_ranges", facet_ranges);
+        rb.rsp.add( "facet_counts", facet_counts );
+      }
+
+      if (facets.size() > 0) {
+        rb.rsp.add("facets", facets);
+      }
+
+    } catch (IOException e) {
+      throw new SolrException(ErrorCode.SERVER_ERROR, e);
+    } catch (SyntaxError e) {
+      throw new SolrException(ErrorCode.BAD_REQUEST, e);
+    }
+  }
+
+    /**
+     * Looks at various Params to determining if any simple Facet Constraint count
+     * computations are desired.
+     *
+     * @see #getFacetQueryCounts
+     * @see #getFacetFieldCounts
+     * @see #getFacetRangeCounts
+     * @see org.apache.solr.common.params.FacetParams#FACET
+     * @return a NamedList of Facet Count info or null
+     */
+    /** nocommit
   public NamedList<Object> getFacetCounts() {
 
     // if someone called this method, benefit of the doubt: assume true
@@ -367,6 +410,7 @@ public class SimpleFacets {
     }
     return facetResponse;
   }
+     **/
 
   /**
    * Returns a list of facet counts for each of the facet queries
@@ -374,39 +418,28 @@ public class SimpleFacets {
    *
    * @see org.apache.solr.common.params.FacetParams#FACET_QUERY
    */
-  public NamedList<Object> getFacetQueryCounts() throws IOException,SyntaxError {
-
-    NamedList<Object> res = new SimpleOrderedMap<Object>();
-
-    /* Ignore CommonParams.DF - could have init param facet.query assuming
-     * the schema default with query param DF intented to only affect Q.
-     * If user doesn't want schema default for facet.query, they should be
-     * explicit.
-     */
-    // SolrQueryParser qp = searcher.getSchema().getSolrQueryParser(null);
-
+  public void getFacetQueryCounts(NamedList<Object> bucket, NamedList<Object> version1Bucket) throws IOException,SyntaxError {
     String[] facetQs = params.getParams(FacetParams.FACET_QUERY);
-
 
     if (null != facetQs && 0 != facetQs.length) {
 
       for (String q : facetQs) {
         try {
-          getQueryFacet(q, res);
+          getQueryFacet(q, bucket, version1Bucket);
         } finally {
           cleanup();
         }
       }
 
     }
-
-    return res;
   }
 
   // call cleanup after returning
-  void getQueryFacet(String q, NamedList<Object> res) throws IOException {
+  // If non-null version1Bucket points to "facet_counts/query_facets"
+  void getQueryFacet(String q, NamedList<Object> bucket, NamedList<Object> version1Bucket) throws IOException {
     try {
       parseParams(FacetParams.FACET_QUERY, q);
+      NamedList<Object> res = version1Bucket != null && version<2 ? version1Bucket : bucket;
 
       // TODO: slight optimization would prevent double-parsing of any localParams
       Query query = QParser.getParser(q, null, req).getQuery();
@@ -474,11 +507,16 @@ public class SimpleFacets {
     if (limit == 0) return new NamedList<Integer>();
     Integer mincount = params.getFieldInt(f, FacetParams.FACET_MINCOUNT);
     if (mincount==null) {
-      Boolean zeros = params.getFieldBool(f, FacetParams.FACET_ZEROS);
-      // mincount = (zeros!=null && zeros) ? 0 : 1;
-      mincount = (zeros!=null && !zeros) ? 1 : 0;
-      // current default is to include zeros.
+      if (version >= 2) {
+        mincount = 1;
+      } else {
+        Boolean zeros = params.getFieldBool(f, FacetParams.FACET_ZEROS);
+        // mincount = (zeros!=null && zeros) ? 0 : 1;
+        mincount = (zeros != null && !zeros) ? 1 : 0;
+        // current default is to include zeros.
+      }
     }
+
     boolean missing = params.getFieldBool(f, FacetParams.FACET_MISSING, false);
     // default to sorting if there is a limit.
     String sort = params.getFieldParam(f, FacetParams.FACET_SORT, limit>0 ? FacetParams.FACET_SORT_COUNT : FacetParams.FACET_SORT_INDEX);
@@ -775,13 +813,14 @@ public class SimpleFacets {
    * @see #getFacetTermEnumCounts
    */
   @SuppressWarnings("unchecked")
-  public NamedList<Object> getFacetFieldCounts() throws IOException, SyntaxError {
+  public void getFacetFieldCounts(NamedList<Object> bucket, NamedList<Object> version1Bucket) throws IOException, SyntaxError {
 
-    NamedList<Object> res = new SimpleOrderedMap<Object>();
     String[] facetFs = params.getParams(FacetParams.FACET_FIELD);
     if (null == facetFs) {
-      return res;
+      return;
     }
+
+    NamedList<Object> res = null;
 
     boolean doLocally = true;
 
@@ -799,6 +838,9 @@ public class SimpleFacets {
       //Loop over fields; submit to executor, keeping the future
       for (String f : facetFs) {
         parseParams(FacetParams.FACET_FIELD, f);
+
+        res = version1Bucket != null && version<2 ? version1Bucket : bucket;
+
         final String termList = localParams == null ? null : localParams.get(CommonParams.TERMS);
         final String workerKey = key;
         final String workerFacetValue = facetValue;
@@ -868,7 +910,6 @@ public class SimpleFacets {
       }
     }
 
-    return res;
   }
 
 
@@ -1412,28 +1453,27 @@ public class SimpleFacets {
    * @see org.apache.solr.common.params.FacetParams#FACET_RANGE
    */
 
-  public NamedList<Object> getFacetRangeCounts() throws IOException, SyntaxError {
-    final NamedList<Object> resOuter = new SimpleOrderedMap<Object>();
+  public void getFacetRangeCounts(NamedList<Object> bucket, NamedList<Object> version1Bucket) throws IOException, SyntaxError {
     final String[] fields = params.getParams(FacetParams.FACET_RANGE);
 
-    if (null == fields || 0 == fields.length) return resOuter;
+    if (null == fields || 0 == fields.length) return;
 
     for (String f : fields) {
       try {
-        getFacetRangeCounts(f, resOuter);
+        getFacetRangeCounts(f, bucket, version1Bucket);
       } finally {
         cleanup();
       }
     }
-
-    return resOuter;
   }
 
   // call cleanup after finished
-  void getFacetRangeCounts(String facetRange, NamedList<Object> resOuter) throws IOException {
+  void getFacetRangeCounts(String facetRange, NamedList<Object> bucket, NamedList<Object> version1Bucket) throws IOException {
 
     parseParams(FacetParams.FACET_RANGE, facetRange);
     String field = facetValue;
+
+    NamedList<Object> res = version1Bucket != null && version<2 ? version1Bucket : bucket;
 
     final IndexSchema schema = searcher.getSchema();
     final SchemaField sf = schema.getField(field);
@@ -1478,13 +1518,13 @@ public class SimpleFacets {
               "Unable to range facet on field:" + sf);
     }
 
-    resOuter.add(key, getFacetRangeCounts(key, sf, (RangeEndpointCalculator)calc));    // redundant cast helps intellij to resolve
+    res.add(key, getFacetRangeCounts(key, sf, calc));
   }
 
   private <T extends Comparable<T>> NamedList getFacetRangeCounts(String key, final SchemaField sf, final RangeEndpointCalculator<T> calc) throws IOException {
 
     final String f = key; // what to use for per-facet params... f.key.facet.offset=...
-    final String field = sf.getName();
+    final String field = sf.getName();  // field isn't currently used... it's encapsulated in "calc"
     final NamedList<Object> res = new SimpleOrderedMap<>();
 
     List<SimpleOrderedMap<Object>> buckets = null;
@@ -1513,7 +1553,7 @@ public class SimpleFacets {
     // likely to catch parse errors before attempting math
     res.add("gap", calc.getGap(gap));
 
-    final int minCount = params.getFieldInt(f,FacetParams.FACET_MINCOUNT, 0);
+    final int minCount = params.getFieldInt(f,FacetParams.FACET_MINCOUNT, version >= 2 ? 1 : 0);
 
     final EnumSet<FacetRangeInclude> include = FacetRangeInclude.parseParam
       (params.getFieldParams(f,FacetParams.FACET_RANGE_INCLUDE));

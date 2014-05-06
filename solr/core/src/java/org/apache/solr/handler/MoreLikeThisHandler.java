@@ -208,7 +208,7 @@ public class MoreLikeThisHandler extends RequestHandlerBase
       }
       else {
         SimpleFacets f = new SimpleFacets(req, mltDocs.docSet, params );
-        rsp.add( "facet_counts", f.getFacetCounts() );
+        f.addFacets();
       }
     }
     boolean dbg = req.getParams().getBool(CommonParams.DEBUG_QUERY, false);

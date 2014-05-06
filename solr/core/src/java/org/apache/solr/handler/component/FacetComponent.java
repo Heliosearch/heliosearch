@@ -81,7 +81,11 @@ public class FacetComponent extends SearchComponent
               params,
               rb );
 
-      NamedList<Object> counts = f.getFacetCounts();
+      f.addFacets();
+
+      // NamedList<Object> counts = f.getFacetCounts();
+      // rb.rsp.add( "facet_counts", counts );
+
       String[] pivots = params.getParams( FacetParams.FACET_PIVOT );
       if( pivots != null && pivots.length > 0 ) {
         PivotFacetHelper pivotHelper = new PivotFacetHelper(rb.req,
@@ -90,12 +94,15 @@ public class FacetComponent extends SearchComponent
             rb );
         NamedList v = pivotHelper.process(pivots);
         if( v != null ) {
+          NamedList<Object> counts = (NamedList<Object>)rb.rsp.getValues().get("facet_counts");
+          if (counts == null) {
+            counts = new SimpleOrderedMap<Object>();
+          }
           counts.add( PIVOT_KEY, v );
         }
       }
       
-      // TODO ???? add this directly to the response, or to the builder?
-      rb.rsp.add( "facet_counts", counts );
+
     }
   }
 
@@ -306,7 +313,10 @@ public class FacetComponent extends SearchComponent
         throw new SolrException(ErrorCode.SERVER_ERROR, "Unable to read facet info for shard: "+srsp.getShard(), ex);
       }
 
-      // handle facet queries
+      if (facet_counts == null) {
+        continue;
+      }
+
       NamedList facet_queries = (NamedList)facet_counts.get("facet_queries");
       if (facet_queries != null) {
         for (int i=0; i<facet_queries.size(); i++) {

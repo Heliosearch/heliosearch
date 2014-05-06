@@ -509,9 +509,9 @@ public class SimpleFacetStats implements Closeable {
           if ("field".equals(sub.type)) {
             subSimple.getFieldFacets(sub.value, bucket);
           } else if ("query".equals(sub.type)) {
-            subSimple.getQueryFacet(sub.value, bucket);
+            subSimple.getQueryFacet(sub.value, bucket, null);
           } else if ("range".equals(sub.type)) {
-            subSimple.getFacetRangeCounts(sub.value, bucket);
+            subSimple.getFacetRangeCounts(sub.value, bucket, null);
           }
 
         } finally {
