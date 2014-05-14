@@ -290,13 +290,13 @@ public abstract class SolrParams implements Serializable {
 
   /** Create SolrParams from NamedList. */
   public static SolrParams toSolrParams(NamedList params) {
-    // if no keys are repeated use the faster MapSolrParams
-    HashMap<String,String> map = new HashMap<>();
+    return new MultiMapSolrParams(toMultiMap(params));  // HS
+/*  HashMap<String,String> map = new HashMap<>();
     for (int i=0; i<params.size(); i++) {
       String prev = map.put(params.getName(i), params.getVal(i).toString());
       if (prev!=null) return new MultiMapSolrParams(toMultiMap(params));
     }
-    return new MapSolrParams(map);
+    return new MapSolrParams(map);  */
   }
   
   /** Create filtered SolrParams. */

@@ -28,11 +28,13 @@ import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.util.AbstractSolrTestCase;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 
 /**
  * Most of the tests for StandardRequestHandler are in ConvertedLegacyTest
  * 
  */
+@Ignore // this test is invalid as it assumes changes to "args" will be reflected in a request
 public class StandardRequestHandlerTest extends AbstractSolrTestCase {
   
   @BeforeClass

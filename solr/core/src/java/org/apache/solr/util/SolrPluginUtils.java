@@ -56,6 +56,7 @@ import org.apache.solr.handler.component.ShardRequest;
 import org.apache.solr.highlight.SolrHighlighter;
 import org.apache.solr.parser.QueryParser;
 import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.request.macro.RequestUtil;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
@@ -67,7 +68,6 @@ import org.apache.solr.search.FieldParams;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.ReturnFields;
-import org.apache.solr.search.SolrCache;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SolrQueryParser;
 import org.apache.solr.search.SyntaxError;
@@ -126,12 +126,13 @@ public class SolrPluginUtils {
   public static void setDefaults(SolrQueryRequest req, SolrParams defaults,
                                  SolrParams appends, SolrParams invariants) {
 
-      SolrParams p = req.getParams();
+    RequestUtil.processParams(req, defaults, appends, invariants);
+/*      SolrParams p = req.getParams();
       p = SolrParams.wrapDefaults(p, defaults);
       p = SolrParams.wrapAppended(p, appends);
       p = SolrParams.wrapDefaults(invariants, p);
 
-      req.setParams(p);
+      req.setParams(p); */
   }
 
 
