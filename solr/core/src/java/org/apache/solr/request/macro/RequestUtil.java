@@ -42,10 +42,8 @@ public class RequestUtil {
 
     SolrParams p = req.getParams();
 
-    boolean doMacros = p.getBool("expandMacros", true);
-
     // short circuit processing
-    if (defaults == null && invariants == null && appends == null && !doMacros) {
+    if (defaults == null && invariants == null && appends == null && !p.getBool("expandMacros", true)) {
       return;  // nothing to do...
     }
 
@@ -83,6 +81,12 @@ public class RequestUtil {
     // first populate defaults, etc..
     if (invariants != null) {
       newMap.putAll( asMultiMap(invariants) );
+    }
+
+    String[] doMacrosStr = newMap.get("expandMacros");
+    boolean doMacros = true;
+    if (doMacrosStr != null) {
+      doMacros = "true".equals(doMacrosStr[0]);
     }
 
     SolrParams newParams;
