@@ -29,6 +29,8 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.util.AttributeFactory;
+import org.apache.lucene.util.AttributeSource;
 import org.apache.lucene.util.Version;
 
 /**
@@ -115,7 +117,7 @@ public final class UAX29URLEmailTokenizer extends Tokenizer {
   }
 
   /**
-   * Creates a new UAX29URLEmailTokenizer with a given {@link org.apache.lucene.util.AttributeSource.AttributeFactory}
+   * Creates a new UAX29URLEmailTokenizer with a given {@link AttributeFactory}
    */
   public UAX29URLEmailTokenizer(Version matchVersion, AttributeFactory factory, Reader input) {
     super(factory, input);
@@ -124,13 +126,13 @@ public final class UAX29URLEmailTokenizer extends Tokenizer {
 
   private StandardTokenizerInterface getScannerFor(Version matchVersion) {
     // best effort NPE if you dont call reset
-    if (matchVersion.onOrAfter(Version.LUCENE_47)) {
+    if (matchVersion.onOrAfter(Version.LUCENE_4_7)) {
       return new UAX29URLEmailTokenizerImpl(input);
-    } else if (matchVersion.onOrAfter(Version.LUCENE_40)) {
+    } else if (matchVersion.onOrAfter(Version.LUCENE_4_0)) {
       return new UAX29URLEmailTokenizerImpl40(input);
-    } else if (matchVersion.onOrAfter(Version.LUCENE_36)) {
+    } else if (matchVersion.onOrAfter(Version.LUCENE_3_6)) {
       return new UAX29URLEmailTokenizerImpl36(input);
-    } else if (matchVersion.onOrAfter(Version.LUCENE_34)) {
+    } else if (matchVersion.onOrAfter(Version.LUCENE_3_4)) {
       return new UAX29URLEmailTokenizerImpl34(input);
     } else {
       return new UAX29URLEmailTokenizerImpl31(input);

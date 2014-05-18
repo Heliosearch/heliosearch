@@ -139,7 +139,7 @@ public class FieldAnalysisRequestHandler extends AnalysisRequestHandlerBase {
     }
     analysisRequest.setQuery(solrParams.get(AnalysisParams.QUERY, solrParams.get(CommonParams.Q)));
 
-    String value = solrParams.get(AnalysisParams.FIELD_VALUE);
+    String value = solrParams.required().get(AnalysisParams.FIELD_VALUE);
 
     Iterable<ContentStream> streams = req.getContentStreams();
     if (streams != null) {
@@ -217,7 +217,7 @@ public class FieldAnalysisRequestHandler extends AnalysisRequestHandlerBase {
 
     NamedList<NamedList> analyzeResults = new SimpleOrderedMap<>();
     if (analysisRequest.getFieldValue() != null) {
-      AnalysisContext context = new AnalysisContext(fieldName, fieldType, fieldType.getAnalyzer(), termsToMatch);
+      AnalysisContext context = new AnalysisContext(fieldName, fieldType, fieldType.getIndexAnalyzer(), termsToMatch);
       NamedList analyzedTokens = analyzeValue(analysisRequest.getFieldValue(), context);
       analyzeResults.add("index", analyzedTokens);
     }

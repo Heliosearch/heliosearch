@@ -35,7 +35,7 @@ import org.apache.lucene.analysis.util.ResourceLoaderAware;
 import org.apache.lucene.analysis.util.StringMockResourceLoader;
 import org.apache.lucene.analysis.util.TokenFilterFactory;
 import org.apache.lucene.analysis.util.TokenizerFactory;
-import org.apache.lucene.util.AttributeSource.AttributeFactory;
+import org.apache.lucene.util.AttributeFactory;
 
 /**
  * Sanity check some things about all factories,
@@ -179,7 +179,7 @@ public class TestFactories extends BaseTokenStreamTestCase {
 
     @Override
     protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
-      Tokenizer tf = tokenizer.create(reader);
+      Tokenizer tf = tokenizer.create(newAttributeFactory(), reader);
       if (tokenfilter != null) {
         return new TokenStreamComponents(tf, tokenfilter.create(tf));
       } else {

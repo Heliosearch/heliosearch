@@ -118,12 +118,12 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       assert CodecUtil.headerLength(codecNameIdx) == indexStream.getFilePointer();
       indexReader = new CompressingStoredFieldsIndexReader(indexStream, si);
 
+      long maxPointer = -1;
+      
       if (version >= VERSION_CHECKSUM) {
         maxPointer = indexStream.readVLong();
-        assert maxPointer + CodecUtil.footerLength() == d.fileLength(fieldsStreamFN);
         CodecUtil.checkFooter(indexStream);
       } else {
-        maxPointer = d.fileLength(fieldsStreamFN);
         CodecUtil.checkEOF(indexStream);
       }
       indexStream.close();
@@ -131,6 +131,14 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
 
       // Open the data file and read metadata
       fieldsStream = d.openInput(fieldsStreamFN, context);
+      if (version >= VERSION_CHECKSUM) {
+        if (maxPointer + CodecUtil.footerLength() != fieldsStream.length()) {
+          throw new CorruptIndexException("Invalid fieldsStream maxPointer (file truncated?): maxPointer=" + maxPointer + ", length=" + fieldsStream.length());
+        }
+      } else {
+        maxPointer = fieldsStream.length();
+      }
+      this.maxPointer = maxPointer;
       final String codecNameDat = formatName + CODEC_SFX_DAT;
       final int fieldsVersion = CodecUtil.checkHeader(fieldsStream, codecNameDat, VERSION_START, VERSION_CURRENT);
       if (version != fieldsVersion) {
@@ -495,17 +503,6 @@ public final class CompressingStoredFieldsReader extends StoredFieldsReader {
       if (bytes.length != chunkSize) {
         throw new CorruptIndexException("Corrupted: expected chunk size = " + chunkSize() + ", got " + bytes.length + " (resource=" + fieldsStream + ")");
       }
-    }
-
-    /**
-     * Copy compressed data.
-     */
-    void copyCompressedData(DataOutput out) throws IOException {
-      assert getVersion() == VERSION_CURRENT;
-      final long chunkEnd = docBase + chunkDocs == numDocs
-          ? maxPointer
-          : indexReader.getStartPointer(docBase + chunkDocs);
-      out.copyBytes(fieldsStream, chunkEnd - fieldsStream.getFilePointer());
     }
 
     /**

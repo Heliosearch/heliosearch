@@ -17,19 +17,28 @@ package org.apache.lucene.index;
  * limitations under the License.
  */
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 
-import org.apache.lucene.analysis.*;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.MockAnalyzer;
+import org.apache.lucene.analysis.MockTokenFilter;
+import org.apache.lucene.analysis.MockTokenizer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.codecs.Codec;
@@ -70,6 +79,7 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.IOUtils;
+import org.apache.lucene.util.LuceneTestCase.AwaitsFix;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.SetOnce;
 import org.apache.lucene.util.TestUtil;
@@ -107,7 +117,7 @@ public class TestIndexWriter extends LuceneTestCase {
         writer.close();
 
         // delete 40 documents
-        writer = new IndexWriter(dir, newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setMergePolicy(NoMergePolicy.NO_COMPOUND_FILES));
+        writer = new IndexWriter(dir, newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setMergePolicy(NoMergePolicy.INSTANCE));
         for (i = 0; i < 40; i++) {
             writer.deleteDocuments(new Term("id", ""+i));
         }
@@ -988,6 +998,8 @@ public class TestIndexWriter extends LuceneTestCase {
     volatile boolean allowInterrupt = false;
     final Random random;
     final Directory adder;
+    final ByteArrayOutputStream bytesLog = new ByteArrayOutputStream();
+    final PrintStream log = new PrintStream(bytesLog, true, IOUtils.UTF_8);
     
     IndexerThreadInterrupt() throws IOException {
       this.random = new Random(random().nextLong());
@@ -1130,24 +1142,27 @@ public class TestIndexWriter extends LuceneTestCase {
           // on!!  This test doesn't repro easily so when
           // Jenkins hits a fail we need to study where the
           // interrupts struck!
-          System.out.println("TEST: got interrupt");
-          re.printStackTrace(System.out);
+          log.println("TEST: got interrupt");
+          re.printStackTrace(log);
           Throwable e = re.getCause();
           assertTrue(e instanceof InterruptedException);
           if (finish) {
             break;
           }
         } catch (Throwable t) {
-          System.out.println("FAILED; unexpected exception");
-          t.printStackTrace(System.out);
+          log.println("FAILED; unexpected exception");
+          t.printStackTrace(log);
           failed = true;
           break;
         }
       }
 
+      if (VERBOSE) {
+        log.println("TEST: now finish failed=" + failed);
+      }
       if (!failed) {
         if (VERBOSE) {
-          System.out.println("TEST: now rollback");
+          log.println("TEST: now rollback");
         }
         // clear interrupt state:
         Thread.interrupted();
@@ -1163,8 +1178,8 @@ public class TestIndexWriter extends LuceneTestCase {
           TestUtil.checkIndex(dir);
         } catch (Exception e) {
           failed = true;
-          System.out.println("CheckIndex FAILED: unexpected exception");
-          e.printStackTrace(System.out);
+          log.println("CheckIndex FAILED: unexpected exception");
+          e.printStackTrace(log);
         }
         try {
           IndexReader r = DirectoryReader.open(dir);
@@ -1172,8 +1187,8 @@ public class TestIndexWriter extends LuceneTestCase {
           r.close();
         } catch (Exception e) {
           failed = true;
-          System.out.println("DirectoryReader.open FAILED: unexpected exception");
-          e.printStackTrace(System.out);
+          log.println("DirectoryReader.open FAILED: unexpected exception");
+          e.printStackTrace(log);
         }
       }
       try {
@@ -1217,7 +1232,9 @@ public class TestIndexWriter extends LuceneTestCase {
     }
     t.finish = true;
     t.join();
-    assertFalse(t.failed);
+    if (t.failed) {
+      fail(new String(t.bytesLog.toString("UTF-8")));
+    }
   }
   
   /** testThreadInterruptDeadlock but with 2 indexer threads */
@@ -1562,11 +1579,13 @@ public class TestIndexWriter extends LuceneTestCase {
 
     // After rollback, IW should remove all files
     writer.rollback();
-    assertEquals("no files should exist in the directory after rollback", 0, dir.listAll().length);
+    String allFiles[] = dir.listAll();
+    assertTrue("no files should exist in the directory after rollback", allFiles.length == 0 || Arrays.equals(allFiles, new String[] { IndexWriter.WRITE_LOCK_NAME }));
 
     // Since we rolled-back above, that close should be a no-op
     writer.close();
-    assertEquals("expected a no-op close after IW.rollback()", 0, dir.listAll().length);
+    allFiles = dir.listAll();
+    assertTrue("expected a no-op close after IW.rollback()", allFiles.length == 0 || Arrays.equals(allFiles, new String[] { IndexWriter.WRITE_LOCK_NAME }));
     dir.close();
   }
 
@@ -2185,6 +2204,124 @@ public class TestIndexWriter extends LuceneTestCase {
     dir.close();
   }
   
+  public void testNullAnalyzer() throws IOException {
+    Directory dir = newDirectory();
+    IndexWriterConfig iwConf = newIndexWriterConfig(TEST_VERSION_CURRENT, null);
+    RandomIndexWriter iw = new RandomIndexWriter(random(), dir, iwConf);
+    // add 3 good docs
+    for (int i = 0; i < 3; i++) {
+      Document doc = new Document();
+      doc.add(new StringField("id", Integer.toString(i), Field.Store.NO));
+      iw.addDocument(doc);
+    }
+    // add broken doc
+    try {
+      Document broke = new Document();
+      broke.add(newTextField("test", "broken", Field.Store.NO));
+      iw.addDocument(broke);
+      fail();
+    } catch (NullPointerException expected) {}
+    // ensure good docs are still ok
+    IndexReader ir = iw.getReader();
+    assertEquals(3, ir.numDocs());
+    ir.close();
+    iw.close();
+    dir.close();
+  }
+  
+  public void testNullDocument() throws IOException {
+    Directory dir = newDirectory();
+    RandomIndexWriter iw = new RandomIndexWriter(random(), dir);
+    // add 3 good docs
+    for (int i = 0; i < 3; i++) {
+      Document doc = new Document();
+      doc.add(new StringField("id", Integer.toString(i), Field.Store.NO));
+      iw.addDocument(doc);
+    }
+    // add broken doc
+    try {
+      iw.addDocument(null);
+      fail();
+    } catch (NullPointerException expected) {}
+    // ensure good docs are still ok
+    IndexReader ir = iw.getReader();
+    assertEquals(3, ir.numDocs());
+    ir.close();
+    iw.close();
+    dir.close();
+  }
+  
+  public void testNullDocuments() throws IOException {
+    Directory dir = newDirectory();
+    RandomIndexWriter iw = new RandomIndexWriter(random(), dir);
+    // add 3 good docs
+    for (int i = 0; i < 3; i++) {
+      Document doc = new Document();
+      doc.add(new StringField("id", Integer.toString(i), Field.Store.NO));
+      iw.addDocument(doc);
+    }
+    // add broken doc block
+    try {
+      iw.addDocuments(null);
+      fail();
+    } catch (NullPointerException expected) {}
+    // ensure good docs are still ok
+    IndexReader ir = iw.getReader();
+    assertEquals(3, ir.numDocs());
+    ir.close();
+    iw.close();
+    dir.close();
+  }
+  
+  public void testIterableFieldThrowsException() throws IOException {
+    Directory dir = newDirectory();
+    IndexWriter w = new IndexWriter(dir, newIndexWriterConfig(
+        TEST_VERSION_CURRENT, new MockAnalyzer(random())));
+    int iters = atLeast(100);
+    int docCount = 0;
+    int docId = 0;
+    Set<String> liveIds = new HashSet<>();
+    for (int i = 0; i < iters; i++) {      
+      int numDocs = atLeast(4);
+      for (int j = 0; j < numDocs; j++) {
+        String id = Integer.toString(docId++);
+        final List<IndexableField> fields = new ArrayList<>();
+        fields.add(new StringField("id", id, Field.Store.YES));
+        fields.add(new StringField("foo", TestUtil.randomSimpleString(random()), Field.Store.NO));
+        docId++;
+        
+        boolean success = false;
+        try {
+          w.addDocument(new RandomFailingIterable<IndexableField>(fields, random()));
+          success = true;
+        } catch (RuntimeException e) {
+          assertEquals("boom", e.getMessage());
+        } finally {
+          if (success) {
+            docCount++;
+            liveIds.add(id);
+          }
+        }
+      }
+    }
+    DirectoryReader reader = w.getReader();
+    assertEquals(docCount, reader.numDocs());
+    List<AtomicReaderContext> leaves = reader.leaves();
+    for (AtomicReaderContext atomicReaderContext : leaves) {
+      AtomicReader ar = atomicReaderContext.reader();
+      Bits liveDocs = ar.getLiveDocs();
+      int maxDoc = ar.maxDoc();
+      for (int i = 0; i < maxDoc; i++) {
+        if (liveDocs == null || liveDocs.get(i)) {
+          assertTrue(liveIds.remove(ar.document(i).get("id")));
+        }
+      }
+    }
+    assertTrue(liveIds.isEmpty());
+    w.close();
+    IOUtils.close(reader, dir);
+  }
+  
   public void testIterableThrowsException() throws IOException {
     Directory dir = newDirectory();
     IndexWriter w = new IndexWriter(dir, newIndexWriterConfig(
@@ -2207,7 +2344,7 @@ public class TestIndexWriter extends LuceneTestCase {
       }
       boolean success = false;
       try {
-        w.addDocuments(new RandomFailingFieldIterable(docs, random()));
+        w.addDocuments(new RandomFailingIterable<Iterable<IndexableField>>(docs, random()));
         success = true;
       } catch (RuntimeException e) {
         assertEquals("boom", e.getMessage());
@@ -2236,20 +2373,54 @@ public class TestIndexWriter extends LuceneTestCase {
     assertTrue(liveIds.isEmpty());
     IOUtils.close(reader, w, dir);
   }
+  
+  public void testIterableThrowsException2() throws IOException {
+    Directory dir = newDirectory();
+    IndexWriter w = new IndexWriter(dir, newIndexWriterConfig(
+        TEST_VERSION_CURRENT, new MockAnalyzer(random())));
+    try {
+      w.addDocuments(new Iterable<Document>() {
+        @Override
+        public Iterator<Document> iterator() {
+          return new Iterator<Document>() {
 
-  private static class RandomFailingFieldIterable implements Iterable<Iterable<IndexableField>> {
-    private final List<Iterable<IndexableField>> docList;
-    private final Random random;
+            @Override
+            public boolean hasNext() {
+              return true;
+            }
 
-    public RandomFailingFieldIterable(List<Iterable<IndexableField>> docList, Random random) {
-      this.docList = docList;
-      this.random = random;
+            @Override
+            public Document next() {
+              throw new RuntimeException("boom");
+            }
+
+            @Override
+            public void remove() { assert false; }
+          };
+        }
+      });
+    } catch (Exception e) {
+      assertNotNull(e.getMessage());
+      assertEquals("boom", e.getMessage());
+    }
+    w.close();
+    IOUtils.close(dir);
+  }
+
+  private static class RandomFailingIterable<T> implements Iterable<T> {
+    private final Iterable<? extends T> list;
+    private final int failOn;
+
+    public RandomFailingIterable(Iterable<? extends T> list, Random random) {
+      this.list = list;
+      this.failOn = random.nextInt(5);
     }
     
     @Override
-    public Iterator<Iterable<IndexableField>> iterator() {
-      final Iterator<Iterable<IndexableField>> docIter = docList.iterator();
-      return new Iterator<Iterable<IndexableField>>() {
+    public Iterator<T> iterator() {
+      final Iterator<? extends T> docIter = list.iterator();
+      return new Iterator<T>() {
+        int count = 0;
 
         @Override
         public boolean hasNext() {
@@ -2257,20 +2428,18 @@ public class TestIndexWriter extends LuceneTestCase {
         }
 
         @Override
-        public Iterable<IndexableField> next() {
-          if (random.nextInt(5) == 0) {
+        public T next() {
+          if (count == failOn) {
             throw new RuntimeException("boom");
           }
+          count++;
           return docIter.next();
         }
 
         @Override
         public void remove() {throw new UnsupportedOperationException();}
-        
-        
       };
     }
-    
   }
 
   // LUCENE-2727/LUCENE-2812/LUCENE-4738:

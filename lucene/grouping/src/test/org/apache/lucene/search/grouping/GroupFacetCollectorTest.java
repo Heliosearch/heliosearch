@@ -273,7 +273,7 @@ public class GroupFacetCollectorTest extends AbstractGroupingTestCase {
         random(),
         dir,
         newIndexWriterConfig(TEST_VERSION_CURRENT,
-            new MockAnalyzer(random())).setMergePolicy(NoMergePolicy.COMPOUND_FILES));
+            new MockAnalyzer(random())).setMergePolicy(NoMergePolicy.INSTANCE));
     boolean useDv = false;
 
     // Cannot assert this since we use NoMergePolicy:
@@ -303,7 +303,6 @@ public class GroupFacetCollectorTest extends AbstractGroupingTestCase {
     doc = new Document();
     addField(doc, groupField, "a", useDv);
     doc.add(new StringField("airport", "dus", Field.Store.NO));
-
     w.addDocument(doc);
 
     // 4

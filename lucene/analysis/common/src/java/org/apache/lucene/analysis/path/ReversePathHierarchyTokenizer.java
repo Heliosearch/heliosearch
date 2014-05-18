@@ -25,6 +25,7 @@ import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.util.AttributeFactory;
 
 /**
  * Tokenizer for domain-like hierarchies.
@@ -81,7 +82,7 @@ public class ReversePathHierarchyTokenizer extends Tokenizer {
   }
 
   public ReversePathHierarchyTokenizer(Reader input, int bufferSize, char delimiter, char replacement, int skip) {
-    this(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY, input, bufferSize, delimiter, replacement, skip);
+    this(DEFAULT_TOKEN_ATTRIBUTE_FACTORY, input, bufferSize, delimiter, replacement, skip);
   }
   public ReversePathHierarchyTokenizer
       (AttributeFactory factory, Reader input, int bufferSize, char delimiter, char replacement, int skip) {

@@ -18,9 +18,11 @@ package org.apache.lucene.index;
  */
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.apache.lucene.analysis.MockAnalyzer;
@@ -71,20 +73,24 @@ abstract class BaseIndexFileFormatTestCase extends LuceneTestCase {
    * comparing indices that store the same content.
    */
   protected Collection<String> excludedExtensionsFromByteCounts() {
+    return new HashSet<String>(Arrays.asList(new String[] { 
     // segment infos store various pieces of information that don't solely depend
     // on the content of the index in the diagnostics (such as a timestamp) so we
     // exclude this file from the bytes counts
-    return Collections.singleton("si");
+                        "si", 
+    // lock files are 0 bytes (one directory in the test could be RAMDir, the other FSDir)
+                        "lock" }));
   }
 
   /** The purpose of this test is to make sure that bulk merge doesn't accumulate useless data over runs. */
   public void testMergeStability() throws Exception {
     Directory dir = newDirectory();
     // do not use newMergePolicy that might return a MockMergePolicy that ignores the no-CFS ratio
+    // do not use RIW which will change things up!
     MergePolicy mp = newTieredMergePolicy();
     mp.setNoCFSRatio(0);
     IndexWriterConfig cfg = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setUseCompoundFile(false).setMergePolicy(mp);
-    RandomIndexWriter w = new RandomIndexWriter(random(), dir, cfg);
+    IndexWriter w = new IndexWriter(dir, cfg);
     final int numDocs = atLeast(500);
     for (int i = 0; i < numDocs; ++i) {
       Document d = new Document();
@@ -100,7 +106,7 @@ abstract class BaseIndexFileFormatTestCase extends LuceneTestCase {
     mp = newTieredMergePolicy();
     mp.setNoCFSRatio(0);
     cfg = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setUseCompoundFile(false).setMergePolicy(mp);
-    w = new RandomIndexWriter(random(), dir2, cfg);
+    w = new IndexWriter(dir2, cfg);
     w.addIndexes(reader);
     w.commit();
     w.close();

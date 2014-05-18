@@ -26,6 +26,7 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionLengthAttribute;
 import org.apache.lucene.analysis.util.CharacterUtils;
+import org.apache.lucene.util.AttributeFactory;
 import org.apache.lucene.util.Version;
 
 /**
@@ -101,7 +102,7 @@ public class NGramTokenizer extends Tokenizer {
   /**
    * Creates NGramTokenizer with given min and max n-grams.
    * @param version the lucene compatibility <a href="#version">version</a>
-   * @param factory {@link org.apache.lucene.util.AttributeSource.AttributeFactory} to use
+   * @param factory {@link org.apache.lucene.util.AttributeFactory} to use
    * @param input {@link Reader} holding the input to be tokenized
    * @param minGram the smallest n-gram to generate
    * @param maxGram the largest n-gram to generate
@@ -120,10 +121,10 @@ public class NGramTokenizer extends Tokenizer {
   }
 
   private void init(Version version, int minGram, int maxGram, boolean edgesOnly) {
-    if (!version.onOrAfter(Version.LUCENE_44)) {
+    if (!version.onOrAfter(Version.LUCENE_4_4)) {
       throw new IllegalArgumentException("This class only works with Lucene 4.4+. To emulate the old (broken) behavior of NGramTokenizer, use Lucene43NGramTokenizer/Lucene43EdgeNGramTokenizer");
     }
-    charUtils = version.onOrAfter(Version.LUCENE_44)
+    charUtils = version.onOrAfter(Version.LUCENE_4_4)
         ? CharacterUtils.getInstance(version)
         : CharacterUtils.getJava4Instance();
     if (minGram < 1) {

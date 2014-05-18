@@ -33,6 +33,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 
 public class TestICUTokenizer extends BaseTokenStreamTestCase {
   
@@ -43,7 +44,7 @@ public class TestICUTokenizer extends BaseTokenStreamTestCase {
     sb.append(whitespace);
     sb.append("testing 1234");
     String input = sb.toString();
-    ICUTokenizer tokenizer = new ICUTokenizer(new StringReader(input), new DefaultICUTokenizerConfig(false));
+    ICUTokenizer tokenizer = new ICUTokenizer(newAttributeFactory(), new StringReader(input), new DefaultICUTokenizerConfig(false));
     assertTokenStreamContents(tokenizer, new String[] { "testing", "1234" });
   }
   
@@ -53,7 +54,7 @@ public class TestICUTokenizer extends BaseTokenStreamTestCase {
       sb.append('a');
     }
     String input = sb.toString();
-    ICUTokenizer tokenizer = new ICUTokenizer(new StringReader(input), new DefaultICUTokenizerConfig(false));
+    ICUTokenizer tokenizer = new ICUTokenizer(newAttributeFactory(), new StringReader(input), new DefaultICUTokenizerConfig(false));
     char token[] = new char[4096];
     Arrays.fill(token, 'a');
     String expectedToken = new String(token);
@@ -68,9 +69,8 @@ public class TestICUTokenizer extends BaseTokenStreamTestCase {
   
   private Analyzer a = new Analyzer() {
     @Override
-    protected TokenStreamComponents createComponents(String fieldName,
-        Reader reader) {
-      Tokenizer tokenizer = new ICUTokenizer(reader, new DefaultICUTokenizerConfig(false));
+    protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
+      Tokenizer tokenizer = new ICUTokenizer(newAttributeFactory(), reader, new DefaultICUTokenizerConfig(false));
       TokenFilter filter = new ICUNormalizer2Filter(tokenizer);
       return new TokenStreamComponents(tokenizer, filter);
     }
@@ -271,6 +271,44 @@ public class TestICUTokenizer extends BaseTokenStreamTestCase {
       ts.end();
     } finally {
       IOUtils.closeWhileHandlingException(ts);
+    }
+  }
+  
+  /** test for bugs like http://bugs.icu-project.org/trac/ticket/10767 */
+  public void testICUConcurrency() throws Exception {
+    int numThreads = 8;
+    final CountDownLatch startingGun = new CountDownLatch(1);
+    Thread threads[] = new Thread[numThreads];
+    for (int i = 0; i < threads.length; i++) {
+      threads[i] = new Thread() {
+        @Override
+        public void run() {
+          try {
+            startingGun.await();
+            long tokenCount = 0;
+            final String contents = "英 เบียร์ ビール ເບຍ abc";
+            for (int i = 0; i < 1000; i++) {
+              try (Tokenizer tokenizer = new ICUTokenizer(new StringReader(contents))) {
+                tokenizer.reset();
+                while (tokenizer.incrementToken()) {
+                  tokenCount++;
+                }
+                tokenizer.end();
+              }
+            }
+            if (VERBOSE) {
+              System.out.println(tokenCount);
+            }
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        } 
+      };
+      threads[i].start();
+    }
+    startingGun.countDown();
+    for (int i = 0; i < threads.length; i++) {
+      threads[i].join();
     }
   }
 }

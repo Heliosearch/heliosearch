@@ -21,11 +21,13 @@ import java.io.IOException;
 import java.io.Closeable;
 import java.lang.reflect.Modifier;
 
+import org.apache.lucene.analysis.tokenattributes.PackedTokenAttributeImpl;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.util.Attribute;
+import org.apache.lucene.util.AttributeFactory;
 import org.apache.lucene.util.AttributeImpl;
 import org.apache.lucene.util.AttributeSource;
 
@@ -84,12 +86,16 @@ import org.apache.lucene.util.AttributeSource;
  * assertions are enabled.
  */
 public abstract class TokenStream extends AttributeSource implements Closeable {
+  
+  /** Default {@link AttributeFactory} instance that should be used for TokenStreams. */
+  public static final AttributeFactory DEFAULT_TOKEN_ATTRIBUTE_FACTORY =
+    AttributeFactory.getStaticImplementation(AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY, PackedTokenAttributeImpl.class);
 
   /**
    * A TokenStream using the default attribute factory.
    */
   protected TokenStream() {
-    super();
+    super(DEFAULT_TOKEN_ATTRIBUTE_FACTORY);
     assert assertFinal();
   }
   
@@ -171,8 +177,9 @@ public abstract class TokenStream extends AttributeSource implements Closeable {
    */
   public void end() throws IOException {
     clearAttributes(); // LUCENE-3849: don't consume dirty atts
-    if (hasAttribute(PositionIncrementAttribute.class)) {
-      getAttribute(PositionIncrementAttribute.class).setPositionIncrement(0);
+    PositionIncrementAttribute posIncAtt = getAttribute(PositionIncrementAttribute.class);
+    if (posIncAtt != null) {
+      posIncAtt.setPositionIncrement(0);
     }
   }
 

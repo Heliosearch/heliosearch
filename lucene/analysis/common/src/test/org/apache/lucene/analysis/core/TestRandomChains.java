@@ -47,6 +47,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.BaseTokenStreamTestCase;
 import org.apache.lucene.analysis.CachingTokenFilter;
 import org.apache.lucene.analysis.CharFilter;
+import org.apache.lucene.analysis.CrankyTokenFilter;
 import org.apache.lucene.analysis.MockGraphTokenFilter;
 import org.apache.lucene.analysis.MockRandomLookaheadTokenFilter;
 import org.apache.lucene.analysis.MockTokenFilter;
@@ -82,8 +83,8 @@ import org.apache.lucene.analysis.synonym.SynonymMap;
 import org.apache.lucene.analysis.util.CharArrayMap;
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.analysis.wikipedia.WikipediaTokenizer;
+import org.apache.lucene.util.AttributeFactory;
 import org.apache.lucene.util.AttributeSource;
-import org.apache.lucene.util.AttributeSource.AttributeFactory;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.Rethrow;
 import org.apache.lucene.util.TestUtil;
@@ -143,6 +144,8 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
           // offsets offenders?
           // doesn't actual reset itself!
           CachingTokenFilter.class,
+          // Not broken, simulates brokenness:
+          CrankyTokenFilter.class,
           // Not broken: we forcefully add this, so we shouldn't
           // also randomly pick it:
           ValidatingTokenFilter.class)) {
@@ -352,6 +355,11 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
       @Override public Object create(Random random) {
         // we expect bugs in emulating old versions
         return TEST_VERSION_CURRENT;
+      }
+    });
+    put(AttributeFactory.class, new ArgProducer() {
+      @Override public Object create(Random random) {
+        return newAttributeFactory(random);
       }
     });
     put(Set.class, new ArgProducer() {
@@ -597,9 +605,6 @@ public class TestRandomChains extends BaseTokenStreamTestCase {
       Class<?> paramType = paramTypes[i];
       if (paramType == Reader.class) {
         args[i] = reader;
-      } else if (paramType == AttributeFactory.class) {
-        // TODO: maybe the collator one...???
-        args[i] = AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY;
       } else if (paramType == AttributeSource.class) {
         // TODO: args[i] = new AttributeSource();
         // this is currently too scary to deal with!

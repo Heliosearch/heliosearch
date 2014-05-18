@@ -20,6 +20,7 @@ package org.apache.solr.search;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.solr.common.SolrException;
@@ -158,7 +159,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
     if (regenerator==null) return;
     warmContext.cache = this;
 
-    long warmingStartTime = System.currentTimeMillis();
+    long warmingStartTime = System.nanoTime();
     LRUCache<K,V> other = (LRUCache<K,V>)warmContext.oldCache;
 
     // warm entries
@@ -201,7 +202,7 @@ public class LRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
       }
     }
 
-    warmupTime = System.currentTimeMillis() - warmingStartTime;
+    warmupTime = TimeUnit.MILLISECONDS.convert(System.nanoTime() - warmingStartTime, TimeUnit.NANOSECONDS);
   }
 
 

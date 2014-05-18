@@ -45,9 +45,8 @@ import org.apache.lucene.index.TrackingIndexWriter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NRTCachingDirectory;
 import org.apache.lucene.util.IOUtils;
-import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.ThreadInterruptedException;
 import org.apache.lucene.util.Version;
 
@@ -304,7 +303,7 @@ public class TestControlledRealTimeReopenThread extends ThreadedIndexingAndSearc
    */
   public void testThreadStarvationNoDeleteNRTReader() throws IOException, InterruptedException {
     IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
-    conf.setMergePolicy(random().nextBoolean() ? NoMergePolicy.COMPOUND_FILES : NoMergePolicy.NO_COMPOUND_FILES);
+    conf.setMergePolicy(NoMergePolicy.INSTANCE);
     Directory d = newDirectory();
     final CountDownLatch latch = new CountDownLatch(1);
     final CountDownLatch signal = new CountDownLatch(1);
@@ -474,7 +473,7 @@ public class TestControlledRealTimeReopenThread extends ThreadedIndexingAndSearc
 
     final SnapshotDeletionPolicy sdp = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
     final Directory dir = new NRTCachingDirectory(newFSDirectory(createTempDir("nrt")), 5, 128);
-    IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_46,
+    IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_4_6,
                                                      new MockAnalyzer(random()));
     config.setIndexDeletionPolicy(sdp);
     config.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);

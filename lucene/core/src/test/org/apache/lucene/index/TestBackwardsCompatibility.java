@@ -61,6 +61,7 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.IOUtils;
+import org.apache.lucene.util.InfoStream;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.StringHelper;
@@ -161,6 +162,64 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
   }
   */
   
+  private void updateNumeric(IndexWriter writer, String id, String f, String cf, long value) throws IOException {
+    writer.updateNumericDocValue(new Term("id", id), f, value);
+    writer.updateNumericDocValue(new Term("id", id), cf, value*2);
+  }
+  
+  private void updateBinary(IndexWriter writer, String id, String f, String cf, long value) throws IOException {
+    writer.updateBinaryDocValue(new Term("id", id), f, TestBinaryDocValuesUpdates.toBytes(value));
+    writer.updateBinaryDocValue(new Term("id", id), cf, TestBinaryDocValuesUpdates.toBytes(value*2));
+  }
+
+/*  // Creates an index with DocValues updates
+  public void testCreateIndexWithDocValuesUpdates() throws Exception {
+    // we use a real directory name that is not cleaned up,
+    // because this method is only used to create backwards
+    // indexes:
+    File indexDir = new File("/tmp/idx/dvupdates");
+    TestUtil.rm(indexDir);
+    Directory dir = newFSDirectory(indexDir);
+    
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
+      .setUseCompoundFile(false).setMergePolicy(NoMergePolicy.INSTANCE);
+    IndexWriter writer = new IndexWriter(dir, conf);
+    // create an index w/ few doc-values fields, some with updates and some without
+    for (int i = 0; i < 30; i++) {
+      Document doc = new Document();
+      doc.add(new StringField("id", "" + i, Store.NO));
+      doc.add(new NumericDocValuesField("ndv1", i));
+      doc.add(new NumericDocValuesField("ndv1_c", i*2));
+      doc.add(new NumericDocValuesField("ndv2", i*3));
+      doc.add(new NumericDocValuesField("ndv2_c", i*6));
+      doc.add(new BinaryDocValuesField("bdv1", TestBinaryDocValuesUpdates.toBytes(i)));
+      doc.add(new BinaryDocValuesField("bdv1_c", TestBinaryDocValuesUpdates.toBytes(i*2)));
+      doc.add(new BinaryDocValuesField("bdv2", TestBinaryDocValuesUpdates.toBytes(i*3)));
+      doc.add(new BinaryDocValuesField("bdv2_c", TestBinaryDocValuesUpdates.toBytes(i*6)));
+      writer.addDocument(doc);
+      if ((i+1) % 10 == 0) {
+        writer.commit(); // flush every 10 docs
+      }
+    }
+    
+    // first segment: no updates
+    
+    // second segment: update two fields, same gen
+    updateNumeric(writer, "10", "ndv1", "ndv1_c", 100L);
+    updateBinary(writer, "11", "bdv1", "bdv1_c", 100L);
+    writer.commit();
+    
+    // third segment: update few fields, different gens, few docs
+    updateNumeric(writer, "20", "ndv1", "ndv1_c", 100L);
+    updateBinary(writer, "21", "bdv1", "bdv1_c", 100L);
+    writer.commit();
+    updateNumeric(writer, "22", "ndv1", "ndv1_c", 200L); // update the field again
+    writer.commit();
+    
+    writer.close();
+    dir.close();
+  }*/
+
   final static String[] oldNames = {"40.cfs",
                                     "40.nocfs",
                                     "41.cfs",
@@ -204,7 +263,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     switch (choice) {
       case 0: return new IndexUpgrader(dir, TEST_VERSION_CURRENT);
       case 1: return new IndexUpgrader(dir, TEST_VERSION_CURRENT, 
-                                       streamType ? null : System.err, false);
+                                       streamType ? null : InfoStream.NO_OUTPUT, false);
       case 2: return new IndexUpgrader(dir, newIndexWriterConfig(TEST_VERSION_CURRENT, null), false);
       default: fail("case statement didn't get updated when random bounds changed");
     }
@@ -620,7 +679,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
       writer.close();
 
       conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setUseCompoundFile(doCFS)
-        .setMaxBufferedDocs(10).setMergePolicy(doCFS ? NoMergePolicy.COMPOUND_FILES : NoMergePolicy.NO_COMPOUND_FILES);
+        .setMaxBufferedDocs(10).setMergePolicy(NoMergePolicy.INSTANCE);
       writer = new IndexWriter(dir, conf);
       Term searchTerm = new Term("id", "7");
       writer.deleteDocuments(searchTerm);
@@ -630,85 +689,6 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     dir.close();
     
     return indexDir;
-  }
-
-  /* Verifies that the expected file names were produced */
-
-  public void testExactFileNames() throws IOException {
-
-    String outputDirName = "lucene.backwardscompat0.index";
-    File outputDir = createTempDir(outputDirName);
-    TestUtil.rm(outputDir);
-
-    try {
-      Directory dir = newFSDirectory(outputDir);
-
-      MergePolicy mergePolicy = newLogMergePolicy(true, 10);
-      
-      // This test expects all of its segments to be in CFS:
-      mergePolicy.setNoCFSRatio(1.0); 
-      mergePolicy.setMaxCFSSegmentSizeMB(Double.POSITIVE_INFINITY);
-
-      IndexWriter writer = new IndexWriter(
-          dir,
-          newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).
-              setMaxBufferedDocs(-1).
-              setRAMBufferSizeMB(16.0).
-              setMergePolicy(mergePolicy).setUseCompoundFile(true)
-      );
-      for(int i=0;i<35;i++) {
-        addDoc(writer, i);
-      }
-      assertEquals("wrong doc count", 35, writer.maxDoc());
-      writer.close();
-
-      // Delete one doc so we get a .del file:
-      writer = new IndexWriter(
-          dir,
-          newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
-            .setMergePolicy(NoMergePolicy.NO_COMPOUND_FILES).setUseCompoundFile(true)
-      );
-      Term searchTerm = new Term("id", "7");
-      writer.deleteDocuments(searchTerm);
-      writer.close();
-
-      // Now verify file names... TODO: fix this test better, we could populate from 
-      // separateFiles() or something.
-      String[] expected = new String[] {"_0.cfs", "_0.cfe",
-                                        "_0_1.del",
-                                        "_0.si",
-                                        "segments_2",
-                                        "segments.gen"};
-      
-      String[] expectedSimpleText = new String[] {"_0.cfs", "_0.cfe",
-                                                  "_0_1.liv",
-                                                  "_0.si",
-                                                  "segments_2",
-                                                  "segments.gen"};
-
-      String[] actual = dir.listAll();
-      Arrays.sort(expected);
-      Arrays.sort(expectedSimpleText);
-      Arrays.sort(actual);
-      if (!Arrays.equals(expected, actual) && !Arrays.equals(expectedSimpleText, actual)) {
-        fail("incorrect filenames in index: expected:\n    " + asString(expected) 
-            + "\n or " + asString(expectedSimpleText) + "\n actual:\n    " + asString(actual));
-      }
-      dir.close();
-    } finally {
-      TestUtil.rm(outputDir);
-    }
-  }
-
-  private String asString(String[] l) {
-    String s = "";
-    for(int i=0;i<l.length;i++) {
-      if (i > 0) {
-        s += "\n    ";
-      }
-      s += l[i];
-    }
-    return s;
   }
 
   private void addDoc(IndexWriter writer, int id) throws IOException
@@ -946,47 +926,53 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
 
   public void testCommandLineArgs() throws Exception {
 
-    for (String name : oldIndexDirs.keySet()) {
-      File dir = createTempDir(name);
-      File dataFile = new File(TestBackwardsCompatibility.class.getResource("index." + name + ".zip").toURI());
-      TestUtil.unzip(dataFile, dir);
-
-      String path = dir.getAbsolutePath();
-      
-      List<String> args = new ArrayList<>();
-      if (random().nextBoolean()) {
-        args.add("-verbose");
+    PrintStream savedSystemOut = System.out;
+    System.setOut(new PrintStream(new ByteArrayOutputStream(), false, "UTF-8"));
+    try {
+      for (String name : oldIndexDirs.keySet()) {
+        File dir = createTempDir(name);
+        File dataFile = new File(TestBackwardsCompatibility.class.getResource("index." + name + ".zip").toURI());
+        TestUtil.unzip(dataFile, dir);
+        
+        String path = dir.getAbsolutePath();
+        
+        List<String> args = new ArrayList<>();
+        if (random().nextBoolean()) {
+          args.add("-verbose");
+        }
+        if (random().nextBoolean()) {
+          args.add("-delete-prior-commits");
+        }
+        if (random().nextBoolean()) {
+          // TODO: need to better randomize this, but ...
+          //  - LuceneTestCase.FS_DIRECTORIES is private
+          //  - newFSDirectory returns BaseDirectoryWrapper
+          //  - BaseDirectoryWrapper doesn't expose delegate
+          Class<? extends FSDirectory> dirImpl = random().nextBoolean() ?
+              SimpleFSDirectory.class : NIOFSDirectory.class;
+          
+          args.add("-dir-impl");
+          args.add(dirImpl.getName());
+        }
+        args.add(path);
+        
+        IndexUpgrader upgrader = null;
+        try {
+          upgrader = IndexUpgrader.parseArgs(args.toArray(new String[0]));
+        } catch (Exception e) {
+          throw new RuntimeException("unable to parse args: " + args, e);
+        }
+        upgrader.upgrade();
+        
+        Directory upgradedDir = newFSDirectory(dir);
+        try {
+          checkAllSegmentsUpgraded(upgradedDir);
+        } finally {
+          upgradedDir.close();
+        }
       }
-      if (random().nextBoolean()) {
-        args.add("-delete-prior-commits");
-      }
-      if (random().nextBoolean()) {
-        // TODO: need to better randomize this, but ...
-        //  - LuceneTestCase.FS_DIRECTORIES is private
-        //  - newFSDirectory returns BaseDirectoryWrapper
-        //  - BaseDirectoryWrapper doesn't expose delegate
-        Class<? extends FSDirectory> dirImpl = random().nextBoolean() ?
-          SimpleFSDirectory.class : NIOFSDirectory.class;
-
-        args.add("-dir-impl");
-        args.add(dirImpl.getName());
-      }
-      args.add(path);
-
-      IndexUpgrader upgrader = null;
-      try {
-        upgrader = IndexUpgrader.parseArgs(args.toArray(new String[0]));
-      } catch (Exception e) {
-        throw new RuntimeException("unable to parse args: " + args, e);
-      }
-      upgrader.upgrade();
-      
-      Directory upgradedDir = newFSDirectory(dir);
-      try {
-        checkAllSegmentsUpgraded(upgradedDir);
-      } finally {
-        upgradedDir.close();
-      }
+    } finally {
+      System.setOut(savedSystemOut);
     }
   }
 
@@ -1047,4 +1033,62 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     TestUtil.checkIndex(dir);
     dir.close();
   }
+
+  public static final String dvUpdatesIndex = "dvupdates.48.zip";
+
+  private void assertNumericDocValues(AtomicReader r, String f, String cf) throws IOException {
+    NumericDocValues ndvf = r.getNumericDocValues(f);
+    NumericDocValues ndvcf = r.getNumericDocValues(cf);
+    for (int i = 0; i < r.maxDoc(); i++) {
+      assertEquals(ndvcf.get(i), ndvf.get(i)*2);
+    }
+  }
+  
+  private void assertBinaryDocValues(AtomicReader r, String f, String cf) throws IOException {
+    BinaryDocValues bdvf = r.getBinaryDocValues(f);
+    BinaryDocValues bdvcf = r.getBinaryDocValues(cf);
+    BytesRef scratch = new BytesRef();
+    for (int i = 0; i < r.maxDoc(); i++) {
+      assertEquals(TestBinaryDocValuesUpdates.getValue(bdvcf, i, scratch ), TestBinaryDocValuesUpdates.getValue(bdvf, i, scratch)*2);
+    }
+  }
+  
+  private void verifyDocValues(Directory dir) throws IOException {
+    DirectoryReader reader = DirectoryReader.open(dir);
+    for (AtomicReaderContext context : reader.leaves()) {
+      AtomicReader r = context.reader();
+      assertNumericDocValues(r, "ndv1", "ndv1_c");
+      assertNumericDocValues(r, "ndv2", "ndv2_c");
+      assertBinaryDocValues(r, "bdv1", "bdv1_c");
+      assertBinaryDocValues(r, "bdv2", "bdv2_c");
+    }
+    reader.close();
+  }
+  
+  public void testDocValuesUpdates() throws Exception {
+    File oldIndexDir = createTempDir("dvupdates");
+    TestUtil.unzip(getDataFile(dvUpdatesIndex), oldIndexDir);
+    Directory dir = newFSDirectory(oldIndexDir);
+    
+    verifyDocValues(dir);
+    
+    // update fields and verify index
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriter writer = new IndexWriter(dir, conf);
+    updateNumeric(writer, "1", "ndv1", "ndv1_c", 300L);
+    updateNumeric(writer, "1", "ndv2", "ndv2_c", 300L);
+    updateBinary(writer, "1", "bdv1", "bdv1_c", 300L);
+    updateBinary(writer, "1", "bdv2", "bdv2_c", 300L);
+    writer.commit();
+    verifyDocValues(dir);
+    
+    // merge all segments
+    writer.forceMerge(1);
+    writer.commit();
+    verifyDocValues(dir);
+    
+    writer.close();
+    dir.close();
+  }
+  
 }

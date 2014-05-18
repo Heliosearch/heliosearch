@@ -281,6 +281,10 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
   // to allow users to query an IndexWriter settings.
   private final LiveIndexWriterConfig config;
 
+  /** System.nanoTime() when commit started; used to write
+   *  an infoStream message about how long commit took. */
+  private long startCommitTime;
+
   DirectoryReader getReader() throws IOException {
     return getReader(true);
   }
@@ -1811,11 +1815,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
             for(int i=0;i<size;i++) {
               final MergePolicy.OneMerge merge = mergeExceptions.get(i);
               if (merge.maxNumSegments != -1) {
-                IOException err = new IOException("background merge hit exception: " + merge.segString(directory));
-                final Throwable t = merge.getException();
-                if (t != null)
-                  err.initCause(t);
-                throw err;
+                throw new IOException("background merge hit exception: " + merge.segString(directory), merge.getException());
               }
             }
           }
@@ -1914,9 +1914,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
             }
             Throwable t = merge.getException();
             if (t != null) {
-              IOException ioe = new IOException("background merge hit exception: " + merge.segString(directory));
-              ioe.initCause(t);
-              throw ioe;
+              throw new IOException("background merge hit exception: " + merge.segString(directory), t);
             }
           }
 
@@ -2904,6 +2902,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
   }
 
   private void prepareCommitInternal() throws IOException {
+    startCommitTime = System.nanoTime();
     synchronized(commitLock) {
       ensureOpen(false);
       if (infoStream.isEnabled("IW")) {
@@ -3129,6 +3128,10 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
         notifyAll();
       }
 
+      if (infoStream.isEnabled("IW")) {
+        infoStream.message("IW", String.format(Locale.ROOT, "commit: took %.1f msec", (System.nanoTime()-startCommitTime)/1000000.0));
+      }
+      
     } else {
       if (infoStream.isEnabled("IW")) {
         infoStream.message("IW", "commit: pendingCommit == null; skip");
@@ -4651,29 +4654,25 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
     // Now merge all added files
     Collection<String> files = info.files();
     CompoundFileDirectory cfsDir = new CompoundFileDirectory(directory, fileName, context, true);
-    IOException prior = null;
+    boolean success = false;
     try {
       for (String file : files) {
         directory.copy(cfsDir, file, file, context);
         checkAbort.work(directory.fileLength(file));
       }
-    } catch(IOException ex) {
-      prior = ex;
+      success = true;
     } finally {
-      boolean success = false;
-      try {
-        IOUtils.closeWhileHandlingException(prior, cfsDir);
-        success = true;
-      } finally {
-        if (!success) {
-          try {
-            directory.deleteFile(fileName);
-          } catch (Throwable t) {
-          }
-          try {
-            directory.deleteFile(IndexFileNames.segmentFileName(info.name, "", IndexFileNames.COMPOUND_FILE_ENTRIES_EXTENSION));
-          } catch (Throwable t) {
-          }
+      if (success) {
+        IOUtils.close(cfsDir);
+      } else {
+        IOUtils.closeWhileHandlingException(cfsDir);
+        try {
+          directory.deleteFile(fileName);
+        } catch (Throwable t) {
+        }
+        try {
+          directory.deleteFile(IndexFileNames.segmentFileName(info.name, "", IndexFileNames.COMPOUND_FILE_ENTRIES_EXTENSION));
+        } catch (Throwable t) {
         }
       }
     }

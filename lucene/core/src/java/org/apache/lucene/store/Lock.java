@@ -72,7 +72,7 @@ public abstract class Lock implements Closeable {
    *         out of bounds
    * @throws IOException if obtain() throws IOException
    */
-  public boolean obtain(long lockWaitTimeout) throws IOException {
+  public final boolean obtain(long lockWaitTimeout) throws IOException {
     failureReason = null;
     boolean locked = obtain();
     if (lockWaitTimeout < 0 && lockWaitTimeout != LOCK_OBTAIN_WAIT_FOREVER)
@@ -86,11 +86,7 @@ public abstract class Lock implements Closeable {
         if (failureReason != null) {
           reason += ": " + failureReason;
         }
-        LockObtainFailedException e = new LockObtainFailedException(reason);
-        if (failureReason != null) {
-          e.initCause(failureReason);
-        }
-        throw e;
+        throw new LockObtainFailedException(reason, failureReason);
       }
       try {
         Thread.sleep(LOCK_POLL_INTERVAL);

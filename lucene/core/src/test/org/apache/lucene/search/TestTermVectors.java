@@ -26,15 +26,10 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.DocsAndPositionsEnum;
-import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.index.RandomIndexWriter;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.English;
 import org.apache.lucene.util.IOUtils;
@@ -85,75 +80,6 @@ public class TestTermVectors extends LuceneTestCase {
     directory.close();
     reader = null;
     directory = null;
-  }
-
-  // In a single doc, for the same field, mix the term
-  // vectors up
-  public void testMixedVectrosVectors() throws IOException {
-    RandomIndexWriter writer = new RandomIndexWriter(random(), directory, 
-        newIndexWriterConfig(TEST_VERSION_CURRENT, 
-        new MockAnalyzer(random(), MockTokenizer.SIMPLE, true)).setOpenMode(OpenMode.CREATE));
-    Document doc = new Document();
-    
-    FieldType ft2 = new FieldType(TextField.TYPE_STORED);
-    ft2.setStoreTermVectors(true);
-    
-    FieldType ft3 = new FieldType(TextField.TYPE_STORED);
-    ft3.setStoreTermVectors(true);
-    ft3.setStoreTermVectorPositions(true);
-    
-    FieldType ft4 = new FieldType(TextField.TYPE_STORED);
-    ft4.setStoreTermVectors(true);
-    ft4.setStoreTermVectorOffsets(true);
-    
-    FieldType ft5 = new FieldType(TextField.TYPE_STORED);
-    ft5.setStoreTermVectors(true);
-    ft5.setStoreTermVectorOffsets(true);
-    ft5.setStoreTermVectorPositions(true);
-    
-    doc.add(newTextField("field", "one", Field.Store.YES));
-    doc.add(newField("field", "one", ft2));
-    doc.add(newField("field", "one", ft3));
-    doc.add(newField("field", "one", ft4));
-    doc.add(newField("field", "one", ft5));
-    writer.addDocument(doc);
-    IndexReader reader = writer.getReader();
-    writer.close();
-
-    IndexSearcher searcher = newSearcher(reader);
-
-    Query query = new TermQuery(new Term("field", "one"));
-    ScoreDoc[] hits = searcher.search(query, null, 1000).scoreDocs;
-    assertEquals(1, hits.length);
-
-    Fields vectors = searcher.reader.getTermVectors(hits[0].doc);
-    assertNotNull(vectors);
-    assertEquals(1, vectors.size());
-    Terms vector = vectors.terms("field");
-    assertNotNull(vector);
-    assertEquals(1, vector.size());
-    TermsEnum termsEnum = vector.iterator(null);
-    assertNotNull(termsEnum.next());
-    assertEquals("one", termsEnum.term().utf8ToString());
-    assertEquals(5, termsEnum.totalTermFreq());
-    DocsAndPositionsEnum dpEnum = termsEnum.docsAndPositions(null, null);
-    assertNotNull(dpEnum);
-    assertTrue(dpEnum.nextDoc() != DocIdSetIterator.NO_MORE_DOCS);
-    assertEquals(5, dpEnum.freq());
-    for(int i=0;i<5;i++) {
-      assertEquals(i, dpEnum.nextPosition());
-    }
-
-    dpEnum = termsEnum.docsAndPositions(null, dpEnum);
-    assertNotNull(dpEnum);
-    assertTrue(dpEnum.nextDoc() != DocIdSetIterator.NO_MORE_DOCS);
-    assertEquals(5, dpEnum.freq());
-    for(int i=0;i<5;i++) {
-      dpEnum.nextPosition();
-      assertEquals(4*i, dpEnum.startOffset());
-      assertEquals(4*i+3, dpEnum.endOffset());
-    }
-    reader.close();
   }
 
   private IndexWriter createWriter(Directory dir) throws IOException {

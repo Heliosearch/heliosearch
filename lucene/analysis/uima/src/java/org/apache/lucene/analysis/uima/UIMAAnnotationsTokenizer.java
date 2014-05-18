@@ -20,6 +20,7 @@ package org.apache.lucene.analysis.uima;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.util.AttributeFactory;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.Type;
 import org.apache.uima.cas.text.AnnotationFS;
@@ -43,7 +44,7 @@ public final class UIMAAnnotationsTokenizer extends BaseUIMATokenizer {
   private int finalOffset = 0;
 
   public UIMAAnnotationsTokenizer(String descriptorPath, String tokenType, Map<String, Object> configurationParameters, Reader input) {
-    this(descriptorPath, tokenType, configurationParameters, AttributeFactory.DEFAULT_ATTRIBUTE_FACTORY, input);
+    this(descriptorPath, tokenType, configurationParameters,DEFAULT_TOKEN_ATTRIBUTE_FACTORY, input);
   }
 
   public UIMAAnnotationsTokenizer(String descriptorPath, String tokenType, Map<String, Object> configurationParameters, 

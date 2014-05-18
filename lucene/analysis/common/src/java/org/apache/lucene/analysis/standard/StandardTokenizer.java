@@ -28,6 +28,8 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
+import org.apache.lucene.util.AttributeFactory;
+import org.apache.lucene.util.AttributeSource;
 import org.apache.lucene.util.Version;
 
 /** A grammar-based tokenizer constructed with JFlex.
@@ -136,7 +138,7 @@ public final class StandardTokenizer extends Tokenizer {
   }
 
   /**
-   * Creates a new StandardTokenizer with a given {@link org.apache.lucene.util.AttributeSource.AttributeFactory} 
+   * Creates a new StandardTokenizer with a given {@link org.apache.lucene.util.AttributeFactory} 
    */
   public StandardTokenizer(Version matchVersion, AttributeFactory factory, Reader input) {
     super(factory, input);
@@ -144,13 +146,13 @@ public final class StandardTokenizer extends Tokenizer {
   }
 
   private final void init(Version matchVersion) {
-    if (matchVersion.onOrAfter(Version.LUCENE_47)) {
+    if (matchVersion.onOrAfter(Version.LUCENE_4_7)) {
       this.scanner = new StandardTokenizerImpl(input);
-    } else if (matchVersion.onOrAfter(Version.LUCENE_40)) {
+    } else if (matchVersion.onOrAfter(Version.LUCENE_4_0)) {
       this.scanner = new StandardTokenizerImpl40(input);
-    } else if (matchVersion.onOrAfter(Version.LUCENE_34)) {
+    } else if (matchVersion.onOrAfter(Version.LUCENE_3_4)) {
       this.scanner = new StandardTokenizerImpl34(input);
-    } else if (matchVersion.onOrAfter(Version.LUCENE_31)) {
+    } else if (matchVersion.onOrAfter(Version.LUCENE_3_1)) {
       this.scanner = new StandardTokenizerImpl31(input);
     } else {
       this.scanner = new ClassicTokenizerImpl(input);

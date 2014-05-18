@@ -74,12 +74,13 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
   boolean preventDoubleWrite = true;
   boolean trackDiskUsage = false;
   boolean wrapLockFactory = true;
+  boolean useSlowOpenClosers = true;
   boolean allowRandomFileNotFoundException = true;
   boolean allowReadingFilesStillOpenForWrite = false;
   private Set<String> unSyncedFiles;
   private Set<String> createdFiles;
   private Set<String> openFilesForWrite = new HashSet<>();
-  Set<String> openLocks = Collections.synchronizedSet(new HashSet<String>());
+  Map<String,Exception> openLocks = Collections.synchronizedMap(new HashMap<String,Exception>());
   volatile boolean crashed;
   private ThrottledIndexOutput throttledOutput;
   private Throttling throttling = Throttling.SOMETIMES;
@@ -171,6 +172,15 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
   
   public void setThrottling(Throttling throttling) {
     this.throttling = throttling;
+  }
+  
+  /** 
+   * By default, opening and closing has a rare small sleep to catch race conditions
+   * <p>
+   * You can disable this if you dont need it
+   */
+  public void setUseSlowOpenClosers(boolean v) {
+    useSlowOpenClosers = v;
   }
 
   /**
@@ -525,7 +535,7 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
     
     // throttling REALLY slows down tests, so don't do it very often for SOMETIMES.
     if (throttling == Throttling.ALWAYS || 
-        (throttling == Throttling.SOMETIMES && randomState.nextInt(50) == 0) && !(in instanceof RateLimitedDirectoryWrapper)) {
+        (throttling == Throttling.SOMETIMES && randomState.nextInt(200) == 0) && !(in instanceof RateLimitedDirectoryWrapper)) {
       if (LuceneTestCase.VERBOSE) {
         System.out.println("MockDirectoryWrapper: throttling indexOutput (" + name + ")");
       }
@@ -579,12 +589,12 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
 
     final IndexInput ii;
     int randomInt = randomState.nextInt(500);
-    if (randomInt == 0) {
+    if (useSlowOpenClosers && randomInt == 0) {
       if (LuceneTestCase.VERBOSE) {
         System.out.println("MockDirectoryWrapper: using SlowClosingMockIndexInputWrapper for file " + name);
       }
       ii = new SlowClosingMockIndexInputWrapper(this, name, delegateInput);
-    } else if (randomInt  == 1) { 
+    } else if (useSlowOpenClosers && randomInt  == 1) { 
       if (LuceneTestCase.VERBOSE) {
         System.out.println("MockDirectoryWrapper: using SlowOpeningMockIndexInputWrapper for file " + name);
       }
@@ -656,14 +666,20 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
       // print the first one as its very verbose otherwise
       Exception cause = null;
       Iterator<Exception> stacktraces = openFileHandles.values().iterator();
-      if (stacktraces.hasNext())
+      if (stacktraces.hasNext()) {
         cause = stacktraces.next();
+      }
       // RuntimeException instead of IOException because
       // super() does not throw IOException currently:
       throw new RuntimeException("MockDirectoryWrapper: cannot close: there are still open files: " + openFiles, cause);
     }
     if (openLocks.size() > 0) {
-      throw new RuntimeException("MockDirectoryWrapper: cannot close: there are still open locks: " + openLocks);
+      Exception cause = null;
+      Iterator<Exception> stacktraces = openLocks.values().iterator();
+      if (stacktraces.hasNext()) {
+        cause = stacktraces.next();
+      }
+      throw new RuntimeException("MockDirectoryWrapper: cannot close: there are still open locks: " + openLocks, cause);
     }
 
     isOpen = false;

@@ -118,7 +118,7 @@
   <property name="tests.verbose" value="false"/>
   <property name="tests.infostream" value="${tests.verbose}"/>
   <property name="tests.filterstacks" value="true"/>
-  
+
   <condition property="tests.heapsize" value="768M">
     <isset property="run.clover"/>
   </condition>
@@ -330,6 +330,17 @@
       </or>
       <!-- TODO: Fix this! For now only run this on 64bit, because jTIDY OOMs with default heap size: -->
       <contains string="${os.arch}" substring="64"/>
+    </and>
+  </condition>
+
+  <!-- workaround for https://issues.apache.org/bugzilla/show_bug.cgi?id=53347 -->
+  <condition property="build.compiler" value="javac1.7">
+    <and>
+      <equals arg1="${build.java.runtime}" arg2="1.8"/>
+      <or>
+        <antversion exactly="1.8.3" />
+        <antversion exactly="1.8.4" />
+      </or>
     </and>
   </condition>
 
@@ -1345,7 +1356,7 @@ ${tests-output}/junit4-*.suites     - per-JVM executed suites
   
 ]]></fail>
     <echo>Code coverage with Atlassian Clover enabled.</echo>
-    <ivy:cachepath organisation="com.cenqua.clover" module="clover" revision="3.2.2"
+    <ivy:cachepath organisation="com.cenqua.clover" module="clover" revision="3.3.0"
       inline="true" conf="master" pathid="clover.classpath"/>
     <taskdef resource="cloverlib.xml" classpathref="clover.classpath" />
     <mkdir dir="${clover.db.dir}"/>
@@ -2191,7 +2202,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
 
   <!-- GROOVY scripting engine for ANT tasks -->
   <target name="resolve-groovy" unless="groovy.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="org.codehaus.groovy" module="groovy-all" revision="2.2.2"
+    <ivy:cachepath organisation="org.codehaus.groovy" module="groovy-all" revision="2.3.0"
       inline="true" conf="default" type="jar" transitive="true" pathid="groovy.classpath"/>
     <taskdef name="groovy"
       classname="org.codehaus.groovy.ant.Groovy"
@@ -2206,7 +2217,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
   <property name="forbidden-rue-excludes" value=""/>
   
   <target name="-install-forbidden-apis" unless="forbidden-apis.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="de.thetaphi" module="forbiddenapis" revision="1.4.1"
+    <ivy:cachepath organisation="de.thetaphi" module="forbiddenapis" revision="1.5.1"
       inline="true" conf="default" transitive="true" pathid="forbidden-apis.classpath"/>
     <taskdef name="forbidden-apis" classname="de.thetaphi.forbiddenapis.AntTask" classpathref="forbidden-apis.classpath"/>
     <property name="forbidden-apis.loaded" value="true"/>

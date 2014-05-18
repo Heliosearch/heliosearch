@@ -98,13 +98,13 @@ public class TestParallelReaderEmptyIndex extends LuceneTestCase {
       doc.add(newField("test", "", customType));
       idField.setStringValue("1");
       iw.addDocument(doc);
-      doc.add(newTextField("test", "", Field.Store.NO));
+      doc.add(newField("test", "", customType));
       idField.setStringValue("2");
       iw.addDocument(doc);
       iw.close();
 
       IndexWriterConfig dontMergeConfig = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
-        .setMergePolicy(NoMergePolicy.COMPOUND_FILES);
+        .setMergePolicy(NoMergePolicy.INSTANCE);
       if (VERBOSE) {
         System.out.println("\nTEST: make 2nd writer");
       }

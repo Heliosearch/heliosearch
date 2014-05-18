@@ -229,11 +229,11 @@ public class DirectUpdateHandler2 extends UpdateHandler implements SolrCoreState
             }
 
             if (cmd.isBlock()) {
-              writer.updateDocuments(updateTerm, cmd, schema.getAnalyzer());
+              writer.updateDocuments(updateTerm, cmd, schema.getIndexAnalyzer());
             } else {
               Document luceneDocument = cmd.getLuceneDocument();
               // SolrCore.verbose("updateDocument",updateTerm,luceneDocument,writer);
-              writer.updateDocument(updateTerm, luceneDocument, schema.getAnalyzer());
+              writer.updateDocument(updateTerm, luceneDocument, schema.getIndexAnalyzer());
             }
             // SolrCore.verbose("updateDocument",updateTerm,"DONE");
             
@@ -258,9 +258,9 @@ public class DirectUpdateHandler2 extends UpdateHandler implements SolrCoreState
         } else {
           // allow duplicates
           if (cmd.isBlock()) {
-            writer.addDocuments(cmd, schema.getAnalyzer());
+            writer.addDocuments(cmd, schema.getIndexAnalyzer());
           } else {
-            writer.addDocument(cmd.getLuceneDocument(), schema.getAnalyzer());
+            writer.addDocument(cmd.getLuceneDocument(), schema.getIndexAnalyzer());
           }
 
           if (ulog != null) ulog.add(cmd);
@@ -437,7 +437,7 @@ public class DirectUpdateHandler2 extends UpdateHandler implements SolrCoreState
       try {
         IndexWriter writer = iw.get();
         writer.updateDocument(idTerm, luceneDocument, cmd.getReq().getSchema()
-            .getAnalyzer());
+            .getIndexAnalyzer());
         
         for (Query q : dbqList) {
           writer.deleteDocuments(q);
@@ -745,7 +745,7 @@ public class DirectUpdateHandler2 extends UpdateHandler implements SolrCoreState
 
       try {
         if (tryToCommit) {
-
+          log.info("Committing on IndexWriter close.");
           CommitUpdateCommand cmd = new CommitUpdateCommand(req, false);
           cmd.openSearcher = false;
           cmd.waitSearcher = false;
@@ -786,7 +786,13 @@ public class DirectUpdateHandler2 extends UpdateHandler implements SolrCoreState
         }
       }
 
-      if (writer != null) writer.close();
+      if (writer != null) {
+        try {
+          writer.waitForMerges();
+        } finally {
+          writer.close();
+        }
+      }
 
     } finally {
       solrCoreState.getCommitLock().unlock();
