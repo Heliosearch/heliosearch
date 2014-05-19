@@ -42,12 +42,14 @@ public class RequestUtil {
 
     SolrParams p = req.getParams();
 
+    boolean hasAdditions = defaults != null || invariants != null || appends != null;
+
     // short circuit processing
-    if (defaults == null && invariants == null && appends == null && !p.getBool("expandMacros", true)) {
+    if (!hasAdditions && !p.getBool("expandMacros", true)) {
       return;  // nothing to do...
     }
 
-    Map<String, String[]> newMap = asMultiMap(p, true);
+    Map<String, String[]> newMap = asMultiMap(p, hasAdditions);
 
     if (defaults != null) {
       Map<String, String[]> defaultsMap = asMultiMap(defaults);

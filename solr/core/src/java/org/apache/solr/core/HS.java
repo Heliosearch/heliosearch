@@ -21,14 +21,28 @@ public class HS
   public static int FLOAT_SIZE  = 4;
   public static int DOUBLE_SIZE = 8;
 
-
   private static Logger log = LoggerFactory.getLogger(HS.class);
 
+  public static boolean loaded = false;
   public static final Unsafe unsafe;
 
-  private static native void print();
+  private static native void _init();
+
+  public static void init() {
+    if (loaded) {
+      _init();
+    }
+  }
 
   static {
+    try {
+      System.loadLibrary("HS");
+      loaded = true;
+    } catch (Throwable th) {
+      log.error("HS: can't load native library: " + th.getMessage());
+      // log.info("HS: can't load native library.", th);  // prevent nasty-looking stack trace for now...
+    }
+
     try {
       Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
       field.setAccessible(true);

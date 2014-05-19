@@ -816,4 +816,8 @@ public class SolrResourceLoader implements ResourceLoader,Closeable
   public void close() throws IOException {
     IOUtils.close(classLoader);
   }
+
+  static {
+    HS.init();  // load native libs as early as possible...
+  }
 }
