@@ -155,6 +155,10 @@ public class TestHS extends LuceneTestCase {
       assertEquals(HS.getInt(arr, i+1), HS.getInt(arr2, i+100));
     }
 
+    HS.setInt(arr, 4, c2);
+    HS.incInt(arr, 4, 7);
+    assertEquals(c2+7, HS.getInt(arr, 4));
+
     HS.freeArray(arr);
     HS.freeArray(arr2);
   }

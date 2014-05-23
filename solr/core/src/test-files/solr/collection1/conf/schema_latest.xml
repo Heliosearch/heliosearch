@@ -203,6 +203,8 @@
    <dynamicField name="*_id"  type="int"    indexed="true"  stored="true"                        docValues="true" />
    <dynamicField name="*_ids" type="int"    indexed="true"  stored="true"  multiValued="true"    docValues="true" />
    <dynamicField name="*_s"  type="string"  indexed="true"  stored="true" />
+   <dynamicField name="*_sTop"  type="string"  indexed="true"  stored="true" cacheTop="true" />
+   <dynamicField name="*_s1"  type="string"  indexed="true"  stored="true" />
    <dynamicField name="*_ss" type="string"  indexed="true"  stored="true" multiValued="true"/>
    <dynamicField name="*_sd"  type="string"  indexed="true"  stored="true"                       docValues="true" />
    <dynamicField name="*_sds" type="string"  indexed="true"  stored="true" multiValued="true"    docValues="true" />

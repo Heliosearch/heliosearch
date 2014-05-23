@@ -83,6 +83,11 @@ public abstract class ValueSource {
     return new ValueSourceSortField(reverse);
   }
 
+  public SortField getSortField(boolean top, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
+    return getSortField(top); // TODO: don't discard other params
+  }
+
+
   class ValueSourceSortField extends SortField {
     public ValueSourceSortField(boolean reverse) {
       super(description(), SortField.Type.REWRITEABLE, reverse);
@@ -90,6 +95,7 @@ public abstract class ValueSource {
 
     @Override
     public SortField rewrite(IndexSearcher searcher) throws IOException {
+
       QueryContext context = QueryContext.newContext(searcher);
       createWeight(context);
       return new SortField(getField(), new ValueSourceComparatorSource(context), getReverse());

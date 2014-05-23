@@ -298,3 +298,64 @@ class Str0Values extends StrLeafValues {
   protected void free() {
   }
 }
+
+
+class StrSliceValues extends StrLeafValues {
+  StrLeafValues top;
+  final int base;
+  final int maxDoc;
+
+  // offset = avg_term_length * ord + adjustment;
+  public StrSliceValues(StrLeafValues reference, int base, int maxDoc) {
+    super(reference.fieldValues, reference.stats);
+    this.top = reference;
+    this.base = base;
+    this.maxDoc = maxDoc;
+  }
+
+  public StrLeafValues getParent() {
+    return top;
+  }
+
+
+  public long ordToTermPointer(long ord) {
+    return top.ordToTermPointer(ord);
+  }
+
+  public int termPointerToOrd(long termPointer) {
+    return top.termPointerToOrd(termPointer);
+  }
+
+
+  @Override
+  public long termToOrd(BytesRef key) {
+    return top.termToOrd(key);
+  }
+
+
+  @Override
+  public int ordVal(int doc) {
+    return top.ordVal(doc + base);
+  }
+
+  @Override
+  public void ordToTerm(long ord, BytesRef target) {
+    top.ordToTerm(ord, target);
+  }
+
+  @Override
+  public boolean bytesVal(int doc, BytesRef target) {
+    return top.bytesVal(doc + base, target);
+
+  }
+
+  @Override
+  public long getSizeInBytes() {
+    return 0;
+  }
+
+  @Override
+  protected void free() {
+  }
+
+}

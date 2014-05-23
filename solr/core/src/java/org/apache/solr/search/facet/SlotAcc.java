@@ -24,6 +24,7 @@ import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.field.FieldUtil;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValueInt;
@@ -380,7 +381,7 @@ class UniqueSinglevaluedSlotAcc extends UniqueSlotAcc {
   public UniqueSinglevaluedSlotAcc(MutableValueInt slot, QueryContext qContext, String field, int numSlots) throws IOException {
     super(slot, qContext, field, numSlots);
     SolrIndexSearcher searcher = qContext.searcher();
-    si = FieldCache.DEFAULT.getTermsIndex(searcher.getAtomicReader(), field);
+    si = FieldUtil.getSortedDocValues(qContext, searcher.getSchema().getField(field), null);
     nTerms = si.getValueCount();
     ords = new FixedBitSet(nTerms);
   }

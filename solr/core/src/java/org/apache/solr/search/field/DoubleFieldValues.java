@@ -61,7 +61,7 @@ public class DoubleFieldValues extends FieldValues {
     return super.toString();
   }
 
-  // @Override TODO
+  @Override
   public SortField getSortField(final boolean top, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
     return new DoubleSortField(top, sortMissingFirst, sortMissingLast, missVal);
   }

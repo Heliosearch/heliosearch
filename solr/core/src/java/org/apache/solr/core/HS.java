@@ -14,12 +14,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class HS
 {
-  public static int BYTE_SIZE   = 1;
-  public static int SHORT_SIZE  = 2;
-  public static int INT_SIZE    = 4;
-  public static int LONG_SIZE   = 8;
-  public static int FLOAT_SIZE  = 4;
-  public static int DOUBLE_SIZE = 8;
+  public static final int BYTE_SIZE   = 1;
+  public static final int SHORT_SIZE  = 2;
+  public static final int INT_SIZE    = 4;
+  public static final int LONG_SIZE   = 8;
+  public static final int FLOAT_SIZE  = 4;
+  public static final int DOUBLE_SIZE = 8;
 
   private static Logger log = LoggerFactory.getLogger(HS.class);
 
@@ -222,6 +222,13 @@ public class HS
   public static void setInt(long ptr, int index, int val) {
     assert (index>=0) && ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
     unsafe.putInt(ptr + (((long)index)<<2), val);
+  }
+
+  public static void incInt(long ptr, int index, int increment) {
+    assert (index>=0) && ((((long)index+1)<<2)) <= arraySizeBytes(ptr);
+    long elemPointer = ptr + (((long)index)<<2);
+    int val = unsafe.getInt(elemPointer);
+    unsafe.putInt(elemPointer, val + increment);
   }
 
   public static float getFloat(long ptr, int index) {

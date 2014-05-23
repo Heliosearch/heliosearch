@@ -31,28 +31,29 @@ public abstract class FieldProperties {
   // many of the variables are independent or semi-independent.
 
   // bit values for boolean field properties.
-  protected final static int INDEXED             = 0x00000001;
-  protected final static int TOKENIZED           = 0x00000002;
-  protected final static int STORED              = 0x00000004;
-  protected final static int BINARY              = 0x00000008;
-  protected final static int OMIT_NORMS          = 0x00000010;
-  protected final static int OMIT_TF_POSITIONS   = 0x00000020;
-  protected final static int STORE_TERMVECTORS   = 0x00000040;
-  protected final static int STORE_TERMPOSITIONS = 0x00000080;
-  protected final static int STORE_TERMOFFSETS   = 0x00000100;
+  public final static int INDEXED             = 0x00000001;
+  public final static int TOKENIZED           = 0x00000002;
+  public final static int STORED              = 0x00000004;
+  public final static int BINARY              = 0x00000008;
+  public final static int OMIT_NORMS          = 0x00000010;
+  public final static int OMIT_TF_POSITIONS   = 0x00000020;
+  public final static int STORE_TERMVECTORS   = 0x00000040;
+  public final static int STORE_TERMPOSITIONS = 0x00000080;
+  public final static int STORE_TERMOFFSETS   = 0x00000100;
 
 
-  protected final static int MULTIVALUED         = 0x00000200;
-  protected final static int SORT_MISSING_FIRST  = 0x00000400;
-  protected final static int SORT_MISSING_LAST   = 0x00000800;
-  
-  protected final static int REQUIRED            = 0x00001000;
-  protected final static int OMIT_POSITIONS      = 0x00002000;
+  public final static int MULTIVALUED         = 0x00000200;
+  public final static int SORT_MISSING_FIRST  = 0x00000400;
+  public final static int SORT_MISSING_LAST   = 0x00000800;
 
-  protected final static int STORE_OFFSETS       = 0x00004000;
-  protected final static int DOC_VALUES          = 0x00008000;
+  public final static int REQUIRED            = 0x00001000;
+  public final static int OMIT_POSITIONS      = 0x00002000;
 
-  protected final static int LUCENE_FIELDCACHE   = 0x00010000;  // use lucene fieldcache instead of nCache
+  public final static int STORE_OFFSETS       = 0x00004000;
+  public final static int DOC_VALUES          = 0x00008000;
+
+  public final static int LUCENE_FIELDCACHE   = 0x00010000;  // use lucene fieldcache instead of nCache
+  public final static int CACHE_TOP           = 0x00020000;  // cache at the top level
 
   static final String[] propertyNames = {
           "indexed", "tokenized", "stored",
@@ -60,7 +61,7 @@ public abstract class FieldProperties {
           "termVectors", "termPositions", "termOffsets",
           "multiValued",
           "sortMissingFirst","sortMissingLast","required", "omitPositions",
-          "storeOffsetsWithPositions", "docValues", "luceneFieldCache"
+          "storeOffsetsWithPositions", "docValues", "luceneFieldCache", "cacheTop"
   };
 
   static final Map<String,Integer> propertyMap = new HashMap<>();

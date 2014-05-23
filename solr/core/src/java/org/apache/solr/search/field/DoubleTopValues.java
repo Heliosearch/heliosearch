@@ -25,6 +25,7 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.solr.core.HS;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.BitDocSetNative;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 
 import java.io.IOException;
@@ -85,7 +86,7 @@ public class DoubleTopValues extends TopValues {
   }
 
   @Override
-  public DoubleLeafValues createValue(TopValues topValues, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException {
+  public DoubleLeafValues createValue(QueryContext context, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException {
     try (
         Uninvert u = new Uninvert(readerContext, fieldValues.field);
     ) {

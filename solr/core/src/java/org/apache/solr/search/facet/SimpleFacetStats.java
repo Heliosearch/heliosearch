@@ -37,6 +37,7 @@ import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.field.FieldUtil;
 import org.apache.solr.search.mutable.MutableValueInt;
 
 import java.io.Closeable;
@@ -302,7 +303,9 @@ public class SimpleFacetStats implements Closeable {
     SolrIndexSearcher searcher = simpleFacets.searcher;
     SchemaField sf = searcher.getSchema().getField(fieldName);
     FieldType ft = sf.getType();
-    SortedDocValues si = FieldCache.DEFAULT.getTermsIndex(searcher.getAtomicReader(), fieldName);
+    // SortedDocValues si = FieldCache.DEFAULT.getTermsIndex(searcher.getAtomicReader(), fieldName);
+    QueryContext qcontext = QueryContext.newContext(searcher);
+    SortedDocValues si = FieldUtil.getSortedDocValues(qcontext, sf, null);
 
     SimpleOrderedMap<Object> res = new SimpleOrderedMap<>();
 

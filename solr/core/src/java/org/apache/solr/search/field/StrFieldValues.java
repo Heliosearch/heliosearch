@@ -23,6 +23,7 @@ import org.apache.lucene.search.FieldComparatorSource;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.schema.FieldProperties;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
@@ -32,9 +33,33 @@ import org.apache.solr.search.Sorting;
 import java.io.IOException;
 
 public class StrFieldValues extends FieldValues {
+  // hashCode and equals are not supposed to pay attention to cacheTop
+  // even if cacheTop == false, values may be returned that are backed by a top-level cache
+  protected boolean cacheTop;
+
+  public StrFieldValues(SchemaField field, QParser qparser, boolean cacheTop) {
+    super(field, qparser);
+    this.cacheTop = cacheTop;
+  }
 
   public StrFieldValues(SchemaField field, QParser qparser) {
-    super(field, qparser);
+    this(field, qparser, (field.getProperties() & FieldProperties.CACHE_TOP) !=0);
+  }
+
+  public boolean cacheTop() {
+    return this.cacheTop;
+  }
+
+  public void setCacheTop(boolean val) {
+    this.cacheTop = val;
+  }
+
+  @Override
+  public boolean accept(TopValues values) {
+    boolean valueCacheTop = ((StrTopValues)values).cacheTop;
+    // Only problem is when we are asking for cacheTop==true and valueCacheTop==false
+    // return !(cacheTop && !valueCacheTop);
+    return !cacheTop || valueCacheTop;
   }
 
   @Override
@@ -49,7 +74,9 @@ public class StrFieldValues extends FieldValues {
 
   @Override
   public String description() {
-    return "str(" + getFieldName() + ')';
+    return "str(" + getFieldName()
+//        + (cacheTop ? ", cache=top" : "")  // TODO: this is nice info, but it causes QueryParsingTest to fail (bad test...)
+        + ')';
   }
 
   @Override
@@ -62,7 +89,7 @@ public class StrFieldValues extends FieldValues {
     return super.toString();
   }
 
-  // @Override TODO
+  @Override
   public SortField getSortField(final boolean top, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
     return new StrSortField(top, sortMissingFirst, sortMissingLast);
   }
@@ -110,7 +137,11 @@ public class StrFieldValues extends FieldValues {
     @Override
     public FieldComparator<BytesRef> newComparator(String fieldname, int numHits,
                                                  int sortPos, boolean reversed) throws IOException {
-         return new StrComparatorNative(StrFieldValues.this, context, numHits, missingLast);
+      if (cacheTop) {
+        return new TopStrComparatorNative(StrFieldValues.this, context, numHits, missingLast);
+      } else {
+        return new StrComparatorNative(StrFieldValues.this, context, numHits, missingLast);
+      }
     }
   }
 

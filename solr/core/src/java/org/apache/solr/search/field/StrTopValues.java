@@ -20,32 +20,95 @@ package org.apache.solr.search.field;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DocsEnum;
+import org.apache.lucene.index.MultiTerms;
+import org.apache.lucene.index.ReaderSlice;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.packed.PackedInts;
 import org.apache.solr.core.HS;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 
 import java.io.IOException;
 
 public class StrTopValues extends TopValues {
+  protected volatile StrLeafValues allSegs;
+  protected final boolean cacheTop;
 
-  public StrTopValues(StrFieldValues StrFieldValues) {
-    super(StrFieldValues);
+  public StrTopValues(StrFieldValues strFieldValues) {
+    super(strFieldValues);
+    this.cacheTop = strFieldValues.cacheTop;
   }
 
+  /** These "StrLeafValues" are really top level (i.e. the leaf is the top level reader). */
+  public StrLeafValues createTopValue(QueryContext context) throws IOException {
+    if (allSegs != null) return allSegs;
+    assert cacheTop;
+
+    synchronized (this) {
+      if (allSegs == null) {
+        allSegs = uninvert(context, null, null);
+      }
+    }
+
+    return allSegs;
+  }
 
   @Override
-  public StrLeafValues createValue(TopValues topValues, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException {
-    AtomicReader reader = readerContext.reader();
-    final int maxDoc = readerContext.reader().maxDoc();
+  public StrLeafValues createValue(QueryContext context, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException {
+    if (cacheTop) {
+      createTopValue(context);
+      // return a view into the top level cache
+      return new StrSliceValues(allSegs, readerContext.docBase, readerContext.reader().maxDoc());
+    }
 
-    Terms terms = reader.terms(topValues.fieldValues.getFieldName());
+    return uninvert(context, create, readerContext);
+  }
+
+  public static long singleValuedUpperBoundTerms(Terms terms, int maxDoc) throws IOException {
+    long nTerms = terms.size();
+    if (nTerms >= 0) return nTerms;
+
+    if (terms instanceof MultiTerms) {
+      nTerms = 0;
+      MultiTerms mTerms = (MultiTerms)terms;
+      Terms[] subTerms = mTerms.getSubTerms();
+      ReaderSlice[] subReaders = mTerms.getSubSlices();
+
+      for (int i=0; i<subTerms.length; i++) {
+        long subCount = subTerms[i].size();
+        if (subCount < 0) {
+          // What codecs don't support this?
+          subCount = subReaders[i].length;  // this is actually the number of docs in the slice
+        }
+        nTerms += subCount;
+      }
+
+      return nTerms;
+
+    } else {
+      // top-level Terms, codec doesn't support size
+      return maxDoc;
+    }
+  }
+
+  public StrLeafValues uninvert(QueryContext context, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException {
+    AtomicReader reader;
+    if (cacheTop) {
+      // TODO: be careful in cross-core query situations that the context is correct!
+      reader = context.searcher().getAtomicReader();
+    } else {
+      reader = readerContext.reader();
+    }
+
+    final int maxDoc = reader.maxDoc();
+
+    Terms terms = reader.terms(fieldValues.getFieldName());
 
     if (terms == null) {
-      return new Str0Values(topValues.fieldValues, new StrFieldStats());
+      return new Str0Values(fieldValues, new StrFieldStats());
     }
 
     StrFieldStats stats = new StrFieldStats();
@@ -63,17 +126,7 @@ public class StrTopValues extends TopValues {
     }
 
 
-    long numUniqueTerms = terms.size();
-    if (numUniqueTerms != -1L) {    // TODO: which codecs don't provide the number of terms???
-      if (numUniqueTerms > termCountHardLimit) {
-        // app is misusing the API (there is more than
-        // one term per doc); in this case we make best
-        // effort to load what we can (see LUCENE-2142)
-        numUniqueTerms = termCountHardLimit;
-      }
-    } else {
-      numUniqueTerms = termCountHardLimit;
-    }
+    long numUniqueTerms = singleValuedUpperBoundTerms(terms, termCountHardLimit);
     int bitsRequired = PackedInts.bitsRequired(numUniqueTerms) + 1;  // add one since we aren't using unsigned values for ords... (i.e. we would need to convert to unsigned or bias the values)
     // TODO: a good test that reliably fails if we didn't add 1 here!  CursorPagingTest is the only one that does fail.
 
@@ -133,9 +186,8 @@ public class StrTopValues extends TopValues {
       pos += len;
     }
 
-    return new StrArrLeafValues(topValues.fieldValues, docToOrd, offsets, termBytes, stats);
+    return new StrArrLeafValues(fieldValues, docToOrd, offsets, termBytes, stats);
   }
-
 
   /***
   public static class OrdIndexBuilder {
@@ -200,9 +252,20 @@ public class StrTopValues extends TopValues {
 
   @Override
   public StrTopValues create(SolrIndexSearcher.WarmContext warmContext) {
+    if (cacheTop) {
+      return null;
+    }
     StrTopValues tv = new StrTopValues((StrFieldValues)fieldValues);
     tv.create(warmContext, this);
     return tv;
+  }
+
+  @Override
+  public void free() {
+    super.free();
+    if (allSegs != null) {
+      allSegs.decref();
+    }
   }
 }
 

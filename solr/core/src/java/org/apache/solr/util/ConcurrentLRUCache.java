@@ -506,7 +506,20 @@ public class ConcurrentLRUCache<K,V> {
   }
 
   public void clear() {
-    map.clear();
+    try {
+      markAndSweepLock.lock();
+
+      for (CacheEntry<K, V> ce : map.values()) {
+        if (ce.value instanceof RefCount) {
+          ((RefCount) ce.value).decref();
+        }
+      }
+
+      map.clear();
+
+    } finally {
+      markAndSweepLock.unlock();
+    }
   }
 
   public Map<Object, CacheEntry<K,V>> getMap() {

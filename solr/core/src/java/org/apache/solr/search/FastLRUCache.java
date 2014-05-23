@@ -140,7 +140,7 @@ public class FastLRUCache<K,V> extends SolrCacheBase implements SolrCache<K,V> {
 
   @Override
   public void clear() {
-    cache.clear();
+    cache.clear(); // TODO: take care of deref...
   }
 
   @Override

@@ -82,6 +82,7 @@ public class QueryContext implements Closeable {
     closeHooks.add(closeable);
   }
 
+  /** Don't call close explicitly!  This will be automatically closed at the end of the request */
   @Override
   public void close() throws IOException {
     if (closeHooks != null) {
@@ -113,7 +114,7 @@ public class QueryContext implements Closeable {
 
     TopValues prev = topValues.put(fvals.getField().getName(), topVals);
     addCloseHook(topVals);
-    assert prev == null;
+    // prev may be non-null if we switched from non-topVal to topVal
   }
 
 }

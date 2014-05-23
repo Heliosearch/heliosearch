@@ -61,7 +61,7 @@ public class FloatFieldValues extends FieldValues {
     return super.toString();
   }
 
-  // @Override TODO
+  @Override
   public SortField getSortField(final boolean top, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
     return new FloatSortField(top, sortMissingFirst, sortMissingLast, missVal);
   }

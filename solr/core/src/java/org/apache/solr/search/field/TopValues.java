@@ -77,7 +77,7 @@ public abstract class TopValues extends RefCountBase {
       synchronized (leaf) {
         CreationLeafValue create = (CreationLeafValue)leaf;
         if (create.value == null) {
-          create.value = createValue(this, create, readerContext);
+          create.value = createValue(context, create, readerContext);
           synchronized (this) {
             leafValues[readerOrd] = create.value;
             nSegs++;
@@ -91,7 +91,7 @@ public abstract class TopValues extends RefCountBase {
 
 
 
-  public abstract LeafValues createValue(TopValues topValues, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException;
+  public abstract LeafValues createValue(QueryContext context, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException;
 
 
   @Override
@@ -208,7 +208,9 @@ public abstract class TopValues extends RefCountBase {
     @Override
     public boolean regenerateItem(SolrIndexSearcher.WarmContext warmContext, Object oldKey, Object oldVal) throws IOException {
       TopValues newValues = ((TopValues)oldVal).create(warmContext);
-      warmContext.searcher.getnCache().put((String)oldKey, newValues);
+      if (newValues != null) {
+        warmContext.searcher.getnCache().put((String) oldKey, newValues);
+      }
       return true;
     }
   }

@@ -19,6 +19,7 @@ package org.apache.solr.search.field;
 
 import org.apache.lucene.index.IndexWriter;
 import org.apache.solr.JSONTestUtil;
+import org.apache.solr.SolrTestCaseHS;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestInfo;
@@ -33,16 +34,17 @@ import org.noggit.ObjectBuilder;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
-public class TestNCache extends SolrTestCaseJ4 {
+public class TestNCache extends SolrTestCaseHS {
 
   @BeforeClass
   public static void beforeTests() throws Exception {
-    initCore("solrconfig.xml","schema15.xml");
+    initCore("solrconfig.xml","schema_latest.xml");
   }
 
 
@@ -52,7 +54,7 @@ public class TestNCache extends SolrTestCaseJ4 {
     if (num <=0) {
       assertU(adoc("id", id));
     } else {
-      assertU(adoc("id", id, "val_i", id, "val_s1", id, "big_s1", big + id));
+      assertU(adoc("id", id, "val_i", id, "val_s1", id, "big_s1", big + id, "val_sTop", id));
     }
   }
 
@@ -96,6 +98,9 @@ public class TestNCache extends SolrTestCaseJ4 {
         , desc
     );
 
+    assertJQ(req("q", "*:*", "sort", "val_sTop desc", "fl", "id")
+        , desc
+    );
 
     // make sure deleteByQuery works OK
     assertU(delQ("{!frange l=1 u=2}val_s1"));
@@ -104,10 +109,128 @@ public class TestNCache extends SolrTestCaseJ4 {
         ,  "/response/docs==[]"
     );
 
+    doTestCacheTop("val_sTop");
+  }
 
+  public void doTestCacheTop(String field) throws Exception {
+    SolrQueryRequest req = req();
+    SolrRequestInfo.setRequestInfo(new SolrRequestInfo(req, new SolrQueryResponse()));
+
+    SchemaField sf = req.getSchema().getField(field);
+    ValueSource vs = sf.getType().getValueSource(sf, null);
+    QueryContext qcontext = QueryContext.newContext(req.getSearcher());
+    vs.createWeight(qcontext);
+
+    FuncValues funcValues = vs.getValues(qcontext, req.getSearcher().getTopReaderContext().leaves().get(0));
+    assertTrue(vs instanceof StrFieldValues);
+    StrFieldValues svals = (StrFieldValues)vs;
+    assertTrue( svals.cacheTop() );
+    assertTrue(funcValues instanceof StrSliceValues);
+    req.close();
+    SolrRequestInfo.clearRequestInfo();
+  }
+
+
+  public void testTopValues() throws Exception {
+    clearNCache();
+    SolrQueryRequest req = req();
+    SolrRequestInfo.setRequestInfo(new SolrRequestInfo(req, new SolrQueryResponse()));
+    QueryContext qcontext1 = QueryContext.newContext(req.getSearcher());
+    QueryContext qcontext2 = QueryContext.newContext(req.getSearcher());
+
+    StrFieldValues leaf = new StrFieldValues(req.getSchema().getField("val_s1"), null, false);
+    StrFieldValues top = new StrFieldValues(req.getSchema().getField("val_s1"), null, true);
+
+    StrTopValues tvals1 = (StrTopValues)leaf.getTopValues(qcontext1);
+    assertTrue(tvals1.cacheTop == false);
+
+    // should retrieve the same object (hopefully from the context cache)
+    StrTopValues tvals1a = (StrTopValues)leaf.getTopValues(qcontext1);
+    assertTrue(tvals1 == tvals1a);
+
+    // should try both the context cache and the normal cache and reject both
+    // hits, finally creating a new object
+    StrTopValues tvals2 = (StrTopValues)top.getTopValues(qcontext1);
+    assertTrue(tvals2.cacheTop == true);
+
+    // leaf vals should be satisfied from top cache retrieved from context
+    StrTopValues tvals3 = (StrTopValues)leaf.getTopValues(qcontext1);
+    assertTrue(tvals3 == tvals2);
+
+    // leaf vals should be satisfied from top cache retrieved from Searcher cache
+    StrTopValues tvals4 = (StrTopValues)leaf.getTopValues(qcontext2);
+    assertTrue(tvals4 == tvals2);
+
+    // retrieve again
+    StrTopValues tvals5 = (StrTopValues)leaf.getTopValues(qcontext2);
+    assertTrue(tvals5 == tvals2);
+
+
+    req.close();
+    SolrRequestInfo.clearRequestInfo();
+  }
+
+
+  public void testValueSourceSort() throws Exception {
+    clearNCache();
+    clearIndex();
+    String f1 = "perseg_s1";
+
+    assertU(adoc("id", "1", f1, "hello"));
+    assertU(commit());
+    assertU(adoc("id", "2", f1, "wow"));
+    assertU(commit());
+
+    assertJQ(req("q", "{!cache=false}*:*", "sort", f1+" desc", "fl", "id")
+        , "/response/docs==[{'id':'2'},{'id':'1'}]"
+    );
+
+    // TODO: adjust if we set top level caches globally
+    assertTrue( isTopLevel(f1) == false );
+
+    assertJQ(req("q", "{!cache=false}*:*", "sort", "top("+f1+") desc", "fl", "id")
+        , "/response/docs==[{'id':'2'},{'id':'1'}]"
+    );
+
+    assertTrue( isTopLevel(f1) );
+
+    assertJQ(req("q", "{!cache=false}*:*", "sort", f1+" desc", "fl", "id")
+        , "/response/docs==[{'id':'2'},{'id':'1'}]"
+    );
+
+    assertTrue( isTopLevel(f1) );  // should still be top level
+
+    // make sure we don't carry the top-level forever just because it was executed once...
+    // we've used cache=false to avoid autowarming bringing back the query+sort on the new searcher.
+
+    assertU(adoc("id", "1", f1, "hello"));
+    assertU(commit());
+
+    assertJQ(req("q", "{!cache=false}*:*", "sort", f1+" desc", "fl", "id")
+        , "/response/docs==[{'id':'2'},{'id':'1'}]"
+    );
+
+    assertTrue( isTopLevel(f1) == false );
+  }
+
+
+  public static TopValues getCacheEntry(String field) {
+    SolrQueryRequest req = req();
+    TopValues entry = req.getSearcher().getnCache().check(field);
+    req.close();
+    return entry;
+  }
+
+  public static boolean isTopLevel(String field) {
+    TopValues vals = getCacheEntry(field);
+    if (!(vals instanceof StrTopValues)) return false;
+    boolean ret = ((StrTopValues)vals).cacheTop;
+    vals.decref();
+    return ret;
   }
 
   public void testSize() throws Exception {
+    clearNCache();
     clearIndex();
     String s = "12345678901234567890";
     int nSets = 10;
@@ -138,25 +261,30 @@ public class TestNCache extends SolrTestCaseJ4 {
     vs.createWeight(qcontext);
 
     FuncValues funcValues = vs.getValues(qcontext, req.getSearcher().getTopReaderContext().leaves().get(0));
-    assertTrue(funcValues instanceof StrArrLeafValues);
+    assertTrue(vs instanceof StrFieldValues);
+    if (((StrFieldValues)vs).cacheTop()) {
+      assertTrue(funcValues instanceof StrSliceValues);
+    } else {
+      StrArrLeafValues vals = (StrArrLeafValues)funcValues;
 
-    StrArrLeafValues vals = (StrArrLeafValues)funcValues;
+      assertTrue(vals._getDocToOrdArray() instanceof LongArray8);
+      assertTrue(vals._getOrdToOffsetArray().memSize() == nTerms*1);
 
-    assertTrue(vals._getDocToOrdArray() instanceof LongArray8);
-    assertTrue(vals._getOrdToOffsetArray().memSize() == nTerms*1);
+      long estSize =
+          (nDocs * 1) // docToOrd array
+              +(nTerms * 1) // ordToOffset array
+              +(termSize);  // term bytes
 
-    long estSize =
-        (nDocs * 1) // docToOrd array
-       +(nTerms * 1) // ordToOffset array
-       +(termSize);  // term bytes
+      long reportedSize = vals.getSizeInBytes();
 
-    long reportedSize = vals.getSizeInBytes();
-
-    assertTrue(estSize >= reportedSize);
+      assertTrue(estSize >= reportedSize);
+    }
 
     req.close();
     SolrRequestInfo.clearRequestInfo();
   }
+
+
 
 
 
@@ -363,6 +491,7 @@ public class TestNCache extends SolrTestCaseJ4 {
       types.add(new FldType("bigb_s1",ZERO_ONE, new SVal('A','z',1,2)));
       types.add(new FldType("bigc_s1",ZERO_ONE, new SVal('A','z',1,3)));
       types.add(new FldType("bigd_s1",ZERO_ONE, new SVal('A','z',1,4)));
+      types.add(new FldType("small_sTop",ZERO_ONE, new SVal('a','z',1,1)));
 
       StringBuilder sb = new StringBuilder();
       for (int i=0; i<nLongFields; i++) {
@@ -393,24 +522,9 @@ public class TestNCache extends SolrTestCaseJ4 {
         // System.out.println("MODEL=" + model);
 
         int rows=model.size();
+        Object modelDocs = createDocObjects(model, createComparator("_docid_",true,false,false,false), rows, null);
 
 
-        //
-        // create model response
-        //
-        List<Doc> docList = new ArrayList<Doc>(model.values());
-        Collections.sort(docList, createComparator("_docid_",true,false,false,false));
-        List sortedDocs = new ArrayList();
-        for (Doc doc : docList) {
-          if (sortedDocs.size() >= rows) break;
-          sortedDocs.add(doc.toObject(h.getCore().getLatestSchema()));
-        }
-        Object modelDocs = sortedDocs;
-
-
-        //
-        // get solr response
-        //
         SolrQueryRequest req = req("wt","json","indent","true", "echoParams","all"
             ,"q","*:*"
             ,"rows",""+rows
@@ -422,35 +536,46 @@ public class TestNCache extends SolrTestCaseJ4 {
             ,"fl","bigb_s1:field(bigb_s1)"
             ,"fl","bigc_s1:field(bigc_s1)"
             ,"fl","bigd_s1:field(bigd_s1)"
+            ,"fl","small_sTop:field(small_sTop)"
             ,"fl",flArg
             ,"fl",flArg2
         );
 
-        String strResponse = h.query(req);
-
-
-        Object realResponse = ObjectBuilder.fromJSON(strResponse);
-        String err = JSONTestUtil.matchObj("/response/docs", realResponse, modelDocs);
-        if (err != null) {
-          log.error("JOIN MISMATCH: " + err
-              + "\n\trequest="+req
-              + "\n\tresult="+strResponse
-              + "\n\texpected="+ JSONUtil.toJSON(modelDocs)
-              + "\n\tmodel="+ model
-          );
-
-          // re-execute the request... good for putting a breakpoint here for debugging
-          String rsp = h.query(req);
-
-          fail(err);
-        }
-
-
-
+        compare(req, "/response/docs", modelDocs, model);
 
         ///////////////////
         //now test sorting
+        ///////////////////
 
+        for (String field : new String[]{"small_s1","big_s1","small_sTop"}) {
+          for (boolean asc : new boolean[]{false, true}) {
+            boolean sortMissingFirst = false;
+            boolean sortMissingLast = true;
+            rows = r.nextInt(model.size() + 5);
+
+            List<Comparator<Doc>> comparators = new ArrayList<>();
+            comparators.add(createComparator(field, asc, sortMissingLast, sortMissingFirst, false));
+            modelDocs = createDocObjects(model, createComparator(comparators), rows, set("id", field));
+
+            String sortStr = field + (asc ? " asc" : " desc");
+
+            //
+            // get solr response
+            //
+            req = req("wt", "json", "indent", "true", "echoParams", "all"
+                , "q", "*:*"
+                , "rows", "" + rows
+                , "fl", "id"
+                , "fl", field
+                , "sort", sortStr
+            );
+
+            compare(req, "/response/docs", modelDocs, model);
+
+            // Comparator<Doc> sortComparator = createSort(schema, types, stringSortA);
+
+          }
+        }
 
 
 

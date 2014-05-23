@@ -62,7 +62,7 @@ public class StrField extends PrimitiveFieldType {
   public SortField getSortField(SchemaField field, boolean reverse) {
     field.checkFieldCacheSource(null);
 
-    return new StrFieldValues(field, null).getSortField(reverse, field.sortMissingFirst(), field.sortMissingLast(), null);
+    return new StrFieldValues(field, null, (field.properties & FieldProperties.CACHE_TOP) !=0).getSortField(reverse, field.sortMissingFirst(), field.sortMissingLast(), null);
 
     // return getStringSort(field,reverse);
   }
@@ -79,7 +79,7 @@ public class StrField extends PrimitiveFieldType {
     if (field.hasDocValues() || (field.properties & FieldProperties.LUCENE_FIELDCACHE) !=0 ) {
       return new StrFieldSource(field.getName());
     } else {
-      return new StrFieldValues(field, qparser);
+      return new StrFieldValues(field, qparser, (field.properties & FieldProperties.CACHE_TOP) !=0);
     }
   }
 

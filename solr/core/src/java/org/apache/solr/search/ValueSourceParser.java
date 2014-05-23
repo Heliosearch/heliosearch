@@ -19,6 +19,7 @@ package org.apache.solr.search;
 import com.spatial4j.core.distance.DistanceUtils;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Term;
+import org.apache.solr.search.field.StrFieldValues;
 import org.apache.solr.search.function.BoostedQuery;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
@@ -136,8 +137,11 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
     addParser("top", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
-        // top(vs) is now a no-op
+        // top(vs) is now a no-op for most value sources
         ValueSource source = fp.parseValueSource();
+        if (source instanceof StrFieldValues) {
+          ((StrFieldValues)source).setCacheTop(true);
+        }
         return source;
       }
     });

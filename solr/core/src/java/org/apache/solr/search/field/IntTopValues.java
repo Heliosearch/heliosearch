@@ -21,12 +21,11 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.FieldCache;
-import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.OpenBitSet;
 import org.apache.solr.core.HS;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.BitDocSetNative;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 
 import java.io.IOException;
@@ -87,7 +86,7 @@ public class IntTopValues extends TopValues {
   }
 
   @Override
-  public IntLeafValues createValue(TopValues topValues, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException {
+  public IntLeafValues createValue(QueryContext context, CreationLeafValue create, AtomicReaderContext readerContext) throws IOException {
     try (
         IntUninvert u = new IntUninvert(readerContext, fieldValues.field);
     ) {

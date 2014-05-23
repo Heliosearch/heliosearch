@@ -20,6 +20,7 @@ package org.apache.solr.search.field;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.FieldCache;
+import org.apache.lucene.search.SortField;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.schema.StrFieldSource;
 import org.apache.solr.schema.TrieDoubleField;
@@ -60,19 +61,39 @@ public abstract class FieldValues extends ValueSource {
 
     // check context cache first
     TopValues entry = context.getTopValues(this);
-    if (entry != null) return entry;
+    if (entry != null && accept(entry)) {
+      return entry;
+    }
 
 
     SolrCache<String, TopValues> fieldCache = context.searcher().getnCache();
 
     // just use the name for now
     entry = fieldCache.get(field.getName());
+
+    if (entry != null) {
+      // if the entry is not accepted, pretend we didn't find it
+      if (!(accept(entry))) {
+        entry.decref();
+        entry = null;
+      }
+    }
+
     if (entry == null) {
       TopValues newEntry = createTopValues(context.searcher());
       // is it kosher to synchronize on the cache?
       synchronized (fieldCache) {
         // try again to see if someone beat us to it
         entry = fieldCache.check(field.getName());
+
+        if (entry != null) {
+          // if the entry is not accepted, pretend we didn't find it
+          if (!(accept(entry))) {
+            entry.decref();
+            entry = null;
+          }
+        }
+
         if (entry == null) {
           newEntry.incref();  // additional reference for the cache
           fieldCache.put(field.getName(), newEntry);
@@ -90,6 +111,9 @@ public abstract class FieldValues extends ValueSource {
     return entry;
   }
 
+  public boolean accept(TopValues values) {
+    return true;
+  }
 
   @Override
   public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
@@ -135,6 +159,12 @@ public abstract class FieldValues extends ValueSource {
   // a generic cache for other field related things?
   public abstract TopValues createTopValues(SolrIndexSearcher searcher);
 
+
+  // TODO: add more params to base class getSortField
+  @Override
+  public SortField getSortField(boolean reverse) {
+    return this.getSortField(reverse, field.sortMissingFirst(), field.sortMissingLast(), null);
+  }
 }
 
 

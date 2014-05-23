@@ -89,7 +89,7 @@ public class LongFieldValues extends FieldValues implements LongConverter {
     return super.toString();
   }
 
-  // @Override TODO
+  @Override
   public SortField getSortField(final boolean top, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
     return new LongSortField(top, sortMissingFirst, sortMissingLast, missVal);
   }

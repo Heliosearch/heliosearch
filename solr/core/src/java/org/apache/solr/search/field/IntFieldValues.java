@@ -61,7 +61,7 @@ public class IntFieldValues extends FieldValues {
     return super.toString();
   }
 
-  // @Override TODO
+  @Override
   public SortField getSortField(final boolean top, boolean sortMissingFirst, boolean sortMissingLast, Object missVal) {
     return new IntSortField(top, sortMissingFirst, sortMissingLast, missVal);
   }

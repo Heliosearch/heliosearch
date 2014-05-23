@@ -25,20 +25,14 @@ import org.apache.solr.search.QueryContext;
 
 import java.io.IOException;
 
-public class StrComparatorNative extends FieldComparator<BytesRef> {
+public class TopStrComparatorNative extends FieldComparator<BytesRef> {
   protected final QueryContext qcontext;
   protected final StrTopValues topValues;
-  protected StrLeafValues strValues;
+  protected StrLeafValues strValues;  // the top level values (must use base to access)
 
   protected final int[] ords;
-  protected final long[] termPointers;
-  protected final int[] readerGen;
-  protected int currentReaderGen = -1;
   protected int bottomSlot = -1;  // only populated if the queue is full
   protected int bottomOrd;
-
-
-  protected boolean bottomSameReader;
 
   protected long bottomPointer;
 
@@ -53,16 +47,16 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
   /** Which ordinal to use for a missing value. */
   protected final int missingOrd;
 
+  protected int base;  // the doc base we are working from
+
   /** Creates this, with control over how missing values
    *  are sorted.  Pass sortMissingLast=true to put
    *  missing values at the end. */
-  public StrComparatorNative(FieldValues fieldValues, QueryContext qcontext, int numHits, boolean missingLast) {
+  public TopStrComparatorNative(FieldValues fieldValues, QueryContext qcontext, int numHits, boolean missingLast) {
     this.qcontext = qcontext;
     this.topValues = (StrTopValues) fieldValues.getTopValues(qcontext);
 
     ords = new int[numHits];
-    termPointers = new long[numHits];
-    readerGen = new int[numHits];
     if (missingLast) {
       missingSortCmp = 1;
       missingOrd = (Integer.MAX_VALUE-1);
@@ -72,82 +66,64 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
     }
   }
 
-  public StrComparatorNative(StrComparatorNative prev) {
+  public TopStrComparatorNative(TopStrComparatorNative prev) {
     // order the same as declared
     this.qcontext = prev.qcontext;
     this.topValues = prev.topValues;
     this.strValues = prev.strValues;
 
     this.ords = prev.ords;
-    this.termPointers = prev.termPointers;
-    this.readerGen = prev.readerGen;
-    this.currentReaderGen = prev.currentReaderGen;
     this.bottomSlot = prev.bottomSlot;
     this.bottomOrd = prev.bottomOrd;
-    this.bottomSameReader = prev.bottomSameReader;  // rely on setNextReader code to change this if necessary
     this.bottomPointer = prev.bottomPointer;
     this.topValue = prev.topValue;
     this.topSameReader = prev.topSameReader;
     this.topOrd = prev.topOrd;
     this.missingSortCmp = prev.missingSortCmp;
     this.missingOrd = prev.missingOrd;
+
+    this.base = prev.base;
   }
 
   @Override
   public int compare(int slot1, int slot2) {
-    if (readerGen[slot1] == readerGen[slot2]) {
-      return ords[slot1] - ords[slot2];
-    }
-
-    long pointer1 = termPointers[slot1];
-    long pointer2 = termPointers[slot2];
-    if (pointer1 == 0) {
-      if (pointer2 == 0) {
-        return 0;
-      }
-      return missingSortCmp;
-    } else if (pointer2 == 0) {
-      return -missingSortCmp;
-    }
-    return HS.compareLengthPrefixBytes(pointer1, pointer2);
+    return ords[slot1] - ords[slot2];
   }
 
   @Override
   public int compareBottom(int doc) {
-    int docOrd = strValues.ordVal(doc);
+    int docOrd = strValues.ordVal(doc + base);
     if (docOrd < 0) {
       docOrd = missingOrd;
     }
-    if (bottomSameReader) {
-      // ord is precisely comparable, even in the equal case
-      return bottomOrd - docOrd;
-    } else if (bottomOrd >= docOrd) {
-      // the equals case always means bottom is > doc
-      // (because we set bottomOrd to the lower bound in
-      // setBottom):
-      return 1;
-    } else {
-      return -1;
-    }
+    return bottomOrd - docOrd;
   }
 
   @Override
   public void copy(int slot, int doc) {
-    int ord = strValues.ordVal(doc);
+    int ord = strValues.ordVal(doc + base);
     if (ord < 0) {
       ord = missingOrd;
-      termPointers[slot] = 0;
-    } else {
-      termPointers[slot] = strValues.ordToTermPointer(ord);
     }
     ords[slot] = ord;
-    readerGen[slot] = currentReaderGen;
   }
 
   @Override
   public FieldComparator<BytesRef> setNextReader(AtomicReaderContext readerContext) throws IOException {
-    strValues = (StrLeafValues)topValues.getLeafValues(qcontext, readerContext);
-    currentReaderGen++;
+    // only thing we need to adjust is the doc base
+    base = readerContext.docBase;
+
+    if (strValues != null) {
+      return this;
+    }
+
+    strValues = (StrLeafValues) topValues.getLeafValues(qcontext, readerContext);
+    if (strValues instanceof StrSliceValues) {
+      // this should always be true
+      strValues = ((StrSliceValues)strValues).getParent();
+    } else {
+      throw new RuntimeException();
+    }
 
     if (topValue != null) {
       // Recompute topOrd/SameReader
@@ -198,40 +174,13 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
       }
     }
 
-    //return new StrComparator(this);
-    // return new AnyOrd(this);
     return this;
   }
 
   @Override
   public void setBottom(final int bottom) {
     bottomSlot = bottom;
-
-    bottomPointer = termPointers[bottomSlot];
-    if (currentReaderGen == readerGen[bottomSlot]) {
-      bottomOrd = ords[bottomSlot];
-      bottomSameReader = true;
-    } else {
-      if (bottomPointer == 0) {
-        // missingOrd is null for all segments
-        assert ords[bottomSlot] == missingOrd;
-        bottomOrd = missingOrd;
-        bottomSameReader = true;
-        readerGen[bottomSlot] = currentReaderGen;
-      } else {
-        final int ord = (int)strValues.termPointerToOrd(bottomPointer);
-        if (ord < 0) {
-          bottomOrd = -ord - 2;
-          bottomSameReader = false;
-        } else {
-          bottomOrd = ord;
-          // exact value match
-          bottomSameReader = true;
-          readerGen[bottomSlot] = currentReaderGen;
-          ords[bottomSlot] = bottomOrd;
-        }
-      }
-    }
+    bottomOrd = ords[bottomSlot];
   }
 
   @Override
@@ -244,11 +193,11 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
   @Override
   public BytesRef value(int slot) {
-    long ptr = termPointers[slot];
-    if (ptr == 0) {
+    int ord = ords[slot];
+    if (ord == missingOrd) {
       return null;
     }
-
+    long ptr = strValues.ordToTermPointer(ord);
     BytesRef val = new BytesRef();
     HS.copyLengthPrefixBytes(ptr, val);
     return val;
@@ -257,7 +206,7 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
   @Override
   public int compareTop(int doc) {
 
-    int ord = strValues.ordVal(doc);
+    int ord = strValues.ordVal(doc + base);
     if (ord < 0) {
       ord = missingOrd;
     }
@@ -274,6 +223,7 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
     }
   }
 
+
   @Override
   public int compareValues(BytesRef val1, BytesRef val2) {
     if (val1 == null) {
@@ -289,41 +239,29 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
 
 
-  public static class Ord0 extends StrComparatorNative {
-    public Ord0(StrComparatorNative prev) {
+  public static class Ord0 extends TopStrComparatorNative {
+    public Ord0(TopStrComparatorNative prev) {
       super(prev);
     }
 
     @Override
     public int compareBottom(int doc) {
       int docOrd = missingOrd;
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
       ords[slot] = missingOrd;
-      termPointers[slot] = 0;
-      readerGen[slot] = currentReaderGen;
     }
   }
 
 
-  public static class Ord8 extends StrComparatorNative {
+  public static class Ord8 extends TopStrComparatorNative {
     final LongArray8 longArr;
     final long arr;
 
-    public Ord8(StrComparatorNative prev) {
+    public Ord8(TopStrComparatorNative prev) {
       super(prev);
       longArr = (LongArray8) ((StrArrLeafValues)strValues)._getDocToOrdArray();
       arr = longArr.getNativeArray();
@@ -331,41 +269,23 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
     @Override
     public int compareBottom(int doc) {
-      int docOrd = HS.getByte(arr, doc) - 1;
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      int docOrd = HS.getByte(arr, doc + base) - 1;
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int ord = HS.getByte(arr, doc) - 1;
-
-      if (ord < 0) {
-        termPointers[slot] = 0;
-      } else {
-        termPointers[slot] = strValues.ordToTermPointer(ord);
-      }
+      int ord = HS.getByte(arr, doc + base) - 1;
       ords[slot] = ord;
-      readerGen[slot] = currentReaderGen;
     }
   }
 
 
-
-  public static class Ord8M extends StrComparatorNative {
+  public static class Ord8M extends TopStrComparatorNative {
     final LongArray8 longArr;
     final long arr;
 
-    public Ord8M(StrComparatorNative prev) {
+    public Ord8M(TopStrComparatorNative prev) {
       super(prev);
       longArr = (LongArray8) ((StrArrLeafValues)strValues)._getDocToOrdArray();
       arr = longArr.getNativeArray();
@@ -373,43 +293,28 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
     @Override
     public int compareBottom(int doc) {
-      int docOrd = HS.getByte(arr, doc) - 1;
+      int docOrd = HS.getByte(arr, doc + base) - 1;
       if (docOrd < 0) {
         docOrd = missingOrd;
       }
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int ord = HS.getByte(arr, doc) - 1;
-
+      int ord = HS.getByte(arr, doc + base) - 1;
       if (ord < 0) {
         ord = missingOrd;
-        termPointers[slot] = 0;
-      } else {
-        termPointers[slot] = strValues.ordToTermPointer(ord);
       }
       ords[slot] = ord;
-      readerGen[slot] = currentReaderGen;
     }
   }
 
-  public static class Ord16 extends StrComparatorNative {
+  public static class Ord16 extends TopStrComparatorNative {
     final LongArray16 longArr;
     final long arr;
 
-    public Ord16(StrComparatorNative prev) {
+    public Ord16(TopStrComparatorNative prev) {
       super(prev);
       longArr = (LongArray16) ((StrArrLeafValues)strValues)._getDocToOrdArray();
       arr = longArr.getNativeArray();
@@ -417,41 +322,23 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
     @Override
     public int compareBottom(int doc) {
-      int docOrd = HS.getShort(arr, doc) - 1;
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      int docOrd = HS.getShort(arr, doc + base) - 1;
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int ord = HS.getShort(arr, doc) - 1;
-
-      if (ord < 0) {
-        termPointers[slot] = 0;
-      } else {
-        termPointers[slot] = strValues.ordToTermPointer(ord);
-      }
+      int ord = HS.getShort(arr, doc + base) - 1;
       ords[slot] = ord;
-      readerGen[slot] = currentReaderGen;
     }
   }
 
 
-
-  public static class Ord16M extends StrComparatorNative {
+  public static class Ord16M extends TopStrComparatorNative {
     final LongArray16 longArr;
     final long arr;
 
-    public Ord16M(StrComparatorNative prev) {
+    public Ord16M(TopStrComparatorNative prev) {
       super(prev);
       longArr = (LongArray16) ((StrArrLeafValues)strValues)._getDocToOrdArray();
       arr = longArr.getNativeArray();
@@ -459,45 +346,28 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
     @Override
     public int compareBottom(int doc) {
-      int docOrd = HS.getShort(arr, doc) - 1;
+      int docOrd = HS.getShort(arr, doc + base) - 1;
       if (docOrd < 0) {
         docOrd = missingOrd;
       }
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int ord = HS.getShort(arr, doc) - 1;
-
+      int ord = HS.getShort(arr, doc + base) - 1;
       if (ord < 0) {
         ord = missingOrd;
-        termPointers[slot] = 0;
-      } else {
-        termPointers[slot] = strValues.ordToTermPointer(ord);
       }
       ords[slot] = ord;
-      readerGen[slot] = currentReaderGen;
     }
   }
 
-
-
-  public static class Ord32 extends StrComparatorNative {
+  public static class Ord32 extends TopStrComparatorNative {
     final LongArray32 longArr;
     final long arr;
 
-    public Ord32(StrComparatorNative prev) {
+    public Ord32(TopStrComparatorNative prev) {
       super(prev);
       longArr = (LongArray32) ((StrArrLeafValues)strValues)._getDocToOrdArray();
       arr = longArr.getNativeArray();
@@ -505,41 +375,23 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
     @Override
     public int compareBottom(int doc) {
-      int docOrd = HS.getInt(arr, doc) - 1;
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      int docOrd = HS.getInt(arr, doc + base) - 1;
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int ord = HS.getInt(arr, doc) - 1;
-
-      if (ord < 0) {
-        termPointers[slot] = 0;
-      } else {
-        termPointers[slot] = strValues.ordToTermPointer(ord);
-      }
+      int ord = HS.getInt(arr, doc + base) - 1;
       ords[slot] = ord;
-      readerGen[slot] = currentReaderGen;
     }
   }
 
 
-
-  public static class Ord32M extends StrComparatorNative {
+  public static class Ord32M extends TopStrComparatorNative {
     final LongArray32 longArr;
     final long arr;
 
-    public Ord32M(StrComparatorNative prev) {
+    public Ord32M(TopStrComparatorNative prev) {
       super(prev);
       longArr = (LongArray32) ((StrArrLeafValues)strValues)._getDocToOrdArray();
       arr = longArr.getNativeArray();
@@ -547,75 +399,47 @@ public class StrComparatorNative extends FieldComparator<BytesRef> {
 
     @Override
     public int compareBottom(int doc) {
-      int docOrd = HS.getInt(arr, doc) - 1;
+      int docOrd = HS.getInt(arr, doc + base) - 1;
       if (docOrd < 0) {
         docOrd = missingOrd;
       }
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int ord = HS.getInt(arr, doc) - 1;
-
+      int ord = HS.getInt(arr, doc + base) - 1;
       if (ord < 0) {
         ord = missingOrd;
-        termPointers[slot] = 0;
-      } else {
-        termPointers[slot] = strValues.ordToTermPointer(ord);
       }
       ords[slot] = ord;
-      readerGen[slot] = currentReaderGen;
     }
   }
 
 
-  public static class AnyOrd extends StrComparatorNative {
 
-    public AnyOrd(StrComparatorNative prev) {
+  public static class AnyOrd extends TopStrComparatorNative {
+
+    public AnyOrd(TopStrComparatorNative prev) {
       super(prev);
     }
 
     @Override
     public int compareBottom(int doc) {
-      int docOrd = strValues.ordVal(doc);
+      int docOrd = strValues.ordVal(doc + base);
       if (docOrd < 0) {
         docOrd = missingOrd;
       }
-      if (bottomSameReader) {
-        // ord is precisely comparable, even in the equal case
-        return bottomOrd - docOrd;
-      } else if (bottomOrd >= docOrd) {
-        // the equals case always means bottom is > doc
-        // (because we set bottomOrd to the lower bound in
-        // setBottom):
-        return 1;
-      } else {
-        return -1;
-      }
+      return bottomOrd - docOrd;
     }
 
     @Override
     public void copy(int slot, int doc) {
-      int ord = strValues.ordVal(doc);
+      int ord = strValues.ordVal(doc + base);
       if (ord < 0) {
         ord = missingOrd;
-        termPointers[slot] = 0;
-      } else {
-        termPointers[slot] = strValues.ordToTermPointer(ord);
       }
       ords[slot] = ord;
-      readerGen[slot] = currentReaderGen;
     }
 
   }
