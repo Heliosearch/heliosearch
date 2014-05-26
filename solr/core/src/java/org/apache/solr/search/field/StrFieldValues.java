@@ -56,6 +56,7 @@ public class StrFieldValues extends FieldValues {
 
   @Override
   public boolean accept(TopValues values) {
+    if (!(values instanceof StrTopValues)) return false;
     boolean valueCacheTop = ((StrTopValues)values).cacheTop;
     // Only problem is when we are asking for cacheTop==true and valueCacheTop==false
     // return !(cacheTop && !valueCacheTop);

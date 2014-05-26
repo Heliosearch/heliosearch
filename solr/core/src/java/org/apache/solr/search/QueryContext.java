@@ -102,19 +102,20 @@ public class QueryContext implements Closeable {
 
 
   /** This can return null */
-  public TopValues getTopValues(FieldValues fvals) {
+  public TopValues getTopValues(String fieldName) {
     if (topValues == null) return null;
-    return topValues.get(fvals.getField().getName());
+    return topValues.get(fieldName);
   }
 
-  public void setTopValues(FieldValues fvals, TopValues topVals) {
+  public void setTopValues(String fieldName, TopValues topVals) {
     if (topValues == null) {
       topValues = new HashMap<>();
     }
 
-    TopValues prev = topValues.put(fvals.getField().getName(), topVals);
+    TopValues prev = topValues.put(fieldName, topVals);
     addCloseHook(topVals);
-    // prev may be non-null if we switched from non-topVal to topVal
+    // prev may be non-null if we switched from non-topVal to topVal, but
+    // it will be cleaned up via closeHooks
   }
 
 }

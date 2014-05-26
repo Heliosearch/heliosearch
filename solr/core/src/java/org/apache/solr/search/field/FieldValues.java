@@ -21,8 +21,11 @@ package org.apache.solr.search.field;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.SortField;
+import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.schema.StrField;
 import org.apache.solr.schema.StrFieldSource;
+import org.apache.solr.schema.TextField;
 import org.apache.solr.schema.TrieDoubleField;
 import org.apache.solr.schema.TrieFloatField;
 import org.apache.solr.schema.TrieIntField;
@@ -59,17 +62,26 @@ public abstract class FieldValues extends ValueSource {
     // TODO: return null for no values indexed???
     // prevent memory filling up by misspelled fields?
 
+    String key = field.getName();
+
+    if (this instanceof StrFieldValues) {
+      // string values are special... they can be requested on non-string fields
+      FieldType ft = field.getType();
+      if (!(ft instanceof StrField || ft instanceof TextField)) {
+        key = key + "__FORCED_STRING__";
+      }
+    }
+
     // check context cache first
-    TopValues entry = context.getTopValues(this);
+    TopValues entry = context.getTopValues(key);
     if (entry != null && accept(entry)) {
       return entry;
     }
 
-
     SolrCache<String, TopValues> fieldCache = context.searcher().getnCache();
 
     // just use the name for now
-    entry = fieldCache.get(field.getName());
+    entry = fieldCache.get(key);
 
     if (entry != null) {
       // if the entry is not accepted, pretend we didn't find it
@@ -84,7 +96,7 @@ public abstract class FieldValues extends ValueSource {
       // is it kosher to synchronize on the cache?
       synchronized (fieldCache) {
         // try again to see if someone beat us to it
-        entry = fieldCache.check(field.getName());
+        entry = fieldCache.check(key);
 
         if (entry != null) {
           // if the entry is not accepted, pretend we didn't find it
@@ -96,7 +108,7 @@ public abstract class FieldValues extends ValueSource {
 
         if (entry == null) {
           newEntry.incref();  // additional reference for the cache
-          fieldCache.put(field.getName(), newEntry);
+          fieldCache.put(key, newEntry);
           entry = newEntry;
         } else {
           // someone else beat us to it... discard ours.
@@ -105,7 +117,7 @@ public abstract class FieldValues extends ValueSource {
       }
     }
 
-    context.setTopValues(this, entry);
+    context.setTopValues(key, entry);
 
     entry.uses.incrementAndGet(); // only increment if it wasn't in our context
     return entry;

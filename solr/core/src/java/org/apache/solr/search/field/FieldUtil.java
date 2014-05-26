@@ -27,13 +27,14 @@ import org.apache.solr.schema.StrField;
 import org.apache.solr.schema.TextField;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.SolrIndexSearcher;
 
 import java.io.IOException;
 
 public class FieldUtil {
 
   /** The returned StrLeafValues do not need to be reference counted,
-   * they will be valid for the lifetime of the context (at a minimum).
+   * they will be valid for the lifetime of the context (at a minimum... normally the request context).
    * These returned StrLeafValues are actually top-level (i.e. the "leaf" used is the top-level reader).
    */
   public static StrLeafValues getTopStrings(QueryContext context, SchemaField field, QParser qparser) throws IOException {
@@ -42,6 +43,7 @@ public class FieldUtil {
     if (!(vals instanceof StrTopValues)) {
       // insanity!
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "getTopStrings type mismatch for field " + field + ", found " + vals);
+      // TODO: a way to force insanity?
     }
     StrTopValues svals = (StrTopValues) vals;
     assert svals.cacheTop;
@@ -49,6 +51,14 @@ public class FieldUtil {
     StrLeafValues actualValues = svals.createTopValue(context);
     return actualValues;
   }
+
+  /** Simpler method that creates a request context and looks up the field for you */
+  public static SortedDocValues getSortedDocValues(SolrIndexSearcher searcher, String field) throws IOException {
+    SchemaField sf = searcher.getSchema().getField(field);
+    QueryContext qContext = QueryContext.newContext(searcher);
+    return getSortedDocValues( qContext, sf, null );
+  }
+
 
   public static SortedDocValues getSortedDocValues(QueryContext context, SchemaField field, QParser qparser) throws IOException {
     if (!field.hasDocValues() && (field.getType() instanceof StrField || field.getType() instanceof TextField)) {

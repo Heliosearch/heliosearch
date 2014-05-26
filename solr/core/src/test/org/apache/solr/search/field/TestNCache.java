@@ -132,14 +132,27 @@ public class TestNCache extends SolrTestCaseHS {
 
 
   public void testTopValues() throws Exception {
-    clearNCache();
+    String strFieldName="val111_s1"; // make these unique to avoid cache pollution
+    String intFieldName="val111_i";
+    String intFieldName2="val222_i";
+
+
+    assertU(adoc("id", "1", strFieldName, "hello", intFieldName, "5"));
+    assertU(commit());
+
     SolrQueryRequest req = req();
     SolrRequestInfo.setRequestInfo(new SolrRequestInfo(req, new SolrQueryResponse()));
+
+    SchemaField strField = req.getSchema().getField(strFieldName);
+    SchemaField intField = req.getSchema().getField(intFieldName);
+    SchemaField intField2 = req.getSchema().getField(intFieldName);
+
+
     QueryContext qcontext1 = QueryContext.newContext(req.getSearcher());
     QueryContext qcontext2 = QueryContext.newContext(req.getSearcher());
 
-    StrFieldValues leaf = new StrFieldValues(req.getSchema().getField("val_s1"), null, false);
-    StrFieldValues top = new StrFieldValues(req.getSchema().getField("val_s1"), null, true);
+    StrFieldValues leaf = new StrFieldValues(req.getSchema().getField(strFieldName), null, false);
+    StrFieldValues top = new StrFieldValues(req.getSchema().getField(strFieldName), null, true);
 
     StrTopValues tvals1 = (StrTopValues)leaf.getTopValues(qcontext1);
     assertTrue(tvals1.cacheTop == false);
@@ -165,6 +178,43 @@ public class TestNCache extends SolrTestCaseHS {
     StrTopValues tvals5 = (StrTopValues)leaf.getTopValues(qcontext2);
     assertTrue(tvals5 == tvals2);
 
+    /////////////
+    // test forcing of string values
+    /////////////
+
+    // first request as native value
+    ValueSource vs = intField.getType().getValueSource(strField, null);
+    assertTrue( vs instanceof IntFieldValues );
+    TopValues topValues1 = ((IntFieldValues) vs).getTopValues(qcontext1);
+
+    // request again, and make sure we're getting the same values
+    ValueSource vs2 = intField.getType().getValueSource(strField, null);
+    TopValues topValues2 = ((IntFieldValues) vs).getTopValues(qcontext1);
+    assertTrue(topValues2 == topValues1);
+
+    // now request as string...
+    StrLeafValues intAsStr = FieldUtil.getTopStrings(qcontext1, intField, null);
+
+    // request native type again, and make sure we're getting the same values
+    ValueSource vs3 = intField.getType().getValueSource(strField, null);
+    TopValues topValues3 = ((IntFieldValues) vs).getTopValues(qcontext1);
+    assertTrue(topValues3 == topValues1);
+
+    // now request as string again and make sure we got the same thing...
+    StrLeafValues intAsStr2 = FieldUtil.getTopStrings(qcontext1, intField, null);
+    assertTrue(intAsStr2 == intAsStr);
+
+    // request an int field as a string first!
+    StrLeafValues intAsStrX2 = FieldUtil.getTopStrings(qcontext1, intField, null);
+
+    // should not interfere with int field
+    ValueSource vsX = intField2.getType().getValueSource(strField, null);
+    assertTrue( vs instanceof IntFieldValues );
+    TopValues topValuesX1 = ((IntFieldValues) vs).getTopValues(qcontext1);
+
+    // make sure string still receives the same value
+    StrLeafValues intAsStrX3 = FieldUtil.getTopStrings(qcontext1, intField, null);
+    assertTrue(intAsStrX3 == intAsStr2);
 
     req.close();
     SolrRequestInfo.clearRequestInfo();
