@@ -25,6 +25,7 @@ import org.apache.lucene.index.SlowCompositeReaderWrapper;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.search.FieldCache;
 import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.field.FieldUtil;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.IntFuncValues;
@@ -37,17 +38,14 @@ import java.io.IOException;
  * Obtains the ordinal of the field value from the default Lucene {@link org.apache.lucene.search.FieldCache} using getStringIndex().
  * <br>
  * The native lucene index order is used to assign an ordinal value for each field value.
- * <br>Field values (terms) are lexicographically ordered by unicode value, and numbered starting at 1.
+ * <br>Field values (terms) are lexicographically ordered by unicode value, and numbered starting at 0.
  * <br>
  * Example:<br>
  * If there were only three field values: "apple","banana","pear"
- * <br>then ord("apple")=1, ord("banana")=2, ord("pear")=3
+ * <br>then ord("apple")=0, ord("banana")=1, ord("pear")=2
  * <p/>
  * WARNING: ord() depends on the position in an index and can thus change when other documents are inserted or deleted,
  * or if a MultiSearcher is used.
- * <br>WARNING: as of Solr 1.4, ord() and rord() can cause excess memory use since they must use a FieldCache entry
- * at the top level reader, while sorting and function queries now use entries at the segment level.  Hence sorting
- * or using a different function query, in addition to ord()/rord() will double memory use.
  */
 
 public class OrdFieldSource extends ValueSource {
@@ -63,13 +61,10 @@ public class OrdFieldSource extends ValueSource {
   }
 
 
-  // TODO: this is trappy? perhaps this query instead should make you pass a slow reader yourself?
   @Override
   public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
     final int off = readerContext.docBase;
-    final IndexReader topReader = ReaderUtil.getTopLevelContext(readerContext).reader();
-    final AtomicReader r = SlowCompositeReaderWrapper.wrap(topReader);
-    final SortedDocValues sindex = FieldCache.DEFAULT.getTermsIndex(r, field);
+    final SortedDocValues sindex = FieldUtil.getSortedDocValues(context, context.searcher().getSchema().getField(field), null);
     return new IntFuncValues(this) {
       protected String toTerm(String readableValue) {
         return readableValue;
@@ -87,7 +82,7 @@ public class OrdFieldSource extends ValueSource {
 
       @Override
       public boolean exists(int doc) {
-        return sindex.getOrd(doc + off) != 0;
+        return sindex.getOrd(doc + off) >= 0;
       }
 
       @Override
@@ -103,7 +98,7 @@ public class OrdFieldSource extends ValueSource {
           @Override
           public void fillValue(int doc) {
             mval.value = sindex.getOrd(doc);
-            mval.exists = mval.value != 0;
+            mval.exists = mval.value >= 0;
           }
         };
       }

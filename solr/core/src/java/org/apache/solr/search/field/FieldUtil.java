@@ -41,9 +41,8 @@ public class FieldUtil {
     StrFieldValues fieldValues = new StrFieldValues(field, qparser, true);
     TopValues vals = fieldValues.getTopValues(context);
     if (!(vals instanceof StrTopValues)) {
-      // insanity!
+      // This should now be impossible...
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "getTopStrings type mismatch for field " + field + ", found " + vals);
-      // TODO: a way to force insanity?
     }
     StrTopValues svals = (StrTopValues) vals;
     assert svals.cacheTop;

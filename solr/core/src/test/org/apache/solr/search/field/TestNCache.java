@@ -209,8 +209,8 @@ public class TestNCache extends SolrTestCaseHS {
 
     // should not interfere with int field
     ValueSource vsX = intField2.getType().getValueSource(strField, null);
-    assertTrue( vs instanceof IntFieldValues );
-    TopValues topValuesX1 = ((IntFieldValues) vs).getTopValues(qcontext1);
+    assertTrue( vsX instanceof IntFieldValues );
+    TopValues topValuesX1 = ((IntFieldValues) vsX).getTopValues(qcontext1);
 
     // make sure string still receives the same value
     StrLeafValues intAsStrX3 = FieldUtil.getTopStrings(qcontext1, intField, null);

@@ -25,9 +25,12 @@ import org.apache.lucene.index.SlowCompositeReaderWrapper;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.search.FieldCache;
 import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.field.FieldUtil;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.funcvalues.IntFuncValues;
+import org.apache.solr.search.mutable.MutableValue;
+import org.apache.solr.search.mutable.MutableValueInt;
 
 import java.io.IOException;
 import java.util.Map;
@@ -37,18 +40,15 @@ import java.util.Map;
  * and reverses the order.
  * <br>
  * The native lucene index order is used to assign an ordinal value for each field value.
- * <br>Field values (terms) are lexicographically ordered by unicode value, and numbered starting at 1.
+ * <br>Field values (terms) are lexicographically ordered by unicode value, and numbered starting at 0.
  * <br>
  * Example of reverse ordinal (rord):<br>
  * If there were only three field values: "apple","banana","pear"
- * <br>then rord("apple")=3, rord("banana")=2, ord("pear")=1
+ * <br>then rord("apple")=2, rord("banana")=1, ord("pear")=0
  * <p/>
  * WARNING: ord() depends on the position in an index and can thus change when other documents are inserted or deleted,
  * or if a MultiSearcher is used.
  * <br>
- * WARNING: as of Solr 1.4, ord() and rord() can cause excess memory use since they must use a FieldCache entry
- * at the top level reader, while sorting and function queries now use entries at the segment level.  Hence sorting
- * or using a different function query, in addition to ord()/rord() will double memory use.
  */
 
 public class ReverseOrdFieldSource extends ValueSource {
@@ -63,20 +63,49 @@ public class ReverseOrdFieldSource extends ValueSource {
     return "rord(" + field + ')';
   }
 
-  // TODO: this is trappy? perhaps this query instead should make you pass a slow reader yourself?
   @Override
   public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
-    final IndexReader topReader = ReaderUtil.getTopLevelContext(readerContext).reader();
-    final AtomicReader r = SlowCompositeReaderWrapper.wrap(topReader);
     final int off = readerContext.docBase;
+    final SortedDocValues sindex = FieldUtil.getSortedDocValues(context, context.searcher().getSchema().getField(field), null);
 
-    final SortedDocValues sindex = FieldCache.DEFAULT.getTermsIndex(r, field);
-    final int end = sindex.getValueCount();
+    final int lastOrd = sindex.getValueCount() - 1;
 
     return new IntFuncValues(this) {
+      protected String toTerm(String readableValue) {
+        return readableValue;
+      }
+
       @Override
       public int intVal(int doc) {
-        return (end - sindex.getOrd(doc + off) - 1);
+        return lastOrd -sindex.getOrd(doc + off);
+      }
+
+      @Override
+      public int ordVal(int doc) {
+        return lastOrd - sindex.getOrd(doc + off);
+      }
+
+      @Override
+      public boolean exists(int doc) {
+        return sindex.getOrd(doc + off) >= 0;
+      }
+
+      @Override
+      public ValueFiller getValueFiller() {
+        return new ValueFiller() {
+          private final MutableValueInt mval = new MutableValueInt();
+
+          @Override
+          public MutableValue getValue() {
+            return mval;
+          }
+
+          @Override
+          public void fillValue(int doc) {
+            mval.value = lastOrd - sindex.getOrd(doc);
+            mval.exists = mval.value >= 0;
+          }
+        };
       }
     };
   }
