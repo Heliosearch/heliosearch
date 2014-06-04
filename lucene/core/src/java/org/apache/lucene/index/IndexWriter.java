@@ -32,8 +32,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +42,9 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.lucene3x.Lucene3xCodec;
 import org.apache.lucene.codecs.lucene3x.Lucene3xSegmentInfoFormat;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.index.DocValuesUpdate.BinaryDocValuesUpdate;
+import org.apache.lucene.index.DocValuesUpdate.NumericDocValuesUpdate;
 import org.apache.lucene.index.FieldInfo.DocValuesType;
 import org.apache.lucene.index.FieldInfos.FieldNumbers;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
@@ -259,6 +262,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
   private List<MergePolicy.OneMerge> mergeExceptions = new ArrayList<>();
   private long mergeGen;
   private boolean stopMerges;
+  private boolean didMessageState;
 
   final AtomicInteger flushCount = new AtomicInteger();
   final AtomicInteger flushDeletesCount = new AtomicInteger();
@@ -697,12 +701,11 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
    */
   public IndexWriter(Directory d, IndexWriterConfig conf) throws IOException {
     conf.setIndexWriter(this); // prevent reuse by other instances
-    config = new LiveIndexWriterConfig(conf);
+    config = conf;
     directory = d;
     analyzer = config.getAnalyzer();
     infoStream = config.getInfoStream();
     mergePolicy = config.getMergePolicy();
-    mergePolicy.setIndexWriter(this);
     mergeScheduler = config.getMergeScheduler();
     codec = config.getCodec();
 
@@ -840,7 +843,8 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
   }
 
   private void messageState() {
-    if (infoStream.isEnabled("IW")) {
+    if (infoStream.isEnabled("IW") && didMessageState == false) {
+      didMessageState = true;
       infoStream.message("IW", "\ndir=" + directory + "\n" +
             "index=" + segString() + "\n" +
             "version=" + Constants.LUCENE_VERSION + "\n" +
@@ -1511,10 +1515,8 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
 
   /**
    * Updates a document's {@link NumericDocValues} for <code>field</code> to the
-   * given <code>value</code>. This method can be used to 'unset' a document's
-   * value by passing {@code null} as the new value. Also, you can only update
-   * fields that already exist in the index, not add new fields through this
-   * method.
+   * given <code>value</code>. You can only update fields that already exist in
+   * the index, not add new fields through this method.
    * 
    * <p>
    * <b>NOTE</b>: if this method hits an OutOfMemoryError you should immediately
@@ -1532,13 +1534,13 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
    * @throws IOException
    *           if there is a low-level IO error
    */
-  public void updateNumericDocValue(Term term, String field, Long value) throws IOException {
+  public void updateNumericDocValue(Term term, String field, long value) throws IOException {
     ensureOpen();
     if (!globalFieldNumberMap.contains(field, DocValuesType.NUMERIC)) {
       throw new IllegalArgumentException("can only update existing numeric-docvalues fields!");
     }
     try {
-      if (docWriter.updateNumericDocValue(term, field, value)) {
+      if (docWriter.updateDocValues(new NumericDocValuesUpdate(term, field, value))) {
         processEvents(true, false);
       }
     } catch (OutOfMemoryError oom) {
@@ -1548,10 +1550,8 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
 
   /**
    * Updates a document's {@link BinaryDocValues} for <code>field</code> to the
-   * given <code>value</code>. This method can be used to 'unset' a document's
-   * value by passing {@code null} as the new value. Also, you can only update
-   * fields that already exist in the index, not add new fields through this
-   * method.
+   * given <code>value</code>. You can only update fields that already exist in
+   * the index, not add new fields through this method.
    * 
    * <p>
    * <b>NOTE:</b> this method currently replaces the existing value of all
@@ -1575,18 +1575,71 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
    */
   public void updateBinaryDocValue(Term term, String field, BytesRef value) throws IOException {
     ensureOpen();
+    if (value == null) {
+      throw new IllegalArgumentException("cannot update a field to a null value: " + field);
+    }
     if (!globalFieldNumberMap.contains(field, DocValuesType.BINARY)) {
       throw new IllegalArgumentException("can only update existing binary-docvalues fields!");
     }
     try {
-      if (docWriter.updateBinaryDocValue(term, field, value)) {
+      if (docWriter.updateDocValues(new BinaryDocValuesUpdate(term, field, value))) {
         processEvents(true, false);
       }
     } catch (OutOfMemoryError oom) {
       handleOOM(oom, "updateBinaryDocValue");
     }
   }
-
+  
+  /**
+   * Updates documents' DocValues fields to the given values. Each field update
+   * is applied to the set of documents that are associated with the
+   * {@link Term} to the same value. All updates are atomically applied and
+   * flushed together.
+   * 
+   * <p>
+   * <b>NOTE</b>: if this method hits an OutOfMemoryError you should immediately
+   * close the writer. See <a href="#OOME">above</a> for details.
+   * </p>
+   * 
+   * @param updates
+   *          the updates to apply
+   * @throws CorruptIndexException
+   *           if the index is corrupt
+   * @throws IOException
+   *           if there is a low-level IO error
+   */
+  public void updateDocValues(Term term, Field... updates) throws IOException {
+    ensureOpen();
+    DocValuesUpdate[] dvUpdates = new DocValuesUpdate[updates.length];
+    for (int i = 0; i < updates.length; i++) {
+      final Field f = updates[i];
+      final DocValuesType dvType = f.fieldType().docValueType();
+      if (dvType == null) {
+        throw new IllegalArgumentException("can only update NUMERIC or BINARY fields! field=" + f.name());
+      }
+      if (!globalFieldNumberMap.contains(f.name(), dvType)) {
+        throw new IllegalArgumentException("can only update existing docvalues fields! field=" + f.name() + ", type=" + dvType);
+      }
+      switch (dvType) {
+        case NUMERIC:
+          dvUpdates[i] = new NumericDocValuesUpdate(term, f.name(), (Long) f.numericValue());
+          break;
+        case BINARY:
+          dvUpdates[i] = new BinaryDocValuesUpdate(term, f.name(), f.binaryValue());
+          break;
+        default:
+          throw new IllegalArgumentException("can only update NUMERIC or BINARY fields: field=" + f.name() + ", type=" + dvType);
+      }
+    }
+    try {
+      if (docWriter.updateDocValues(dvUpdates)) {
+        processEvents(true, false);
+      }
+    } catch (OutOfMemoryError oom) {
+      handleOOM(oom, "updateDocValues");
+    }
+  }
+  
   // for test purpose
   final synchronized int getSegmentCount(){
     return segmentInfos.size();
@@ -1837,7 +1890,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
     MergePolicy.MergeSpecification spec;
     boolean newMergesFound = false;
     synchronized(this) {
-      spec = mergePolicy.findForcedDeletesMerges(segmentInfos);
+      spec = mergePolicy.findForcedDeletesMerges(segmentInfos, this);
       newMergesFound = spec != null;
       if (newMergesFound) {
         final int numMerges = spec.merges.size();
@@ -1942,6 +1995,11 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
 
   private synchronized boolean updatePendingMerges(MergeTrigger trigger, int maxNumSegments)
     throws IOException {
+
+    // In case infoStream was disabled on init, but then enabled at some
+    // point, try again to log the config here:
+    messageState();
+
     assert maxNumSegments == -1 || maxNumSegments > 0;
     assert trigger != null;
     if (stopMerges) {
@@ -1957,7 +2015,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
     if (maxNumSegments != UNBOUNDED_MAX_MERGE_SEGMENTS) {
       assert trigger == MergeTrigger.EXPLICIT || trigger == MergeTrigger.MERGE_FINISHED :
         "Expected EXPLICT or MERGE_FINISHED as trigger even with maxNumSegments set but was: " + trigger.name();
-      spec = mergePolicy.findForcedMerges(segmentInfos, maxNumSegments, Collections.unmodifiableMap(segmentsToMerge));
+      spec = mergePolicy.findForcedMerges(segmentInfos, maxNumSegments, Collections.unmodifiableMap(segmentsToMerge), this);
       newMergesFound = spec != null;
       if (newMergesFound) {
         final int numMerges = spec.merges.size();
@@ -1967,7 +2025,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
         }
       }
     } else {
-      spec = mergePolicy.findMerges(trigger, segmentInfos);
+      spec = mergePolicy.findMerges(trigger, segmentInfos, this);
     }
     newMergesFound = spec != null;
     if (newMergesFound) {
@@ -2651,7 +2709,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
           return;
         }
         ensureOpen();
-        useCompoundFile = mergePolicy.useCompoundFile(segmentInfos, infoPerCommit);
+        useCompoundFile = mergePolicy.useCompoundFile(segmentInfos, infoPerCommit, this);
       }
 
       // Now create the compound file if needed
@@ -4128,7 +4186,7 @@ public class IndexWriter implements Closeable, TwoPhaseCommit{
       //System.out.println("merger set hasProx=" + merger.hasProx() + " seg=" + merge.info.name);
       boolean useCompoundFile;
       synchronized (this) { // Guard segmentInfos
-        useCompoundFile = mergePolicy.useCompoundFile(segmentInfos, merge.info);
+        useCompoundFile = mergePolicy.useCompoundFile(segmentInfos, merge.info, this);
       }
 
       if (useCompoundFile) {

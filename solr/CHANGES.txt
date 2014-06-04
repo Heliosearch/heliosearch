@@ -55,6 +55,10 @@ New Features
 
 * SOLR-6108: Add support for 'addreplica' Collection API in SolrJ. (shalin)
 
+* SOLR-5468: Allow a client application to request the minium achieved
+  replication factor for an update request (single or batch) by sending
+  an optional parameter "min_rf". (Timothy Potter)
+
 Bug Fixes
 ----------------------
 
@@ -70,6 +74,11 @@ Bug Fixes
 
 * SOLR-6111: The 'deleteshard' collection API should be able to delete a shard
   in 'construction' state. (shalin)
+
+* SOLR-6118: 'expand.sort' didn't support function queries. (David Smiley)
+
+* SOLR-6120: zkcli.sh should expand solr.war automatically instead of throwing
+  ClassNotFoundException. (sebastian badea, shalin)
 
 Other Changes
 ---------------------
@@ -94,7 +103,7 @@ Other Changes
 * SOLR-6022: Deprecate getAnalyzer() in IndexField and FieldType, and add getIndexAnalyzer().
   (Ryan Ernst)
 
-* SOLR_3671: Fix DIHWriter interface usage so users may implement writers that output
+* SOLR-3671: Fix DIHWriter interface usage so users may implement writers that output
   documents to a location external to Solr (ex. a NoSql db). (Roman Chyla via James Dyer)
 
 * SOLR-5340: Add support for named snapshots (Varun Thacker via Noble Paul)
@@ -103,11 +112,16 @@ Other Changes
   recovery scenarios after the leader receives an error trying to forward an
   update request to a replica. (Timothy Potter)
 
-* SOLR-5681: Make the processing of Collection API calls multi-threaded. (Anshum Gupta)
+* SOLR-6116: Refactor DocRouter.getDocRouter to accept routerName as a String. (shalin)
 
-* SOLR-5468: Allow a client application to request the minium achieved 
-  replication factor for an update request (single or batch) by sending
-  an optional parameter "min_rf". (Timothy Potter)
+* SOLR-6026: REQUESTSTATUS Collection API now also checks for submitted tasks which are
+  yet to begin execution.
+
+Optimizations
+----------------------
+
+* SOLR-5681: Make the processing of Collection API calls multi-threaded. 
+  (Anshum Gupta, shalin, Noble Paul)
 
 Build
 ---------------------
@@ -115,6 +129,10 @@ Build
 * SOLR-6006: Separate test and compile scope dependencies in the Solrj and
   Solr contrib ivy.xml files, so that the derived Maven dependencies get
   filled out properly in the corresponding POMs. (Steven Scott, Steve Rowe)
+  
+* SOLR-6130: Added com.uwyn:jhighlight dependency to, and removed asm:asm
+  dependency from the extraction contrib - dependencies weren't fully
+  upgraded with the Tika 1.4->1.5 upgrade (SOLR-5763). (Steve Rowe)
 
 ==================  4.8.1 ==================
 
@@ -131,7 +149,7 @@ Bug Fixes
 * SOLR-6017: Fix SimpleQParser to use query analyzer
   (Ryan Ernst)
 
-* SOLR_6029: CollapsingQParserPlugin throws ArrayIndexOutOfBoundsException
+* SOLR-6029: CollapsingQParserPlugin throws ArrayIndexOutOfBoundsException
   if elevated doc has been deleted from a segment. (Greg Harris, Joel Bernstein)
 
 * SOLR-6030: Use System.nanoTime() instead of currentTimeInMills() in LRUCache.warm.

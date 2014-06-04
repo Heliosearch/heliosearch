@@ -35,6 +35,7 @@ import org.apache.solr.search.DocListAndSet;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SortSpec;
+import org.apache.solr.search.RankQuery;
 import org.apache.solr.search.grouping.GroupingSpecification;
 import org.apache.solr.search.grouping.distributed.command.QueryCommandResult;
 
@@ -78,6 +79,7 @@ public class ResponseBuilder
   private CursorMark nextCursorMark;
 
   private List<MergeStrategy> mergeStrategies;
+  private RankQuery rankQuery;
 
 
   private DocListAndSet results = null;
@@ -249,6 +251,10 @@ public class ResponseBuilder
     return this.mergeStrategies;
   }
 
+  public void setRankQuery(RankQuery rankQuery) {
+    this.rankQuery = rankQuery;
+  }
+
   public void setResponseDocs(SolrDocumentList _responseDocs) {
     this._responseDocs = _responseDocs;
   }
@@ -411,7 +417,7 @@ public class ResponseBuilder
    */
   public SolrIndexSearcher.QueryCommand getQueryCommand() {
     SolrIndexSearcher.QueryCommand cmd = new SolrIndexSearcher.QueryCommand();
-    cmd.setQuery(getQuery())
+    cmd.setQuery(wrap(getQuery()))
             .setFilterList(getFilters())
             .setSort(getSortSpec().getSort())
             .setOffset(getSortSpec().getOffset())
@@ -420,6 +426,14 @@ public class ResponseBuilder
             .setNeedDocSet(isNeedDocSet())
             .setCursorMark(getCursorMark());
     return cmd;
+  }
+
+  private Query wrap(Query q) {
+    if(this.rankQuery != null) {
+      return this.rankQuery.wrap(q);
+    } else {
+      return q;
+    }
   }
 
   /**

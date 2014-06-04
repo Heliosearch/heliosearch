@@ -31,6 +31,7 @@ import java.security.PrivilegedActionException;
 import java.util.Locale;
 import java.lang.reflect.Method;
 
+import org.apache.lucene.store.ByteBufferIndexInput.BufferCleaner;
 import org.apache.lucene.util.Constants;
 
 /** File-based {@link Directory} implementation that uses
@@ -193,71 +194,14 @@ public class MMapDirectory extends FSDirectory {
     ensureOpen();
     File file = new File(getDirectory(), name);
     try (FileChannel c = FileChannel.open(file.toPath(), StandardOpenOption.READ)) {
-      return new MMapIndexInput("MMapIndexInput(path=\"" + file.toString() + "\")", c);
+      final String resourceDescription = "MMapIndexInput(path=\"" + file.toString() + "\")";
+      final boolean useUnmap = getUseUnmap();
+      return ByteBufferIndexInput.newInstance(resourceDescription,
+          map(resourceDescription, c, 0, c.size()), 
+          c.size(), chunkSizePower, useUnmap ? CLEANER : null, useUnmap);
     }
-  }
-  
-  @Override
-  public IndexInputSlicer createSlicer(String name, IOContext context) throws IOException {
-    final MMapIndexInput full = (MMapIndexInput) openInput(name, context);
-    return new IndexInputSlicer() {
-      @Override
-      public IndexInput openSlice(String sliceDescription, long offset, long length) throws IOException {
-        ensureOpen();
-        return full.slice(sliceDescription, offset, length);
-      }
-      
-      @Override
-      public IndexInput openFullSlice() throws IOException {
-        ensureOpen();
-        return full.clone();
-      }
-
-      @Override
-      public void close() throws IOException {
-        full.close();
-      }
-    };
   }
 
-  private final class MMapIndexInput extends ByteBufferIndexInput {
-    private final boolean useUnmapHack;
-    
-    MMapIndexInput(String resourceDescription, FileChannel fc) throws IOException {
-      super(resourceDescription, map(resourceDescription, fc, 0, fc.size()), fc.size(), chunkSizePower, getUseUnmap());
-      this.useUnmapHack = getUseUnmap();
-    }
-    
-    /**
-     * Try to unmap the buffer, this method silently fails if no support
-     * for that in the JVM. On Windows, this leads to the fact,
-     * that mmapped files cannot be modified or deleted.
-     */
-    @Override
-    protected void freeBuffer(final ByteBuffer buffer) throws IOException {
-      if (useUnmapHack) {
-        try {
-          AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              final Method getCleanerMethod = buffer.getClass()
-                .getMethod("cleaner");
-              getCleanerMethod.setAccessible(true);
-              final Object cleaner = getCleanerMethod.invoke(buffer);
-              if (cleaner != null) {
-                cleaner.getClass().getMethod("clean")
-                  .invoke(cleaner);
-              }
-              return null;
-            }
-          });
-        } catch (PrivilegedActionException e) {
-          throw new IOException("Unable to unmap the mapped buffer: " + toString(), e.getCause());
-        }
-      }
-    }
-  }
-  
   /** Maps a file into a set of buffers */
   final ByteBuffer[] map(String resourceDescription, FileChannel fc, long offset, long length) throws IOException {
     if ((length >>> chunkSizePower) >= Integer.MAX_VALUE)
@@ -317,4 +261,28 @@ public class MMapDirectory extends FSDirectory {
     newIoe.setStackTrace(ioe.getStackTrace());
     return newIoe;
   }
+  
+  private static final BufferCleaner CLEANER = new BufferCleaner() {
+    @Override
+    public void freeBuffer(final ByteBufferIndexInput parent, final ByteBuffer buffer) throws IOException {
+      try {
+        AccessController.doPrivileged(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            final Method getCleanerMethod = buffer.getClass()
+              .getMethod("cleaner");
+            getCleanerMethod.setAccessible(true);
+            final Object cleaner = getCleanerMethod.invoke(buffer);
+            if (cleaner != null) {
+              cleaner.getClass().getMethod("clean")
+                .invoke(cleaner);
+            }
+            return null;
+          }
+        });
+      } catch (PrivilegedActionException e) {
+        throw new IOException("Unable to unmap the mapped buffer: " + parent.toString(), e.getCause());
+      }
+    }
+  };
 }

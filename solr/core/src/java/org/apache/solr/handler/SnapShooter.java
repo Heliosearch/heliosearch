@@ -118,13 +118,12 @@ public class SnapShooter {
   }
 
   void validateCreateSnapshot() throws IOException {
-
     Lock lock = lockFactory.makeLock(directoryName + ".lock");
+    snapShotDir = new File(snapDir, directoryName);
     if (lock.isLocked()) {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
           "Unable to acquire lock for snapshot directory: " + snapShotDir.getAbsolutePath());
     }
-    snapShotDir = new File(snapDir, directoryName);
     if (snapShotDir.exists()) {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
           "Snapshot directory already exists: " + snapShotDir.getAbsolutePath());
@@ -154,7 +153,9 @@ public class SnapShooter {
 
       details.add("fileCount", files.size());
       details.add("status", "success");
-      details.add("snapshotCompletedAt", new Date().toString());
+      String date = new Date().toString();
+      details.add("snapshotCompletedAt", date);
+      LOG.info("Done creating backup snapshot, completed at: " + date);
     } catch (Exception e) {
       SnapPuller.delTree(snapShotDir);
       LOG.error("Exception while creating snapshot", e);
@@ -198,7 +199,7 @@ public class SnapShooter {
     LOG.info("Deleting snapshot: " + snapshotName);
 
     NamedList<Object> details = new NamedList<>();
-    boolean isSuccess = false;
+    boolean isSuccess;
     File f = new File(snapDir, "snapshot." + snapshotName);
     isSuccess = SnapPuller.delTree(f);
 
@@ -236,7 +237,6 @@ public class SnapShooter {
     }
   }
 
-  public static final String SNAP_DIR = "snapDir";
   public static final String DATE_FMT = "yyyyMMddHHmmssSSS";
   
 
@@ -271,6 +271,4 @@ public class SnapShooter {
       sourceDir.copy(destDir, indexFile, indexFile, DirectoryFactory.IOCONTEXT_NO_CACHE);
     }
   }
-  
-
 }

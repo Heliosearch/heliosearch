@@ -236,31 +236,6 @@ public class NativeUnixDirectory extends FSDirectory {
       return filePos + bufferPos;
     }
 
-    // TODO: seek is fragile at best; it can only properly
-    // handle seek & then change bytes that fit entirely
-    // within one buffer
-    @Override
-    public void seek(long pos) throws IOException {
-      if (pos != getFilePointer()) {
-        dump();
-        final long alignedPos = pos & ALIGN_NOT_MASK;
-        filePos = alignedPos;
-        int n = (int) NativePosixUtil.pread(fos.getFD(), filePos, buffer);
-        if (n < bufferSize) {
-          buffer.limit(n);
-        }
-        //System.out.println("seek refill=" + n);
-        final int delta = (int) (pos - alignedPos);
-        buffer.position(delta);
-        bufferPos = delta;
-      }
-    }
-
-    @Override
-    public long length() {
-      return fileLength + bufferPos;
-    }
-    
     @Override
     public long getChecksum() throws IOException {
       throw new UnsupportedOperationException("this directory currently does not work at all!");
@@ -435,6 +410,12 @@ public class NativeUnixDirectory extends FSDirectory {
       } catch (IOException ioe) {
         throw new RuntimeException("IOException during clone: " + this, ioe);
       }
+    }
+
+    @Override
+    public IndexInput slice(String sliceDescription, long offset, long length) throws IOException {
+      // TODO: is this the right thing to do?
+      return BufferedIndexInput.wrap(sliceDescription, this, offset, length);
     }
   }
 }

@@ -127,10 +127,10 @@ class MemoryDocValuesProducer extends DocValuesProducer {
       }
     }
 
+    String dataName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, dataExtension);
+    this.data = state.directory.openInput(dataName, state.context);
     success = false;
     try {
-      String dataName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, dataExtension);
-      data = state.directory.openInput(dataName, state.context);
       final int version2 = CodecUtil.checkHeader(data, dataCodec, 
                                                  VERSION_START,
                                                  VERSION_CURRENT);
@@ -331,7 +331,7 @@ class MemoryDocValuesProducer extends DocValuesProducer {
       if (instance == null) {
         data.seek(entry.offset);
         instance = new FST<>(data, PositiveIntOutputs.getSingleton());
-        ramBytesUsed.addAndGet(instance.sizeInBytes());
+        ramBytesUsed.addAndGet(instance.ramBytesUsed());
         fstInstances.put(field.number, instance);
       }
     }
@@ -406,7 +406,7 @@ class MemoryDocValuesProducer extends DocValuesProducer {
       if (instance == null) {
         data.seek(entry.offset);
         instance = new FST<>(data, PositiveIntOutputs.getSingleton());
-        ramBytesUsed.addAndGet(instance.sizeInBytes());
+        ramBytesUsed.addAndGet(instance.ramBytesUsed());
         fstInstances.put(field.number, instance);
       }
     }

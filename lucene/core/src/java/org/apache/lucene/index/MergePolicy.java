@@ -43,7 +43,7 @@ import java.util.Map;
  * {@link MergeSpecification} instance describing the set of
  * merges that should be done, or null if no merges are
  * necessary.  When IndexWriter.forceMerge is called, it calls
- * {@link #findForcedMerges(SegmentInfos,int,Map)} and the MergePolicy should
+ * {@link #findForcedMerges(SegmentInfos,int,Map, IndexWriter)} and the MergePolicy should
  * then return the necessary merges.</p>
  *
  * <p>Note that the policy can return more than one merge at
@@ -57,7 +57,7 @@ import java.util.Map;
  *
  * @lucene.experimental
  */
-public abstract class MergePolicy implements java.io.Closeable, Cloneable {
+public abstract class MergePolicy implements java.io.Closeable {
 
   /** A map of doc IDs. */
   public static abstract class DocMap {
@@ -372,9 +372,6 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
    */
   protected static final long DEFAULT_MAX_CFS_SEGMENT_SIZE = Long.MAX_VALUE;
 
-  /** {@link IndexWriter} that contains this instance. */
-  protected SetOnce<IndexWriter> writer;
-  
   /** If the size of the merge segment exceeds this ratio of
    *  the total index size then it will remain in
    *  non-compound format */
@@ -384,23 +381,8 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
    *  this value then it will not use compound file format. */
   protected long maxCFSSegmentSize = DEFAULT_MAX_CFS_SEGMENT_SIZE;
 
-  @Override
-  public MergePolicy clone() {
-    MergePolicy clone;
-    try {
-      clone = (MergePolicy) super.clone();
-    } catch (CloneNotSupportedException e) {
-      // should not happen
-      throw new RuntimeException(e);
-    }
-    clone.writer = new SetOnce<>();
-    return clone;
-  }
-
   /**
-   * Creates a new merge policy instance. Note that if you intend to use it
-   * without passing it to {@link IndexWriter}, you should call
-   * {@link #setIndexWriter(IndexWriter)}.
+   * Creates a new merge policy instance.
    */
   public MergePolicy() {
     this(DEFAULT_NO_CFS_RATIO, DEFAULT_MAX_CFS_SEGMENT_SIZE);
@@ -412,22 +394,10 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
    * defaults than the {@link MergePolicy}
    */
   protected MergePolicy(double defaultNoCFSRatio, long defaultMaxCFSSegmentSize) {
-    writer = new SetOnce<>();
     this.noCFSRatio = defaultNoCFSRatio;
     this.maxCFSSegmentSize = defaultMaxCFSSegmentSize;
   }
 
-  /**
-   * Sets the {@link IndexWriter} to use by this merge policy. This method is
-   * allowed to be called only once, and is usually set by IndexWriter. If it is
-   * called more than once, {@link AlreadySetException} is thrown.
-   * 
-   * @see SetOnce
-   */
-  public void setIndexWriter(IndexWriter writer) {
-    this.writer.set(writer);
-  }
-  
   /**
    * Determine what set of merge operations are now necessary on the index.
    * {@link IndexWriter} calls this whenever there is a change to the segments.
@@ -436,8 +406,9 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
    * @param mergeTrigger the event that triggered the merge
    * @param segmentInfos
    *          the total set of segments in the index
+   * @param writer the IndexWriter to find the merges on
    */
-  public abstract MergeSpecification findMerges(MergeTrigger mergeTrigger, SegmentInfos segmentInfos)
+  public abstract MergeSpecification findMerges(MergeTrigger mergeTrigger, SegmentInfos segmentInfos, IndexWriter writer)
       throws IOException;
 
   /**
@@ -460,9 +431,10 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
    *          an original segment present in the
    *          to-be-merged index; else, it was a segment
    *          produced by a cascaded merge.
+   * @param writer the IndexWriter to find the merges on
    */
   public abstract MergeSpecification findForcedMerges(
-          SegmentInfos segmentInfos, int maxSegmentCount, Map<SegmentCommitInfo,Boolean> segmentsToMerge)
+          SegmentInfos segmentInfos, int maxSegmentCount, Map<SegmentCommitInfo,Boolean> segmentsToMerge, IndexWriter writer)
       throws IOException;
 
   /**
@@ -471,9 +443,10 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
    * 
    * @param segmentInfos
    *          the total set of segments in the index
+   * @param writer the IndexWriter to find the merges on
    */
   public abstract MergeSpecification findForcedDeletesMerges(
-      SegmentInfos segmentInfos) throws IOException;
+      SegmentInfos segmentInfos, IndexWriter writer) throws IOException;
 
   /**
    * Release all resources for the policy.
@@ -488,11 +461,11 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
    * {@link #getMaxCFSSegmentSizeMB()} and the size is less or equal to the
    * TotalIndexSize * {@link #getNoCFSRatio()} otherwise <code>false</code>.
    */
-  public boolean useCompoundFile(SegmentInfos infos, SegmentCommitInfo mergedInfo) throws IOException {
+  public boolean useCompoundFile(SegmentInfos infos, SegmentCommitInfo mergedInfo, IndexWriter writer) throws IOException {
     if (getNoCFSRatio() == 0.0) {
       return false;
     }
-    long mergedInfoSize = size(mergedInfo);
+    long mergedInfoSize = size(mergedInfo, writer);
     if (mergedInfoSize > maxCFSSegmentSize) {
       return false;
     }
@@ -501,7 +474,7 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
     }
     long totalSize = 0;
     for (SegmentCommitInfo info : infos) {
-      totalSize += size(info);
+      totalSize += size(info, writer);
     }
     return mergedInfoSize <= getNoCFSRatio() * totalSize;
   }
@@ -509,9 +482,9 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
   /** Return the byte size of the provided {@link
    *  SegmentCommitInfo}, pro-rated by percentage of
    *  non-deleted documents is set. */
-  protected long size(SegmentCommitInfo info) throws IOException {
+  protected long size(SegmentCommitInfo info, IndexWriter writer) throws IOException {
     long byteSize = info.sizeInBytes();
-    int delCount = writer.get().numDeletedDocs(info);
+    int delCount = writer.numDeletedDocs(info);
     double delRatio = (info.info.getDocCount() <= 0 ? 0.0f : ((float)delCount / (float)info.info.getDocCount()));
     assert delRatio <= 1.0;
     return (info.info.getDocCount() <= 0 ?  byteSize : (long)(byteSize * (1.0 - delRatio)));
@@ -520,14 +493,13 @@ public abstract class MergePolicy implements java.io.Closeable, Cloneable {
   /** Returns true if this single info is already fully merged (has no
    *  pending deletes, is in the same dir as the
    *  writer, and matches the current compound file setting */
-  protected final boolean isMerged(SegmentInfos infos, SegmentCommitInfo info) throws IOException {
-    IndexWriter w = writer.get();
-    assert w != null;
-    boolean hasDeletions = w.numDeletedDocs(info) > 0;
+  protected final boolean isMerged(SegmentInfos infos, SegmentCommitInfo info, IndexWriter writer) throws IOException {
+    assert writer != null;
+    boolean hasDeletions = writer.numDeletedDocs(info) > 0;
     return !hasDeletions &&
       !info.info.hasSeparateNorms() &&
-      info.info.dir == w.getDirectory() &&
-      useCompoundFile(infos, info) == info.info.getUseCompoundFile();
+      info.info.dir == writer.getDirectory() &&
+      useCompoundFile(infos, info, writer) == info.info.getUseCompoundFile();
   }
   
   /** Returns current {@code noCFSRatio}.

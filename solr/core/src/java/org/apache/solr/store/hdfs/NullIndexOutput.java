@@ -45,17 +45,6 @@ public class NullIndexOutput extends IndexOutput {
   }
   
   @Override
-  public long length() throws IOException {
-    return length;
-  }
-  
-
-  @Override
-  public void seek(long pos) throws IOException {
-    this.pos = pos;
-  }
-  
-  @Override
   public void writeByte(byte b) throws IOException {
     pos++;
     updateLength();

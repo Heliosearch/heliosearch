@@ -37,6 +37,7 @@ import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.store.CompoundFileDirectory;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
+import org.apache.lucene.util.Accountable;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.CloseableThreadLocal;
 import org.apache.lucene.util.IOUtils;
@@ -49,7 +50,7 @@ import org.apache.lucene.util.Version;
  * may share the same core data.
  * @lucene.experimental
  */
-public final class SegmentReader extends AtomicReader {
+public final class SegmentReader extends AtomicReader implements Accountable {
 
   private final SegmentCommitInfo si;
   private final Bits liveDocs;
@@ -564,39 +565,20 @@ public final class SegmentReader extends AtomicReader {
     ensureOpen();
     return core.getNormValues(fieldInfos, field);
   }
-
-  /**
-   * Called when the shared core for this SegmentReader
-   * is closed.
-   * <p>
-   * This listener is called only once all SegmentReaders 
-   * sharing the same core are closed.  At this point it 
-   * is safe for apps to evict this reader from any caches 
-   * keyed on {@link #getCoreCacheKey}.  This is the same 
-   * interface that {@link FieldCache} uses, internally, 
-   * to evict entries.</p>
-   * 
-   * @lucene.experimental
-   */
-  public static interface CoreClosedListener {
-    /** Invoked when the shared core of the original {@code
-     *  SegmentReader} has closed. */
-    public void onClose(Object ownerCoreCacheKey);
-  }
   
-  /** Expert: adds a CoreClosedListener to this reader's shared core */
+  @Override
   public void addCoreClosedListener(CoreClosedListener listener) {
     ensureOpen();
     core.addCoreClosedListener(listener);
   }
   
-  /** Expert: removes a CoreClosedListener from this reader's shared core */
+  @Override
   public void removeCoreClosedListener(CoreClosedListener listener) {
     ensureOpen();
     core.removeCoreClosedListener(listener);
   }
   
-  /** Returns approximate RAM Bytes used */
+  @Override
   public long ramBytesUsed() {
     ensureOpen();
     long ramBytesUsed = 0;

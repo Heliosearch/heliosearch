@@ -89,17 +89,6 @@ public class ThrottledIndexOutput extends IndexOutput {
   }
 
   @Override
-  public void seek(long pos) throws IOException {
-    sleep(seekDelayMillis);
-    delegate.seek(pos);
-  }
-
-  @Override
-  public long length() throws IOException {
-    return delegate.length();
-  }
-
-  @Override
   public void writeByte(byte b) throws IOException {
     bytes[0] = b;
     writeBytes(bytes, 0, 1);
@@ -142,11 +131,6 @@ public class ThrottledIndexOutput extends IndexOutput {
     }
   }
   
-  @Override
-  public void setLength(long length) throws IOException {
-    delegate.setLength(length);
-  }
-
   @Override
   public void copyBytes(DataInput input, long numBytes) throws IOException {
     delegate.copyBytes(input, numBytes);

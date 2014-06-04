@@ -25,6 +25,13 @@ New Features
 * LUCENE-5675: Add IDVersionPostingsFormat, a postings format
   optimized for primary-key (ID) fields that also record a version
   (long) for each ID.  (Robert Muir, Mike McCandless)
+  
+* LUCENE-5680: Add ability to atomically update a set of DocValues
+  fields. (Shai Erera)
+
+* LUCENE-5717: Add support for multiterm queries nested inside
+  filtered and constant-score queries to postings highlighter.
+  (Luca Cavanna via Robert Muir)
 
 Changes in Backwards Compatibility Policy
 
@@ -36,7 +43,21 @@ Changes in Backwards Compatibility Policy
   top-level class: org.apache.lucene.util.AttributeFactory
   (Uwe Schindler, Robert Muir)
 
+* LUCENE-4371: Removed IndexInputSlicer and Directory.createSlicer() and replaced
+  with IndexInput.slice(). (Robert Muir)
+
+* LUCENE-5727, LUCENE-5678: Remove IndexOutput.seek, IndexOutput.setLength().
+  (Robert Muir, Uwe Schindler)
+
 API Changes
+
+* LUCENE-5725: MoreLikeThis#like now accepts multiple values per field.
+  The pre-existing method has been deprecated in favor of a variable arguments
+  for the like text. (Alex Ksikes via Simon Willnauer)
+
+* LUCENE-5711: MergePolicy accepts an IndexWriter instance
+  on each method rather than holding state against a single
+  IndexWriter instance. (Simon Willnauer)
 
 * LUCENE-5582: Deprecate IndexOutput.length (just use
   IndexOutput.getFilePointer instead) and IndexOutput.setLength.
@@ -68,6 +89,25 @@ API Changes
 * LUCENE-5679: Consolidated IndexWriter.deleteDocuments(Term) and 
   IndexWriter.deleteDocuments(Query) with their varargs counterparts.
   (Shai Erera)
+
+* LUCENE-5706: Removed the option to unset a DocValues field through DocValues
+  updates. (Shai Erera)
+
+* LUCENE-5700: Added oal.util.Accountable that is now implemented by all
+  classes whose memory usage can be estimated. (Robert Muir, Adrien Grand)
+
+* LUCENE-5708: Remove IndexWriterConfig.clone, so now IndexWriter
+  simply uses the IndexWriterConfig you pass it, and you must create a
+  new IndexWriterConfig for each IndexWriter.  (Mike McCandless)
+  
+* LUCENE-5701: Core closed listeners are now available in the AtomicReader API,
+  they used to sit only in SegmentReader. (Adrien Grand, Robert Muir)
+
+* LUCENE-5678: IndexOutput no longer allows seeking, so it is no longer required
+  to use RandomAccessFile to write Indexes. Lucene now uses standard FileOutputStream
+  wrapped with OutputStreamIndexOutput to write index data. BufferedIndexOutput was
+  removed, because buffering and checksumming is provided by FilterOutputStreams,
+  provided by the JDK.  (Uwe Schindler, Mike McCandless)
 
 Optimizations
 
@@ -102,6 +142,15 @@ Optimizations
 * LUCENE-5694: Don't score() subscorers in DisjunctionSumScorer or 
   DisjunctionMaxScorer unless score() is called.  (Robert Muir)
 
+* LUCENE-5720: Optimize DirectPackedReader's decompression. (Robert Muir)
+
+* LUCENE-5722: Optimize ByteBufferIndexInput#seek() by specializing
+  implementations. This improves random access as used by docvalues codecs
+  if used with MMapDirectory.  (Robert Muir, Uwe Schindler)
+
+* LUCENE-5730: FSDirectory.open returns MMapDirectory for 64-bit operating
+  systems, not just Linux and Windows. (Robert Muir)
+
 Bug fixes
 
 * LUCENE-5673: MMapDirectory: Work around a "bug" in the JDK that throws
@@ -127,6 +176,17 @@ Bug fixes
   this is IndexWriter.deleteAll, or opening an IndexWriter with
   OpenMode.CREATE)  (Mike McCandless)
 
+* LUCENE-5704: Fix compilation error with Java 8u20.  (Uwe Schindler)
+
+* LUCENE-5710: Include the inner exception as the cause and in the
+  exception message when an immense term is hit during indexing (Lee
+  Hinman via Mike McCandless)
+
+* LUCENE-5724: CompoundFileWriter was failing to pass through the
+  IOContext in some cases, causing NRTCachingDirectory to cache
+  compound files when it shouldn't, then causing OOMEs.  (Mike
+  McCandless)
+
 Test Framework
 
 * LUCENE-5622: Fail tests if they print over the given limit of bytes to 
@@ -134,6 +194,15 @@ Test Framework
   
 * LUCENE-5619: Added backwards compatibility tests to ensure we can update existing
   indexes with doc-values updates. (Shai Erera, Robert Muir)
+  
+Build
+  
+* LUCENE-5442: The Ant check-lib-versions target now runs Ivy resolution
+  transitively, then fails the build when it finds a version conflict: when a
+  transitive dependency's version is more recent than the direct dependency's
+  version specified in lucene/ivy-versions.properties.  Exceptions are
+  specifiable in lucene/ivy-ignore-conflicts.properties.
+  (Steve Rowe)
 
 ======================= Lucene 4.8.1 =======================
 

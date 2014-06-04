@@ -25,6 +25,7 @@ import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.store.DataInput;
 import org.apache.lucene.store.DataOutput;
 import org.apache.lucene.store.IndexInput;
+import org.apache.lucene.util.Accountable;
 import org.apache.lucene.util.LongsRef;
 import org.apache.lucene.util.RamUsageEstimator;
 
@@ -49,9 +50,9 @@ public class PackedInts {
   public static final float FAST = 0.5f;
 
   /**
-   * At most 20% memory overhead.
+   * At most 25% memory overhead.
    */
-  public static final float DEFAULT = 0.2f;
+  public static final float DEFAULT = 0.25f;
 
   /**
    * No memory overhead at all, but the returned implementation may be slow.
@@ -281,6 +282,39 @@ public class PackedInts {
 
     return new FormatAndBits(format, actualBitsPerValue);
   }
+  
+  /**
+   * Try to find the number of bits per value that would
+   * read from disk the fastest reader whose overhead is less than
+   * <code>acceptableOverheadRatio</code>.
+   * </p><p>
+   * The <code>acceptableOverheadRatio</code> parameter makes sense for
+   * random-access {@link Reader}s. In case you only plan to perform
+   * sequential access on this stream later on, you should probably use
+   * {@link PackedInts#COMPACT}.
+   * </p><p>
+   */
+  public static int fastestDirectBits(int bitsPerValue, float acceptableOverheadRatio) {
+    acceptableOverheadRatio = Math.max(COMPACT, acceptableOverheadRatio);
+    acceptableOverheadRatio = Math.min(FASTEST, acceptableOverheadRatio);
+    float acceptableOverheadPerValue = acceptableOverheadRatio * bitsPerValue; // in bits
+
+    int maxBitsPerValue = bitsPerValue + (int) acceptableOverheadPerValue;
+
+    // first see if we can upgrade to byte
+    int byteAlign = (bitsPerValue + 7) & 0xF8;
+    if (byteAlign <= maxBitsPerValue) {
+      return byteAlign;
+    }
+      
+    // otherwise try to upgrade to a nibble boundary (for numbers < 32)
+    int nibbleAlign = (bitsPerValue + 3) & 0xFC;
+    if (bitsPerValue < 32 && nibbleAlign <= maxBitsPerValue) {
+      return nibbleAlign;
+    }
+      
+    return bitsPerValue;
+  }
 
   /**
    * A decoder for packed integers.
@@ -452,7 +486,7 @@ public class PackedInts {
    * A read-only random access array of positive integers.
    * @lucene.internal
    */
-  public static abstract class Reader extends NumericDocValues {
+  public static abstract class Reader extends NumericDocValues implements Accountable {
 
     /**
      * Bulk get: read at least one and at most <code>len</code> longs starting
@@ -483,11 +517,6 @@ public class PackedInts {
      * @return the number of values.
      */
     public abstract int size();
-
-    /**
-     * Return the in-memory size in bytes.
-     */
-    public abstract long ramBytesUsed();
 
     /**
      * Expert: if the bit-width of this reader matches one of
@@ -968,7 +997,7 @@ public class PackedInts {
             }
           };
         } else {
-          return new DirectPackedReader(bitsPerValue, valueCount, in);
+          return DirectPackedReader.getInstance(bitsPerValue, valueCount, in);
         }
       case PACKED_SINGLE_BLOCK:
         return new DirectPacked64SingleBlockReader(bitsPerValue, valueCount, in);
