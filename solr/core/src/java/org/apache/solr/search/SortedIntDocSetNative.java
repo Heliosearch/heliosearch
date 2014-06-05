@@ -79,6 +79,9 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
   }
 
 
+  public static native int intersectionSizeNative(long smallerSortedList, int a_size, long biggerSortedList, int b_size);
+  public static long count_isizeNative; // debugging count
+
   public static int intersectionSize(long smallerSortedList, int a_size, long biggerSortedList, int b_size) {
     final long a = smallerSortedList;
     final long b = biggerSortedList;
@@ -248,8 +251,14 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
 
     // if b is 8 times bigger than a, use the modified binary search.
     if ((b_size>>3) >= a_size) {
-      return intersectionSize(a,a_size, b,b_size);
+      if (HS.loaded) {
+        count_isizeNative++;
+        return intersectionSizeNative(a,a_size,b,b_size);
+      } else {
+        return intersectionSize(a,a_size, b,b_size);
+      }
     }
+
 
     // if they are close in size, just do a linear walk of both.
     int icount=0;

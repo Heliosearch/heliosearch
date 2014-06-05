@@ -48,8 +48,10 @@ LUCENE=$LUSOLR/lucene
 CLASSES="$SOLR/build/solr-core/classes/java${JSEP}$LUCENE/build/core/classes/java"
 
 javah -force -classpath ${CLASSES} ${FULLCLASS}
+javah -force -classpath ${CLASSES} org.apache.solr.search.SortedIntDocSetNative
 
-$GPP -O6 -Wall $CFLAGS $JNI_INC -shared $CLASS.cpp -o $OUT
+
+$GPP -O6 -Wall $CFLAGS $JNI_INC -shared -fPIC $CLASS.cpp docset.cpp -o $OUT
 
 cp $OUT $LUSOLR/solr/example
 
