@@ -6,7 +6,6 @@
 #include <assert.h>
 #include "org_apache_solr_search_SortedIntDocSetNative.h"
 
-#define ctzl(val) __builtin_ctzl(val)
 
 int intersectionSize(const int* const a, int32_t a_size, const int* const b, int32_t b_size);
 
@@ -39,12 +38,12 @@ class BitDocSet : public DocSet {
         // TODO: we should be able to do even better with some inline ASM
         // to eliminate a conditional.  Although since we already check for 0, the
         // branch should be 100% predictable by the CPU.
-        return (i<<6) + subIndex + ctzl(word);
+        return (i<<6) + subIndex + ctz64(word);
       }
 
       while(++i < wlen) {
         word = bits[i];
-        if (word!=0) return (i<<6) + ctzl(word);
+        if (word!=0) return (i<<6) + ctz64(word);
       }
 
       return -1;

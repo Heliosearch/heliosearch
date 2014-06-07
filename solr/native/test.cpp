@@ -42,9 +42,10 @@ int count(DS set, int& docsum) {
 }
 
 // to see generated asm
-int countBS(BitDocSet set, int& docsum) {
+int countBSTest(BitDocSet set, int& docsum) {
   return count(set, docsum);
 }
+
 
 void testIter() {
   int docsum;
@@ -63,6 +64,12 @@ void testIter() {
   assert( count(set, docsum) > 0 );
   delete set.bits;
 
+  set = getBitDocSet(2);
+  *(jlong*)set.bits = 0;  // test the 0 case at start
+  assert( count(set, docsum) > 0 );
+  delete set.bits;
+
+
   jlong ret = 0;
   for (int i=0; i<1000000; i++) {
     int len = randomLong() & 0x03; 
@@ -73,8 +80,21 @@ void testIter() {
 }
 
 
+void testctz() {
+  int64_t x = 1;
+  x = x<<60;
+  assert( ctz64(x) == 60 );
+}
+
 
 int main(int argc, char** argv) {
+  assert( sizeof(char)==1 );
+  assert( sizeof(short)==2 );
+  assert( sizeof(int)==4 );
+  assert( sizeof(long long)==8);
+
+  testctz();
+
   testIter();
 }
 

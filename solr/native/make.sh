@@ -1,7 +1,7 @@
 
 echo "Make sure you do an 'ant compile' so the lucene/solr class files are generated first"
-echo "NOTE: running the example on linux requires the CWD to be in java.library.path.
-echo "$ java -Djava.library.path=. -jar start.jar"
+echo "NOTE: running the example on linux requires the CWD to be in java.library.path"
+echo "example: java -Djava.library.path=. -jar start.jar"
 
 BUILD=./build
 
