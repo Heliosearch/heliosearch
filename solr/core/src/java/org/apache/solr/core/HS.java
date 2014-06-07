@@ -14,6 +14,20 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class HS
 {
+  /** format codes to pass to native code to describe the data structure */
+  public static final int FORMAT_BITS      = 1;
+  public static final int FORMAT_INT8      = 2;
+  public static final int FORMAT_INT16     = 3;
+  public static final int FORMAT_INT32     = 4;
+  public static final int FORMAT_INT64     = 5;
+  public static final int FORMAT_MONOTONIC = 6;
+
+  public interface NativeData {
+    public long getNativeData();
+    public int getNativeFormat();
+    public long getNativeSize();
+  }
+
   public static final int BYTE_SIZE   = 1;
   public static final int SHORT_SIZE  = 2;
   public static final int INT_SIZE    = 4;

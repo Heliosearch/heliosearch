@@ -74,33 +74,3 @@ public class FieldUtil {
   }
 }
 
-class NativeSortedDocValues extends SortedDocValues {
-  protected final StrLeafValues vals;
-  public NativeSortedDocValues(StrLeafValues vals) {
-    this.vals = vals;
-  }
-
-  public StrLeafValues getWrappedValues() {
-    return vals;
-  }
-
-  @Override
-  public int getOrd(int docID) {
-    return vals.ordVal(docID);
-  }
-
-  @Override
-  public void lookupOrd(int ord, BytesRef result) {
-    vals.ordToTerm(ord, result);
-  }
-
-  @Override
-  public int getValueCount() {
-    return (int)vals.getFieldStats().getNumUniqueValues();
-  }
-
-  @Override
-  public int lookupTerm(BytesRef key) {
-    return (int)vals.termToOrd(key);
-  }
-}

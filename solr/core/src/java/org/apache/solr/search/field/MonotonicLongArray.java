@@ -19,6 +19,7 @@ package org.apache.solr.search.field;
 
 import org.apache.lucene.util.PagedBytes;
 import org.apache.lucene.util.packed.PackedInts;
+import org.apache.solr.core.HS;
 
 import java.io.IOException;
 
@@ -66,6 +67,16 @@ public class MonotonicLongArray extends LongArray {
   @Override
   public long memSize() {
     return adjustments.memSize();
+  }
+
+  @Override
+  public long getNativeData() {
+    return 0; // need to get wrapped array...
+  }
+
+  @Override
+  public int getNativeFormat() {
+    return HS.FORMAT_MONOTONIC;
   }
 
   @Override

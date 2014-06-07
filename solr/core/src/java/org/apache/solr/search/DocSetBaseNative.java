@@ -27,6 +27,7 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.core.HS;
 import org.apache.solr.core.RefCount;
 import org.apache.solr.core.SolrCore;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ import org.slf4j.Logger;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** A base class that may be useful for implementing DocSets */
-public abstract class DocSetBaseNative implements RefCount, DocSet {
+public abstract class DocSetBaseNative implements RefCount, DocSet, HS.NativeData {
   public static Logger log = SolrCore.log;
 
   private final AtomicInteger refcount = new AtomicInteger(1);

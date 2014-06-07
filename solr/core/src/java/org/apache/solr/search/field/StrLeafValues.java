@@ -37,6 +37,11 @@ public abstract class StrLeafValues extends LeafValues {
     this.stats = stats;
   }
 
+  /** This should only currently be used on top string values. null can be returned if there are no ords,
+   * or if this is a slice into a top level string values.
+   */
+  public abstract LongArray getOrdArray();
+
   @Override
   public StrFieldStats getFieldStats() {
     return stats;
@@ -151,6 +156,10 @@ class StrArrLeafValues extends StrLeafValues {
     this.termBytes = termBytes;
   }
 
+  @Override
+  public LongArray getOrdArray() {
+    return ords;
+  }
 
   // testing methods, subject to change with implementation
   public LongArray _getDocToOrdArray() { return ords; }
@@ -259,6 +268,11 @@ class Str0Values extends StrLeafValues {
   }
 
   @Override
+  public LongArray getOrdArray() {
+    return null;
+  }
+
+  @Override
   public int ordVal(int doc) {
     return -1;
   }
@@ -311,6 +325,11 @@ class StrSliceValues extends StrLeafValues {
     this.top = reference;
     this.base = base;
     this.maxDoc = maxDoc;
+  }
+
+  @Override
+  public LongArray getOrdArray() {
+    return null;
   }
 
   public StrLeafValues getParent() {

@@ -64,6 +64,21 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     // Don't set size... the purpose of making a copy will be to change it.
   }
 
+  @Override
+  public long getNativeData() {
+    return array;
+  }
+
+  @Override
+  public int getNativeFormat() {
+    return HS.FORMAT_BITS;
+  }
+
+  @Override
+  public long getNativeSize() {
+    return wlen;
+  }
+
   public int capacity() {
     return wlen<<6;
   }

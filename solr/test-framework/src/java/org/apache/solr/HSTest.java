@@ -23,6 +23,7 @@ public class HSTest {
   public static long startFrees;
 
   public static void startTrackingMemory() {
+    assert HS.loaded;
     startAllocations = HS.getNumAllocations();
     startFrees = HS.getNumFrees();
   }

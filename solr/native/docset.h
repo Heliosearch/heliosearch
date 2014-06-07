@@ -1,3 +1,4 @@
+#include "HS.h"
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,17 +6,27 @@
 #include <assert.h>
 #include "org_apache_solr_search_SortedIntDocSetNative.h"
 
+#define ctzl(val) __builtin_ctzl(val)
+
 int intersectionSize(const int* const a, int32_t a_size, const int* const b, int32_t b_size);
 
-/**** work in progress
 
 class DocSet {
 };
 
+class BitSetIterator;
+
 class BitDocSet : public DocSet {
   public:
     const uint64_t* bits;
-    const uint32_t wlen;
+    int wlen;
+    // TODO: what about number of bits set?
+
+    typedef BitSetIterator iterator;
+
+    BitDocSet(uint64_t* bits, int wlen) : bits(bits), wlen(wlen) {
+    }
+
 
     int nextSetBit(int index) const {
       assert(index >= 0);
@@ -38,21 +49,25 @@ class BitDocSet : public DocSet {
 
       return -1;
     }
+
+
+    iterator begin() const;
+
+    iterator end() const;
 };
 
-// TODO: we can probably do better with a more stateful iterator
+// TODO: we can probably do a little better with a more stateful iterator
 class BitSetIterator {
   public:
-    const OpenBitSet obs;  // const ref or shallow copy?
+    const BitDocSet obs;  // const ref or shallow copy?
     int pos;
 
-    BitSetIterator(const OpenBitSet& bitset) : obs(bitset) {
+    BitSetIterator(const BitDocSet& bitset) : obs(bitset) , pos(-1) {
       ++(*this);  // position on first set bit
     }
 
-    // custom positioning, use -1 for "end"
-    BitSetIterator(const OpenBitSet& bitset, int position) : obs(bitset), pos(position) {
-      ++(*this);  // position on first set bit
+    // custom positioning, does not advance to first set bit.  use -1 for "end"
+    BitSetIterator(const BitDocSet& bitset, int position) : obs(bitset), pos(position) {
     }
 
     bool operator==(const BitSetIterator& other) {
@@ -79,5 +94,31 @@ class BitSetIterator {
     }
 };
 
-***/
+
+class SortedIntDocSet : public DocSet {
+  public:
+    const int* docs;
+    int len;
+
+    typedef const int* iterator;
+    
+    SortedIntDocSet(int* docs, int len) : docs(docs), len(len) {
+    }
+
+    iterator begin() const {
+      return docs;
+    }
+
+    iterator end() const {
+      return docs + len;
+    }
+};
+
+inline BitSetIterator BitDocSet::begin() const {
+  return BitSetIterator(*this);
+}
+
+inline BitSetIterator BitDocSet::end() const {
+  return BitSetIterator(*this, -1);
+}
 

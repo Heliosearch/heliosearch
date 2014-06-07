@@ -24,27 +24,37 @@ import java.io.Closeable;
 import java.io.IOException;
 
 // An array of longs of max size 2**31 (2B long values)
-public abstract class LongArray implements Closeable {
-  public abstract long getSize();  // maximum index
+public abstract class LongArray implements Closeable, HS.NativeData {
+  public abstract long getSize();  // number of elements, not size in bytes
+
   public abstract long getLong(int idx);
+
   public abstract int getInt(int idx);
+
   public abstract void setLong(int idx, long value);
+
   public abstract long memSize();
 
 
-  /** 8 bits needed means storing signed -128 to 127 */
+  /**
+   * 8 bits needed means storing signed -128 to 127
+   */
   public static LongArray create(long size, int bitsNeeded) {
     if (bitsNeeded <= 8) {
-      return new LongArray8( HS.allocArray(size, 1, true) );
+      return new LongArray8(HS.allocArray(size, 1, true));
     } else if (bitsNeeded <= 16) {
-      return new LongArray16( HS.allocArray(size, 2, true) );
+      return new LongArray16(HS.allocArray(size, 2, true));
     } else if (bitsNeeded <= 32) {
-      return new LongArray32( HS.allocArray(size, 4, true) );
+      return new LongArray32(HS.allocArray(size, 4, true));
     } else {
-      return new LongArray64( HS.allocArray(size, 8, true) );
+      return new LongArray64(HS.allocArray(size, 8, true));
     }
   }
 
+  @Override
+  public long getNativeSize() {
+    return getSize();
+  }
 }
 
 abstract class LongArrayBasicNative extends LongArray {
@@ -68,6 +78,12 @@ abstract class LongArrayBasicNative extends LongArray {
     HS.freeArray(arr);
   }
 
+  @Override
+  public long getNativeData() {
+    return arr;
+  }
+
+  public abstract int getNativeFormat();
 }
 
 // A long array backed by a native array of longs (64 bits per value)
@@ -95,6 +111,11 @@ class LongArray64 extends LongArrayBasicNative {
   public void setLong(int idx, long value) {
     HS.setLong(arr, idx,value);
   }
+
+  @Override
+  public int getNativeFormat() {
+    return HS.FORMAT_INT64;
+  }
 }
 
 // A long array backed by a native array of ints (32 bits per value)
@@ -121,6 +142,11 @@ class LongArray32 extends LongArrayBasicNative {
   @Override
   public void setLong(int idx, long value) {
     HS.setInt(arr, idx, (int) value);
+  }
+
+  @Override
+  public int getNativeFormat() {
+    return HS.FORMAT_INT32;
   }
 }
 
@@ -150,6 +176,10 @@ class LongArray16 extends LongArrayBasicNative {
     HS.setShort(arr, idx, (short) value);
   }
 
+  @Override
+  public int getNativeFormat() {
+    return HS.FORMAT_INT16;
+  }
 }
 
 // A long array backed by a native array of bytes (8 bits per value)
@@ -176,5 +206,10 @@ class LongArray8 extends LongArrayBasicNative {
   @Override
   public void setLong(int idx, long value) {
     HS.setByte(arr, idx, (byte) value);
+  }
+
+  @Override
+  public int getNativeFormat() {
+    return HS.FORMAT_INT8;
   }
 }

@@ -934,6 +934,9 @@
             <jvmarg line="${tests.heapdump.args}"/>
             <jvmarg line="${tests.clover.args}"/>
 
+            <!-- for heliosearch tests -->
+            <sysproperty key="java.library.path" value="${dest}"/>
+
             <!-- set the number of times tests should run -->
             <sysproperty key="tests.iters" value="${tests.iters}"/>
             <!-- allow tests to control debug prints -->

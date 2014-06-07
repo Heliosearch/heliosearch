@@ -1,5 +1,11 @@
 
 echo "Make sure you do an 'ant compile' so the lucene/solr class files are generated first"
+echo "NOTE: running the example on linux requires the CWD to be in java.library.path.
+echo "$ java -Djava.library.path=. -jar start.jar"
+
+BUILD=./build
+
+mkdir -p $BUILD/inc
 
 GPP=g++
 which g++-4.8 > /dev/null 2>&1
@@ -12,6 +18,8 @@ JSEP=":"
 
 CLASS=HS
 LIBNAME=$CLASS
+
+OPT="-m64 -mtune=corei7 -O6 -msse -msse2 -msse3 -mfpmath=sse"
 
 OS=`uname`
 case $OS in
@@ -45,15 +53,22 @@ FULLCLASS=org.apache.solr.core.${CLASS}
 LUSOLR=../..
 SOLR=..
 LUCENE=$LUSOLR/lucene
-CLASSES="$SOLR/build/solr-core/classes/java${JSEP}$LUCENE/build/core/classes/java"
+CLASSES="$SOLR/build/solr-core/classes/java${JSEP}$SOLR/build/solr-solrj/classes/java${JSEP}$LUCENE/build/core/classes/java"
 
-javah -force -classpath ${CLASSES} ${FULLCLASS}
-javah -force -classpath ${CLASSES} org.apache.solr.search.SortedIntDocSetNative
+javah -d $BUILD/inc -force -classpath ${CLASSES} ${FULLCLASS}
+javah -d $BUILD/inc -force -classpath ${CLASSES} org.apache.solr.search.SortedIntDocSetNative
+javah -d $BUILD/inc -force -classpath ${CLASSES} org.apache.solr.search.facet.SimpleFacets
 
+CPPFILES="$CLASS.cpp docset.cpp facet.cpp"
+INC="$JNI_INC -I$BUILD/inc"
+$GPP $OPT -Wall $CFLAGS $INC -shared -fPIC $CPPFILES -o $BUILD/$OUT
 
-$GPP -O6 -Wall $CFLAGS $JNI_INC -shared -fPIC $CLASS.cpp docset.cpp -o $OUT
+$GPP $OPT -Wall $CFLAGS $INC         -fPIC $CPPFILES test.cpp -o $BUILD/test.exe
+# $GPP -S $OPT -Wall $CFLAGS $INC    -fPIC $CPPFILES test.cpp 
 
-cp $OUT $LUSOLR/solr/example
+cp $BUILD/$OUT $SOLR/example/        #for the server
+cp $BUILD/$OUT $SOLR/build/          #for tests
+cp $BUILD/$OUT $LUSOLR/              #for intellij (TODO: get it to look in build or example)
 
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
 #java $FULLCLASS

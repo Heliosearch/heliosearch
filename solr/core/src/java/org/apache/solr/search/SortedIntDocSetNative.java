@@ -64,6 +64,21 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
     this.len = len;
   }
 
+  @Override
+  public long getNativeData() {
+    return array;
+  }
+
+  @Override
+  public int getNativeFormat() {
+    return HS.FORMAT_INT32;
+  }
+
+  @Override
+  public long getNativeSize() {
+    return len;
+  }
+
   public long getIntArrayPointer() {
     return array;
   }
@@ -259,7 +274,7 @@ public class SortedIntDocSetNative extends DocSetBaseNative implements RefCount 
       }
     }
 
-
+    // TODO: move this to native code as well...
     // if they are close in size, just do a linear walk of both.
     int icount=0;
     int i=0,j=0;

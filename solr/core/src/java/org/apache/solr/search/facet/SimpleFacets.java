@@ -65,6 +65,7 @@ import org.apache.solr.schema.TrieField;
 import org.apache.solr.search.BitDocSetNative;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocSet;
+import org.apache.solr.search.DocSetBaseNative;
 import org.apache.solr.search.Grouping;
 import org.apache.solr.search.HashDocSet;
 import org.apache.solr.search.QParser;
@@ -74,6 +75,9 @@ import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SortedIntDocSetNative;
 import org.apache.solr.search.SyntaxError;
 import org.apache.solr.search.field.FieldUtil;
+import org.apache.solr.search.field.LongArray;
+import org.apache.solr.search.field.NativeSortedDocValues;
+import org.apache.solr.search.field.StrLeafValues;
 import org.apache.solr.search.grouping.AbstractAllGroupHeadsCollector;
 import org.apache.solr.search.grouping.GroupingSpecification;
 import org.apache.solr.search.grouping.TermAllGroupsCollector;
@@ -917,6 +921,11 @@ public class SimpleFacets {
   }
 
 
+//  private static native void getFieldCacheCounts(long baseArr, int baseSize, int baseFormat, long ordArr, int ordSize, int ordFormat, int startIndex, int endIndex, int offset, int limit);
+  private static native void fillCounts(long baseArr, int baseFormat, long baseSize,
+                                        long ordArr, int ordFormat, long ordSize, int numTermsInField,
+                                        int startTermIndex, int endTermIndex, int offset, int limit, long counts);
+
   /**
    * Use the Lucene FieldCache to get counts for each unique field value in <code>docs</code>.
    * The field must have at most one indexed token per document.
@@ -980,19 +989,52 @@ public class SimpleFacets {
         // final int[] counts = new int[nTerms];
         counts = HS.allocArray(nTerms, HS.INT_SIZE, true);
 
-        DocIterator iter = docs.iterator();
+        if (HS.loaded && si instanceof NativeSortedDocValues && docs instanceof DocSetBaseNative) {
 
-        while (iter.hasNext()) {
-          int term = si.getOrd(iter.nextDoc());
-          int arrIdx = term - startTermIndex;
-          if (arrIdx >= 0 && arrIdx < nTerms) {
-            HS.incInt(counts, arrIdx, 1);
+          DocSetBaseNative base = (DocSetBaseNative)docs;
+          LongArray ordArr = ((NativeSortedDocValues)si).getWrappedValues().getOrdArray();
+
+          if (ordArr == null) {
+            if (missing) {
+              missingCount = docs.size();
+            }
+          } else {
+
+            // private static native void fillCounts(long baseArr, int baseFormat, long baseSize
+            // , long ordArr, int ordFormat, long ordSize, int numTermsInField
+            // , int startTermIndex, int endTermIndex
+            // , int offset, int limit
+            // , long counts);
+            fillCounts(base.getNativeData(), base.getNativeFormat(), base.getNativeSize()
+                , ordArr == null ? 0 : ordArr.getNativeData(), ordArr == null ? 0 : ordArr.getNativeFormat(), ordArr == null ? 0 : ordArr.getNativeSize(), si.getValueCount()
+                , startTermIndex, endTermIndex
+                , offset, limit
+                , counts
+            );
+
+            if (startTermIndex == -1) {
+              missingCount = HS.getInt(counts, 0);
+            }
+
           }
+
+        } else {
+
+          DocIterator iter = docs.iterator();
+          while (iter.hasNext()) {
+            int term = si.getOrd(iter.nextDoc());
+            int arrIdx = term - startTermIndex;
+            if (arrIdx >= 0 && arrIdx < nTerms) {
+              HS.incInt(counts, arrIdx, 1);
+            }
+          }
+
+          if (startTermIndex == -1) {
+            missingCount = HS.getInt(counts, 0);
+          }
+
         }
 
-        if (startTermIndex == -1) {
-          missingCount = HS.getInt(counts, 0);
-        }
 
         // IDEA: we could also maintain a count of "other"... everything that fell outside
         // of the top 'N'
@@ -1073,6 +1115,7 @@ public class SimpleFacets {
       }
     }
   }
+
 
 
   /**

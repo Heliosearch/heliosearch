@@ -22,6 +22,7 @@
 **/pom.xml
 /nbproject
 /nb-build
+**/*.swp
 
 /solr/package
 
