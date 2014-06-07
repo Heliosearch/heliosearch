@@ -1,6 +1,11 @@
 #ifndef HS_H
 #define HS_H
 
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "org_apache_solr_core_HS.h"
 
 // NOTE: avoid "long"... it is 64 bits on linux/OS-X, but 32 bits on Windows!

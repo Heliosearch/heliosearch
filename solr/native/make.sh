@@ -3,6 +3,11 @@ echo "Make sure you do an 'ant compile' so the lucene/solr class files are gener
 echo "NOTE: running the example on linux requires the CWD to be in java.library.path"
 echo "example: java -Djava.library.path=. -jar start.jar"
 
+#production
+DEBUG="-DNDEBUG"
+#debugging
+#DEBUG="-g"
+
 BUILD=./build
 
 mkdir -p $BUILD/inc
@@ -61,7 +66,7 @@ javah -d $BUILD/inc -force -classpath ${CLASSES} org.apache.solr.search.facet.Si
 
 CPPFILES="$CLASS.cpp docset.cpp facet.cpp"
 INC="$JNI_INC -I$BUILD/inc"
-$GPP $OPT -Wall $CFLAGS $INC -shared -fPIC $CPPFILES -o $BUILD/$OUT
+$GPP $DEBUG $OPT -Wall $CFLAGS $INC -shared -fPIC $CPPFILES -o $BUILD/$OUT
 
 $GPP $OPT -Wall $CFLAGS $INC         -fPIC $CPPFILES test.cpp -o $BUILD/test.exe
 # $GPP -S $OPT -Wall $CFLAGS $INC    -fPIC $CPPFILES test.cpp 

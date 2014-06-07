@@ -1,9 +1,4 @@
 #include "HS.h"
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <assert.h>
 #include "org_apache_solr_search_SortedIntDocSetNative.h"
 
 

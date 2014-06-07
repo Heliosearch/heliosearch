@@ -1,6 +1,3 @@
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
 #include "docset.h"
 
 using namespace std;
@@ -88,6 +85,11 @@ void testctz() {
 
 
 int main(int argc, char** argv) {
+  int a=0;
+  assert( (a=1, true) );
+  if (a==0) {
+    fprintf(stderr,"assert is not enabled!\n");
+  }
   assert( sizeof(char)==1 );
   assert( sizeof(short)==2 );
   assert( sizeof(int)==4 );
