@@ -42,6 +42,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.SortedDocValuesField;
+import org.apache.lucene.document.SortedNumericDocValuesField;
 import org.apache.lucene.document.SortedSetDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
@@ -160,6 +161,10 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
       if (defaultCodecSupportsSortedSet()) {
         doc.add(new SortedSetDocValuesField("sortedsetdv", new BytesRef("hellllo")));
         doc.add(new SortedSetDocValuesField("sortedsetdv", new BytesRef("again")));
+      }
+      if (defaultCodecSupportsSortedNumeric()) {
+        doc.add(new SortedNumericDocValuesField("sortednumericdv", 10));
+        doc.add(new SortedNumericDocValuesField("sortednumericdv", 5));
       }
 
       doc.add(newField(r, "content7", "aaa bbb ccc ddd", DocCopyIterator.custom4));
@@ -2089,7 +2094,6 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
       }
       assertEquals(docCount-deleteCount, r.numDocs());
       if (defaultCodecSupportsDocValues()) {
-        BytesRef scratch = new BytesRef();
         for (AtomicReaderContext context : r.leaves()) {
           AtomicReader reader = context.reader();
           Bits liveDocs = reader.getLiveDocs();
@@ -2100,7 +2104,7 @@ public class TestIndexWriterExceptions extends LuceneTestCase {
           for (int i = 0; i < reader.maxDoc(); i++) {
             if (liveDocs == null || liveDocs.get(i)) {
               assertEquals("doc=" + (docBase + i), cf.get(i), f.get(i) * 2);
-              assertEquals("doc=" + (docBase + i), TestBinaryDocValuesUpdates.getValue(bcf, i, scratch), TestBinaryDocValuesUpdates.getValue(bf, i, scratch) * 2);
+              assertEquals("doc=" + (docBase + i), TestBinaryDocValuesUpdates.getValue(bcf, i), TestBinaryDocValuesUpdates.getValue(bf, i) * 2);
             }
           }
         }

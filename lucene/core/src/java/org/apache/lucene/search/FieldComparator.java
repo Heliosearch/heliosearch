@@ -331,14 +331,14 @@ public abstract class FieldComparator<T> {
 
   /** Parses field's values as double (using {@link
    *  FieldCache#getDoubles} and sorts by ascending value */
-  public static final class DoubleComparator extends NumericComparator<Double> {
+  public static class DoubleComparator extends NumericComparator<Double> {
     private final double[] values;
     private final DoubleParser parser;
     private FieldCache.Doubles currentReaderValues;
     private double bottom;
     private double topValue;
 
-    DoubleComparator(int numHits, String field, FieldCache.Parser parser, Double missingValue) {
+    public DoubleComparator(int numHits, String field, FieldCache.Parser parser, Double missingValue) {
       super(field, missingValue);
       values = new double[numHits];
       this.parser = (DoubleParser) parser;
@@ -377,8 +377,13 @@ public abstract class FieldComparator<T> {
     public FieldComparator<Double> setNextReader(AtomicReaderContext context) throws IOException {
       // NOTE: must do this before calling super otherwise
       // we compute the docsWithField Bits twice!
-      currentReaderValues = FieldCache.DEFAULT.getDoubles(context.reader(), field, parser, missingValue != null);
+      currentReaderValues = getDoubleValues(context, field);
       return super.setNextReader(context);
+    }
+    
+    /** Expert: provides source of doubles for sorting */
+    protected FieldCache.Doubles getDoubleValues(AtomicReaderContext context, String field) throws IOException {
+      return FieldCache.DEFAULT.getDoubles(context.reader(), field, parser, missingValue != null);
     }
     
     @Override
@@ -410,14 +415,14 @@ public abstract class FieldComparator<T> {
 
   /** Parses field's values as float (using {@link
    *  FieldCache#getFloats} and sorts by ascending value */
-  public static final class FloatComparator extends NumericComparator<Float> {
+  public static class FloatComparator extends NumericComparator<Float> {
     private final float[] values;
     private final FloatParser parser;
     private FieldCache.Floats currentReaderValues;
     private float bottom;
     private float topValue;
 
-    FloatComparator(int numHits, String field, FieldCache.Parser parser, Float missingValue) {
+    public FloatComparator(int numHits, String field, FieldCache.Parser parser, Float missingValue) {
       super(field, missingValue);
       values = new float[numHits];
       this.parser = (FloatParser) parser;
@@ -457,8 +462,13 @@ public abstract class FieldComparator<T> {
     public FieldComparator<Float> setNextReader(AtomicReaderContext context) throws IOException {
       // NOTE: must do this before calling super otherwise
       // we compute the docsWithField Bits twice!
-      currentReaderValues = FieldCache.DEFAULT.getFloats(context.reader(), field, parser, missingValue != null);
+      currentReaderValues = getFloatValues(context, field);
       return super.setNextReader(context);
+    }
+    
+    /** Expert: provides source of floats for sorting */
+    protected FieldCache.Floats getFloatValues(AtomicReaderContext context, String field) throws IOException {
+      return FieldCache.DEFAULT.getFloats(context.reader(), field, parser, missingValue != null);
     }
     
     @Override
@@ -570,14 +580,14 @@ public abstract class FieldComparator<T> {
 
   /** Parses field's values as int (using {@link
    *  FieldCache#getInts} and sorts by ascending value */
-  public static final class IntComparator extends NumericComparator<Integer> {
+  public static class IntComparator extends NumericComparator<Integer> {
     private final int[] values;
     private final IntParser parser;
     private FieldCache.Ints currentReaderValues;
     private int bottom;                           // Value of bottom of queue
     private int topValue;
 
-    IntComparator(int numHits, String field, FieldCache.Parser parser, Integer missingValue) {
+    public IntComparator(int numHits, String field, FieldCache.Parser parser, Integer missingValue) {
       super(field, missingValue);
       values = new int[numHits];
       this.parser = (IntParser) parser;
@@ -616,8 +626,13 @@ public abstract class FieldComparator<T> {
     public FieldComparator<Integer> setNextReader(AtomicReaderContext context) throws IOException {
       // NOTE: must do this before calling super otherwise
       // we compute the docsWithField Bits twice!
-      currentReaderValues = FieldCache.DEFAULT.getInts(context.reader(), field, parser, missingValue != null);
+      currentReaderValues = getIntValues(context, field);
       return super.setNextReader(context);
+    }
+    
+    /** Expert: provides source of ints for sorting */
+    protected FieldCache.Ints getIntValues(AtomicReaderContext context, String field) throws IOException {
+      return FieldCache.DEFAULT.getInts(context.reader(), field, parser, missingValue != null);
     }
     
     @Override
@@ -649,14 +664,14 @@ public abstract class FieldComparator<T> {
 
   /** Parses field's values as long (using {@link
    *  FieldCache#getLongs} and sorts by ascending value */
-  public static final class LongComparator extends NumericComparator<Long> {
+  public static class LongComparator extends NumericComparator<Long> {
     private final long[] values;
     private final LongParser parser;
     private FieldCache.Longs currentReaderValues;
     private long bottom;
     private long topValue;
 
-    LongComparator(int numHits, String field, FieldCache.Parser parser, Long missingValue) {
+    public LongComparator(int numHits, String field, FieldCache.Parser parser, Long missingValue) {
       super(field, missingValue);
       values = new long[numHits];
       this.parser = (LongParser) parser;
@@ -697,8 +712,13 @@ public abstract class FieldComparator<T> {
     public FieldComparator<Long> setNextReader(AtomicReaderContext context) throws IOException {
       // NOTE: must do this before calling super otherwise
       // we compute the docsWithField Bits twice!
-      currentReaderValues = FieldCache.DEFAULT.getLongs(context.reader(), field, parser, missingValue != null);
+      currentReaderValues = getLongValues(context, field);
       return super.setNextReader(context);
+    }
+    
+    /** Expert: provides source of longs for sorting */
+    protected FieldCache.Longs getLongValues(AtomicReaderContext context, String field) throws IOException {
+      return FieldCache.DEFAULT.getLongs(context.reader(), field, parser, missingValue != null);
     }
     
     @Override
@@ -1009,7 +1029,7 @@ public abstract class FieldComparator<T> {
         if (values[slot] == null) {
           values[slot] = new BytesRef();
         }
-        termsIndex.lookupOrd(ord, values[slot]);
+        values[slot].copyBytes(termsIndex.lookupOrd(ord));
       }
       ords[slot] = ord;
       readerGen[slot] = currentReaderGen;
@@ -1138,21 +1158,25 @@ public abstract class FieldComparator<T> {
 
     // sentinels, just used internally in this comparator
     private static final byte[] MISSING_BYTES = new byte[0];
-    private static final byte[] NON_MISSING_BYTES = new byte[0];
-
-    private BytesRef[] values;
+    // TODO: this is seriously not good, we should nuke this comparator, or
+    // instead we should represent missing as null, or use missingValue from the user...
+    // but it was always this way...
+    private final BytesRef MISSING_BYTESREF = new BytesRef(MISSING_BYTES);
+    
+    private final BytesRef[] values;
+    private final BytesRef[] tempBRs;
     private BinaryDocValues docTerms;
     private Bits docsWithField;
     private final String field;
     private BytesRef bottom;
     private BytesRef topValue;
-    private final BytesRef tempBR = new BytesRef();
 
     // TODO: add missing first/last support here?
 
     /** Sole constructor. */
     TermValComparator(int numHits, String field) {
       values = new BytesRef[numHits];
+      tempBRs = new BytesRef[numHits];
       this.field = field;
     }
 
@@ -1160,32 +1184,27 @@ public abstract class FieldComparator<T> {
     public int compare(int slot1, int slot2) {
       final BytesRef val1 = values[slot1];
       final BytesRef val2 = values[slot2];
-      if (val1.bytes == MISSING_BYTES) {
-        if (val2.bytes == MISSING_BYTES) {
-          return 0;
-        }
-        return -1;
-      } else if (val2.bytes == MISSING_BYTES) {
-        return 1;
-      }
-
-      return val1.compareTo(val2);
+      return compareValues(val1, val2);
     }
 
     @Override
     public int compareBottom(int doc) {
-      docTerms.get(doc, tempBR);
-      setMissingBytes(doc, tempBR);
-      return compareValues(bottom, tempBR);
+      final BytesRef comparableBytes = getComparableBytes(doc, docTerms.get(doc));
+      return compareValues(bottom, comparableBytes);
     }
 
     @Override
     public void copy(int slot, int doc) {
-      if (values[slot] == null) {
-        values[slot] = new BytesRef();
+      final BytesRef comparableBytes = getComparableBytes(doc, docTerms.get(doc));
+      if (comparableBytes == MISSING_BYTESREF) {
+        values[slot] = MISSING_BYTESREF;
+      } else {
+        if (tempBRs[slot] == null) {
+          tempBRs[slot] = new BytesRef();
+        }
+        values[slot] = tempBRs[slot];
+        values[slot].copyBytes(comparableBytes);
       }
-      docTerms.get(doc, values[slot]);
-      setMissingBytes(doc, values[slot]);
     }
 
     @Override
@@ -1205,6 +1224,9 @@ public abstract class FieldComparator<T> {
       if (value == null) {
         throw new IllegalArgumentException("value cannot be null");
       }
+      if (value.bytes == MISSING_BYTES) {
+        value = MISSING_BYTESREF;
+      }
       topValue = value;
     }
 
@@ -1216,12 +1238,12 @@ public abstract class FieldComparator<T> {
     @Override
     public int compareValues(BytesRef val1, BytesRef val2) {
       // missing always sorts first:
-      if (val1.bytes == MISSING_BYTES) {
-        if (val2.bytes == MISSING_BYTES) {
+      if (val1 == MISSING_BYTESREF) {
+        if (val2 == MISSING_BYTESREF) {
           return 0;
         }
         return -1;
-      } else if (val2.bytes == MISSING_BYTES) {
+      } else if (val2 == MISSING_BYTESREF) {
         return 1;
       }
       return val1.compareTo(val2);
@@ -1229,20 +1251,19 @@ public abstract class FieldComparator<T> {
 
     @Override
     public int compareTop(int doc) {
-      docTerms.get(doc, tempBR);
-      setMissingBytes(doc, tempBR);
-      return compareValues(topValue, tempBR);
+      final BytesRef comparableBytes = getComparableBytes(doc, docTerms.get(doc));
+      return compareValues(topValue, comparableBytes);
     }
 
-    private void setMissingBytes(int doc, BytesRef br) {
-      if (br.length == 0) {
-        br.offset = 0;
-        if (docsWithField.get(doc) == false) {
-          br.bytes = MISSING_BYTES;
-        } else {
-          br.bytes = NON_MISSING_BYTES;
-        }
+    /**
+     * Given a document and a term, return the term itself if it exists or
+     * {@link #MISSING_BYTESREF} otherwise.
+     */
+    private BytesRef getComparableBytes(int doc, BytesRef term) {
+      if (term.length == 0 && docsWithField.get(doc) == false) {
+        return MISSING_BYTESREF;
       }
+      return term;
     }
   }
 }

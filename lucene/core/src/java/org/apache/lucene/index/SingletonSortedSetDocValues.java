@@ -26,10 +26,10 @@ import org.apache.lucene.util.BytesRef;
  * against e.g. FieldCache.getDocTermOrds that also works for single-valued 
  * fields.
  */
-final class SingletonSortedSetDocValues extends SortedSetDocValues {
+final class SingletonSortedSetDocValues extends RandomAccessOrds {
   private final SortedDocValues in;
-  private int docID;
-  private boolean set;
+  private long currentOrd;
+  private long ord;
   
   /** Creates a multi-valued view over the provided SortedDocValues */
   public SingletonSortedSetDocValues(SortedDocValues in) {
@@ -44,24 +44,20 @@ final class SingletonSortedSetDocValues extends SortedSetDocValues {
 
   @Override
   public long nextOrd() {
-    if (set) {
-      return NO_MORE_ORDS;
-    } else {
-      set = true;
-      return in.getOrd(docID);
-    }
+    long v = currentOrd;
+    currentOrd = NO_MORE_ORDS;
+    return v;
   }
 
   @Override
   public void setDocument(int docID) {
-    this.docID = docID;
-    set = false;
+    currentOrd = ord = in.getOrd(docID);
   }
 
   @Override
-  public void lookupOrd(long ord, BytesRef result) {
+  public BytesRef lookupOrd(long ord) {
     // cast is ok: single-valued cannot exceed Integer.MAX_VALUE
-    in.lookupOrd((int)ord, result);
+    return in.lookupOrd((int) ord);
   }
 
   @Override
@@ -72,5 +68,20 @@ final class SingletonSortedSetDocValues extends SortedSetDocValues {
   @Override
   public long lookupTerm(BytesRef key) {
     return in.lookupTerm(key);
+  }
+
+  @Override
+  public long ordAt(int index) {
+    return ord;
+  }
+
+  @Override
+  public int cardinality() {
+    return (int) (ord >>> 63) ^ 1;
+  }
+
+  @Override
+  public TermsEnum termsEnum() {
+    return in.termsEnum();
   }
 }

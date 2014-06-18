@@ -154,7 +154,6 @@ class SortableIntFieldSource extends FieldCacheSource {
     final int def = defVal;
 
     return new DocTermsIndexFuncValues(this, readerContext, field) {
-      private final BytesRef spare = new BytesRef();
 
       @Override
       protected String toTerm(String readableValue) {
@@ -177,7 +176,7 @@ class SortableIntFieldSource extends FieldCacheSource {
         if (ord==-1) {
           return def;
         } else {
-          termsIndex.lookupOrd(ord, spare);
+          BytesRef spare = termsIndex.lookupOrd(ord);
           return NumberUtils.SortableStr2int(spare,0,3);
         }
       }
@@ -224,7 +223,7 @@ class SortableIntFieldSource extends FieldCacheSource {
               mval.value = def;
               mval.exists = false;
             } else {
-              termsIndex.lookupOrd(ord, spare);
+              BytesRef spare = termsIndex.lookupOrd(ord);
               mval.value = NumberUtils.SortableStr2int(spare,0,3);
               mval.exists = true;
             }

@@ -79,11 +79,12 @@ public class TestCloudManagedSchemaAddField extends AbstractFullDistribZkTestBas
     }
   }
   
-  @Override                                                                                                                 
+  @Override
   public void doTest() throws Exception {
     setupHarnesses();
     
-    // First. add a bunch of fields, and verify each is present in all shards' schemas
+    // First. add a bunch of fields, but do it fast enough
+    // and verify shards' schemas after all of them are added
     int numFields = 25;
     for (int i = 1 ; i <= numFields ; ++i) {
       RestTestHarness publisher = restTestHarnesses.get(r.nextInt(restTestHarnesses.size()));
@@ -91,69 +92,32 @@ public class TestCloudManagedSchemaAddField extends AbstractFullDistribZkTestBas
       final String content = "{\"type\":\"text\",\"stored\":\"false\"}";
       String request = "/schema/fields/" + newFieldName + "?wt=xml";             
       String response = publisher.put(request, content);
-      final long addFieldTime = System.currentTimeMillis(); 
       String result = publisher.validateXPath
           (response, "/response/lst[@name='responseHeader']/int[@name='status'][.='0']");
       if (null != result) {
         fail("PUT REQUEST FAILED: xpath=" + result + "  request=" + request 
             + "  content=" + content + "  response=" + response);
       }
-        
-      int maxAttempts = 40;
-      long retryPauseMillis = 20;
+    }
+    
+    Thread.sleep(100000);
 
+    for (int i = 1 ; i <= numFields ; ++i) {
+      String newFieldName = "newfield" + i;
       for (RestTestHarness client : restTestHarnesses) {
-        boolean stillTrying = true;
-        for (int attemptNum = 1; stillTrying && attemptNum <= maxAttempts ; ++attemptNum) {
-          request = "/schema/fields/" + newFieldName + "?wt=xml";
-          response = client.query(request);
-          long elapsedTimeMillis = System.currentTimeMillis() - addFieldTime;
-          result = client.validateXPath(response,
-                                        "/response/lst[@name='responseHeader']/int[@name='status'][.='0']",
-                                        "/response/lst[@name='field']/str[@name='name'][.='" + newFieldName + "']");
-          if (null == result) {
-            stillTrying = false;
-            if (attemptNum > 1) {
-              log.info("On attempt #" + attemptNum + ", successful request " + request + " against server "
-                      + client.getBaseURL() + " after " + elapsedTimeMillis + " ms");
-            }
-          } else {
-            if (attemptNum == maxAttempts || ! response.contains("Field '" + newFieldName + "' not found.")) {
-              String msg = "QUERY FAILED: xpath=" + result + "  request=" + request + "  response=" + response;
-              if (attemptNum == maxAttempts) {
-                msg = "Max retry count " + maxAttempts + " exceeded after " + elapsedTimeMillis +" ms.  " + msg;
-              }
-              log.error(msg);
-              fail(msg);
-            }
-            Thread.sleep(retryPauseMillis);
+        String request = "/schema/fields/" + newFieldName + "?wt=xml";
+        String response = client.query(request);
+        String result = client.validateXPath(response,
+                                      "/response/lst[@name='responseHeader']/int[@name='status'][.='0']",
+                                      "/response/lst[@name='field']/str[@name='name'][.='" + newFieldName + "']");
+        if (null != result) {
+          if (response.contains("Field '" + newFieldName + "' not found.")) {
+            String msg = "QUERY FAILED: xpath=" + result + "  request=" + request + "  response=" + response;
+            log.error(msg);
+            fail(msg);
           }
         }
       }
     }
-    
-    // Add a doc with one of the newly created fields
-    String fieldName = "newfield" + (r.nextInt(numFields) + 1);
-    
-    int addDocClientNum = r.nextInt(restTestHarnesses.size());
-    RestTestHarness client = restTestHarnesses.get(addDocClientNum);
-    String updateResult = client.validateUpdate(adoc(fieldName, "word1 word2", "id", "88"));
-    assertNull("Error adding a document with field " + fieldName + ": " + updateResult, updateResult);
-    updateResult = client.validateUpdate(BaseTestHarness.commit());
-    assertNull("Error committing: " + updateResult, updateResult);
-    
-    // Query for the newly added doc against a different client
-    int queryDocClientNum = r.nextInt(restTestHarnesses.size());
-    while (queryDocClientNum == addDocClientNum) {
-      queryDocClientNum = r.nextInt(restTestHarnesses.size()); 
-    }
-    client = restTestHarnesses.get(queryDocClientNum);
-    String response = client.query("/select?q=" + fieldName + ":word2");
-    String queryResult = client.validateXPath(response,
-                                              "/response/result[@name='response'][@numFound='1']",
-                                              "count(/response/result[@name='response']/doc/int[@name='id']) = 1",
-                                              "/response/result[@name='response']/doc/int[@name='id'] = '88'");
-    assertNull("Error querying for a document with field " + fieldName + ": " + queryResult
-              + "  response=" + response, queryResult);
   }
 }

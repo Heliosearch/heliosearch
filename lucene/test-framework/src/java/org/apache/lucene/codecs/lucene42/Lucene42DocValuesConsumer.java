@@ -169,7 +169,7 @@ class Lucene42DocValuesConsumer extends DocValuesConsumer {
       data.writeLong(gcd);
       data.writeVInt(BLOCK_SIZE);
 
-      final BlockPackedWriter writer = new BlockPackedWriter(data, BLOCK_SIZE, PackedInts.COMPACT);
+      final BlockPackedWriter writer = new BlockPackedWriter(data, BLOCK_SIZE);
       for (Number nv : values) {
         long value = nv == null ? 0 : nv.longValue();
         writer.add((value - minValue) / gcd);
@@ -181,7 +181,7 @@ class Lucene42DocValuesConsumer extends DocValuesConsumer {
       meta.writeVInt(PackedInts.VERSION_CURRENT);
       data.writeVInt(BLOCK_SIZE);
 
-      final BlockPackedWriter writer = new BlockPackedWriter(data, BLOCK_SIZE, PackedInts.COMPACT);
+      final BlockPackedWriter writer = new BlockPackedWriter(data, BLOCK_SIZE);
       for (Number nv : values) {
         writer.add(nv == null ? 0 : nv.longValue());
       }
@@ -377,5 +377,10 @@ class Lucene42DocValuesConsumer extends DocValuesConsumer {
     public void remove() {
       throw new UnsupportedOperationException();
     }
+  }
+
+  @Override
+  public void addSortedNumericField(FieldInfo field, Iterable<Number> docToValueCount, Iterable<Number> values) throws IOException {
+    throw new UnsupportedOperationException("Lucene 4.2 does not support SORTED_NUMERIC");
   }
 }

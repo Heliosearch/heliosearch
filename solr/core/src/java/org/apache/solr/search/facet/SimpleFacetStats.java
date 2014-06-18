@@ -309,8 +309,6 @@ public class SimpleFacetStats implements Closeable {
 
     SimpleOrderedMap<Object> res = new SimpleOrderedMap<>();
 
-    final BytesRef br = new BytesRef();
-
     final BytesRef prefixRef;
     if (prefix == null) {
       prefixRef = null;
@@ -456,12 +454,14 @@ public class SimpleFacetStats implements Closeable {
       // get the ord of the slot...
       int ord = startTermIndex + slotNum;
 
+      BytesRef br;
       Object val;
       if (startTermIndex == -1 && slotNum == 0) {
         // this is the "missing" bucket
         val = null;
+        br = new BytesRef();
       } else {
-        si.lookupOrd(ord, br);
+        br = si.lookupOrd(ord);
         val = ft.toObject(sf, br);
         // ft.indexedToReadable(br, charsRef);
         // val = charsRef.toString();

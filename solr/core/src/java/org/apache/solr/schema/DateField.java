@@ -527,7 +527,7 @@ class DateFieldSource extends FieldCacheSource {
         if (ord == -1) {
           return null;
         } else {
-          termsIndex.lookupOrd(ord, spare);
+          BytesRef spare = termsIndex.lookupOrd(ord);
           return ft.indexedToReadable(spare, spareChars).toString();
         }
       }
@@ -538,8 +538,7 @@ class DateFieldSource extends FieldCacheSource {
         if (ord == -1) {
           return null;
         } else {
-          final BytesRef br = new BytesRef();
-          termsIndex.lookupOrd(ord, br);
+          BytesRef br = termsIndex.lookupOrd(ord);
           return ft.toObject(sf, br);
         }
       }

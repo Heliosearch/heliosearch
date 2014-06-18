@@ -15,9 +15,9 @@ import org.apache.lucene.codecs.asserting.AssertingDocValuesFormat;
 import org.apache.lucene.codecs.lucene40.Lucene40RWCodec;
 import org.apache.lucene.codecs.lucene41.Lucene41RWCodec;
 import org.apache.lucene.codecs.lucene42.Lucene42RWCodec;
-import org.apache.lucene.codecs.lucene45.Lucene45DocValuesFormat;
 import org.apache.lucene.codecs.lucene45.Lucene45RWCodec;
-import org.apache.lucene.codecs.lucene46.Lucene46Codec;
+import org.apache.lucene.codecs.lucene49.Lucene49DocValuesFormat;
+import org.apache.lucene.codecs.lucene49.Lucene49Codec;
 import org.apache.lucene.document.BinaryDocValuesField;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field.Store;
@@ -355,21 +355,20 @@ public class TestNumericDocValuesUpdates extends LuceneTestCase {
     BinaryDocValues bdv = r.getBinaryDocValues("bdv");
     SortedDocValues sdv = r.getSortedDocValues("sdv");
     SortedSetDocValues ssdv = r.getSortedSetDocValues("ssdv");
-    BytesRef scratch = new BytesRef();
     for (int i = 0; i < r.maxDoc(); i++) {
       assertEquals(17, ndv.get(i));
-      bdv.get(i, scratch);
-      assertEquals(new BytesRef(Integer.toString(i)), scratch);
-      sdv.get(i, scratch);
-      assertEquals(new BytesRef(Integer.toString(i)), scratch);
+      BytesRef term = bdv.get(i);
+      assertEquals(new BytesRef(Integer.toString(i)), term);
+      term = sdv.get(i);
+      assertEquals(new BytesRef(Integer.toString(i)), term);
       ssdv.setDocument(i);
       long ord = ssdv.nextOrd();
-      ssdv.lookupOrd(ord, scratch);
-      assertEquals(i, Integer.parseInt(scratch.utf8ToString()));
+      term = ssdv.lookupOrd(ord);
+      assertEquals(i, Integer.parseInt(term.utf8ToString()));
       if (i != 0) {
         ord = ssdv.nextOrd();
-        ssdv.lookupOrd(ord, scratch);
-        assertEquals(i * 2, Integer.parseInt(scratch.utf8ToString()));
+        term = ssdv.lookupOrd(ord);
+        assertEquals(i * 2, Integer.parseInt(term.utf8ToString()));
       }
       assertEquals(SortedSetDocValues.NO_MORE_ORDS, ssdv.nextOrd());
     }
@@ -479,10 +478,10 @@ public class TestNumericDocValuesUpdates extends LuceneTestCase {
   public void testDifferentDVFormatPerField() throws Exception {
     Directory dir = newDirectory();
     IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
-    conf.setCodec(new Lucene46Codec() {
+    conf.setCodec(new Lucene49Codec() {
       @Override
       public DocValuesFormat getDocValuesFormatForField(String field) {
-        return new Lucene45DocValuesFormat();
+        return new Lucene49DocValuesFormat();
       }
     });
     IndexWriter writer = new IndexWriter(dir, conf);
@@ -503,11 +502,10 @@ public class TestNumericDocValuesUpdates extends LuceneTestCase {
     AtomicReader r = SlowCompositeReaderWrapper.wrap(reader);
     NumericDocValues ndv = r.getNumericDocValues("ndv");
     SortedDocValues sdv = r.getSortedDocValues("sorted");
-    BytesRef scratch = new BytesRef();
     for (int i = 0; i < r.maxDoc(); i++) {
       assertEquals(17, ndv.get(i));
-      sdv.get(i, scratch);
-      assertEquals(new BytesRef("value"), scratch);
+      final BytesRef term = sdv.get(i);
+      assertEquals(new BytesRef("value"), term);
     }
     
     reader.close();
@@ -1057,10 +1055,10 @@ public class TestNumericDocValuesUpdates extends LuceneTestCase {
     Directory dir = newDirectory();
     IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     conf.setMergePolicy(NoMergePolicy.INSTANCE); // disable merges to simplify test assertions.
-    conf.setCodec(new Lucene46Codec() {
+    conf.setCodec(new Lucene49Codec() {
       @Override
       public DocValuesFormat getDocValuesFormatForField(String field) {
-        return new Lucene45DocValuesFormat();
+        return new Lucene49DocValuesFormat();
       }
     });
     IndexWriter writer = new IndexWriter(dir, conf);
@@ -1074,7 +1072,7 @@ public class TestNumericDocValuesUpdates extends LuceneTestCase {
     // change format
     conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     conf.setMergePolicy(NoMergePolicy.INSTANCE); // disable merges to simplify test assertions.
-    conf.setCodec(new Lucene46Codec() {
+    conf.setCodec(new Lucene49Codec() {
       @Override
       public DocValuesFormat getDocValuesFormatForField(String field) {
         return new AssertingDocValuesFormat();

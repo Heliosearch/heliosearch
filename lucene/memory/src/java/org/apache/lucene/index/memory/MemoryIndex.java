@@ -45,6 +45,7 @@ import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.OrdTermState;
 import org.apache.lucene.index.SortedDocValues;
+import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.StoredFieldVisitor;
 import org.apache.lucene.index.TermState;
@@ -574,15 +575,6 @@ public class MemoryIndex {
        */
     }   
   }
-  
-  /**
-   * Returns a reasonable approximation of the main memory [bytes] consumed by
-   * this instance. Useful for smart memory sensititive caches/pools.
-   * @return the main memory consumption
-   */
-  public long getMemorySize() {
-    return RamUsageEstimator.sizeOf(this);
-  }
 
   /** sorts into ascending order (on demand), reusing memory along the way */
   private void sortFields() {
@@ -655,7 +647,6 @@ public class MemoryIndex {
       
       result.append("\tterms=" + info.terms.size());
       result.append(", positions=" + numPositions);
-      result.append(", memory=" + RamUsageEstimator.humanReadableUnits(RamUsageEstimator.sizeOf(info)));
       result.append("\n");
       sumPositions += numPositions;
       sumTerms += info.terms.size();
@@ -664,7 +655,6 @@ public class MemoryIndex {
     result.append("\nfields=" + sortedFields.length);
     result.append(", terms=" + sumTerms);
     result.append(", positions=" + sumPositions);
-    result.append(", memory=" + RamUsageEstimator.humanReadableUnits(getMemorySize()));
     return result.toString();
   }
   
@@ -791,6 +781,11 @@ public class MemoryIndex {
 
     @Override
     public SortedDocValues getSortedDocValues(String field) {
+      return null;
+    }
+    
+    @Override
+    public SortedNumericDocValues getSortedNumericDocValues(String field) {
       return null;
     }
     

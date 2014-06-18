@@ -20,8 +20,10 @@ package org.apache.solr.search.field;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.util.BytesRef;
 
-public class NativeSortedDocValues extends SortedDocValues {
+public class NativeSortedDocValues extends SolrSortedDocValues {
   protected final StrLeafValues vals;
+  protected final BytesRef spare = new BytesRef();
+
   public NativeSortedDocValues(StrLeafValues vals) {
     this.vals = vals;
   }
@@ -36,8 +38,14 @@ public class NativeSortedDocValues extends SortedDocValues {
   }
 
   @Override
-  public void lookupOrd(int ord, BytesRef result) {
-    vals.ordToTerm(ord, result);
+  public BytesRef lookupOrd(int ord) {
+    vals.ordToTerm(ord, spare);
+    return spare;
+  }
+
+  @Override
+  public void lookupOrd(int ord, BytesRef target) {
+    vals.ordToTerm(ord, target);
   }
 
   @Override

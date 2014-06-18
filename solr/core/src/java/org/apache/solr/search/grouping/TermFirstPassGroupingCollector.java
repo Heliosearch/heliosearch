@@ -66,8 +66,7 @@ public class TermFirstPassGroupingCollector extends AbstractFirstPassGroupingCol
     if (ord == -1) {
       return null;
     } else {
-      index.lookupOrd(ord, scratchBytesRef);
-      return scratchBytesRef;
+      return index.lookupOrd(ord);
     }
   }
 

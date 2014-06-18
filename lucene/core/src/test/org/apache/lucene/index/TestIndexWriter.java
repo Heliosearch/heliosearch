@@ -49,6 +49,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.SortedDocValuesField;
+import org.apache.lucene.document.SortedNumericDocValuesField;
 import org.apache.lucene.document.SortedSetDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
@@ -79,7 +80,6 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.IOUtils;
-import org.apache.lucene.util.LuceneTestCase.AwaitsFix;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.SetOnce;
 import org.apache.lucene.util.TestUtil;
@@ -1021,6 +1021,10 @@ public class TestIndexWriter extends LuceneTestCase {
         doc.add(new SortedSetDocValuesField("sortedsetdv", new BytesRef("one")));
         doc.add(new SortedSetDocValuesField("sortedsetdv", new BytesRef("two")));
       }
+      if (defaultCodecSupportsSortedNumeric()) {
+        doc.add(new SortedNumericDocValuesField("sortednumericdv", 4));
+        doc.add(new SortedNumericDocValuesField("sortednumericdv", 3));
+      }
       w.addDocument(doc);
       doc = new Document();
       doc.add(newStringField(random, "id", "501", Field.Store.NO));
@@ -1033,6 +1037,10 @@ public class TestIndexWriter extends LuceneTestCase {
       if (defaultCodecSupportsSortedSet()) {
         doc.add(new SortedSetDocValuesField("sortedsetdv", new BytesRef("two")));
         doc.add(new SortedSetDocValuesField("sortedsetdv", new BytesRef("three")));
+      }
+      if (defaultCodecSupportsSortedNumeric()) {
+        doc.add(new SortedNumericDocValuesField("sortednumericdv", 6));
+        doc.add(new SortedNumericDocValuesField("sortednumericdv", 1));
       }
       w.addDocument(doc);
       w.deleteDocuments(new Term("id", "500"));
@@ -1781,8 +1789,7 @@ public class TestIndexWriter extends LuceneTestCase {
 
     SortedDocValues dti = FieldCache.DEFAULT.getTermsIndex(SlowCompositeReaderWrapper.wrap(reader), "content", random().nextFloat() * PackedInts.FAST);
     assertEquals(4, dti.getValueCount());
-    BytesRef br = new BytesRef();
-    dti.lookupOrd(2, br);
+    BytesRef br = dti.lookupOrd(2);
     assertEquals(bigTermBytesRef, br);
     reader.close();
     dir.close();

@@ -24,6 +24,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.document.SortedDocValuesField;
+import org.apache.lucene.document.SortedNumericDocValuesField;
 import org.apache.lucene.document.SortedSetDocValuesField;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.Bits;
@@ -98,11 +99,9 @@ public class TestMultiDocValues extends LuceneTestCase {
     
     BinaryDocValues multi = MultiDocValues.getBinaryValues(ir, "bytes");
     BinaryDocValues single = merged.getBinaryDocValues("bytes");
-    BytesRef actual = new BytesRef();
-    BytesRef expected = new BytesRef();
     for (int i = 0; i < numDocs; i++) {
-      single.get(i, expected);
-      multi.get(i, actual);
+      final BytesRef expected = BytesRef.deepCopyOf(single.get(i));
+      final BytesRef actual = multi.get(i);
       assertEquals(expected, actual);
     }
     ir.close();
@@ -141,14 +140,12 @@ public class TestMultiDocValues extends LuceneTestCase {
     SortedDocValues multi = MultiDocValues.getSortedValues(ir, "bytes");
     SortedDocValues single = merged.getSortedDocValues("bytes");
     assertEquals(single.getValueCount(), multi.getValueCount());
-    BytesRef actual = new BytesRef();
-    BytesRef expected = new BytesRef();
     for (int i = 0; i < numDocs; i++) {
       // check ord
       assertEquals(single.getOrd(i), multi.getOrd(i));
       // check value
-      single.get(i, expected);
-      multi.get(i, actual);
+      final BytesRef expected = BytesRef.deepCopyOf(single.get(i));
+      final BytesRef actual = multi.get(i);
       assertEquals(expected, actual);
     }
     ir.close();
@@ -185,14 +182,12 @@ public class TestMultiDocValues extends LuceneTestCase {
     SortedDocValues multi = MultiDocValues.getSortedValues(ir, "bytes");
     SortedDocValues single = merged.getSortedDocValues("bytes");
     assertEquals(single.getValueCount(), multi.getValueCount());
-    BytesRef actual = new BytesRef();
-    BytesRef expected = new BytesRef();
     for (int i = 0; i < numDocs; i++) {
       // check ord
       assertEquals(single.getOrd(i), multi.getOrd(i));
       // check ord value
-      single.get(i, expected);
-      multi.get(i, actual);
+      final BytesRef expected = BytesRef.deepCopyOf(single.get(i));
+      final BytesRef actual = multi.get(i);
       assertEquals(expected, actual);
     }
     ir.close();
@@ -232,12 +227,10 @@ public class TestMultiDocValues extends LuceneTestCase {
       assertNull(single);
     } else {
       assertEquals(single.getValueCount(), multi.getValueCount());
-      BytesRef actual = new BytesRef();
-      BytesRef expected = new BytesRef();
       // check values
       for (long i = 0; i < single.getValueCount(); i++) {
-        single.lookupOrd(i, expected);
-        multi.lookupOrd(i, actual);
+        final BytesRef expected = BytesRef.deepCopyOf(single.lookupOrd(i));
+        final BytesRef actual = multi.lookupOrd(i);
         assertEquals(expected, actual);
       }
       // check ord list
@@ -297,12 +290,10 @@ public class TestMultiDocValues extends LuceneTestCase {
       assertNull(single);
     } else {
       assertEquals(single.getValueCount(), multi.getValueCount());
-      BytesRef actual = new BytesRef();
-      BytesRef expected = new BytesRef();
       // check values
       for (long i = 0; i < single.getValueCount(); i++) {
-        single.lookupOrd(i, expected);
-        multi.lookupOrd(i, actual);
+        final BytesRef expected = BytesRef.deepCopyOf(single.lookupOrd(i));
+        final BytesRef actual = multi.lookupOrd(i);
         assertEquals(expected, actual);
       }
       // check ord list
@@ -321,6 +312,58 @@ public class TestMultiDocValues extends LuceneTestCase {
           upto++;
         }
         assertEquals(expectedList.size(), upto);
+      }
+    }
+    
+    ir.close();
+    ir2.close();
+    dir.close();
+  }
+  
+  public void testSortedNumeric() throws Exception {
+    assumeTrue("codec does not support SORTED_NUMERIC", defaultCodecSupportsSortedNumeric());
+    Directory dir = newDirectory();
+    
+    IndexWriterConfig iwc = newIndexWriterConfig(random(), TEST_VERSION_CURRENT, null);
+    iwc.setMergePolicy(newLogMergePolicy());
+    RandomIndexWriter iw = new RandomIndexWriter(random(), dir, iwc);
+
+    int numDocs = atLeast(500);
+    for (int i = 0; i < numDocs; i++) {
+      Document doc = new Document();
+      int numValues = random().nextInt(5);
+      for (int j = 0; j < numValues; j++) {
+        doc.add(new SortedNumericDocValuesField("nums", TestUtil.nextLong(random(), Long.MIN_VALUE, Long.MAX_VALUE)));
+      }
+      iw.addDocument(doc);
+      if (random().nextInt(17) == 0) {
+        iw.commit();
+      }
+    }
+    DirectoryReader ir = iw.getReader();
+    iw.forceMerge(1);
+    DirectoryReader ir2 = iw.getReader();
+    AtomicReader merged = getOnlySegmentReader(ir2);
+    iw.close();
+    
+    SortedNumericDocValues multi = MultiDocValues.getSortedNumericValues(ir, "nums");
+    SortedNumericDocValues single = merged.getSortedNumericDocValues("nums");
+    if (multi == null) {
+      assertNull(single);
+    } else {
+      // check values
+      for (int i = 0; i < numDocs; i++) {
+        single.setDocument(i);
+        ArrayList<Long> expectedList = new ArrayList<>();
+        for (int j = 0; j < single.count(); j++) {
+          expectedList.add(single.valueAt(j));
+        }
+        
+        multi.setDocument(i);
+        assertEquals(expectedList.size(), multi.count());
+        for (int j = 0; j < single.count(); j++) {
+          assertEquals(expectedList.get(j).longValue(), multi.valueAt(j));
+        }
       }
     }
     

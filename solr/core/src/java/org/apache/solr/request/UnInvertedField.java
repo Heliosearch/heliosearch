@@ -154,7 +154,7 @@ class UnInvertedField extends DocTermOrds {
   public long memSize() {
     // can cache the mem size since it shouldn't change
     if (memsz!=0) return memsz;
-    long sz = super.ramUsedInBytes();
+    long sz = super.ramBytesUsed();
     sz += 8*8 + 32; // local fields
     sz += bigTerms.size() * 64;
     for (TopTerm tt : bigTerms.values()) {

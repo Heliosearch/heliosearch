@@ -27,6 +27,8 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.funcvalues.DocTermsIndexFuncValues;
+import org.apache.solr.search.mutable.MutableValue;
+import org.apache.solr.search.mutable.MutableValueStr;
 
 import java.io.IOException;
 import java.util.Map;
@@ -57,7 +59,7 @@ public class BytesRefFieldSource extends FieldCacheSource {
 
         @Override
         public boolean bytesVal(int doc, BytesRef target) {
-          binaryValues.get(doc, target);
+          target.copyBytes(binaryValues.get(doc));
           return target.length > 0;
         }
 
@@ -77,6 +79,26 @@ public class BytesRefFieldSource extends FieldCacheSource {
         public String toString(int doc) {
           return description() + '=' + strVal(doc);
         }
+
+        @Override
+        public ValueFiller getValueFiller() {
+          return new ValueFiller() {
+            private final MutableValueStr mval = new MutableValueStr();
+
+            @Override
+            public MutableValue getValue() {
+              return mval;
+            }
+
+            @Override
+            public void fillValue(int doc) {
+              mval.exists = docsWithField.get(doc);
+              mval.value.length = 0;
+              mval.value.copyBytes(binaryValues.get(doc));
+            }
+          };
+        }
+
       };
     } else {
       return new DocTermsIndexFuncValues(this, readerContext, field) {

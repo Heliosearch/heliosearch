@@ -50,9 +50,6 @@ import org.apache.lucene.util.packed.PackedInts;
  *        to this table, and those ordinals are compressed with bitpacking ({@link PackedInts}). 
  *    <li>GCD-compressed: when all numbers share a common divisor, such as dates, the greatest
  *        common denominator (GCD) is computed, and quotients are stored using Delta-compressed Numerics.
- *    <li>Bitpack-compressed: per-document integers written as a block for the entire segment.
- *        This technique will only be used when numbers range from {@code -1 .. Long.MAX_VALUE-1},
- *        when the blocking for the delta-compressed method would not provide additional compression.
  * </ul>
  * <p>
  * {@link DocValuesType#BINARY BINARY}:
@@ -99,7 +96,6 @@ import org.apache.lucene.util.packed.PackedInts;
  *     <li>GCDNumericEntry --&gt; NumericHeader,MinValue,GCD</li>
  *     <li>TableNumericEntry --&gt; NumericHeader,TableSize,{@link DataOutput#writeLong Int64}<sup>TableSize</sup></li>
  *     <li>DeltaNumericEntry --&gt; NumericHeader</li>
- *     <li>DeltaNumericEntry --&gt; NumericHeader,BitsPerValue</li>
  *     <li>NumericHeader --&gt; FieldNumber,EntryType,NumericType,MissingOffset,PackedVersion,DataOffset,Count,BlockSize</li>
  *     <li>BinaryEntry --&gt; FixedBinaryEntry | VariableBinaryEntry | PrefixBinaryEntry</li>
  *     <li>FixedBinaryEntry --&gt; BinaryHeader</li>
@@ -112,7 +108,7 @@ import org.apache.lucene.util.packed.PackedInts;
  *     <li>EntryType,CompressionType --&gt; {@link DataOutput#writeByte Byte}</li>
  *     <li>Header --&gt; {@link CodecUtil#writeHeader CodecHeader}</li>
  *     <li>MinValue,GCD,MissingOffset,AddressOffset,DataOffset --&gt; {@link DataOutput#writeLong Int64}</li>
- *     <li>BitsPerValue,TableSize --&gt; {@link DataOutput#writeVInt vInt}</li>
+ *     <li>TableSize --&gt; {@link DataOutput#writeVInt vInt}</li>
  *     <li>Footer --&gt; {@link CodecUtil#writeFooter CodecFooter}</li>
  *   </ul>
  *   <p>Sorted fields have two entries: a BinaryEntry with the value metadata,
@@ -126,17 +122,15 @@ import org.apache.lucene.util.packed.PackedInts;
  *      <ul>
  *         <li>0 --&gt; delta-compressed. For each block of 16k integers, every integer is delta-encoded
  *             from the minimum value within the block. 
- *         <li>1 --&gt; gcd-compressed. When all integers share a common divisor, only quotients are stored
+ *         <li>1 --&gt, gcd-compressed. When all integers share a common divisor, only quotients are stored
  *             using blocks of delta-encoded ints.
  *         <li>2 --&gt; table-compressed. When the number of unique numeric values is small and it would save space,
  *             a lookup table of unique values is written, followed by the ordinal for each document.
- *         <li>3 --&gt; bitpack-compressed. When the delta method would not save space, every integer is
- *             delta encoded from {@code -1} for the entire segment.
  *      </ul>
  *   <p>BinaryType indicates how Binary values will be stored:
  *      <ul>
  *         <li>0 --&gt; fixed-width. All values have the same length, addressing by multiplication. 
- *         <li>1 --&gt; variable-width. An address for each value is stored.
+ *         <li>1 --&gt, variable-width. An address for each value is stored.
  *         <li>2 --&gt; prefix-compressed. An address to the start of every interval'th value is stored.
  *      </ul>
  *   <p>MinLength and MaxLength represent the min and max byte[] value lengths for Binary values.
@@ -165,9 +159,11 @@ import org.apache.lucene.util.packed.PackedInts;
  *   <p>SortedSet entries store the list of ordinals in their BinaryData as a
  *      sequences of increasing {@link DataOutput#writeVLong vLong}s, delta-encoded.</p>
  * </ol>
+ * @deprecated Only for reading old 4.3-4.5 segments
  * @lucene.experimental
  */
-public final class Lucene45DocValuesFormat extends DocValuesFormat {
+@Deprecated
+public class Lucene45DocValuesFormat extends DocValuesFormat {
 
   /** Sole Constructor */
   public Lucene45DocValuesFormat() {
@@ -176,6 +172,7 @@ public final class Lucene45DocValuesFormat extends DocValuesFormat {
 
   @Override
   public DocValuesConsumer fieldsConsumer(SegmentWriteState state) throws IOException {
+    // really we should be read-only, but to allow posting of dv updates against old segments...
     return new Lucene45DocValuesConsumer(state, DATA_CODEC, DATA_EXTENSION, META_CODEC, META_EXTENSION);
   }
 
@@ -191,8 +188,7 @@ public final class Lucene45DocValuesFormat extends DocValuesFormat {
   static final int VERSION_START = 0;
   static final int VERSION_SORTED_SET_SINGLE_VALUE_OPTIMIZED = 1;
   static final int VERSION_CHECKSUM = 2;
-  static final int VERSION_BITPACK_COMPRESSED = 3;
-  static final int VERSION_CURRENT = VERSION_BITPACK_COMPRESSED;
+  static final int VERSION_CURRENT = VERSION_CHECKSUM;
   static final byte NUMERIC = 0;
   static final byte BINARY = 1;
   static final byte SORTED = 2;

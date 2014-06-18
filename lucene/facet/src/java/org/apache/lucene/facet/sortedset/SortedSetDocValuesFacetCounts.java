@@ -40,6 +40,7 @@ import org.apache.lucene.index.ReaderUtil;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.LongValues;
 
 /** Compute facets counts from previously
  *  indexed {@link SortedSetDocValuesFacetField},
@@ -131,13 +132,11 @@ public class SortedSetDocValuesFacetCounts extends Facets {
       return null;
     }
 
-    BytesRef scratch = new BytesRef();
-
     LabelAndValue[] labelValues = new LabelAndValue[q.size()];
     for(int i=labelValues.length-1;i>=0;i--) {
       TopOrdAndIntQueue.OrdAndValue ordAndValue = q.pop();
-      dv.lookupOrd(ordAndValue.ord, scratch);
-      String[] parts = FacetsConfig.stringToPath(scratch.utf8ToString());
+      final BytesRef term = dv.lookupOrd(ordAndValue.ord);
+      String[] parts = FacetsConfig.stringToPath(term.utf8ToString());
       labelValues[i] = new LabelAndValue(parts[1], ordAndValue.value);
     }
 
@@ -190,7 +189,8 @@ public class SortedSetDocValuesFacetCounts extends Facets {
       // temp ram req'ts (sum of number of ords across all
       // segs)
       if (ordinalMap != null) {
-        int segOrd = hits.context.ord;
+        final int segOrd = hits.context.ord;
+        final LongValues ordMap = ordinalMap.getGlobalOrds(segOrd);
 
         int numSegOrds = (int) segValues.getValueCount();
 
@@ -204,7 +204,7 @@ public class SortedSetDocValuesFacetCounts extends Facets {
             int term = (int) segValues.nextOrd();
             while (term != SortedSetDocValues.NO_MORE_ORDS) {
               //System.out.println("      segOrd=" + segOrd + " ord=" + term + " globalOrd=" + ordinalMap.getGlobalOrd(segOrd, term));
-              counts[(int) ordinalMap.getGlobalOrd(segOrd, term)]++;
+              counts[(int) ordMap.get(term)]++;
               term = (int) segValues.nextOrd();
             }
           }
@@ -230,7 +230,7 @@ public class SortedSetDocValuesFacetCounts extends Facets {
             int count = segCounts[ord];
             if (count != 0) {
               //System.out.println("    migrate segOrd=" + segOrd + " ord=" + ord + " globalOrd=" + ordinalMap.getGlobalOrd(segOrd, ord));
-              counts[(int) ordinalMap.getGlobalOrd(segOrd, ord)] += count;
+              counts[(int) ordMap.get(ord)] += count;
             }
           }
         }

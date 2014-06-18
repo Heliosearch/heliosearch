@@ -88,4 +88,45 @@ public abstract class IndexInput extends DataInput implements Cloneable,Closeabl
    * The slice is seeked to the beginning.
    */
   public abstract IndexInput slice(String sliceDescription, long offset, long length) throws IOException;
+  
+  /**
+   * Creates a random-access slice of this index input, with the given offset and length. 
+   * <p>
+   * The default implementation calls {@link #slice}, and it doesn't support random access,
+   * it implements absolute reads as seek+read.
+   */
+  public RandomAccessInput randomAccessSlice(long offset, long length) throws IOException {
+    final IndexInput slice = slice("randomaccess", offset, length);
+    if (slice instanceof RandomAccessInput) {
+      // slice() already supports random access
+      return (RandomAccessInput) slice;
+    } else {
+      // return default impl
+      return new RandomAccessInput() {
+        @Override
+        public byte readByte(long pos) throws IOException {
+          slice.seek(pos);
+          return slice.readByte();
+        }
+        
+        @Override
+        public short readShort(long pos) throws IOException {
+          slice.seek(pos);
+          return slice.readShort();
+        }
+        
+        @Override
+        public int readInt(long pos) throws IOException {
+          slice.seek(pos);
+          return slice.readInt();
+        }
+        
+        @Override
+        public long readLong(long pos) throws IOException {
+          slice.seek(pos);
+          return slice.readLong();
+        }
+      };
+    }
+  }
 }

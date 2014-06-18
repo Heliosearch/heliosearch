@@ -96,6 +96,7 @@ import org.apache.lucene.index.SerialMergeScheduler;
 import org.apache.lucene.index.SimpleMergedSegmentWarmer;
 import org.apache.lucene.index.SlowCompositeReaderWrapper;
 import org.apache.lucene.index.SortedDocValues;
+import org.apache.lucene.index.SortedNumericDocValues;
 import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum.SeekStatus;
@@ -374,7 +375,7 @@ public abstract class LuceneTestCase extends Assert {
    * Use this constant when creating Analyzers and any other version-dependent stuff.
    * <p><b>NOTE:</b> Change this when development starts for new Lucene version:
    */
-  public static final Version TEST_VERSION_CURRENT = Version.LUCENE_4_9;
+  public static final Version TEST_VERSION_CURRENT = Version.LUCENE_4_10;
 
   /**
    * True if and only if tests are run in verbose mode. If this flag is false
@@ -1745,6 +1746,18 @@ public abstract class LuceneTestCase extends Assert {
     return true;
   }
   
+  /** Returns true if the default codec supports SORTED_NUMERIC docvalues */ 
+  public static boolean defaultCodecSupportsSortedNumeric() {
+    if (!defaultCodecSupportsDocValues()) {
+      return false;
+    }
+    String name = Codec.getDefault().getName();
+    if (name.equals("Lucene40") || name.equals("Lucene41") || name.equals("Lucene42") || name.equals("Lucene45") || name.equals("Lucene46")) {
+      return false;
+    }
+    return true;
+  }
+  
   /** Returns true if the codec "supports" docsWithField 
    * (other codecs return MatchAllBits, because you couldnt write missing values before) */
   public static boolean defaultCodecSupportsDocsWithField() {
@@ -2294,12 +2307,10 @@ public abstract class LuceneTestCase extends Assert {
         BinaryDocValues leftValues = MultiDocValues.getBinaryValues(leftReader, field);
         BinaryDocValues rightValues = MultiDocValues.getBinaryValues(rightReader, field);
         if (leftValues != null && rightValues != null) {
-          BytesRef scratchLeft = new BytesRef();
-          BytesRef scratchRight = new BytesRef();
           for(int docID=0;docID<leftReader.maxDoc();docID++) {
-            leftValues.get(docID, scratchLeft);
-            rightValues.get(docID, scratchRight);
-            assertEquals(info, scratchLeft, scratchRight);
+            final BytesRef left = BytesRef.deepCopyOf(leftValues.get(docID));
+            final BytesRef right = rightValues.get(docID);
+            assertEquals(info, left, right);
           }
         } else {
           assertNull(info, leftValues);
@@ -2317,15 +2328,15 @@ public abstract class LuceneTestCase extends Assert {
           BytesRef scratchLeft = new BytesRef();
           BytesRef scratchRight = new BytesRef();
           for (int i = 0; i < leftValues.getValueCount(); i++) {
-            leftValues.lookupOrd(i, scratchLeft);
-            rightValues.lookupOrd(i, scratchRight);
-            assertEquals(info, scratchLeft, scratchRight);
+            final BytesRef left = BytesRef.deepCopyOf(leftValues.lookupOrd(i));
+            final BytesRef right = rightValues.lookupOrd(i);
+            assertEquals(info, left, right);
           }
           // bytes
           for(int docID=0;docID<leftReader.maxDoc();docID++) {
-            leftValues.get(docID, scratchLeft);
-            rightValues.get(docID, scratchRight);
-            assertEquals(info, scratchLeft, scratchRight);
+            final BytesRef left = BytesRef.deepCopyOf(leftValues.get(docID));
+            final BytesRef right = rightValues.get(docID);
+            assertEquals(info, left, right);
           }
         } else {
           assertNull(info, leftValues);
@@ -2340,12 +2351,10 @@ public abstract class LuceneTestCase extends Assert {
           // numOrds
           assertEquals(info, leftValues.getValueCount(), rightValues.getValueCount());
           // ords
-          BytesRef scratchLeft = new BytesRef();
-          BytesRef scratchRight = new BytesRef();
           for (int i = 0; i < leftValues.getValueCount(); i++) {
-            leftValues.lookupOrd(i, scratchLeft);
-            rightValues.lookupOrd(i, scratchRight);
-            assertEquals(info, scratchLeft, scratchRight);
+            final BytesRef left = BytesRef.deepCopyOf(leftValues.lookupOrd(i));
+            final BytesRef right = rightValues.lookupOrd(i);
+            assertEquals(info, left, right);
           }
           // ord lists
           for(int docID=0;docID<leftReader.maxDoc();docID++) {
@@ -2356,6 +2365,28 @@ public abstract class LuceneTestCase extends Assert {
               assertEquals(info, ord, rightValues.nextOrd());
             }
             assertEquals(info, SortedSetDocValues.NO_MORE_ORDS, rightValues.nextOrd());
+          }
+        } else {
+          assertNull(info, leftValues);
+          assertNull(info, rightValues);
+        }
+      }
+      
+      {
+        SortedNumericDocValues leftValues = MultiDocValues.getSortedNumericValues(leftReader, field);
+        SortedNumericDocValues rightValues = MultiDocValues.getSortedNumericValues(rightReader, field);
+        if (leftValues != null && rightValues != null) {
+          for (int i = 0; i < leftReader.maxDoc(); i++) {
+            leftValues.setDocument(i);
+            long expected[] = new long[leftValues.count()];
+            for (int j = 0; j < expected.length; j++) {
+              expected[j] = leftValues.valueAt(j);
+            }
+            rightValues.setDocument(i);
+            for (int j = 0; j < expected.length; j++) {
+              assertEquals(info, expected[j], rightValues.valueAt(j));
+            }
+            assertEquals(info, expected.length, rightValues.count());
           }
         } else {
           assertNull(info, leftValues);

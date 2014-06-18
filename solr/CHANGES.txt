@@ -23,6 +23,10 @@ $Id$
 * SOLR-5868: HttpClient should be configured to use ALLOW_ALL_HOSTNAME hostname
   verifier to simplify SSL setup. (Steve Davids via Mark Miller)
 
+==================  4.10.0 =================
+
+(No Changes)
+
 ==================  4.9.0 ==================
 
 Versions of Major Components
@@ -36,7 +40,11 @@ Apache ZooKeeper 3.4.6
 Upgrading from Solr 4.8
 ----------------------
 
-* placeholder
+* Support for DiskDocValuesFormat (ie: fieldTypes configured with docValuesFormat="Disk") 
+  has been removed due to poor performance.  If you have an existing fieldTypes using 
+  DiskDocValuesFormat please modify your schema.xml to remove the 'docValuesFormat' 
+  attribute, and optimize your index to rewrite it into the default codec, prior to 
+  upgrading to 4.9.  See LUCENE-5761 for more details.
 
 Detailed Change List
 ----------------------
@@ -59,12 +67,28 @@ New Features
   replication factor for an update request (single or batch) by sending
   an optional parameter "min_rf". (Timothy Potter)
 
+* SOLR-6088: Add query re-ranking with the ReRankingQParserPlugin
+  (Joel Bernstein)
+
+* SOLR-5285: Added a new [child ...] DocTransformer for optionally including 
+  Block-Join decendent documents inline in the results of a search.  This works 
+  independent of whether the search itself is a block-join related query and is 
+  supported by he xml, json, and javabin response formats.
+  (Varun Thacker via hossman)
+
+* SOLR-6150: Add new AnalyticsQuery to support pluggable analytics
+  (Joel Bernstein)
+
+
 Bug Fixes
 ----------------------
 
 * SOLR-6002: Fix a couple of ugly issues around SolrIndexWriter close and 
   rollback as well as how SolrIndexWriter manages it's ref counted directory
   instance. (Mark Miller, Gregory Chanan)
+
+* SOLR-6015: Better way to handle managed synonyms when ignoreCase=true
+  (Timothy Potter)
 
 * SOLR-6104: The 'addreplica' Collection API does not support 'async' parameter.
   (shalin)
@@ -79,6 +103,29 @@ Bug Fixes
 
 * SOLR-6120: zkcli.sh should expand solr.war automatically instead of throwing
   ClassNotFoundException. (sebastian badea, shalin)
+
+* SOLR-6149: Specifying the query value without any index value does not work in
+  Analysis browser. (Aman Tandon, shalin)
+  
+* SOLR-6145: Fix Schema API optimistic concurrency by moving it out of 
+  ManagedIndexSchema.add(Copy)Fields() into the consumers of those methods: 
+  CopyFieldCollectionResource, FieldCollectionResource, FieldResource,
+  and AddSchemaFieldsUpdateProcessorFactory.
+  (Gregory Chanan, Alexey Serba, Steve Rowe)
+
+* SOLR-6146: Incorrect configuration such as wrong chroot in zk server address can
+  cause CloudSolrServer to leak resources. (Jessica Cheng, Varun Thacker, shalin)
+
+* SOLR-6158: Relative configSetBase directories were resolved relative to the 
+  container CWD, rather than solr.home. (Simon Endele, Alan Woodward)
+
+* SOLR-5426: Fixed a bug in ReverseWildCardFilter that could cause 
+  InvalidTokenOffsetsException when highlighting. (Uwe Schindler, Arun Kumar, via hossman)
+
+* SOLR-6175: DebugComponent throws NPE on shard exceptions when using shards.tolerant.
+  (Tomás Fernández Löbbe via shalin)
+
+* SOLR-6129: DateFormatTransformer doesn't resolve dateTimeFormat. (Aaron LaBella via shalin)
 
 Other Changes
 ---------------------
@@ -116,6 +163,21 @@ Other Changes
 
 * SOLR-6026: REQUESTSTATUS Collection API now also checks for submitted tasks which are
   yet to begin execution.
+
+* SOLR-6067: Refactor duplicate Collector code in SolrIndexSearcher 
+  (Christine Poerschke via hossman)
+
+* SOLR-5940: post.jar reports back detailed error in case of error responses.
+  (Sameer Maggon, shalin, Uwe Schindler)
+
+* SOLR-6161: SolrDispatchFilter should throw java.lang.Error back even if wrapped in
+  another exception. (Miklos Christine via shalin)
+
+* SOLR-6153: ReplicationHandler backup response format should contain backup name.
+  (Varun Thacker via shalin)
+
+* SOLR-6169: Remove broken handleAlias action in CoreAdminHandler (Alan
+  Woodward)
 
 Optimizations
 ----------------------

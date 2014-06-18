@@ -955,8 +955,6 @@ public class SimpleFacets {
       QueryContext qcontext = QueryContext.newContext(searcher);
       SortedDocValues si = FieldUtil.getSortedDocValues(qcontext, sf, null);
 
-      final BytesRef br = new BytesRef();
-
       final BytesRef prefixRef;
       if (prefix == null) {
         prefixRef = null;
@@ -1075,7 +1073,7 @@ public class SimpleFacets {
             long pair = sorted[i];
             int c = (int) (pair >>> 32);
             int tnum = Integer.MAX_VALUE - (int) pair;
-            si.lookupOrd(startTermIndex + tnum, br);
+            BytesRef br = si.lookupOrd(startTermIndex + tnum);
             ft.indexedToReadable(br, charsRef);
             res.add(charsRef.toString(), c);
           }
@@ -1094,7 +1092,7 @@ public class SimpleFacets {
             int c = HS.getInt(counts, i);
             if (c < mincount || --off >= 0) continue;
             if (--lim < 0) break;
-            si.lookupOrd(startTermIndex + i, br);
+            BytesRef br = si.lookupOrd(startTermIndex + i);
             ft.indexedToReadable(br, charsRef);
             res.add(charsRef.toString(), c);
           }

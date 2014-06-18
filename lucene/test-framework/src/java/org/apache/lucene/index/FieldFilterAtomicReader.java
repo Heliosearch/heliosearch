@@ -131,6 +131,16 @@ public final class FieldFilterAtomicReader extends FilterAtomicReader {
   public SortedDocValues getSortedDocValues(String field) throws IOException {
     return hasField(field) ? super.getSortedDocValues(field) : null;
   }
+  
+  @Override
+  public SortedNumericDocValues getSortedNumericDocValues(String field) throws IOException {
+    return hasField(field) ? super.getSortedNumericDocValues(field) : null;
+  }
+  
+  @Override
+  public SortedSetDocValues getSortedSetDocValues(String field) throws IOException {
+    return hasField(field) ? super.getSortedSetDocValues(field) : null;
+  }
 
   @Override
   public NumericDocValues getNormValues(String field) throws IOException {

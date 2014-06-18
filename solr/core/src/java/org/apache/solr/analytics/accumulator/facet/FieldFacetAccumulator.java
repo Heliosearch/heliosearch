@@ -50,7 +50,6 @@ public class FieldFacetAccumulator extends ValueAccumulator {
   protected final boolean multiValued;
   protected final boolean numField;
   protected final boolean dateField;
-  protected final BytesRef value;
   protected SortedSetDocValues setValues;
   protected SortedDocValues sortValues; 
   protected NumericDocValues numValues; 
@@ -70,7 +69,6 @@ public class FieldFacetAccumulator extends ValueAccumulator {
     this.numField = schemaField.getType().getNumericType()!=null;
     this.dateField = schemaField.getType().getClass().equals(TrieDateField.class);
     this.parent = parent;  
-    this.value = new BytesRef();
     this.parser = AnalyticsParsers.getParser(schemaField.getType().getClass());
   }
 
@@ -108,7 +106,7 @@ public class FieldFacetAccumulator extends ValueAccumulator {
         int term;
         while ((term = (int)setValues.nextOrd()) != SortedSetDocValues.NO_MORE_ORDS) {
           exists = true;
-          setValues.lookupOrd(term, value);
+          BytesRef value = setValues.lookupOrd(term);
           parent.collectField(doc, name, parser.parse(value) );
         }
       }
@@ -129,8 +127,8 @@ public class FieldFacetAccumulator extends ValueAccumulator {
         }
       } else {
         if(sortValues != null) {
-          sortValues.get(doc,value);
-          if( BytesRef.EMPTY_BYTES == value.bytes ){
+          BytesRef value = sortValues.get(doc);
+          if( value.length == 0 ){
             parent.collectField(doc, name, FacetingAccumulator.MISSING_VALUE );
           } else {
             parent.collectField(doc, name, parser.parse(value) );

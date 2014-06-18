@@ -95,7 +95,7 @@ public class DebugComponent extends SearchComponent
       }
 
       NamedList stdinfo = SolrPluginUtils.doStandardDebug( rb.req,
-          rb.getQueryString(), rb.getQuery(), results, rb.isDebugQuery(), rb.isDebugResults());
+          rb.getQueryString(), rb.wrap(rb.getQuery()), results, rb.isDebugQuery(), rb.isDebugResults());
       
       NamedList info = rb.getDebugInfo();
       if( info == null ) {
@@ -206,6 +206,11 @@ public class DebugComponent extends SearchComponent
 
       for (ShardRequest sreq : rb.finished) {
         for (ShardResponse srsp : sreq.responses) {
+          if (srsp.getException() != null) {
+            // can't expect the debug content if there was an exception for this request
+            // this should only happen when using shards.tolerant=true
+            continue;
+          }
           NamedList sdebug = (NamedList)srsp.getSolrResponse().getResponse().get("debug");
           info = (NamedList)merge(sdebug, info, EXCLUDE_SET);
           if ((sreq.purpose & ShardRequest.PURPOSE_GET_DEBUG) != 0) {
@@ -234,7 +239,7 @@ public class DebugComponent extends SearchComponent
         }
         // No responses were received from shards. Show local query info.
         SolrPluginUtils.doStandardQueryDebug(
-                rb.req, rb.getQueryString(),  rb.getQuery(), rb.isDebugQuery(), info);
+                rb.req, rb.getQueryString(),  rb.wrap(rb.getQuery()), rb.isDebugQuery(), info);
         if (rb.isDebugQuery() && rb.getQparser() != null) {
           rb.getQparser().addDebugInfo(info);
         }
@@ -257,6 +262,10 @@ public class DebugComponent extends SearchComponent
 
   private NamedList<String> getTrackResponse(ShardResponse shardResponse) {
     NamedList<String> namedList = new NamedList<>();
+    if (shardResponse.getException() != null) {
+      namedList.add("Exception", shardResponse.getException().getMessage());
+      return namedList;
+    }
     NamedList<Object> responseNL = shardResponse.getSolrResponse().getResponse();
     @SuppressWarnings("unchecked")
     NamedList<Object> responseHeader = (NamedList<Object>)responseNL.get("responseHeader");

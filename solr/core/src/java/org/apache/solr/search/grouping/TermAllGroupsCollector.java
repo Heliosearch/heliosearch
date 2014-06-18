@@ -89,8 +89,7 @@ public class TermAllGroupsCollector extends AbstractAllGroupsCollector<BytesRef>
       if (key == -1) {
         term = null;
       } else {
-        term = new BytesRef();
-        index.lookupOrd(key, term);
+        term = BytesRef.deepCopyOf(index.lookupOrd(key));
       }
       groups.add(term);
     }

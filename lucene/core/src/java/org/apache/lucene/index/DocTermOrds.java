@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.lucene.codecs.PostingsFormat; // javadocs
 import org.apache.lucene.index.TermsEnum.SeekStatus;
 import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.util.Accountable;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.PagedBytes;
@@ -103,7 +104,7 @@ import org.apache.lucene.util.StringHelper;
  *
  */
 
-public class DocTermOrds {
+public class DocTermOrds implements Accountable {
 
   // Term ords are shifted by this, internally, to reserve
   // values 0 (end term) and 1 (index is a pointer into byte array)
@@ -160,7 +161,7 @@ public class DocTermOrds {
   protected DocsEnum docsEnum;
 
   /** Returns total bytes used. */
-  public long ramUsedInBytes() {
+  public long ramBytesUsed() {
     // can cache the mem size since it shouldn't change
     if (memsz!=0) return memsz;
     long sz = 8*8 + 32; // local fields
@@ -768,7 +769,7 @@ public class DocTermOrds {
   /** Returns a SortedSetDocValues view of this instance */
   public SortedSetDocValues iterator(AtomicReader reader) throws IOException {
     if (isEmpty()) {
-      return DocValues.EMPTY_SORTED_SET;
+      return DocValues.emptySortedSet();
     } else {
       return new Iterator(reader);
     }
@@ -869,16 +870,12 @@ public class DocTermOrds {
     }
 
     @Override
-    public void lookupOrd(long ord, BytesRef result) {
-      BytesRef ref = null;
+    public BytesRef lookupOrd(long ord) {
       try {
-        ref = DocTermOrds.this.lookupTerm(te, (int) ord);
+        return DocTermOrds.this.lookupTerm(te, (int) ord);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
-      result.bytes = ref.bytes;
-      result.offset = ref.offset;
-      result.length = ref.length;
     }
 
     @Override
