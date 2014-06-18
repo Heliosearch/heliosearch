@@ -1062,8 +1062,9 @@ public abstract class SolrTestCaseJ4 extends LuceneTestCase {
    * This transformation is automatically applied to JSON test srings (like assertJQ).
    */
   public static String json(String testJSON) {
-    testJSON = nonEscapedSingleQuotePattern.matcher(testJSON).replaceAll("\"");
-    testJSON = escapedSingleQuotePattern.matcher(testJSON).replaceAll("'");
+    // noggit now handles this directly
+    // testJSON = nonEscapedSingleQuotePattern.matcher(testJSON).replaceAll("\"");
+    // testJSON = escapedSingleQuotePattern.matcher(testJSON).replaceAll("'");
     return testJSON;
   }
   private static Pattern nonEscapedSingleQuotePattern = Pattern.compile("(?<!\\\\)\'");
