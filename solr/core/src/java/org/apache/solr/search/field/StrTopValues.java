@@ -32,6 +32,7 @@ import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 
 import java.io.IOException;
+import java.util.Map;
 
 public class StrTopValues extends TopValues {
   protected volatile StrLeafValues allSegs;
@@ -40,6 +41,23 @@ public class StrTopValues extends TopValues {
   public StrTopValues(StrFieldValues strFieldValues) {
     super(strFieldValues);
     this.cacheTop = strFieldValues.cacheTop;
+  }
+
+  @Override
+  public long getSizeInBytes() {
+    if (cacheTop) {
+      return allSegs == null ? 0 : allSegs.getSizeInBytes();
+    } else {
+      return super.getSizeInBytes();
+    }
+  }
+
+  @Override
+  public void addInfo(Map<String, Object> map) {
+    super.addInfo(map);
+    if (cacheTop) {
+      map.put("cacheTop", "true");
+    }
   }
 
   /** These "StrLeafValues" are really top level (i.e. the leaf is the top level reader). */
