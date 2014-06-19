@@ -93,8 +93,10 @@ public final class NativePagedBytes implements Closeable {
       HS.copyBytes(block, 0, arr, pos, used);
       pos += used;
     }
-    HS.copyBytes(currentBlock, 0, arr, pos, upto);
-    pos += upto;
+    if (currentBlock != 0) {
+      HS.copyBytes(currentBlock, 0, arr, pos, upto);
+      pos += upto;
+    }
     assert pos == sz;
     return arr;
   }

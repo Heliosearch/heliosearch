@@ -161,6 +161,12 @@ public class StrTopValues extends TopValues {
 
     stats.numUniqueValues = termOrd;
 
+    if (termOrd == 0) {
+      docToOrd.close();
+      bytes.close();
+      return new Str0Values(fieldValues, new StrFieldStats());
+    }
+
     long termBytesLength = bytes.getUsedSize();
     termBytes = bytes.buildSingleArray();
     assert termBytesLength == HS.arraySizeBytes(termBytes);
