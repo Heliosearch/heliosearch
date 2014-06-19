@@ -1,12 +1,14 @@
 
 echo "Make sure you do an 'ant compile' so the lucene/solr class files are generated first"
-echo "NOTE: running the example on linux requires the CWD to be in java.library.path"
-echo "example: java -Djava.library.path=. -jar start.jar"
 
+#
 #production
 DEBUG="-DNDEBUG"
+
+#
 #debugging
 #DEBUG="-g"
+
 
 BUILD=./build
 
@@ -29,20 +31,17 @@ OPT="-m64 -mtune=corei7 -O6 -msse -msse2 -msse3 -mfpmath=sse"
 OS=`uname`
 case $OS in
   Darwin)
-    OUT=lib${LIBNAME}.jnilib
+    SHORT_OS=Mac
     JNI_INC="-I/System/Library/Frameworks/JavaVM.framework/Headers"
-    LIB_EXT=jnilib
   ;;
   Linux)
-    OUT=lib${LIBNAME}.so
+    SHORT_OS=Linux
     JNI_INC="-I$JAVA_HOME/include -I$JAVA_HOME/include/linux"
-    LIB_EXT=so
   ;;
   CYGWIN*)
-    OUT=${LIBNAME}.dll
+    SHORT_OS=Windows
     JSEP=";"
     JNI_INC="-I$JAVA_HOME/include -I$JAVA_HOME/include/win32"
-    LIB_EXT=dll
     GPP="/usr/bin/x86_64-w64-mingw32-g++.exe"
     CFLAGS="-static-libstdc++ -static-libgcc -D_JNI_IMPLEMENTATION_ -Wl,--kill-at -Wl,--enable-auto-image-base -Wl,--add-stdcall-alias -Wl,--enable-auto-import"
   ;;
@@ -51,6 +50,8 @@ case $OS in
     exit 1
   ;;
 esac
+
+OUT=libHS_${SHORT_OS}.so
 
 MYPATH=org/apache/solr/core/${CLASS}.java
 FULLCLASS=org.apache.solr.core.${CLASS}
@@ -71,9 +72,8 @@ $GPP $DEBUG $OPT -Wall $CFLAGS $INC -shared -fPIC $CPPFILES -o $BUILD/$OUT
 $GPP $OPT -Wall $CFLAGS $INC         -fPIC $CPPFILES test.cpp -o $BUILD/test.exe
 # $GPP -S $OPT -Wall $CFLAGS $INC    -fPIC $CPPFILES test.cpp 
 
-cp $BUILD/$OUT $SOLR/example/        #for the server
-cp $BUILD/$OUT $SOLR/build/          #for tests
-cp $BUILD/$OUT $LUSOLR/              #for intellij (TODO: get it to look in build or example)
+mkdir -p $SOLR/example/native/
+cp $BUILD/$OUT $SOLR/example/native/ 
 
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
 #java $FULLCLASS

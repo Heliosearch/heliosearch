@@ -935,7 +935,7 @@
             <jvmarg line="${tests.clover.args}"/>
 
             <!-- for heliosearch tests -->
-            <sysproperty key="java.library.path" value="${dest}"/>
+            <sysproperty key="solr.dir" value="${common-solr.dir}/example"/>
 
             <!-- set the number of times tests should run -->
             <sysproperty key="tests.iters" value="${tests.iters}"/>

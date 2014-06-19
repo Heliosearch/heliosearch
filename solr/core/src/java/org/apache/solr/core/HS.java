@@ -5,11 +5,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.misc.Unsafe;
 
+import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class HS
@@ -49,9 +51,64 @@ public class HS
   }
 
   static {
+
+    String OS_Name = System.getProperty("os.name");
+    // chop at first space
+    int idx = OS_Name.indexOf(' ');
+    if (idx > 0) {
+      OS_Name = OS_Name.substring(0, idx);
+    }
+
+    String libName = "libHS_" + OS_Name + ".so";
+    String cwd = System.getProperty("user.dir");
+    String solrDir = System.getProperty("solr.dir"); // set by command-line ant tests to use solr/example/native
+
     try {
-      System.loadLibrary("HS");
-      loaded = true;
+      boolean found = false;
+      File file;
+
+      if (!found && solrDir != null) {
+        file = new File(solrDir + File.separator + "native" + File.separator + libName);
+        if (file.exists()) {
+          found = true;
+          System.load(file.getAbsolutePath());
+        }
+      }
+
+      if (!found) {
+        file = new File(cwd + File.separator + "native" + File.separator + libName);
+        if (file.exists()) {
+          found = true;
+          System.load(file.getAbsolutePath());
+        }
+      }
+
+      if (!found) {
+        // intellij tests CWD will be at the root of lucene/solr, so point it at solr/example/native
+        file = new File(cwd + File.separator + "solr" + File.separator + "example" + File.separator + "native" + File.separator + libName);
+        if (file.exists()) {
+          found = true;
+          System.load(file.getAbsolutePath());
+        }
+      }
+
+      if (!found) {
+        // intellij tests CWD will be at the root of lucene/solr, so point it at solr/example/native
+        file = new File(cwd + File.separator + "solr" + File.separator + "example" + File.separator + "native" + File.separator + libName);
+        if (file.exists()) {
+          found = true;
+          System.load(file.getAbsolutePath());
+        }
+      }
+
+      // debugging
+      // System.out.println("CWD="+cwd);
+      // Properties p = System.getProperties();
+      // p.list(System.err);
+
+      if (found) {
+        loaded = true;
+      }
     } catch (Throwable th) {
       log.error("HS: can't load native library: " + th.getMessage());
       // log.info("HS: can't load native library.", th);  // prevent nasty-looking stack trace for now...
