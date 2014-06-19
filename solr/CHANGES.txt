@@ -25,7 +25,15 @@ $Id$
 
 ==================  4.10.0 =================
 
-(No Changes)
+Bug Fixes
+----------------------
+
+* SOLR-6095 : SolrCloud cluster can end up without an overseer with overseer roles (Noble Paul, Shalin Mangar)
+
+Other Changes
+---------------------
+
+* SOLR-6173: Fixed wrong failure message in TestDistributedSearch. (shalin)
 
 ==================  4.9.0 ==================
 
@@ -79,6 +87,12 @@ New Features
 * SOLR-6150: Add new AnalyticsQuery to support pluggable analytics
   (Joel Bernstein)
 
+* SOLR-6125: Allow SolrIndexWriter to close without waiting for merges
+  (Christine Poerschke via Alan Woodward)
+
+* SOLR-6064: DebugComponent track output should be returned as a JSON
+  object rather than a list (Christine Poerschke, Alan Woodward)
+
 
 Bug Fixes
 ----------------------
@@ -126,6 +140,13 @@ Bug Fixes
   (Tomás Fernández Löbbe via shalin)
 
 * SOLR-6129: DateFormatTransformer doesn't resolve dateTimeFormat. (Aaron LaBella via shalin)
+
+* SOLR-6164: Copy Fields Schema additions are not distributed to other nodes.
+  (Gregory Chanan via Steve Rowe)
+
+* SOLR-6160: An error was sometimes possible if a distributed search included grouping
+  with group.facet, faceting on facet.field and either facet.range or facet.query.
+  (David Smiley)
 
 Other Changes
 ---------------------
@@ -178,6 +199,9 @@ Other Changes
 
 * SOLR-6169: Remove broken handleAlias action in CoreAdminHandler (Alan
   Woodward)
+
+* SOLR-6128: Removed deprecated analysis factories and fieldTypes from the example
+  schema.xml (hossman)
 
 Optimizations
 ----------------------
