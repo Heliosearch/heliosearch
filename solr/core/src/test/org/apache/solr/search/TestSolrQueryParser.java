@@ -16,10 +16,16 @@
  */
 package org.apache.solr.search;
 
+import org.apache.lucene.search.ConstantScoreQuery;
+import org.apache.lucene.search.Query;
 import org.apache.solr.SolrTestCaseJ4;
+import org.apache.solr.core.SolrCore;
+import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.transform.ScoreAugmenter;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.Closeable;
 
 
 public class TestSolrQueryParser extends SolrTestCaseJ4 {
@@ -178,6 +184,24 @@ public class TestSolrQueryParser extends SolrTestCaseJ4 {
     assertJQ(req("q",q)
         ,"/response/numFound==6"
     );
+  }
+
+
+  @Test
+  public void testCSQ() throws Exception {
+    SolrQueryRequest req = req();
+
+    QParser qParser = QParser.getParser("text:x^=3", "lucene", req);
+    Query q = qParser.getQuery();
+    assertTrue( q instanceof ConstantScoreQuery );
+    assertEquals(3.0, q.getBoost(), 0.0f);
+
+    qParser = QParser.getParser("(text:x text:y)^=-3", "lucene", req);
+    q = qParser.getQuery();
+    assertTrue( q instanceof ConstantScoreQuery );
+    assertEquals(-3.0, q.getBoost(), 0.0f);
+
+    req.close();
   }
 
 }
