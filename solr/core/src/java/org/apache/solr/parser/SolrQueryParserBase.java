@@ -44,6 +44,7 @@ import org.apache.solr.analysis.ReversedWildcardFilterFactory;
 import org.apache.solr.analysis.TokenizerChain;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.parser.QueryParser.Operator;
+import org.apache.solr.query.FilterQuery;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
@@ -578,6 +579,10 @@ public abstract class SolrQueryParserBase extends QueryBuilder {
     return q;
   }
 
+  // called from parser for filter(query)
+  Query getFilter(Query q) {
+    return new FilterQuery(q);
+  }
 
 
   /**

@@ -65,17 +65,19 @@ public interface QueryParserConstants {
   /** RegularExpression Id. */
   int LPARAMS = 28;
   /** RegularExpression Id. */
-  int NUMBER = 29;
+  int FILTER = 29;
   /** RegularExpression Id. */
-  int RANGE_TO = 30;
+  int NUMBER = 30;
   /** RegularExpression Id. */
-  int RANGEIN_END = 31;
+  int RANGE_TO = 31;
   /** RegularExpression Id. */
-  int RANGEEX_END = 32;
+  int RANGEIN_END = 32;
   /** RegularExpression Id. */
-  int RANGE_QUOTED = 33;
+  int RANGEEX_END = 33;
   /** RegularExpression Id. */
-  int RANGE_GOOP = 34;
+  int RANGE_QUOTED = 34;
+  /** RegularExpression Id. */
+  int RANGE_GOOP = 35;
 
   /** Lexical state. */
   int Boost = 0;
@@ -115,6 +117,7 @@ public interface QueryParserConstants {
     "\"[\"",
     "\"{\"",
     "<LPARAMS>",
+    "\"filter(\"",
     "<NUMBER>",
     "\"TO\"",
     "\"]\"",
