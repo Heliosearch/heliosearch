@@ -17,16 +17,12 @@ package org.apache.solr.query;
  * limitations under the License.
  */
 
-import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.ConstantScoreQuery;
-import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.Weight;
-import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.ToStringUtils;
 import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.search.DocSet;
@@ -62,7 +58,7 @@ public class FilterQuery extends Query {
   public String toString(String field) {
     StringBuilder sb = new StringBuilder();
     sb.append("field(");
-    sb.append(q.toString(field));
+    sb.append(q.toString(""));
     sb.append(')');
     sb.append(ToStringUtils.boost(getBoost()));
     return sb.toString();

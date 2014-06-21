@@ -223,41 +223,56 @@ public class TestSolrQueryParser extends SolrTestCaseJ4 {
         ,"/response/numFound==2"
     );
 
-    assertEquals(inserts + 3, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
-    assertEquals(inserts + 3, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
+    inserts+=3;
+    assertEquals(inserts, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
     assertEquals(hits, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
 
     assertJQ(req("q","doesnotexist2 filter(id:1) filter(qqq_s:X) filter(abcdefg)")
         ,"/response/numFound==2"
     );
 
-    assertEquals(inserts + 3, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
-    assertEquals(hits + 3, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
+    hits+=3;
+    assertEquals(inserts, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
+    assertEquals(hits, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
 
     // make sure normal "fq" parameters also hit the cache the same way
     assertJQ(req("q","doesnotexist3", "fq","id:1", "fq", "qqq_s:X", "fq", "abcdefg")
         ,"/response/numFound==0"
     );
 
-    assertEquals(inserts + 3, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
-    assertEquals(hits + 6, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
+    hits+=3;
+    assertEquals(inserts, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
+    assertEquals(hits, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
 
     // try a query deeply nested in a FQ
     assertJQ(req("q","*:* doesnotexist4", "fq","(id:* +(filter(id:1) filter(qqq_s:X) filter(abcdefg)) )")
         ,"/response/numFound==2"
     );
 
-    assertEquals(inserts + 4, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );  // +1 for top level fq
-    assertEquals(hits + 9, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
+    inserts+=1;  // +1 for top level fq
+    hits+=3;
+    assertEquals(inserts, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
+    assertEquals(hits, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
 
     // retry the complex FQ and make sure hashCode/equals works as expected w/ filter queries
     assertJQ(req("q","*:* doesnotexist5", "fq","(id:* +(filter(id:1) filter(qqq_s:X) filter(abcdefg)) )")
         ,"/response/numFound==2"
     );
 
-    assertEquals(inserts + 4, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
-    assertEquals(hits + 10, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );  // top-level fq should have been found.
+    hits+=1;  // top-level fq should have been found.
+    assertEquals(inserts, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
+    assertEquals(hits, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
 
+
+    // try nested filter with multiple top-level args (i.e. a boolean query)
+    assertJQ(req("q","*:* +filter(id:1 filter(qqq_s:X) abcdefg)")
+        ,"/response/numFound==2"
+    );
+
+    hits+=1;  // the inner filter
+    inserts+=1; // the outer filter
+    assertEquals(inserts, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
+    assertEquals(hits, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
   }
 
 
