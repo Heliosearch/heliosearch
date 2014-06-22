@@ -123,7 +123,8 @@ public class QueryParser extends SolrQueryParserBase implements QueryParserConst
       case TERM:
       case PREFIXTERM:
       case WILDTERM:
-      case REGEXPTERM:
+      case REGEX1:
+      case REGEX2:
       case RANGEIN_START:
       case RANGEEX_START:
       case LPARAMS:
@@ -179,7 +180,8 @@ public class QueryParser extends SolrQueryParserBase implements QueryParserConst
     case TERM:
     case PREFIXTERM:
     case WILDTERM:
-    case REGEXPTERM:
+    case REGEX1:
+    case REGEX2:
     case RANGEIN_START:
     case RANGEEX_START:
     case NUMBER:
@@ -251,7 +253,8 @@ public class QueryParser extends SolrQueryParserBase implements QueryParserConst
     case TERM:
     case PREFIXTERM:
     case WILDTERM:
-    case REGEXPTERM:
+    case REGEX1:
+    case REGEX2:
     case NUMBER:
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case TERM:
@@ -269,9 +272,13 @@ public class QueryParser extends SolrQueryParserBase implements QueryParserConst
         term = jj_consume_token(WILDTERM);
                           wildcard=true;
         break;
-      case REGEXPTERM:
-        term = jj_consume_token(REGEXPTERM);
-                            regexp=true;
+      case REGEX1:
+        term = jj_consume_token(REGEX1);
+                        regexp=true;
+        break;
+      case REGEX2:
+        term = jj_consume_token(REGEX2);
+                        regexp=true;
         break;
       case NUMBER:
         term = jj_consume_token(NUMBER);
@@ -474,10 +481,10 @@ public class QueryParser extends SolrQueryParserBase implements QueryParserConst
       jj_la1_init_1();
    }
    private static void jj_la1_init_0() {
-      jj_la1_0 = new int[] {0x600,0x600,0x3800,0x3800,0x7fb4fe00,0x240000,0x80000,0x80000,0x80000,0x7fb4c000,0x43a44000,0x400000,0x400000,0x80000,0xc000000,0x0,0x80000000,0x0,0x0,0x80000,0x400000,0x80000,0x4fb44000,};
+      jj_la1_0 = new int[] {0x6000,0x6000,0x38000,0x38000,0xfb4fe000,0x2400000,0x800000,0x800000,0x800000,0xfb4c0000,0x7a440000,0x4000000,0x4000000,0x800000,0x80000000,0x0,0x0,0x0,0x0,0x800000,0x4000000,0x800000,0xfb440000,};
    }
    private static void jj_la1_init_1() {
-      jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xc,0x0,0xc,0x3,0x0,0x0,0x0,0x0,};
+      jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0xf,0x0,0x0,0x0,0x0,0xf,0x8,0x0,0x0,0x0,0x1,0x180,0x10,0x180,0x60,0x0,0x0,0x0,0x9,};
    }
   final private JJCalls[] jj_2_rtns = new JJCalls[1];
   private boolean jj_rescan = false;
@@ -631,7 +638,7 @@ public class QueryParser extends SolrQueryParserBase implements QueryParserConst
   /** Generate ParseException. */
   public ParseException generateParseException() {
     jj_expentries.clear();
-    boolean[] la1tokens = new boolean[36];
+    boolean[] la1tokens = new boolean[41];
     if (jj_kind >= 0) {
       la1tokens[jj_kind] = true;
       jj_kind = -1;
@@ -648,7 +655,7 @@ public class QueryParser extends SolrQueryParserBase implements QueryParserConst
         }
       }
     }
-    for (int i = 0; i < 36; i++) {
+    for (int i = 0; i < 41; i++) {
       if (la1tokens[i]) {
         jj_expentry = new int[1];
         jj_expentry[0] = i;

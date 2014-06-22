@@ -526,7 +526,8 @@ public abstract class SolrQueryParserBase extends QueryBuilder {
           discardEscapeChar(term.image.substring
               (0, term.image.length()-1)));
     } else if (regexp) {
-      q = getRegexpQuery(qfield, term.image.substring(1, term.image.length()-1));
+      String regex = term.image.startsWith("regex(") ? term.image.substring("regex(".length(), term.image.length()-1) : term.image.substring(1, term.image.length()-1);
+      q = getRegexpQuery(qfield, regex);
     } else if (fuzzy) {
       float fms = fuzzyMinSim;
       try {

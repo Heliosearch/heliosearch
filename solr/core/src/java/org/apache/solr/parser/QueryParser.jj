@@ -54,6 +54,10 @@ public class QueryParser extends SolrQueryParserBase {
 
 PARSER_END(QueryParser)
 
+TOKEN_MGR_DECLS : {
+  int commentNestingDepth ;
+}
+
 /* ***************** */
 /* Token Definitions */
 /* ***************** */
@@ -72,9 +76,24 @@ PARSER_END(QueryParser)
  | <#_SQUOTED_CHAR:  ( ~[ "'", "\\" ] | <_ESCAPED_CHAR> ) >
 }
 
-<DEFAULT, Range> SKIP : {
+<DEFAULT, COMMENT> SKIP : {
+  < <_WHITESPACE>>
+  | "/*" {commentNestingDepth++;} : COMMENT
+}
+
+<COMMENT> SKIP : {
+  // trying to avoid matching comment in string leads to more problems (incorrectly thinking we are in a string due
+  // to the simplistic matching in this state.
+  // < ("\"" (<_QUOTED_CHAR>)* "\"") >
+  "*/" {commentNestingDepth -= 1; SwitchTo( commentNestingDepth==0 ? DEFAULT : COMMENT ); }
+  | < ~[]>
+}
+
+<Range> SKIP : {
   < <_WHITESPACE>>
 }
+
+
 
 <DEFAULT> TOKEN : {
   <AND:       ("AND" | "&&") >
@@ -93,7 +112,9 @@ PARSER_END(QueryParser)
  | <FUZZY_SLOP:     "~" ( (<_NUM_CHAR>)+ ( "." (<_NUM_CHAR>)+ )? )? >
  | <PREFIXTERM:  ("*") | ( <_TERM_START_CHAR> (<_TERM_CHAR>)* "*" ) >
  | <WILDTERM:  (<_TERM_START_CHAR> | [ "*", "?" ]) (<_TERM_CHAR> | ( [ "*", "?" ] ))* >
- | <REGEXPTERM: "/" (~[ "/" ] | "\\/" )* "/" >
+// | <REGEXPTERM: "/" (~[ "/" ] | "\\/" )* "/" >
+ | <REGEX1: "/" (~["*","/"]) (~[ "/" ] | "\\/" )* "/" >
+ | <REGEX2: "regex(" (~[ ")" ] | "\\)" )* ")" >
  | <RANGEIN_START: "[" > : Range
  | <RANGEEX_START: "{" > : Range
 // TODO: consider using token states instead of inlining SQUOTED
@@ -222,7 +243,8 @@ Query Term(String field) throws SyntaxError : {
       | term=<STAR> { wildcard=true; }
       | term=<PREFIXTERM> { prefix=true; }
       | term=<WILDTERM> { wildcard=true; }
-      | term=<REGEXPTERM> { regexp=true; }
+      | term=<REGEX1> { regexp=true; }
+      | term=<REGEX2> { regexp=true; }
       | term=<NUMBER>
       | term=<BAREOPER> { term.image = term.image.substring(0,1); }
     )
