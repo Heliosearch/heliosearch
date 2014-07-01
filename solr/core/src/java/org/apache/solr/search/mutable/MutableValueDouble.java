@@ -54,9 +54,8 @@ public class MutableValueDouble extends MutableValue {
     MutableValueDouble b = (MutableValueDouble) other;
     int c = Double.compare(value, b.value);
     if (c != 0) return c;
-    if (!exists) return -1;
-    if (!b.exists) return 1;
-    return 0;
+    if (exists == b.exists) return 0;
+    return exists ? 1 : -1;
   }
 
   @Override
