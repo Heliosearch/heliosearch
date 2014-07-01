@@ -36,6 +36,7 @@ public class FilterQuery extends Query {
 
   public FilterQuery(Query q) {
     this.q = q;
+    setBoost(0);  // default boost is 0;
   }
 
   public Query getQuery() {
@@ -51,7 +52,7 @@ public class FilterQuery extends Query {
   public boolean equals(Object obj) {
     if (!(obj instanceof FilterQuery)) return false;
     FilterQuery fq = (FilterQuery)obj;
-    return q.equals(fq.q) && q.getBoost() == fq.getBoost();
+    return this.q.equals(fq.q) && this.getBoost() == fq.getBoost();
   }
 
   @Override

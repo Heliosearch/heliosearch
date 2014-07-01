@@ -273,6 +273,16 @@ public class TestSolrQueryParser extends SolrTestCaseJ4 {
     inserts+=1; // the outer filter
     assertEquals(inserts, ((Long) filterCacheStats.getStatistics().get("inserts")).longValue() );
     assertEquals(hits, ((Long) filterCacheStats.getStatistics().get("hits")).longValue() );
+
+    // test the score for a filter, and that default score is 0
+    assertJQ(req("q","+filter(*:*) +filter(id:1)", "fl","id,score", "sort","id asc")
+        ,"/response/docs/[0]/score==0.0"
+    );
+
+    assertJQ(req("q","+filter(*:*)^=10 +filter(id:1)", "fl","id,score", "sort","id asc")
+        ,"/response/docs/[0]/score==1.0"  // normalization reduces to 1
+    );
+
   }
 
   @Test
