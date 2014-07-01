@@ -202,15 +202,22 @@ public class MoreLikeThisHandler extends RequestHandlerBase
     }
     
     // maybe facet the results
-    if (params.getBool(FacetParams.FACET,false)) {
-      if( mltDocs.docSet == null ) {
-        rsp.add( "facet_counts", null );
+    try {
+      if (params.getBool(FacetParams.FACET, false)) {
+        if (mltDocs.docSet == null) {
+          rsp.add("facet_counts", null);
+        } else {
+          SimpleFacets f = new SimpleFacets(req, mltDocs.docSet, params);
+          f.addFacets(rsp.getValues());
+        }
       }
-      else {
-        SimpleFacets f = new SimpleFacets(req, mltDocs.docSet, params );
-        f.addFacets();
+    } finally {
+      if (mltDocs.docSet != null) {
+        mltDocs.docSet.decref();
       }
     }
+
+
     boolean dbg = req.getParams().getBool(CommonParams.DEBUG_QUERY, false);
 
     boolean dbgQuery = false, dbgResults = false;

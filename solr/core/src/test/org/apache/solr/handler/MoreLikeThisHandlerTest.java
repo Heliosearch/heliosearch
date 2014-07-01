@@ -145,6 +145,13 @@ public class MoreLikeThisHandlerTest extends SolrTestCaseJ4 {
     // params.put(MoreLikeThisParams.QF,new String[]{"foo_ti"});
     // String response = h.query(mltreq);
     // System.out.println(response);
+    params.set(CommonParams.Q, "id:44");
+    params.set("facet", "true");
+    params.set("facet.field", "id");
+    mltreq.close(); mltreq = new LocalSolrQueryRequest(h.getCore(), params);
+    assertQ("morelike this - harrison ford",mltreq
+        ,"//result/doc[1]/int[@name='id'][.='45']");
 
+    mltreq.close();
   }
 }

@@ -350,6 +350,11 @@ public class SimpleFacets {
   }
 
   public void addFacets() {
+    addFacets( rb.rsp.getValues() );
+  }
+
+
+  public void addFacets(NamedList<Object> parent) {
     SimpleOrderedMap<Object> facet_counts = new SimpleOrderedMap<>();   // version < 2
     SimpleOrderedMap<Object> facets = new SimpleOrderedMap<>();         // version >= 2
 
@@ -372,11 +377,11 @@ public class SimpleFacets {
         facet_counts.add("facet_fields", facet_fields);
         facet_counts.add("facet_dates", facet_dates);
         facet_counts.add("facet_ranges", facet_ranges);
-        rb.rsp.add( "facet_counts", facet_counts );
+        parent.add( "facet_counts", facet_counts );
       }
 
       if (facets.size() > 0) {
-        rb.rsp.add("facets", facets);
+        parent.add("facets", facets);
       }
 
     } catch (IOException e) {
@@ -385,7 +390,6 @@ public class SimpleFacets {
       throw new SolrException(ErrorCode.BAD_REQUEST, e);
     }
   }
-
 
   /**
    * Returns a list of facet counts for each of the facet queries
