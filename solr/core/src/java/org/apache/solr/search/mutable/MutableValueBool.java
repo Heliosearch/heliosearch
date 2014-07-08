@@ -52,7 +52,7 @@ public class MutableValueBool extends MutableValue {
   @Override
   public int compareSameType(Object other) {
     MutableValueBool b = (MutableValueBool) other;
-    if (value != b.value) return value ? 1 : 0;
+    if (value != b.value) return value ? 1 : -1;
     if (exists == b.exists) return 0;
     return exists ? 1 : -1;
   }
