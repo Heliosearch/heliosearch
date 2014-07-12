@@ -62,6 +62,17 @@ public class TestFacetStats extends SolrTestCaseJ4 {
         ,"facets/cat_s=={'stats':{'x':3.0}, 'buckets':[{'val':'B','x':-3.0},{'val':'A','x':6.0}] }"
     );
 
+    // sort asc with limit
+    assertJQ(req("q","*:*", "rows","0", "facet","true"
+            ,"facet.field","cat_s"
+            ,"facet.stat", "x:sum(num_d)"
+            ,"facet.sort", "x asc"
+            ,"facet.limit", "1"
+        )
+        ,"facets/cat_s=={'stats':{'x':3.0}, 'buckets':[{'val':'B','x':-3.0}] }"
+    );
+
+
     // test two
     assertJQ(req("q","*:*", "rows","0", "facet","true"
         ,"facet.field","cat_s"

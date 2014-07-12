@@ -418,7 +418,7 @@ public class SimpleFacetStats implements Closeable {
       // TODO: screen out mincount?  Other filters on stats?
 
       if (bottom != null) {
-        if (sortAcc.compare(bottom.slot, i) < 0) {
+        if (sortAcc.compare(bottom.slot, i) * sortMul < 0) {
           bottom.slot = i;
           bottom = queue.updateTop();
         }
