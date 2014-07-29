@@ -26,14 +26,15 @@ class BitDocSet : public DocSet {
       assert(index >= 0);
       int i = index>>6;
       if (i>=wlen) return -1;
-      uint32_t subIndex = index & 0x3f;      // index within the word
-      uint64_t word = bits[i] >> subIndex;  // skip all the bits to the right of index
+      // gcc will optimize (a<<(x&0x3f)) to (a<<x) on x86.  We should not remove the mask since
+      // the C/C++ standards do not guarantee this behavior for x outside 0..63
+      uint64_t word = bits[i] >> (index & 0x3f);  // skip all the bits to the right of index
 
       if (word!=0) {
         // TODO: we should be able to do even better with some inline ASM
         // to eliminate a conditional.  Although since we already check for 0, the
         // branch should be 100% predictable by the CPU.
-        return (i<<6) + subIndex + ctz64(word);
+        return (i<<6) + (index & 0x3f) + ctz64(word);
       }
 
       while(++i < wlen) {

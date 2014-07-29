@@ -213,8 +213,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     int i = index >> 6;               // div 64
     // signed shift will keep a negative index and force an
     // array-index-out-of-bounds-exception, removing the need for an explicit check.
-    int bit = index & 0x3f;           // mod 64
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;  // this is equivalent to 1L << (index%64)
     return (HS.getLong(array, i) & bitmask) != 0;
   }
 
@@ -225,8 +224,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     int i = index >> 6;               // div 64
     // signed shift will keep a negative index and force an
     // array-index-out-of-bounds-exception, removing the need for an explicit check.
-    int bit = index & 0x3f;           // mod 64
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;   // this is equivalent to 1L << (index%64)
     return (HS.getLong(array, i) & bitmask) != 0;
   }
 
@@ -235,21 +233,18 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
    */
   public int getBit(int index) {
     int i = index >> 6;                // div 64
-    int bit = index & 0x3f;            // mod 64
-    return ((int)(HS.getLong(array,i)>>>bit)) & 0x01;
+    return ((int)(HS.getLong(array,i)>>>index)) & 0x01;
   }
 
   public void fastSet(int index) {
     int wordNum = index >> 6;      // div 64
-    int bit = index & 0x3f;     // mod 64
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;   // this is equivalent to 1L << (index%64)
     HS.setLong(array,wordNum, HS.getLong(array,wordNum) | bitmask);
   }
 
   public void fastClear(int index) {
     int wordNum = index >> 6;
-    int bit = index & 0x03f;
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;   // this is equivalent to 1L << (index%64)
 
     HS.setLong(array, wordNum, HS.getLong(array, wordNum) & ~bitmask);
     // hmmm, it takes one more instruction to clear than it does to set... any
@@ -263,8 +258,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
   public boolean getAndSet(int index) {
     int wordNum = index >> 6;      // div 64
-    int bit = index & 0x3f;     // mod 64
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;   // this is equivalent to 1L << (index%64)
     long word = HS.getLong(array,wordNum) ;
     boolean val = (word & bitmask) != 0;
     HS.setLong(array,wordNum, word | bitmask);
@@ -273,24 +267,21 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
   public int getAndSetBit(int index) {
     int wordNum = index >> 6;      // div 64
-    int bit = index & 0x3f;     // mod 64
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;   // this is equivalent to 1L << (index%64)
     long word = HS.getLong(array,wordNum) ;
     HS.setLong(array,wordNum, word | bitmask);
-    return ((int)(word >>> bit)) & 0x01;
+    return ((int)(word >>> index)) & 0x01;
   }
 
   public void fastFlip(int index) {
     int wordNum = index >> 6;      // div 64
-    int bit = index & 0x3f;     // mod 64
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;    // this is equivalent to 1L << (index%64)
     HS.setLong(array,wordNum, HS.getLong(array,wordNum) ^ bitmask);
   }
 
   public boolean flipAndGet(int index) {
     int wordNum = index >> 6;      // div 64
-    int bit = index & 0x3f;     // mod 64
-    long bitmask = 1L << bit;
+    long bitmask = 1L << index;  // this is equivalent to 1L << (index%64)
     long word = HS.getLong(array,wordNum) ^ bitmask;
     HS.setLong(array, wordNum, word);
     return (word & bitmask) != 0;
@@ -416,11 +407,10 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   public int nextSetBit(int index) {
     int i = index>>6;
     if (i>=wlen) return -1;
-    int subIndex = index & 0x3f;      // index within the word
-    long word = HS.getLong(array, i) >> subIndex;  // skip all the bits to the right of index
+    long word = HS.getLong(array, i) >> index;  // skip all the bits to the right of index
 
     if (word!=0) {
-      return (i<<6) + subIndex + Long.numberOfTrailingZeros(word);
+      return (i<<6) + (index & 0x3f) + Long.numberOfTrailingZeros(word);
     }
 
     while(++i < wlen) {
