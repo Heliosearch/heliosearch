@@ -322,6 +322,27 @@ public class HS
     unsafe.putLong(ptr + (((long) index) << 3), val);
   }
 
+  /** ptr[index] |= val */
+  public static void setLongOR(long ptr, int index, long val) {
+    assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
+    long x = ptr + (((long) index) << 3);
+    unsafe.putLong(x, unsafe.getLong(x) | val);
+  }
+
+  /** ptr[index] &= val */
+  public static void setLongAND(long ptr, int index, long val) {
+    assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
+    long x = ptr + (((long) index) << 3);
+    unsafe.putLong(x, unsafe.getLong(x) & val);
+  }
+
+  /** ptr[index] ^= val */
+  public static void setLongXOR(long ptr, int index, long val) {
+    assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
+    long x = ptr + (((long) index) << 3);
+    unsafe.putLong(x, unsafe.getLong(x) ^ val);
+  }
+
   public static double getDouble(long ptr, int index) {
     assert (index>=0) && ((((long)index+1)<<3)) <= arraySizeBytes(ptr);
     return unsafe.getDouble(ptr + (((long) index) << 3));
@@ -416,6 +437,11 @@ public class HS
     long nbytes = ((long)numElements);
     assert srcOff>=0 && targetOff>=0 && (targetOff + nbytes) <= arraySizeBytes(targetPointer);
     unsafe.copyMemory(srcArray, Unsafe.ARRAY_BYTE_BASE_OFFSET + (((long)srcOff)), null, targetPointer+targetOff, nbytes);
+  }
+
+  public static void copyBytes(long srcPointer, long srcOff, byte[] target, int targetOff,  int numBytes) {
+    assert srcOff>=0 && targetOff>=0 && (targetOff + numBytes) <= target.length && (srcOff + numBytes) <= arraySizeBytes(srcPointer);
+    unsafe.copyMemory(null, srcPointer + srcOff, target, Unsafe.ARRAY_BYTE_BASE_OFFSET + targetOff, numBytes);
   }
 
   public static void copyBytes(long srcPointer, long srcOff, long targetPointer, long targetOff,  long numBytes) {

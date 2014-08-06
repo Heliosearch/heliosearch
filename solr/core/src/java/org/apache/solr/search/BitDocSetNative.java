@@ -239,14 +239,14 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   public void fastSet(int index) {
     int wordNum = index >> 6;      // div 64
     long bitmask = 1L << index;   // this is equivalent to 1L << (index%64)
-    HS.setLong(array,wordNum, HS.getLong(array,wordNum) | bitmask);
+    HS.setLongOR(array,wordNum,bitmask);
   }
 
   public void fastClear(int index) {
     int wordNum = index >> 6;
     long bitmask = 1L << index;   // this is equivalent to 1L << (index%64)
 
-    HS.setLong(array, wordNum, HS.getLong(array, wordNum) & ~bitmask);
+    HS.setLongAND(array, wordNum, ~bitmask);
     // hmmm, it takes one more instruction to clear than it does to set... any
     // way to work around this?  If there were only 63 bits per word, we could
     // use a right shift of 10111111...111 in binary to position the 0 in the
@@ -276,7 +276,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   public void fastFlip(int index) {
     int wordNum = index >> 6;      // div 64
     long bitmask = 1L << index;    // this is equivalent to 1L << (index%64)
-    HS.setLong(array,wordNum, HS.getLong(array,wordNum) ^ bitmask);
+    HS.setLongXOR(array,wordNum, bitmask);
   }
 
   public boolean flipAndGet(int index) {
@@ -306,17 +306,17 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     long endmask = -1L >>> -endIndex;  // 64-(endIndex&0x3f) is the same as -endIndex due to wrap
 
     if (startWord == endWord) {
-      HS.setLong(array, startWord, HS.getLong(array, startWord) ^ (startmask & endmask) );
+      HS.setLongXOR(array, startWord,(startmask & endmask) );
       return;
     }
 
-    HS.setLong(array, startWord, HS.getLong(array, startWord) ^ startmask);
+    HS.setLongXOR(array, startWord, startmask);
 
     for (int i=startWord+1; i<endWord; i++) {
       HS.setLong(array, i, ~HS.getLong(array, i));
     }
 
-    HS.setLong(array, endWord, HS.getLong(array, endWord) ^ endmask);
+    HS.setLongXOR(array, endWord, endmask);
   }
 
   /** @return the number of set bits */
@@ -442,7 +442,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     }
 
     if (word != 0) {
-      return (i << 6) + subIndex - Long.numberOfLeadingZeros(word); // See LUCENE-3197
+      return (i << 6) + subIndex - Long.numberOfLeadingZeros(word);
     }
 
     while (--i >= 0) {
