@@ -208,6 +208,17 @@ public class TestSolrQueryParser extends SolrTestCaseJ4 {
   @Test
   public void testFilter() throws Exception {
 
+    // normal test "solrconfig.xml" has autowarm set to 2...
+    for (int i=0; i<10; i++) {
+      assertJQ(req("q","*:* "+ i, "fq","filter(just_to_clear_the_cache) filter(id:10000" + i + ") filter(id:10001" + i + ")")
+        ,"/response/numFound==0"
+      );
+    }
+    assertU(adoc("id","777"));
+    delI("777");
+    assertU(commit());  // arg... commit no longer "commits" unless there has been a change.
+
+
     final SolrInfoMBean filterCacheStats
         = h.getCore().getInfoRegistry().get("filterCache");
     assertNotNull(filterCacheStats);
@@ -215,6 +226,7 @@ public class TestSolrQueryParser extends SolrTestCaseJ4 {
         = h.getCore().getInfoRegistry().get("queryResultCache");
 
     assertNotNull(queryCacheStats);
+
 
     long inserts = (Long) filterCacheStats.getStatistics().get("inserts");
     long hits = (Long) filterCacheStats.getStatistics().get("hits");
