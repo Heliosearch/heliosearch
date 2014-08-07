@@ -19,6 +19,7 @@ package org.apache.solr.search;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.SolrInfoMBean;
+import org.apache.solr.query.TermsQParserPlugin;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.join.BlockJoinChildQParserPlugin;
 import org.apache.solr.search.join.BlockJoinParentQParserPlugin;
@@ -61,7 +62,8 @@ public abstract class QParserPlugin implements NamedListInitializedPlugin, SolrI
     CollapsingQParserPlugin.NAME, CollapsingQParserPlugin.class,
     SimpleQParserPlugin.NAME, SimpleQParserPlugin.class,
     ComplexPhraseQParserPlugin.NAME, ComplexPhraseQParserPlugin.class,
-    ReRankQParserPlugin.NAME, ReRankQParserPlugin.class
+    ReRankQParserPlugin.NAME, ReRankQParserPlugin.class,
+    TermsQParserPlugin.NAME, TermsQParserPlugin.class
   };
 
   /** return a {@link QParser} */

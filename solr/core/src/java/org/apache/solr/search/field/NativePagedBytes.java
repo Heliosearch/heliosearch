@@ -19,6 +19,7 @@ package org.apache.solr.search.field;
 
 
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.common.SolrException;
 import org.apache.solr.core.HS;
 
 import java.io.Closeable;
@@ -49,6 +50,24 @@ public final class NativePagedBytes implements Closeable {
     return bytesUsedInPrevBlocks + upto;
   }
 
+  public void appendByte(byte singleByte) {
+    if (upto >= blockSize) {
+      newblock();
+    }
+    HS.setByte(currentBlock, upto, singleByte);
+    upto++;
+  }
+
+  private void newblock() {
+    if (currentBlock != 0) {
+      blocks.add(currentBlock);
+      blockEnd.add(upto);
+    }
+    bytesUsedInPrevBlocks += upto;
+    currentBlock = HS.allocArray(blockSize, 1, false);
+    upto = 0;
+  }
+
   public void copyUsingLengthPrefix(BytesRef bytes) {
     if (bytes.length >= blockSize) {
       throw new IllegalArgumentException("max length is " + blockSize + " (got " + bytes.length + ")");
@@ -58,13 +77,7 @@ public final class NativePagedBytes implements Closeable {
       if (bytes.length + 2 > blockSize) {
         throw new IllegalArgumentException("block size " + blockSize + " is too small to store length " + bytes.length + " bytes");
       }
-      if (currentBlock != 0) {
-        blocks.add(currentBlock);
-        blockEnd.add(upto);
-      }
-      bytesUsedInPrevBlocks += upto;
-      currentBlock = HS.allocArray(blockSize, 1, false);
-      upto = 0;
+      newblock();
     }
 
     // TODO: implement in HS for better efficiency?
@@ -100,6 +113,29 @@ public final class NativePagedBytes implements Closeable {
     assert pos == sz;
     return arr;
   }
+
+  public byte[] buildByteArray() {
+    long sz = getUsedSize();
+    if (sz >= Integer.MAX_VALUE) {
+      throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "byte array size exceeded: " + sz);
+    }
+    byte[] arr = new byte[(int)sz];
+    long pos = 0;
+    for (int i=0; i<blocks.size(); i++) {
+      long block = blocks.get(i);
+      long used = blockEnd.get(i);
+      HS.copyBytes(block, 0, arr, (int)pos, (int)used);
+      pos += used;
+    }
+    if (currentBlock != 0) {
+      HS.copyBytes(currentBlock, 0, arr, (int)pos, upto);
+      pos += upto;
+    }
+    assert pos == sz;
+    return arr;
+  }
+
+
 
   @Override
   public void close() throws IOException {

@@ -27,6 +27,7 @@ import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.core.HS;
 
+import java.io.IOException;
 
 
 public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable  {
@@ -111,6 +112,65 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
       public float score() {
         return 0.0f;
+      }
+    };
+  }
+
+  public  DocIdSetIterator docIterator() {
+    return new DocIdSetIterator() {
+      int pos = -1;
+
+      @Override
+      public int docID() {
+        return pos;
+      }
+
+      @Override
+      public int nextDoc() throws IOException {
+        pos = nextSetBit(pos + 1);
+        if (pos == -1) pos = DocIdSetIterator.NO_MORE_DOCS;
+        return pos;
+      }
+
+      @Override
+      public int advance(int target) throws IOException {
+        pos = target - 1;
+        return nextDoc();
+      }
+
+      @Override
+      public long cost() {
+        // we don't want to actually compute cardinality, but
+        // if its already been computed, we use it (pro-rated for the segment)
+        if (size != -1) {
+          return size;
+        } else {
+          return capacity()>>1;  // estimate 50% full...
+        }
+      }
+    };
+  }
+
+  public DocIdSet getDocIdSet() {
+    return new DocIdSet() {
+      @Override
+      public Bits bits() throws IOException {
+        return BitDocSetNative.this;
+      }
+
+      @Override
+      public boolean isCacheable() {
+        return false;
+      }
+
+      @Override
+      public long ramBytesUsed() {
+        return memSize();
+      }
+
+      @Override
+      public DocIdSetIterator iterator() throws IOException {
+        return docIterator();
       }
     };
   }
@@ -276,7 +336,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
   public void fastFlip(int index) {
     int wordNum = index >> 6;      // div 64
     long bitmask = 1L << index;    // this is equivalent to 1L << (index%64)
-    HS.setLongXOR(array,wordNum, bitmask);
+    HS.setLongXOR(array, wordNum, bitmask);
   }
 
   public boolean flipAndGet(int index) {
@@ -306,7 +366,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     long endmask = -1L >>> -endIndex;  // 64-(endIndex&0x3f) is the same as -endIndex due to wrap
 
     if (startWord == endWord) {
-      HS.setLongXOR(array, startWord,(startmask & endmask) );
+      HS.setLongXOR(array, startWord, (startmask & endmask));
       return;
     }
 

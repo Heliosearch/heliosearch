@@ -1,9 +1,18 @@
 package org.apache.solr.search;
 
-import org.apache.lucene.search.*;
-import org.apache.lucene.util.Bits;
-import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.search.ComplexExplanation;
+import org.apache.lucene.search.ConstantScoreQuery;
+import org.apache.lucene.search.DocIdSet;
+import org.apache.lucene.search.DocIdSetIterator;
+import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.Filter;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.Scorer;
+import org.apache.lucene.search.Weight;
+import org.apache.lucene.util.Bits;
 import org.apache.solr.common.SolrException;
 
 import java.io.IOException;
@@ -33,7 +42,7 @@ import java.util.Set;
  *
  * Experimental and subject to change.
  */
-public class SolrConstantScoreQuery extends ConstantScoreQuery implements ExtendedQuery {
+public class SolrConstantScoreQuery extends ConstantScoreQuery implements ExtendedQuery, DocSetProducer {
   boolean cache = true;  // cache by default
   int cost;
 
@@ -87,6 +96,16 @@ public class SolrConstantScoreQuery extends ConstantScoreQuery implements Extend
     // OK to not add any terms when used for MultiSearcher,
     // but may not be OK for highlighting
   }
+
+  @Override
+  public DocSet createDocSet(QueryContext queryContext) throws IOException {
+    if (filter instanceof DocSetProducer) {
+      return ((DocSetProducer)filter).createDocSet(queryContext);
+    } else {
+      return DocSetUtil.createDocSet(queryContext, filter);
+    }
+  }
+
 
   protected class ConstantWeight extends Weight {
     private float queryNorm;

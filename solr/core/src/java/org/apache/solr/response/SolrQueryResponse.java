@@ -240,7 +240,13 @@ public class SolrQueryResponse {
       if (name != null) {
         sb.append(name).append('=');
       }
-      sb.append(val).append(' ');
+      if (val instanceof CharSequence && ((CharSequence)val).length()>500) {
+        CharSequence chars = (CharSequence)val;
+        sb.append(chars.subSequence(0, 500));
+        sb.append("[..." + (chars.length() - 500) + " more chars]");
+      } else {
+        sb.append(val).append(' ');
+      }
     }
     return sb.toString();
   }

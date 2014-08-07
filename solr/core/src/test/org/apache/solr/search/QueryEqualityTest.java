@@ -917,6 +917,8 @@ public class QueryEqualityTest extends SolrTestCaseJ4 {
     assertFuncEquals("sumsq(foo_i)", "sumsq(foo_i)");
     assertFuncEquals("stdev(foo_i)", "stdev(foo_i)");
     assertFuncEquals("multistat(foo_i)", "multistat(foo_i)");
+
+    assertQueryEquals("terms", "{!terms f=foo_i}10,20,30,-10,-20,-30", "{!terms f=foo_i}10,20,30,-10,-20,-30");
   }
 
 }
