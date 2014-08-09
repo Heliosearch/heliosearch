@@ -274,6 +274,22 @@ public class SolrQuery extends ModifiableSolrParams
     return this;
   }
 
+  /** 
+   * Add a stats facet
+   * 
+   * @param fields Array of field names from the IndexSchema
+   * @return this
+   */
+  public SolrQuery addFacetStat(String ... fields) {
+    add(FacetParams.FACET_STAT, fields);
+    this.set(FacetParams.FACET, true);
+    return this;
+  }
+  
+  public String[] getFacetStats(){
+          return this.getParams(FacetParams.FACET_STAT);  
+  }
+  
   /** get the facet fields
    * 
    * @return string array of facet fields or null if not set/empty

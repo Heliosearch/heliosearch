@@ -253,6 +253,11 @@ public interface FacetParams {
    * @see FacetRangeInclude
    */
   public static final String FACET_RANGE_INCLUDE = FACET_RANGE + ".include";
+  
+  /**
+   * Aggregated Functions support: http://heliosearch.org/solr-facet-functions/
+   */
+  public static final String FACET_STAT = FACET + ".stat";
 
 
   /**
