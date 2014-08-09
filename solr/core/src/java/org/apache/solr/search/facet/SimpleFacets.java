@@ -51,6 +51,7 @@ import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.core.HS;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.request.DocValuesFacets;
+import org.apache.solr.request.IntervalFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.BoolField;
 import org.apache.solr.schema.DateField;
@@ -108,6 +109,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.solr.request.IntervalFacets.FacetInterval;
 
 /**
  * SimpleFacets for Heliosearch
@@ -371,12 +374,15 @@ public class SimpleFacets {
       // old style only for facet.date
       NamedList<Object> facet_dates = getFacetDateCounts();
 
-      if (facet_queries.size() + facet_fields.size() + facet_dates.size() + facet_ranges.size() > 0 || facets.size()==0) {
+      NamedList<Object> facet_intervals = getFacetIntervalCounts();
+
+      if (facet_queries.size() + facet_fields.size() + facet_dates.size() + facet_ranges.size() +facet_intervals.size() > 0 || facets.size()==0 ) {
         // we also add this empty info if there are no v2 facets since distrib search testing expects this empty facet info
         facet_counts.add("facet_queries", facet_queries);
         facet_counts.add("facet_fields", facet_fields);
         facet_counts.add("facet_dates", facet_dates);
         facet_counts.add("facet_ranges", facet_ranges);
+        facet_counts.add("facet_intervals", getFacetIntervalCounts());
         parent.add( "facet_counts", facet_counts );
       }
 
@@ -448,8 +454,7 @@ public class SimpleFacets {
    * @see org.apache.solr.common.params.FacetParams#FACET_QUERY
    */
   public int getGroupedFacetQueryCount(Query facetQuery) throws IOException {
-    GroupingSpecification groupingSpecification = rb.getGroupingSpec();
-    String groupField  = groupingSpecification != null ? groupingSpecification.getFields()[0] : null;
+    String groupField = params.get(GroupParams.GROUP_FIELD);
     if (groupField == null) {
       throw new SolrException (
           ErrorCode.BAD_REQUEST,
@@ -1938,6 +1943,45 @@ public class SimpleFacets {
       return dmp.parseMath(gap);
     }
   }
-  
+
+  /**
+   * Returns a <code>NamedList</code> with each entry having the "key" of the interval as name and the count of docs
+   * in that interval as value. All intervals added in the request are included in the returned
+   * <code>NamedList</code> (included those with 0 count), and it's required that the order of the intervals
+   * is deterministic and equals in all shards of a distributed request, otherwise the collation of results
+   * will fail.
+   *
+   */
+  public NamedList<Object> getFacetIntervalCounts() throws IOException, SyntaxError {
+    NamedList<Object> res = new SimpleOrderedMap<Object>();
+    String[] fields = params.getParams(FacetParams.FACET_INTERVAL);
+    if (fields == null || fields.length == 0) return res;
+
+    for (String field : fields) {
+      try {
+        parseParams(FacetParams.FACET_INTERVAL, field);
+        String[] intervalStrs = required.getFieldParams(field, FacetParams.FACET_INTERVAL_SET);
+        SchemaField schemaField = searcher.getCore().getLatestSchema().getField(field);
+        if (!schemaField.hasDocValues()) {
+          throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Interval Faceting only on fields with doc values");
+        }
+        if (params.getBool(GroupParams.GROUP_FACET, false)) {
+          throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Interval Faceting can't be used with " + GroupParams.GROUP_FACET);
+        }
+
+        SimpleOrderedMap<Integer> fieldResults = new SimpleOrderedMap<Integer>();
+        res.add(field, fieldResults);
+        IntervalFacets intervalFacets = new IntervalFacets(schemaField, searcher, docs, intervalStrs, params);
+        for (FacetInterval interval : intervalFacets) {
+          fieldResults.add(interval.getKey(), interval.getCount());
+        }
+      } finally {
+        cleanup();
+      }
+    }
+
+    return res;
+  }
+
 }
 

@@ -20,13 +20,10 @@ package org.apache.lucene.spatial;
 
 import com.spatial4j.core.context.SpatialContext;
 import com.spatial4j.core.shape.Shape;
-import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.codecs.lucene45.Lucene45DocValuesFormat;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.function.FunctionQuery;
 import org.apache.lucene.queries.function.ValueSource;
@@ -38,9 +35,6 @@ import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.spatial.query.SpatialArgs;
 import org.apache.lucene.spatial.query.SpatialArgsParser;
 import org.apache.lucene.spatial.query.SpatialOperation;
-import org.apache.lucene.spatial.serialized.SerializedDVStrategy;
-import org.apache.lucene.util.TestUtil;
-import org.junit.Assert;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -51,8 +45,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -231,6 +223,7 @@ public abstract class StrategyTestCase extends SpatialTestCase {
 //    }
 //    CheckHits.checkHits(random(), q, "", indexSearcher, expectedDocs);
 
+    //TopDocs is sorted but we actually don't care about the order
     TopDocs docs = indexSearcher.search(q, 1000);//calculates the score
     for (int i = 0; i < docs.scoreDocs.length; i++) {
       ScoreDoc gotSD = docs.scoreDocs[i];
@@ -241,19 +234,20 @@ public abstract class StrategyTestCase extends SpatialTestCase {
     CheckHits.checkExplanations(q, "", indexSearcher);
   }
 
-  protected void assertOperation(Map<String,Shape> indexedDocs,
-                                 SpatialOperation operation, Shape queryShape) {
-    //Generate truth via brute force
-    Set<String> expectedIds = new HashSet<>();
-    for (Map.Entry<String, Shape> stringShapeEntry : indexedDocs.entrySet()) {
-      if (operation.evaluate(stringShapeEntry.getValue(), queryShape))
-        expectedIds.add(stringShapeEntry.getKey());
-    }
-
-    SpatialTestQuery testQuery = new SpatialTestQuery();
-    testQuery.args = new SpatialArgs(operation, queryShape);
-    testQuery.ids = new ArrayList<>(expectedIds);
-    runTestQuery(SpatialMatchConcern.FILTER, testQuery);
+  protected void testOperation(Shape indexedShape, SpatialOperation operation,
+                               Shape queryShape, boolean match) throws IOException {
+    assertTrue("Faulty test",
+        operation.evaluate(indexedShape, queryShape) == match ||
+            indexedShape.equals(queryShape) &&
+              (operation == SpatialOperation.Contains || operation == SpatialOperation.IsWithin));
+    adoc("0", indexedShape);
+    commit();
+    Query query = strategy.makeQuery(new SpatialArgs(operation, queryShape));
+    SearchResults got = executeQuery(query, 1);
+    assert got.numFound <= 1 : "unclean test env";
+    if ((got.numFound == 1) != match)
+      fail(operation+" I:" + indexedShape + " Q:" + queryShape);
+    deleteAll();//clean up after ourselves
   }
 
 }

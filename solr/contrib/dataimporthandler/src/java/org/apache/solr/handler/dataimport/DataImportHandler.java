@@ -83,6 +83,10 @@ public class DataImportHandler extends RequestHandlerBase implements
 
   private static final String PARAM_WRITER_IMPL = "writerImpl";
   private static final String DEFAULT_WRITER_NAME = "SolrWriter";
+
+  public DataImporter getImporter() {
+    return this.importer;
+  }
   
   @Override
   @SuppressWarnings("unchecked")
@@ -155,6 +159,14 @@ public class DataImportHandler extends RequestHandlerBase implements
         rsp.add(RawResponseWriter.CONTENT, content);
       }
       return;
+    }
+
+    Map<String, DataImportHandler> requestHandlers = req.getCore().getRequestHandlers(DataImportHandler.class);
+    for (Map.Entry<String, DataImportHandler> entry : requestHandlers.entrySet()) {
+      if (this == entry.getValue()) {
+        DataImportHandler handler = entry.getValue();
+        System.out.println("This is me! = " + handler.getName());
+      }
     }
 
     rsp.add("initArgs", initArgs);
@@ -318,7 +330,7 @@ public class DataImportHandler extends RequestHandlerBase implements
 
   @Override
   public String getSource() {
-    return "$URL$";
+    return null;
   }
 
   public static final String ENABLE_DEBUG = "enableDebug";

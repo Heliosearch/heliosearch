@@ -918,6 +918,8 @@
 
             heartbeat="${tests.heartbeat}"
             uniqueSuiteNames="false"
+            
+            debugstream="false"
         >
             <!-- Classpaths. -->
             <classpath refid="@{junit.classpath}"/>
@@ -2013,6 +2015,15 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
     </sequential>
   </macrodef>
 
+  <target name="check-javadocs-uptodate">
+    <uptodate property="javadocs-uptodate-${name}" targetfile="${build.dir}/${final.name}-javadoc.jar">
+      <srcfiles dir="${src.dir}">
+        <include name="**/*.java"/>
+        <include name="**/*.html"/>
+      </srcfiles>
+    </uptodate>
+  </target>
+
   <macrodef name="modules-crawl">
     <attribute name="target" default=""/>
     <attribute name="failonerror" default="true"/>
@@ -2197,7 +2208,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
 
   <!-- JFlex task -->
   <target name="-install-jflex" unless="jflex.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="de.jflex" module="jflex" revision="1.5.1"
+    <ivy:cachepath organisation="de.jflex" module="jflex" revision="1.6.0"
                    inline="true" conf="default" transitive="true" pathid="jflex.classpath"/>
     <taskdef name="jflex" classname="jflex.anttask.JFlexTask" classpathref="jflex.classpath"/>
     <property name="jflex.loaded" value="true"/>
@@ -2219,7 +2230,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
   <property name="forbidden-sysout-excludes" value=""/>
   
   <target name="-install-forbidden-apis" unless="forbidden-apis.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="de.thetaphi" module="forbiddenapis" revision="1.5.1"
+    <ivy:cachepath organisation="de.thetaphi" module="forbiddenapis" revision="1.6.1"
       inline="true" conf="default" transitive="true" pathid="forbidden-apis.classpath"/>
     <taskdef name="forbidden-apis" classname="de.thetaphi.forbiddenapis.AntTask" classpathref="forbidden-apis.classpath"/>
     <property name="forbidden-apis.loaded" value="true"/>

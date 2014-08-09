@@ -54,7 +54,7 @@
 
   <path id="classpath">
     <pathelement location="${common-solr.dir}/build/contrib/solr-dataimporthandler/classes/java"/>
-    <fileset dir="${common-solr.dir}/contrib/dataimporthandler/lib" excludes="${common.classpath.excludes}"/>
+    <fileset dir="${common-solr.dir}/contrib/dataimporthandler-extras/lib" excludes="${common.classpath.excludes}"/>
     <fileset dir="${common-solr.dir}/contrib/extraction/lib" excludes="${common.classpath.excludes}"/>
     <path refid="solr.base.classpath"/>
   </path>
@@ -67,7 +67,7 @@
   </path>
 
   <!-- TODO: make this nicer like lucene? -->
-  <target name="javadocs" depends="compile-core,define-lucene-javadoc-url,lucene-javadocs,javadocs-solr-core,javadocs-dataimporthandler">
+  <target name="javadocs" depends="compile-core,define-lucene-javadoc-url,lucene-javadocs,javadocs-solr-core,javadocs-dataimporthandler,check-javadocs-uptodate" unless="javadocs-uptodate-${name}">
         <sequential>
       <mkdir dir="${javadoc.dir}/${name}"/>
       <solr-invoke-javadoc>

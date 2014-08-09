@@ -153,7 +153,8 @@ final class SegmentTermsEnumFrame {
     entCount = code >>> 1;
     assert entCount > 0;
     isLastInFloor = (code & 1) != 0;
-    assert arc == null || (isLastInFloor || isFloor);
+
+    assert arc == null || (isLastInFloor || isFloor): "fp=" + fp + " arc=" + arc + " isFloor=" + isFloor + " isLastInFloor=" + isLastInFloor;
 
     // TODO: if suffixes were stored in random-access
     // array structure, then we could do binary search
@@ -222,6 +223,7 @@ final class SegmentTermsEnumFrame {
     if (isFloor) {
       floorDataReader.rewind();
       numFollowFloorBlocks = floorDataReader.readVInt();
+      assert numFollowFloorBlocks > 0;
       nextFloorLabel = floorDataReader.readByte() & 0xff;
     }
 
@@ -551,19 +553,6 @@ final class SegmentTermsEnumFrame {
           // return NOT_FOUND:
           fillTerm();
 
-          if (!exactOnly && !ste.termExists) {
-            // We are on a sub-block, and caller wants
-            // us to position to the next term after
-            // the target, so we must recurse into the
-            // sub-frame(s):
-            ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, termLen);
-            ste.currentFrame.loadBlock();
-            while (ste.currentFrame.next()) {
-              ste.currentFrame = ste.pushFrame(null, ste.currentFrame.lastSubFP, ste.term.length);
-              ste.currentFrame.loadBlock();
-            }
-          }
-                
           //if (DEBUG) System.out.println("        not found");
           return SeekStatus.NOT_FOUND;
         } else if (stop) {

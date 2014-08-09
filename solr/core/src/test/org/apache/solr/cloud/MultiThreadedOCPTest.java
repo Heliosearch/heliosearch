@@ -34,16 +34,18 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests the Multi threaded Collections API.
  */
 public class MultiThreadedOCPTest extends AbstractFullDistribZkTestBase {
 
+  private static final int REQUEST_STATUS_TIMEOUT = 5 * 60;
   private static Logger log = LoggerFactory
       .getLogger(MultiThreadedOCPTest.class);
 
-  private static int NUM_COLLECTIONS = 4;
+  private static final int NUM_COLLECTIONS = 4;
 
   @Before
   @Override
@@ -98,7 +100,7 @@ public class MultiThreadedOCPTest extends AbstractFullDistribZkTestBase {
     }
     assertTrue("More than one tasks were supposed to be running in parallel but they weren't.", pass);
     for(int i=1;i<=NUM_COLLECTIONS;i++) {
-      String state = getRequestStateAfterCompletion(i + "", 30, server);
+      String state = getRequestStateAfterCompletion(i + "", REQUEST_STATUS_TIMEOUT, server);
       assertTrue("Task " + i + " did not complete, final state: " + state,state.equals("completed"));
     }
   }
@@ -127,7 +129,7 @@ public class MultiThreadedOCPTest extends AbstractFullDistribZkTestBase {
       
       assertTrue("Mutual exclusion failed. Found more than one task running for the same collection", runningTasks < 2);
 
-      if(completedTasks == 2 || iterations++ > 90)
+      if(completedTasks == 2 || iterations++ > REQUEST_STATUS_TIMEOUT)
         break;
 
       try {
@@ -138,7 +140,7 @@ public class MultiThreadedOCPTest extends AbstractFullDistribZkTestBase {
       }
     }
     for (int i=1001;i<=1002;i++) {
-      String state = getRequestStateAfterCompletion(i + "", 30, server);
+      String state = getRequestStateAfterCompletion(i + "", REQUEST_STATUS_TIMEOUT, server);
       assertTrue("Task " + i + " did not complete, final state: " + state,state.equals("completed"));
     }
   }
@@ -150,14 +152,14 @@ public class MultiThreadedOCPTest extends AbstractFullDistribZkTestBase {
     CollectionAdminRequest.splitShard("ocptest_shardsplit2", SHARD1, server, "3001");
     CollectionAdminRequest.splitShard("ocptest_shardsplit2", SHARD2, server, "3002");
 
-    // Now submit another task with the same id. At this time, hopefully the previous 2002 should still be in the queue.
+    // Now submit another task with the same id. At this time, hopefully the previous 3002 should still be in the queue.
     CollectionAdminResponse response = CollectionAdminRequest.splitShard("ocptest_shardsplit2", SHARD1, server, "3002");
     NamedList r = response.getResponse();
     assertEquals("Duplicate request was supposed to exist but wasn't found. De-duplication of submitted task failed.",
         "Task with the same requestid already exists.", r.get("error"));
 
     for (int i=3001;i<=3002;i++) {
-      String state = getRequestStateAfterCompletion(i + "", 30, server);
+      String state = getRequestStateAfterCompletion(i + "", REQUEST_STATUS_TIMEOUT, server);
       assertTrue("Task " + i + " did not complete, final state: " + state,state.equals("completed"));
     }
   }
@@ -224,7 +226,9 @@ public class MultiThreadedOCPTest extends AbstractFullDistribZkTestBase {
   private String getRequestStateAfterCompletion(String requestId, int waitForSeconds, SolrServer server)
       throws IOException, SolrServerException {
     String state = null;
-    while(waitForSeconds-- > 0) {
+    long maxWait = System.nanoTime() + TimeUnit.NANOSECONDS.convert(waitForSeconds, TimeUnit.SECONDS);
+
+    while (System.nanoTime() < maxWait)  {
       state = getRequestState(requestId, server);
       if(state.equals("completed") || state.equals("failed"))
         return state;
@@ -233,6 +237,7 @@ public class MultiThreadedOCPTest extends AbstractFullDistribZkTestBase {
       } catch (InterruptedException e) {
       }
     }
+
     return state;
   }
 

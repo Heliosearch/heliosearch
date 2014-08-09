@@ -173,6 +173,7 @@
       <pathelement path="${facet.jar}"/>
       <pathelement path="${spatial.jar}"/>
       <pathelement path="${queries.jar}"/>
+      <pathelement path="${codecs.jar}"/>
       <path refid="base.classpath"/>
       <fileset dir="lib"/>
     </path>
@@ -183,7 +184,8 @@
     </path>
 
     <target name="javadocs" depends="javadocs-memory,javadocs-highlighter,javadocs-analyzers-common,
-      javadocs-queryparser,javadocs-facet,javadocs-spatial,compile-core">
+      javadocs-queryparser,javadocs-facet,javadocs-spatial,compile-core,check-javadocs-uptodate" 
+            unless="javadocs-uptodate-${name}">
     <invoke-module-javadoc>
       <links>
         <link href="../memory"/>
@@ -274,7 +276,7 @@
       <echo>Benchmark output in JIRA table format is in file: ${shingle.jira.output.file}</echo>
     </target>
 
-    <target name="init" depends="module-build.init,jar-memory,jar-highlighter,jar-analyzers-common,jar-queryparser,jar-facet,jar-spatial"/>
+    <target name="init" depends="module-build.init,jar-memory,jar-highlighter,jar-analyzers-common,jar-queryparser,jar-facet,jar-spatial,jar-codecs"/>
   
     <target name="compile-test" depends="copy-alg-files-for-testing,module-build.compile-test"/>
     <target name="copy-alg-files-for-testing" description="copy .alg files as resources for testing">

@@ -17,6 +17,7 @@ package org.apache.lucene.store;
  * limitations under the License.
  */
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -229,6 +230,72 @@ public abstract class BaseDirectoryTestCase extends LuceneTestCase {
     dir.close();
   }
   
+  public void testZInt() throws Exception {
+    final int[] ints = new int[random().nextInt(10)];
+    for (int i = 0; i < ints.length; ++i) {
+      switch (random().nextInt(3)) {
+        case 0:
+          ints[i] = random().nextInt();
+          break;
+        case 1:
+          ints[i] = random().nextBoolean() ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+          break;
+        case 2:
+          ints[i] = (random().nextBoolean() ? -1 : 1) * random().nextInt(1024);
+          break;
+        default:
+          throw new AssertionError();
+      }
+    }
+    Directory dir = getDirectory(createTempDir("testZInt"));
+    IndexOutput output = dir.createOutput("zint", newIOContext(random()));
+    for (int i : ints) {
+      output.writeZInt(i);
+    }
+    output.close();
+    
+    IndexInput input = dir.openInput("zint", newIOContext(random()));
+    for (int i : ints) {
+      assertEquals(i, input.readZInt());
+    }
+    assertEquals(input.length(), input.getFilePointer());
+    input.close();
+    dir.close();
+  }
+  
+  public void testZLong() throws Exception {
+    final long[] longs = new long[random().nextInt(10)];
+    for (int i = 0; i < longs.length; ++i) {
+      switch (random().nextInt(3)) {
+        case 0:
+          longs[i] = random().nextLong();
+          break;
+        case 1:
+          longs[i] = random().nextBoolean() ? Long.MIN_VALUE : Long.MAX_VALUE;
+          break;
+        case 2:
+          longs[i] = (random().nextBoolean() ? -1 : 1) * random().nextInt(1024);
+          break;
+        default:
+          throw new AssertionError();
+      }
+    }
+    Directory dir = getDirectory(createTempDir("testZLong"));
+    IndexOutput output = dir.createOutput("zlong", newIOContext(random()));
+    for (long l : longs) {
+      output.writeZLong(l);
+    }
+    output.close();
+    
+    IndexInput input = dir.openInput("zlong", newIOContext(random()));
+    for (long l : longs) {
+      assertEquals(l, input.readZLong());
+    }
+    assertEquals(input.length(), input.getFilePointer());
+    input.close();
+    dir.close();
+  }
+
   public void testStringSet() throws Exception {
     Directory dir = getDirectory(createTempDir("testStringSet"));
     IndexOutput output = dir.createOutput("stringset", newIOContext(random()));
@@ -439,6 +506,56 @@ public abstract class BaseDirectoryTestCase extends LuceneTestCase {
     dir.close();
   }
 
+  public void testSeekPastEOF() throws Exception {
+    Directory dir = getDirectory(createTempDir("testSeekPastEOF"));
+    IndexOutput o = dir.createOutput("out", newIOContext(random()));
+    final int len = random().nextInt(2048);
+    byte[] b = new byte[len];
+    o.writeBytes(b, 0, len);
+    o.close();
+    IndexInput i = dir.openInput("out", newIOContext(random()));
+    try {
+      i.seek(len + random().nextInt(2048));
+      i.readByte();
+      fail("Did not get EOFException");
+    } catch (EOFException eof) {
+      // pass
+    }
+    i.close();
+    dir.close();
+  }
+
+  public void testSliceOutOfBounds() throws Exception {
+    Directory dir = getDirectory(createTempDir("testSliceOutOfBounds"));
+    IndexOutput o = dir.createOutput("out", newIOContext(random()));
+    final int len = random().nextInt(2040) + 8;
+    byte[] b = new byte[len];
+    o.writeBytes(b, 0, len);
+    o.close();
+    IndexInput i = dir.openInput("out", newIOContext(random()));
+    try {
+      i.slice("slice1", 0, len + 1);
+      fail("Did not get IllegalArgumentException");
+    } catch (IllegalArgumentException iae) {
+      // pass
+    }
+    try {
+      i.slice("slice2", -1, len);
+      fail("Did not get IllegalArgumentException");
+    } catch (IllegalArgumentException iae) {
+      // pass
+    }
+    IndexInput slice = i.slice("slice3", 4, len / 2);
+    try {
+      slice.slice("slice3sub", 1, len / 2);
+      fail("Did not get IllegalArgumentException");
+    } catch (IllegalArgumentException iae) {
+      // pass
+    }
+    i.close();
+    dir.close();    
+  }
+  
   // LUCENE-3382 -- make sure we get exception if the directory really does not exist.
   public void testNoDir() throws Throwable {
     File tempDir = createTempDir("doesnotexist");
@@ -860,6 +977,53 @@ public abstract class BaseDirectoryTestCase extends LuceneTestCase {
       }
       padded.close();
     }
+    input.close();
+    dir.close();
+  }
+  
+  /** try to stress slices of slices */
+  public void testSliceOfSlice() throws Exception {
+    Directory dir = getDirectory(createTempDir("sliceOfSlice"));
+    IndexOutput output = dir.createOutput("bytes", newIOContext(random()));
+    int num = TestUtil.nextInt(random(), 50, 2500);
+    byte bytes[] = new byte[num];
+    random().nextBytes(bytes);
+    for (int i = 0; i < bytes.length; i++) {
+      output.writeByte(bytes[i]);
+    }
+    output.close();
+    
+    IndexInput input = dir.openInput("bytes", newIOContext(random()));
+    // seek to a random spot shouldnt impact slicing.
+    input.seek(TestUtil.nextLong(random(), 0, input.length()));
+    for (int i = 0; i < num; i += 16) {
+      IndexInput slice1 = input.slice("slice1", i, num-i);
+      assertEquals(0, slice1.getFilePointer());
+      assertEquals(num-i, slice1.length());
+      
+      // seek to a random spot shouldnt impact slicing.
+      slice1.seek(TestUtil.nextLong(random(), 0, slice1.length()));
+      for (int j = 0; j < slice1.length(); j += 16) {
+        IndexInput slice2 = slice1.slice("slice2", j, num-i-j);
+        assertEquals(0, slice2.getFilePointer());
+        assertEquals(num-i-j, slice2.length());
+        byte data[] = new byte[num];
+        System.arraycopy(bytes, 0, data, 0, i+j);
+        if (random().nextBoolean()) {
+          // read the bytes for this slice-of-slice
+          slice2.readBytes(data, i+j, num-i-j);
+        } else {
+          // seek to a random spot in between, read some, seek back and read the rest
+          long seek = TestUtil.nextLong(random(), 0, slice2.length());
+          slice2.seek(seek);
+          slice2.readBytes(data, (int)(i+j+seek), (int)(num-i-j-seek));
+          slice2.seek(0);
+          slice2.readBytes(data, i+j, (int)seek);
+        }
+        assertArrayEquals(bytes, data);
+      }
+    }
+    
     input.close();
     dir.close();
   }

@@ -507,10 +507,13 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     sreq.actualShards = sreq.shards;
     sreq.params = params;
     shardHandler.submit(sreq, replica, sreq.params);
+    shardHandler.takeCompletedOrError();
   }
 
 
   protected LeaderStatus amILeader() {
+    TimerContext timerContext = stats.time("collection_am_i_leader");
+    boolean success = true;
     try {
       ZkNodeProps props = ZkNodeProps.load(zkStateReader.getZkClient().getData(
           "/overseer_elect/leader", null, null, true));
@@ -518,6 +521,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
         return LeaderStatus.YES;
       }
     } catch (KeeperException e) {
+      success = false;
       if (e.code() == KeeperException.Code.CONNECTIONLOSS) {
         log.error("", e);
         return LeaderStatus.DONT_KNOW;
@@ -527,7 +531,15 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
         log.warn("", e);
       }
     } catch (InterruptedException e) {
+      success = false;
       Thread.currentThread().interrupt();
+    } finally {
+      timerContext.stop();
+      if (success)  {
+        stats.success("collection_am_i_leader");
+      } else  {
+        stats.error("collection_am_i_leader");
+      }
     }
     log.info("According to ZK I (id=" + myId + ") am no longer a leader.");
     return LeaderStatus.NO;
@@ -660,7 +672,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
 
   }
 
-  private void getClusterStatus(ClusterState clusterState, ZkNodeProps message, NamedList results) {
+  private void getClusterStatus(ClusterState clusterState, ZkNodeProps message, NamedList results) throws KeeperException, InterruptedException {
     String collection = message.getStr(ZkStateReader.COLLECTION_PROP);
 
     // read aliases
@@ -682,6 +694,11 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
           }
         }
       }
+    }
+
+    Map roles = null;
+    if (zkStateReader.getZkClient().exists(ZkStateReader.ROLES, true)) {
+      roles = (Map) ZkStateReader.fromJSON(zkStateReader.getZkClient().getData(ZkStateReader.ROLES, null, null, true));
     }
 
     // convert cluster state into a map of writable types
@@ -740,6 +757,15 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     if (aliasVsCollections != null && !aliasVsCollections.isEmpty())  {
       clusterStatus.add("aliases", aliasVsCollections);
     }
+
+    // add the roles map
+    if (roles != null)  {
+      clusterStatus.add("roles", roles);
+    }
+
+    // add live_nodes
+    List<String> liveNodes = zkStateReader.getZkClient().getChildren(ZkStateReader.LIVE_NODES_ZKNODE, null, true);
+    clusterStatus.add("live_nodes", liveNodes);
 
     results.add("cluster", clusterStatus);
   }
@@ -852,7 +878,9 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     
     // assume the core exists and try to unload it
     Map m = ZkNodeProps.makeMap("qt", adminPath, CoreAdminParams.ACTION,
-        CoreAdminAction.UNLOAD.toString(), CoreAdminParams.CORE, core);
+        CoreAdminAction.UNLOAD.toString(), CoreAdminParams.CORE, core,
+        CoreAdminParams.DELETE_INSTANCE_DIR, "true",
+        CoreAdminParams.DELETE_DATA_DIR, "true");
     
     ShardRequest sreq = new ShardRequest();
     sreq.purpose = 1;
@@ -1743,7 +1771,8 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     for (Slice sourceSlice : sourceSlices) {
       for (Slice targetSlice : targetSlices) {
         log.info("Migrating source shard: {} to target shard: {} for split.key = " + splitKey, sourceSlice, targetSlice);
-        migrateKey(clusterState, sourceCollection, sourceSlice, targetCollection, targetSlice, splitKey, timeout, results, asyncId);
+        migrateKey(clusterState, sourceCollection, sourceSlice, targetCollection, targetSlice, splitKey,
+            timeout, results, asyncId, message);
       }
     }
   }
@@ -1751,7 +1780,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
   private void migrateKey(ClusterState clusterState, DocCollection sourceCollection, Slice sourceSlice,
                           DocCollection targetCollection, Slice targetSlice,
                           String splitKey, int timeout,
-                          NamedList results, String asyncId) throws KeeperException, InterruptedException {
+                          NamedList results, String asyncId, ZkNodeProps message) throws KeeperException, InterruptedException {
     String tempSourceCollectionName = "split_" + sourceSlice.getName() + "_temp_" + targetSlice.getName();
     if (clusterState.hasCollection(tempSourceCollectionName)) {
       log.info("Deleting temporary collection: " + tempSourceCollectionName);
@@ -1761,6 +1790,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
 
       try {
         deleteCollection(new ZkNodeProps(props), results);
+        clusterState = zkStateReader.getClusterState();
       } catch (Exception e) {
         log.warn("Unable to clean up existing temporary collection: " + tempSourceCollectionName, e);
       }
@@ -1894,15 +1924,25 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
 
     log.info("Creating a replica of temporary collection: {} on the target leader node: {}",
         tempSourceCollectionName, targetLeader.getNodeName());
-    params = new ModifiableSolrParams();
-    params.set(CoreAdminParams.ACTION, CoreAdminAction.CREATE.toString());
     String tempCollectionReplica2 = tempSourceCollectionName + "_" + tempSourceSlice.getName() + "_replica2";
-    params.set(CoreAdminParams.NAME, tempCollectionReplica2);
-    params.set(CoreAdminParams.COLLECTION, tempSourceCollectionName);
-    params.set(CoreAdminParams.SHARD, tempSourceSlice.getName());
+    props = new HashMap<>();
+    props.put(Overseer.QUEUE_OPERATION, ADDREPLICA.toLower());
+    props.put(COLLECTION_PROP, tempSourceCollectionName);
+    props.put(SHARD_ID_PROP, tempSourceSlice.getName());
+    props.put("node", targetLeader.getNodeName());
+    props.put(CoreAdminParams.NAME, tempCollectionReplica2);
+    // copy over property params:
+    for (String key : message.keySet()) {
+      if (key.startsWith(COLL_PROP_PREFIX)) {
+        props.put(key, message.getStr(key));
+      }
+    }
+    // add async param
+    if(asyncId != null) {
+      props.put(ASYNC, asyncId);
+    }
+    addReplica(clusterState, new ZkNodeProps(props), results);
 
-    setupAsyncRequest(asyncId, requestMap, params, targetLeader.getNodeName());
-    sendShardRequest(targetLeader.getNodeName(), params, shardHandler);
     collectShardResponses(results, true,
         "MIGRATE failed to create replica of temporary collection in target leader node.",
         shardHandler);

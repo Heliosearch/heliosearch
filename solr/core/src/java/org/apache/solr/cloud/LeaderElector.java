@@ -298,6 +298,7 @@ public  class LeaderElector {
         // we must have failed in creating the election node - someone else must
         // be working on it, lets try again
         if (tries++ > 20) {
+          context = null;
           throw new ZooKeeperException(SolrException.ErrorCode.SERVER_ERROR,
               "", e);
         }
@@ -341,41 +342,35 @@ public  class LeaderElector {
       if (EventType.None.equals(event.getType())) {
         return;
       }
-      if(canceled) {
+      if (canceled) {
         log.info("This watcher is not active anymore {}", myNode);
         try {
-          zkClient.delete(myNode,-1,true);
-        }catch (KeeperException.NoNodeException nne) {
-          //expected . don't do anything
-        }  catch (Exception e) {
-          log.warn("My watched node still exists and can't remove "+myNode, e);
+          zkClient.delete(myNode, -1, true);
+        } catch (KeeperException.NoNodeException nne) {
+          // expected . don't do anything
+        } catch (Exception e) {
+          log.warn("My watched node still exists and can't remove " + myNode, e);
         }
         return;
       }
       try {
         // am I the next leader?
         checkIfIamLeader(seq, context, true);
-      } catch (InterruptedException e) {
-        // Restore the interrupted status
-        Thread.currentThread().interrupt();
-        log.warn("", e);
-      } catch (IOException e) {
-        log.warn("", e);
       } catch (Exception e) {
         log.warn("", e);
       }
     }
   }
-  
+
   /**
    * Set up any ZooKeeper nodes needed for leader election.
    */
   public void setup(final ElectionContext context) throws InterruptedException,
       KeeperException {
-    this.context = context;
     String electZKPath = context.electionPath + LeaderElector.ELECTION_NODE;
     
     zkCmdExecutor.ensureExists(electZKPath, zkClient);
+    this.context = context;
   }
   
   /**
@@ -401,4 +396,5 @@ public  class LeaderElector {
     this.context = ctx;
     joinElection(ctx, true, joinAtHead);
   }
+
 }

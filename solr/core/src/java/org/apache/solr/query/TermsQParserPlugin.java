@@ -73,11 +73,16 @@ public class TermsQParserPlugin extends QParserPlugin {
       public Query parse() {
         final String field = localParams.get(QueryParsing.F);
         final String termStr = localParams.get(QueryParsing.V);
+        final String separator = localParams.get("separator", ",");
+        if (separator.length() > 1) {
+          throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "separator must be single character, got '" + separator + "'");
+        }
+        char sepChar = separator.charAt(0);
 
         TFilter tfilter;
         try (TFilter.Builder builder = new TFilter.Builder(field, termStr.length())) {
 
-          CharUtils.splitSmart(termStr, ',', true, new Callback<CharSequence>() {
+          CharUtils.splitSmart(termStr, sepChar, true, new Callback<CharSequence>() {
             final BytesRef br = new BytesRef();
             final SchemaField sf = req.getSchema().getField(field);
 

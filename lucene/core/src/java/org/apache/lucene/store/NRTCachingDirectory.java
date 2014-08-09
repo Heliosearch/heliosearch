@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.store.RAMDirectory;      // javadocs
+import org.apache.lucene.util.Accountable;
 import org.apache.lucene.util.IOUtils;
 
 // TODO
@@ -63,11 +64,10 @@ import org.apache.lucene.util.IOUtils;
  * @lucene.experimental
  */
 
-public class NRTCachingDirectory extends Directory {
+public class NRTCachingDirectory extends FilterDirectory implements Accountable {
 
   private final RAMDirectory cache = new RAMDirectory();
 
-  private final Directory delegate;
 
   private final long maxMergeSizeBytes;
   private final long maxCachedBytes;
@@ -80,43 +80,15 @@ public class NRTCachingDirectory extends Directory {
    *  maxMergeSizeMB, and 2) the total cached bytes is <=
    *  maxCachedMB */
   public NRTCachingDirectory(Directory delegate, double maxMergeSizeMB, double maxCachedMB) {
-    this.delegate = delegate;
+    super(delegate);
     maxMergeSizeBytes = (long) (maxMergeSizeMB*1024*1024);
     maxCachedBytes = (long) (maxCachedMB*1024*1024);
   }
 
-  public Directory getDelegate() {
-    return delegate;
-  }
-
-  @Override
-  public LockFactory getLockFactory() {
-    return delegate.getLockFactory();
-  }
-
-  @Override
-  public void setLockFactory(LockFactory lf) throws IOException {
-    delegate.setLockFactory(lf);
-  }
-
-  @Override
-  public String getLockID() {
-    return delegate.getLockID();
-  }
-
-  @Override
-  public Lock makeLock(String name) {
-    return delegate.makeLock(name);
-  }
-
-  @Override
-  public void clearLock(String name) throws IOException {
-    delegate.clearLock(name);
-  }
 
   @Override
   public String toString() {
-    return "NRTCachingDirectory(" + delegate + "; maxCacheMB=" + (maxCachedBytes/1024/1024.) + " maxMergeSizeMB=" + (maxMergeSizeBytes/1024/1024.) + ")";
+    return "NRTCachingDirectory(" + in + "; maxCacheMB=" + (maxCachedBytes/1024/1024.) + " maxMergeSizeMB=" + (maxMergeSizeBytes/1024/1024.) + ")";
   }
 
   @Override
@@ -130,7 +102,7 @@ public class NRTCachingDirectory extends Directory {
     // yet been called, because so far everything is a cached write,
     // in this case, we don't want to throw a NoSuchDirectoryException
     try {
-      for(String f : delegate.listAll()) {
+      for(String f : in.listAll()) {
         // Cannot do this -- if lucene calls createOutput but
         // file already exists then this falsely trips:
         //assert !files.contains(f): "file \"" + f + "\" is in both dirs";
@@ -146,15 +118,9 @@ public class NRTCachingDirectory extends Directory {
     return files.toArray(new String[files.size()]);
   }
 
-  /** Returns how many bytes are being used by the
-   *  RAMDirectory cache */
-  public long cacheRamBytesUsed()  {
-    return cache.ramBytesUsed();
-  }
-
   @Override
   public synchronized boolean fileExists(String name) throws IOException {
-    return cache.fileExists(name) || delegate.fileExists(name);
+    return cache.fileExists(name) || in.fileExists(name);
   }
 
   @Override
@@ -165,7 +131,7 @@ public class NRTCachingDirectory extends Directory {
     if (cache.fileExists(name)) {
       cache.deleteFile(name);
     } else {
-      delegate.deleteFile(name);
+      in.deleteFile(name);
     }
   }
 
@@ -174,7 +140,7 @@ public class NRTCachingDirectory extends Directory {
     if (cache.fileExists(name)) {
       return cache.fileLength(name);
     } else {
-      return delegate.fileLength(name);
+      return in.fileLength(name);
     }
   }
 
@@ -192,7 +158,7 @@ public class NRTCachingDirectory extends Directory {
         System.out.println("  to cache");
       }
       try {
-        delegate.deleteFile(name);
+        in.deleteFile(name);
       } catch (IOException ioe) {
         // This is fine: file may not exist
       }
@@ -203,7 +169,7 @@ public class NRTCachingDirectory extends Directory {
       } catch (IOException ioe) {
         // This is fine: file may not exist
       }
-      return delegate.createOutput(name, context);
+      return in.createOutput(name, context);
     }
   }
 
@@ -215,7 +181,7 @@ public class NRTCachingDirectory extends Directory {
     for(String fileName : fileNames) {
       unCache(fileName);
     }
-    delegate.sync(fileNames);
+    in.sync(fileNames);
   }
 
   @Override
@@ -229,7 +195,7 @@ public class NRTCachingDirectory extends Directory {
       }
       return cache.openInput(name, context);
     } else {
-      return delegate.openInput(name, context);
+      return in.openInput(name, context);
     }
   }
   
@@ -246,7 +212,7 @@ public class NRTCachingDirectory extends Directory {
       unCache(fileName);
     }
     cache.close();
-    delegate.close();
+    in.close();
   }
 
   /** Subclass can override this to customize logic; return
@@ -278,7 +244,7 @@ public class NRTCachingDirectory extends Directory {
         return;
       }
       final IOContext context = IOContext.DEFAULT;
-      final IndexOutput out = delegate.createOutput(fileName, context);
+      final IndexOutput out = in.createOutput(fileName, context);
       IndexInput in = null;
       try {
         in = cache.openInput(fileName, context);
@@ -294,5 +260,10 @@ public class NRTCachingDirectory extends Directory {
         cache.deleteFile(fileName);
       }
     }
+  }
+
+  @Override
+  public long ramBytesUsed() {
+    return cache.ramBytesUsed();
   }
 }

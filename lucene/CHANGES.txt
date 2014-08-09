@@ -5,7 +5,155 @@ http://s.apache.org/luceneversions
 
 ======================= Lucene 4.10.0 ======================
 
-(No Changes)
+New Features
+
+* LUCENE-5778: Support hunspell morphological description fields/aliases.
+  (Robert Muir)
+
+* LUCENE-5801: Added (back) OrdinalMappingAtomicReader for merging search
+  indexes that contain category ordinals from separate taxonomy indexes.
+  (Nicola Buso via Shai Erera)
+
+* LUCENE-4175, LUCENE-5714, LUCENE-5779: Index and search rectangles with spatial
+  BBoxSpatialStrategy using most predicates.  Sort documents by relative overlap
+  of query areas or just by indexed shape area. (Ryan McKinley, David Smiley)
+
+* LUCENE-5806: Extend expressions grammar to support array access in variables.
+  Added helper class VariableContext to parse complex variable into pieces.
+  (Ryan Ernst)
+
+* LUCENE-5826: Support proper hunspell case handling, LANG, KEEPCASE, NEEDAFFIX,
+  and ONLYINCOMPOUND flags.  (Robert Muir)
+
+* LUCENE-5815: Add TermAutomatonQuery, a proximity query allowing you
+  to create an arbitrary automaton, using terms on the transitions,
+  expressing which sequence of sequential terms (including a special
+  "any" term) are allowed.  This is a generalization of
+  MultiPhraseQuery and span queries, and enables "correct" (including
+  position) length search-time graph synonyms.  (Mike McCandless)
+
+* LUCENE-5819: Add OrdsLucene41 block tree terms dict and postings
+  format, to include term ordinals in the index so the optional
+  TermsEnum.ord() and TermsEnum.seekExact(long ord) APIs work.  (Mike
+  McCandless)
+
+* LUCENE-5835: TermValComparator can sort missing values last. (Adrien Grand)
+
+* LUCENE-5825: Benchmark module can use custom postings format, e.g.:
+ codec.postingsFormat=Memory (Varun Shenoy, David Smiley)
+
+* LUCENE-5842: When opening large files (where its to expensive to compare
+  checksum against all the bytes), retrieve checksum to validate structure
+  of footer, this can detect some forms of corruption such as truncation.
+  (Robert Muir)
+
+* LUCENE-5739: Added DataInput.readZ(Int|Long) and DataOutput.writeZ(Int|Long)
+  to read and write small signed integers. (Adrien Grand)
+
+API Changes
+
+* LUCENE-5752: Simplified Automaton API to be immutable. (Mike McCandless)
+
+* LUCENE-5793: Add equals/hashCode to FieldType. (Shay Banon, Robert Muir)
+
+* LUCENE-5692: DisjointSpatialFilter is deprecated (used by RecursivePrefixTreeStrategy)
+  (David Smiley)
+
+* LUCENE-5771: SpatialOperation's predicate names are now aliased to OGC standard names.
+  Thus you can use: Disjoint, Equals, Intersects, Overlaps, Within, Contains, Covers,
+  CoveredBy. The area requirement on the predicates was removed, and Overlaps' definition
+  was fixed. (David Smiley)
+
+* LUCENE-5850: CheckIndex now prints the Lucene version used to write
+  each segment.  (Robert Muir, Mike McCandless)
+
+Optimizations
+
+* LUCENE-5780: Make OrdinalMap more memory-efficient, especially in case the
+  first segment has all values. (Adrien Grand, Robert Muir)
+
+* LUCENE-5782: OrdinalMap now sorts enums before being built in order to
+  improve compression. (Adrien Grand)
+
+* LUCENE-5798: Optimize MultiDocsEnum reuse. (Robert Muir)
+
+* LUCENE-5799: Optimize numeric docvalues merging. (Robert Muir)
+
+* LUCENE-5797: Optimize norms merging (Adrien Grand, Robert Muir)
+
+* LUCENE-5803: Add DelegatingAnalyzerWrapper, an optimized variant
+  of AnalyzerWrapper that doesn't allow to wrap components or readers.
+  This wrapper class is the base class of all analyzers that just delegate
+  to another analyzer, e.g. per field name: PerFieldAnalyzerWrapper and
+  Solr's schema support.  (Shay Banon, Uwe Schindler, Robert Muir)
+
+* LUCENE-5795: MoreLikeThisQuery now only collects the top N terms instead
+  of collecting all terms from the like text when building the query. 
+  (Alex Ksikes, Simon Willnauer)
+
+* LUCENE-5681: Fix RAMDirectory's IndexInput to not do double buffering
+  on slices (causes useless data copying, especially on random access slices).
+  This also improves slices of NRTCachingDirectory, because the cache
+  is based on RAMDirectory. BufferedIndexInput.wrap() was marked with a
+  warning in javadocs. It is almost always a better idea to implement
+  slicing on your own!  (Uwe Schindler, Robert Muir)
+
+* LUCENE-5834: Empty sorted set and numeric doc values are now singletons.
+  (Adrien Grand)
+
+* LUCENE-5841: Improve performance of block tree terms dictionary when
+  assigning terms to blocks.  (Mike McCandless)
+
+* LUCENE-5856: Optimize Fixed/Open/LongBitSet to remove unnecessary AND. 
+  (Robert Muir)
+
+Bug Fixes
+
+* LUCENE-5796: Fixes the Scorer.getChildren() method for two combinations 
+  of BooleanQuery. (Terry Smith via Robert Muir)
+
+* LUCENE-5790: Fix compareTo in MutableValueDouble and MutableValueBool, this caused 
+  incorrect results when grouping on fields with missing values. 
+  (海老澤 志信, hossman)
+
+* LUCENE-5817: Fix hunspell zero-affix handling: previously only zero-strips worked
+  correctly.  (Robert Muir)
+
+* LUCENE-5818, LUCENE-5823: Fix hunspell overgeneration for short strings that also 
+  match affixes, words are only stripped to a zero-length string if FULLSTRIP option
+  is specifed in the dictionary.  (Robert Muir)
+
+* LUCENE-5824: Fix hunspell 'long' flag handling. (Robert Muir)
+
+* LUCENE-5827: Make all Directory implementations correctly fail with
+  IllegalArgumentException if slices are out of bounds.  (Uwe SChindler)
+
+* LUCENE-5838: Fix hunspell when the .aff file has over 64k affixes. (Robert Muir)
+
+* LUCENE-5844: ArrayUtil.grow/oversize now returns a maximum of
+  Integer.MAX_VALUE - 8 for the maximum array size.  (Robert Muir,
+  Mike McCandless)
+
+* LUCENE-5843: Added IndexWriter.MAX_DOCS which is the maximum number
+  of documents allowed in a single index, and any operations that add
+  documents will now throw IllegalStateException if the max count
+  would be exceeded, instead of silently creating an unusable
+  index.  (Mike McCandless)
+
+* LUCENE-5869: Added restriction to positive values for maxExpansions in FuzzyQuery.
+  (Ryan Ernst)
+  
+Test Framework
+
+* LUCENE-5786: Unflushed/ truncated events file (hung testing subprocess).
+  (Dawid Weiss)
+
+Build
+ 
+* LUCENE-5770: Upgrade to JFlex 1.6, which has direct support for
+  supplementary code points - as a result, ICU4J is no longer used
+  to generate surrogate pairs to augment JFlex scanner specifications.
+  (Steve Rowe)
 
 ======================= Lucene 4.9.0 =======================
 

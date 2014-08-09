@@ -36,7 +36,7 @@ import org.apache.solr.update.AddUpdateCommand;
  * </p>
  * <p>
  * This base class handles initialization of the <code>fieldName</code> init 
- * param, and provides an {@link DefaultValueUpdateProcessor} that Factory 
+ * param, and provides an {@link AbstractDefaultValueUpdateProcessorFactory.DefaultValueUpdateProcessor} that Factory 
  * subclasses may choose to return from their <code>getInstance</code> 
  * implementation.
  * </p>
@@ -72,7 +72,7 @@ public abstract class AbstractDefaultValueUpdateProcessorFactory
    * to any document which does not already have a value in 
    * <code>fieldName</code>
    */
-  protected static abstract class DefaultValueUpdateProcessor 
+  static abstract class DefaultValueUpdateProcessor
     extends UpdateRequestProcessor {
 
     final String fieldName;

@@ -37,7 +37,7 @@
   -->
   <luceneMatchVersion>4.10</luceneMatchVersion>
 
-  <!-- <lib/> directives can be used to instruct Solr to load an Jars
+  <!-- <lib/> directives can be used to instruct Solr to load any Jars
        identified and use them to resolve any "plugins" specified in
        your solrconfig.xml or schema.xml (ie: Analyzers, Request
        Handlers, etc...).
@@ -1015,20 +1015,6 @@
     </lst>
   </requestHandler>
 
-  <!-- for back compat with clients using /update/json and /update/csv -->
-  <requestHandler name="/update/json" class="solr.UpdateRequestHandler">
-    <lst name="defaults">
-      <str name="stream.contentType">application/json</str>
-      <str name="update.chain">add-unknown-fields-to-the-schema</str>
-    </lst>
-  </requestHandler>
-  <requestHandler name="/update/csv" class="solr.UpdateRequestHandler">
-    <lst name="defaults">
-      <str name="stream.contentType">application/csv</str>
-      <str name="update.chain">add-unknown-fields-to-the-schema</str>
-    </lst>
-  </requestHandler>
-
   <!-- Solr Cell Update Request Handler
 
        http://wiki.apache.org/solr/ExtractingRequestHandler 
@@ -1563,6 +1549,11 @@
        See http://wiki.apache.org/solr/GuessingFieldTypes
     -->
   <updateRequestProcessorChain name="add-unknown-fields-to-the-schema">
+    <!-- UUIDUpdateProcessorFactory will generate an id if none is present in the incoming document -->
+    <processor class="solr.UUIDUpdateProcessorFactory" />
+
+    <processor class="solr.LogUpdateProcessorFactory"/>
+    <processor class="solr.DistributedUpdateProcessorFactory"/>
     <processor class="solr.RemoveBlankFieldUpdateProcessorFactory"/>
     <processor class="solr.ParseBooleanFieldUpdateProcessorFactory"/>
     <processor class="solr.ParseLongFieldUpdateProcessorFactory"/>
@@ -1608,7 +1599,6 @@
         <str name="fieldType">tdoubles</str>
       </lst>
     </processor>
-    <processor class="solr.LogUpdateProcessorFactory"/>
     <processor class="solr.RunUpdateProcessorFactory"/>
   </updateRequestProcessorChain>
 

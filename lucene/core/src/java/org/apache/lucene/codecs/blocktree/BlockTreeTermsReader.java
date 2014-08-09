@@ -18,43 +18,26 @@ package org.apache.lucene.codecs.blocktree;
  */
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.TreeMap;
 
-import org.apache.lucene.codecs.BlockTermState;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.FieldsProducer;
 import org.apache.lucene.codecs.PostingsReaderBase;
 import org.apache.lucene.index.CorruptIndexException;
-import org.apache.lucene.index.DocsAndPositionsEnum;
-import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.FieldInfo.IndexOptions;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.SegmentInfo;
-import org.apache.lucene.index.TermState;
 import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.store.ByteArrayDataInput;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
-import org.apache.lucene.util.ArrayUtil;
-import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.RamUsageEstimator;
-import org.apache.lucene.util.StringHelper;
-import org.apache.lucene.util.automaton.CompiledAutomaton;
-import org.apache.lucene.util.automaton.RunAutomaton;
-import org.apache.lucene.util.automaton.Transition;
-import org.apache.lucene.util.fst.ByteSequenceOutputs;
-import org.apache.lucene.util.fst.FST;
-import org.apache.lucene.util.fst.Outputs;
-import org.apache.lucene.util.fst.Util;
 
 /** A block-based terms index and dictionary that assigns
  *  terms to variable length blocks according to how they
@@ -144,6 +127,15 @@ public class BlockTreeTermsReader extends FieldsProducer {
 
       // Have PostingsReader init itself
       postingsReader.init(in);
+      
+      
+      // NOTE: data file is too costly to verify checksum against all the bytes on open,
+      // but for now we at least verify proper structure of the checksum footer: which looks
+      // for FOOTER_MAGIC + algorithmID. This is cheap and can detect some forms of corruption
+      // such as file truncation.
+      if (version >= BlockTreeTermsWriter.VERSION_CHECKSUM) {
+        CodecUtil.retrieveChecksum(in);
+      }
 
       // Read per-field details
       seekDir(in, dirOffset);
@@ -159,18 +151,27 @@ public class BlockTreeTermsReader extends FieldsProducer {
       for(int i=0;i<numFields;i++) {
         final int field = in.readVInt();
         final long numTerms = in.readVLong();
-        assert numTerms >= 0;
+        if (numTerms <= 0) {
+          throw new CorruptIndexException("Illegal numTerms for field number: " + field + " (resource=" + in + ")");
+        }
         final int numBytes = in.readVInt();
+        if (numBytes < 0) {
+          throw new CorruptIndexException("invalid rootCode for field number: " + field + ", numBytes=" + numBytes + " (resource=" + in + ")");
+        }
         final BytesRef rootCode = new BytesRef(new byte[numBytes]);
         in.readBytes(rootCode.bytes, 0, numBytes);
         rootCode.length = numBytes;
         final FieldInfo fieldInfo = fieldInfos.fieldInfo(field);
-        assert fieldInfo != null: "field=" + field;
+        if (fieldInfo == null) {
+          throw new CorruptIndexException("invalid field number: " + field + ", resource=" + in + ")");
+        }
         final long sumTotalTermFreq = fieldInfo.getIndexOptions() == IndexOptions.DOCS_ONLY ? -1 : in.readVLong();
         final long sumDocFreq = in.readVLong();
         final int docCount = in.readVInt();
         final int longsSize = version >= BlockTreeTermsWriter.VERSION_META_ARRAY ? in.readVInt() : 0;
-
+        if (longsSize < 0) {
+          throw new CorruptIndexException("invalid longsSize for field: " + fieldInfo.name + ", longsSize=" + longsSize + " (resource=" + in + ")");
+        }
         BytesRef minTerm, maxTerm;
         if (version >= BlockTreeTermsWriter.VERSION_MIN_MAX_TERMS) {
           minTerm = readBytesRef(in);

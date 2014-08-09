@@ -816,6 +816,9 @@ public class SolrResourceLoader implements ResourceLoader,Closeable
   public void close() throws IOException {
     IOUtils.close(classLoader);
   }
+  public List<SolrInfoMBean> getInfoMBeans(){
+    return Collections.unmodifiableList(infoMBeans);
+  }
 
   static {
     HS.init();  // load native libs as early as possible...

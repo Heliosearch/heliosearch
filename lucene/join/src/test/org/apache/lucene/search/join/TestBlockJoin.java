@@ -386,8 +386,7 @@ public class TestBlockJoin extends LuceneTestCase {
     final RandomIndexWriter w = new RandomIndexWriter(
         random(),
         dir,
-        newIndexWriterConfig(TEST_VERSION_CURRENT,
-            new MockAnalyzer(random())).setMergePolicy(NoMergePolicy.INSTANCE));
+        newIndexWriterConfig(new MockAnalyzer(random())).setMergePolicy(NoMergePolicy.INSTANCE));
 
     // Cannot assert this since we use NoMergePolicy:
     w.setDoRandomForceMergeAssert(false);
@@ -608,7 +607,7 @@ public class TestBlockJoin extends LuceneTestCase {
       }
       DocsEnum parents = MultiFields.getTermDocsEnum(joinR, null, "isParent", new BytesRef("x"));
       System.out.println("parent docIDs:");
-      while (parents.nextDoc() != parents.NO_MORE_DOCS) {
+      while (parents.nextDoc() != DocsEnum.NO_MORE_DOCS) {
         System.out.println("  " + parents.docID());
       }
     }
@@ -1138,7 +1137,7 @@ public class TestBlockJoin extends LuceneTestCase {
 
   public void testAdvanceSingleParentNoChild() throws Exception {
     Directory dir = newDirectory();
-    RandomIndexWriter w = new RandomIndexWriter(random(), dir, newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setMergePolicy(new LogDocMergePolicy()));
+    RandomIndexWriter w = new RandomIndexWriter(random(), dir, newIndexWriterConfig(new MockAnalyzer(random())).setMergePolicy(new LogDocMergePolicy()));
     Document parentDoc = new Document();
     parentDoc.add(newStringField("parent", "1", Field.Store.NO));
     parentDoc.add(newStringField("isparent", "yes", Field.Store.NO));

@@ -79,16 +79,40 @@ public final class Lucene41PostingsReader extends PostingsReaderBase {
                             Lucene41PostingsWriter.VERSION_START,
                             Lucene41PostingsWriter.VERSION_CURRENT);
       forUtil = new ForUtil(docIn);
+      
+      if (version >= Lucene41PostingsWriter.VERSION_CHECKSUM) {
+        // NOTE: data file is too costly to verify checksum against all the bytes on open,
+        // but for now we at least verify proper structure of the checksum footer: which looks
+        // for FOOTER_MAGIC + algorithmID. This is cheap and can detect some forms of corruption
+        // such as file truncation.
+        CodecUtil.retrieveChecksum(docIn);
+      }
 
       if (fieldInfos.hasProx()) {
         posIn = dir.openInput(IndexFileNames.segmentFileName(segmentInfo.name, segmentSuffix, Lucene41PostingsFormat.POS_EXTENSION),
                               ioContext);
         CodecUtil.checkHeader(posIn, Lucene41PostingsWriter.POS_CODEC, version, version);
+        
+        if (version >= Lucene41PostingsWriter.VERSION_CHECKSUM) {
+          // NOTE: data file is too costly to verify checksum against all the bytes on open,
+          // but for now we at least verify proper structure of the checksum footer: which looks
+          // for FOOTER_MAGIC + algorithmID. This is cheap and can detect some forms of corruption
+          // such as file truncation.
+          CodecUtil.retrieveChecksum(posIn);
+        }
 
         if (fieldInfos.hasPayloads() || fieldInfos.hasOffsets()) {
           payIn = dir.openInput(IndexFileNames.segmentFileName(segmentInfo.name, segmentSuffix, Lucene41PostingsFormat.PAY_EXTENSION),
                                 ioContext);
           CodecUtil.checkHeader(payIn, Lucene41PostingsWriter.PAY_CODEC, version, version);
+          
+          if (version >= Lucene41PostingsWriter.VERSION_CHECKSUM) {
+            // NOTE: data file is too costly to verify checksum against all the bytes on open,
+            // but for now we at least verify proper structure of the checksum footer: which looks
+            // for FOOTER_MAGIC + algorithmID. This is cheap and can detect some forms of corruption
+            // such as file truncation.
+            CodecUtil.retrieveChecksum(payIn);
+          }
         }
       }
 
@@ -656,7 +680,11 @@ public final class Lucene41PostingsReader extends PostingsReaderBase {
       doc = -1;
       accum = 0;
       docUpto = 0;
-      nextSkipDoc = BLOCK_SIZE - 1;
+      if (docFreq > BLOCK_SIZE) {
+        nextSkipDoc = BLOCK_SIZE - 1; // we won't skip if target is found in first block
+      } else {
+        nextSkipDoc = NO_MORE_DOCS; // not enough docs for skipping
+      }
       docBufferUpto = BLOCK_SIZE;
       skipped = false;
       return this;
@@ -781,7 +809,7 @@ public final class Lucene41PostingsReader extends PostingsReaderBase {
       //   System.out.println("  FPR.advance target=" + target);
       // }
 
-      if (docFreq > BLOCK_SIZE && target > nextSkipDoc) {
+      if (target > nextSkipDoc) {
         // if (DEBUG) {
         //   System.out.println("    try skipper");
         // }
@@ -1117,7 +1145,11 @@ public final class Lucene41PostingsReader extends PostingsReaderBase {
       doc = -1;
       accum = 0;
       docUpto = 0;
-      nextSkipDoc = BLOCK_SIZE - 1;
+      if (docFreq > BLOCK_SIZE) {
+        nextSkipDoc = BLOCK_SIZE - 1; // we won't skip if target is found in first block
+      } else {
+        nextSkipDoc = NO_MORE_DOCS; // not enough docs for skipping
+      }
       docBufferUpto = BLOCK_SIZE;
       skipped = false;
       return this;
@@ -1301,7 +1333,7 @@ public final class Lucene41PostingsReader extends PostingsReaderBase {
       //   System.out.println("  FPR.advance target=" + target);
       // }
 
-      if (docFreq > BLOCK_SIZE && target > nextSkipDoc) {
+      if (target > nextSkipDoc) {
 
         // if (DEBUG) {
         //   System.out.println("    try skipper");

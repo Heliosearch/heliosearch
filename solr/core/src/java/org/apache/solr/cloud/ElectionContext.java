@@ -3,6 +3,7 @@ package org.apache.solr.cloud;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
+import org.apache.solr.common.cloud.Replica;
 import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.solr.common.cloud.ZkCmdExecutor;
@@ -51,7 +52,7 @@ public abstract class ElectionContext {
   final ZkNodeProps leaderProps;
   final String id;
   final String leaderPath;
-  String leaderSeqPath;
+  volatile String leaderSeqPath;
   private SolrZkClient zkClient;
 
   public ElectionContext(final String coreNodeName,
@@ -66,12 +67,16 @@ public abstract class ElectionContext {
   public void close() {}
   
   public void cancelElection() throws InterruptedException, KeeperException {
-    try {
-      log.info("canceling election {}",leaderSeqPath );
-      zkClient.delete(leaderSeqPath, -1, true);
-    } catch (NoNodeException e) {
-      // fine
-      log.warn("cancelElection did not find election node to remove {}" ,leaderSeqPath);
+    if( leaderSeqPath != null ){
+      try {
+        log.info("canceling election {}",leaderSeqPath );
+        zkClient.delete(leaderSeqPath, -1, true);
+      } catch (NoNodeException e) {
+        // fine
+        log.warn("cancelElection did not find election node to remove {}" ,leaderSeqPath);
+      }
+    } else {
+      log.warn("cancelElection skipped as this context has not been initialized");
     }
   }
 
@@ -326,10 +331,11 @@ final class ShardLeaderElectionContext extends ShardLeaderElectionContextBase {
       CloudDescriptor cloudDesc = core.getCoreDescriptor().getCloudDescriptor();
       String coll = cloudDesc.getCollectionName();
       String shardId = cloudDesc.getShardId();
-      
+      String coreNodeName = cloudDesc.getCoreNodeName();
+
       if (coll == null || shardId == null) {
         log.error("Cannot start leader-initiated recovery on new leader (core="+
-           coreName+") because collection and/or shard is null!");
+           coreName+",coreNodeName=" + coreNodeName + ") because collection and/or shard is null!");
         return;
       }
       
@@ -342,24 +348,22 @@ final class ShardLeaderElectionContext extends ShardLeaderElectionContextBase {
       }
       
       if (replicas != null && replicas.size() > 0) {
-        for (String replicaCore : replicas) {
+        for (String replicaCoreNodeName : replicas) {
           
-          if (coreName.equals(replicaCore))
+          if (coreNodeName.equals(replicaCoreNodeName))
             continue; // added safe-guard so we don't mark this core as down
           
-          String lirState = zkController.getLeaderInitiatedRecoveryState(coll, shardId, replicaCore);
+          String lirState = zkController.getLeaderInitiatedRecoveryState(coll, shardId, replicaCoreNodeName);
           if (ZkStateReader.DOWN.equals(lirState) || ZkStateReader.RECOVERY_FAILED.equals(lirState)) {
-            log.info("After "+coreName+" was elected leader, found "+
-               replicaCore+" as "+lirState+" and needing recovery.");
-            
+            log.info("After core={} coreNodeName={} was elected leader, a replica coreNodeName={} was found in state: "
+                + lirState + " and needing recovery.", coreName, coreNodeName, replicaCoreNodeName);
             List<ZkCoreNodeProps> replicaProps = 
-                zkController.getZkStateReader().getReplicaProps(
-                    collection, shardId, coreName, replicaCore, null, null);
+                zkController.getZkStateReader().getReplicaProps(collection, shardId, coreNodeName);
             
             if (replicaProps != null && replicaProps.size() > 0) {                
               ZkCoreNodeProps coreNodeProps = null;
               for (ZkCoreNodeProps p : replicaProps) {
-                if (p.getCoreName().equals(replicaCore)) {
+                if (((Replica)p.getNodeProps()).getName().equals(replicaCoreNodeName)) {
                   coreNodeProps = p;
                   break;
                 }
@@ -373,7 +377,7 @@ final class ShardLeaderElectionContext extends ShardLeaderElectionContextBase {
                                                     coreNodeProps,
                                                     120);
               zkController.ensureReplicaInLeaderInitiatedRecovery(
-                  collection, shardId, replicaCore, coreNodeProps, false);
+                  collection, shardId, coreNodeProps.getCoreUrl(), coreNodeProps, false);
               
               ExecutorService executor = cc.getUpdateShardHandler().getUpdateExecutor();
               executor.execute(lirThread);
@@ -449,7 +453,8 @@ final class ShardLeaderElectionContext extends ShardLeaderElectionContextBase {
   }
 
   private boolean shouldIBeLeader(ZkNodeProps leaderProps, SolrCore core, boolean weAreReplacement) {
-    log.info("Checking if I ("+core.getName()+") should try and be the leader.");
+    log.info("Checking if I (core={},coreNodeName={}) should try and be the leader.", core.getName(),
+        core.getCoreDescriptor().getCloudDescriptor().getCoreNodeName());
     
     if (isClosed) {
       log.info("Bailing on leader process because we have been closed");
@@ -466,7 +471,8 @@ final class ShardLeaderElectionContext extends ShardLeaderElectionContextBase {
       
       // maybe active but if the previous leader marked us as down and
       // we haven't recovered, then can't be leader
-      String lirState = zkController.getLeaderInitiatedRecoveryState(collection, shardId, core.getName());
+      String lirState = zkController.getLeaderInitiatedRecoveryState(collection, shardId,
+          core.getCoreDescriptor().getCloudDescriptor().getCoreNodeName());
       if (ZkStateReader.DOWN.equals(lirState) || ZkStateReader.RECOVERING.equals(lirState)) {
         log.warn("Although my last published state is Active, the previous leader marked me "+core.getName()
             + " as " + lirState

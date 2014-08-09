@@ -351,7 +351,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -378,7 +378,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -416,7 +416,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -443,7 +443,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -470,7 +470,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
     String longTerm = "longtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongterm";
@@ -506,7 +506,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -546,7 +546,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
     String longTerm = "longtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongtermlongterm";
@@ -583,7 +583,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -613,7 +613,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -649,7 +649,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -692,7 +692,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testSortedMergeAwayAllValues() throws IOException {
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -729,7 +729,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -752,7 +752,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -780,7 +780,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testSortedTermsEnum() throws IOException {
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -852,7 +852,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -881,7 +881,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -910,7 +910,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -936,7 +936,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -961,7 +961,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -986,7 +986,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     Analyzer analyzer = new MockAnalyzer(random());
 
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -1013,7 +1013,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testDocValuesSimple() throws IOException {
     Directory dir = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig conf = newIndexWriterConfig(analyzer);
     conf.setMergePolicy(newLogMergePolicy());
     IndexWriter writer = new IndexWriter(dir, conf);
     for (int i = 0; i < 5; i++) {
@@ -1053,7 +1053,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   
   public void testRandomSortedBytes() throws IOException {
     Directory dir = newDirectory();
-    IndexWriterConfig cfg = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig cfg = newIndexWriterConfig(new MockAnalyzer(random()));
     if (!defaultCodecSupportsDocsWithField()) {
       // if the codec doesnt support missing, we expect missing to be mapped to byte[]
       // by the impersonator, but we have to give it a chance to merge them to this
@@ -1151,7 +1151,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
 
   private void doTestNumericsVsStoredFields(LongProducer longs) throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     Document doc = new Document();
     Field idField = new StringField("id", "", Field.Store.NO);
@@ -1216,7 +1216,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   private void doTestMissingVsFieldCache(LongProducer longs) throws Exception {
     assumeTrue("Codec does not support getDocsWithField", defaultCodecSupportsDocsWithField());
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     Field idField = new StringField("id", "", Field.Store.NO);
     Field indexedField = newStringField("indexed", "", Field.Store.NO);
@@ -1273,7 +1273,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   
   private void doTestSortedNumericsVsStoredFields(LongProducer counts, LongProducer values) throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     
     // index some docs
@@ -1399,7 +1399,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   
   private void doTestBinaryVsStoredFields(int minLength, int maxLength) throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     Document doc = new Document();
     Field idField = new StringField("id", "", Field.Store.NO);
@@ -1435,10 +1435,9 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
       int id = random().nextInt(numDocs);
       writer.deleteDocuments(new Term("id", Integer.toString(id)));
     }
-    writer.close();
     
     // compare
-    DirectoryReader ir = DirectoryReader.open(dir);
+    DirectoryReader ir = writer.getReader();
     for (AtomicReaderContext context : ir.leaves()) {
       AtomicReader r = context.reader();
       BinaryDocValues docValues = r.getBinaryDocValues("dv");
@@ -1449,6 +1448,21 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
       }
     }
     ir.close();
+    
+    // compare again
+    writer.forceMerge(1);
+    ir = writer.getReader();
+    for (AtomicReaderContext context : ir.leaves()) {
+      AtomicReader r = context.reader();
+      BinaryDocValues docValues = r.getBinaryDocValues("dv");
+      for (int i = 0; i < r.maxDoc(); i++) {
+        BytesRef binaryValue = r.document(i).getBinaryValue("stored");
+        BytesRef scratch = docValues.get(i);
+        assertEquals(binaryValue, scratch);
+      }
+    }
+    ir.close();
+    writer.close();
     dir.close();
   }
   
@@ -1469,7 +1483,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   
   private void doTestSortedVsStoredFields(int minLength, int maxLength) throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     Document doc = new Document();
     Field idField = new StringField("id", "", Field.Store.NO);
@@ -1505,10 +1519,9 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
       int id = random().nextInt(numDocs);
       writer.deleteDocuments(new Term("id", Integer.toString(id)));
     }
-    writer.close();
     
     // compare
-    DirectoryReader ir = DirectoryReader.open(dir);
+    DirectoryReader ir = writer.getReader();
     for (AtomicReaderContext context : ir.leaves()) {
       AtomicReader r = context.reader();
       BinaryDocValues docValues = r.getSortedDocValues("dv");
@@ -1519,12 +1532,27 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
       }
     }
     ir.close();
+    writer.forceMerge(1);
+    
+    // compare again
+    ir = writer.getReader();
+    for (AtomicReaderContext context : ir.leaves()) {
+      AtomicReader r = context.reader();
+      BinaryDocValues docValues = r.getSortedDocValues("dv");
+      for (int i = 0; i < r.maxDoc(); i++) {
+        BytesRef binaryValue = r.document(i).getBinaryValue("stored");
+        BytesRef scratch = docValues.get(i);
+        assertEquals(binaryValue, scratch);
+      }
+    }
+    ir.close();
+    writer.close();
     dir.close();
   }
   
   private void doTestSortedVsFieldCache(int minLength, int maxLength) throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     Document doc = new Document();
     Field idField = new StringField("id", "", Field.Store.NO);
@@ -1667,7 +1695,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
   
@@ -1769,7 +1797,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -1818,7 +1846,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -1850,7 +1878,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -1884,7 +1912,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -1917,7 +1945,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -1951,7 +1979,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -1980,7 +2008,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     
@@ -2043,7 +2071,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
 
   private void doTestSortedSetVsStoredFields(int minLength, int maxLength, int maxValuesPerDoc) throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     
     // index some docs
@@ -2089,10 +2117,9 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
       int id = random().nextInt(numDocs);
       writer.deleteDocuments(new Term("id", Integer.toString(id)));
     }
-    writer.close();
     
     // compare
-    DirectoryReader ir = DirectoryReader.open(dir);
+    DirectoryReader ir = writer.getReader();
     for (AtomicReaderContext context : ir.leaves()) {
       AtomicReader r = context.reader();
       SortedSetDocValues docValues = r.getSortedSetDocValues("dv");
@@ -2112,6 +2139,30 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
       }
     }
     ir.close();
+    writer.forceMerge(1);
+    
+    // compare again
+    ir = writer.getReader();
+    for (AtomicReaderContext context : ir.leaves()) {
+      AtomicReader r = context.reader();
+      SortedSetDocValues docValues = r.getSortedSetDocValues("dv");
+      for (int i = 0; i < r.maxDoc(); i++) {
+        String stringValues[] = r.document(i).getValues("stored");
+        if (docValues != null) {
+          docValues.setDocument(i);
+        }
+        for (int j = 0; j < stringValues.length; j++) {
+          assert docValues != null;
+          long ord = docValues.nextOrd();
+          assert ord != NO_MORE_ORDS;
+          BytesRef scratch = docValues.lookupOrd(ord);
+          assertEquals(stringValues[j], scratch.utf8ToString());
+        }
+        assert docValues == null || docValues.nextOrd() == NO_MORE_ORDS;
+      }
+    }
+    ir.close();
+    writer.close();
     dir.close();
   }
   
@@ -2449,7 +2500,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testTwoNumbersOneMissing() throws IOException {
     assumeTrue("Codec does not support getDocsWithField", defaultCodecSupportsDocsWithField());
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = newIndexWriterConfig(null);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iw = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -2478,7 +2529,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testTwoNumbersOneMissingWithMerging() throws IOException {
     assumeTrue("Codec does not support getDocsWithField", defaultCodecSupportsDocsWithField());
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = newIndexWriterConfig(null);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iw = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -2508,7 +2559,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testThreeNumbersOneMissingWithMerging() throws IOException {
     assumeTrue("Codec does not support getDocsWithField", defaultCodecSupportsDocsWithField());
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = newIndexWriterConfig(null);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iw = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -2544,7 +2595,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testTwoBytesOneMissing() throws IOException {
     assumeTrue("Codec does not support getDocsWithField", defaultCodecSupportsDocsWithField());
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = newIndexWriterConfig(null);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iw = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -2575,7 +2626,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testTwoBytesOneMissingWithMerging() throws IOException {
     assumeTrue("Codec does not support getDocsWithField", defaultCodecSupportsDocsWithField());
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = newIndexWriterConfig(null);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iw = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -2607,7 +2658,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   public void testThreeBytesOneMissingWithMerging() throws IOException {
     assumeTrue("Codec does not support getDocsWithField", defaultCodecSupportsDocsWithField());
     Directory directory = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = newIndexWriterConfig(null);
     conf.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iw = new RandomIndexWriter(random(), directory, conf);
     Document doc = new Document();
@@ -2660,7 +2711,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     } else {
       numDocs = TestUtil.nextInt(random(), 100, 200);
     }
-    IndexWriter w = new IndexWriter(d, newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer));
+    IndexWriter w = new IndexWriter(d, newIndexWriterConfig(analyzer));
     List<byte[]> docBytes = new ArrayList<>();
     long totalBytes = 0;
     for(int docID=0;docID<numDocs;docID++) {
@@ -2757,7 +2808,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     } else {
       numDocs = TestUtil.nextInt(random(), 100, 200);
     }
-    IndexWriter w = new IndexWriter(d, newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer));
+    IndexWriter w = new IndexWriter(d, newIndexWriterConfig(analyzer));
     List<byte[]> docBytes = new ArrayList<>();
     long totalBytes = 0;
     for(int docID=0;docID<numDocs;docID++) {
@@ -2810,7 +2861,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
   /** Tests dv against stored fields with threads (binary/numeric/sorted, no missing) */
   public void testThreads() throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     Document doc = new Document();
     Field idField = new StringField("id", "", Field.Store.NO);
@@ -2902,7 +2953,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_SET", defaultCodecSupportsSortedSet());
     assumeTrue("Codec does not support SORTED_NUMERIC", defaultCodecSupportsSortedNumeric());
     Directory dir = newDirectory();
-    IndexWriterConfig conf = newIndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     RandomIndexWriter writer = new RandomIndexWriter(random(), dir, conf);
     Field idField = new StringField("id", "", Field.Store.NO);
     Field storedBinField = new StoredField("storedBin", new byte[0]);
@@ -3244,7 +3295,7 @@ public abstract class BaseDocValuesFormatTestCase extends BaseIndexFileFormatTes
     assumeTrue("Codec does not support SORTED_NUMERIC", defaultCodecSupportsSortedNumeric());
     Directory directory = newDirectory();
     Analyzer analyzer = new MockAnalyzer(random());
-    IndexWriterConfig iwconfig = newIndexWriterConfig(TEST_VERSION_CURRENT, analyzer);
+    IndexWriterConfig iwconfig = newIndexWriterConfig(analyzer);
     iwconfig.setMergePolicy(newLogMergePolicy());
     RandomIndexWriter iwriter = new RandomIndexWriter(random(), directory, iwconfig);
     

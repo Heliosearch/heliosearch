@@ -36,10 +36,9 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.automaton.Automaton;
 import org.apache.lucene.util.automaton.AutomatonTestUtil;
-import org.apache.lucene.util.automaton.BasicAutomata;
-import org.apache.lucene.util.automaton.BasicOperations;
+import org.apache.lucene.util.automaton.Automata;
+import org.apache.lucene.util.automaton.Operations;
 import org.apache.lucene.util.automaton.CharacterRunAutomaton;
 import org.apache.lucene.util.automaton.RegExp;
 
@@ -168,9 +167,9 @@ public class TestMockAnalyzer extends BaseTokenStreamTestCase {
   public void testKeep() throws Exception {
     CharacterRunAutomaton keepWords = 
       new CharacterRunAutomaton(
-          BasicOperations.complement(
-              Automaton.union(
-                  Arrays.asList(BasicAutomata.makeString("foo"), BasicAutomata.makeString("bar")))));
+          Operations.complement(
+              Operations.union(
+                  Arrays.asList(Automata.makeString("foo"), Automata.makeString("bar")))));
     Analyzer a = new MockAnalyzer(random(), MockTokenizer.SIMPLE, true, keepWords);
     assertAnalyzesTo(a, "quick foo brown bar bar fox foo",
         new String[] { "foo", "bar", "bar", "foo" },
@@ -278,11 +277,6 @@ public class TestMockAnalyzer extends BaseTokenStreamTestCase {
       }
       
       @Override
-      protected TokenStreamComponents wrapComponents(String fieldName, TokenStreamComponents components) {
-        return components;
-      }
-      
-      @Override
       protected Analyzer getWrappedAnalyzer(String fieldName) {
         return delegate;
       }
@@ -296,7 +290,7 @@ public class TestMockAnalyzer extends BaseTokenStreamTestCase {
     final int positionGap = random().nextInt(1000);
     final int offsetGap = random().nextInt(1000);
     final Analyzer delegate = new MockAnalyzer(random());
-    final Analyzer a = new AnalyzerWrapper(delegate.getReuseStrategy()) {      
+    final Analyzer a = new DelegatingAnalyzerWrapper(delegate.getReuseStrategy()) {
       @Override
       protected Analyzer getWrappedAnalyzer(String fieldName) {
         return delegate;

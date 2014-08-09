@@ -101,13 +101,11 @@ class UnInvertedField extends DocTermOrds {
 
   private SolrIndexSearcher.DocsEnumState deState;
   private final SolrIndexSearcher searcher;
-  private final boolean isPlaceholder;
 
   private static UnInvertedField uifPlaceholder = new UnInvertedField();
 
   private UnInvertedField() { // Dummy for synchronization.
     super("fake", 0, 0); // cheapest initialization I can find.
-    isPlaceholder = true;
     searcher = null;
    }
 
@@ -181,7 +179,6 @@ class UnInvertedField extends DocTermOrds {
           DEFAULT_INDEX_INTERVAL_BITS);
     //System.out.println("maxTermDocFreq=" + maxTermDocFreq + " maxDoc=" + searcher.maxDoc());
 
-    isPlaceholder = false;
     final String prefix = TrieField.getMainValuePrefix(searcher.getSchema().getFieldType(field));
     this.searcher = searcher;
     try {
@@ -711,9 +708,10 @@ class UnInvertedField extends DocTermOrds {
     synchronized (cache) {
       uif = cache.get(field);
       if (uif == null) {
-        cache.put(field, uifPlaceholder); // This thread will load this field, don't let other threads try.
+
+        cache.put(field, uifPlaceholder);
       } else {
-        if (uif.isPlaceholder == false) {
+        if (uif != uifPlaceholder) {
           return uif;
         }
         doWait = true; // Someone else has put the place holder in, wait for that to complete.
@@ -723,7 +721,7 @@ class UnInvertedField extends DocTermOrds {
       try {
         synchronized (cache) {
           uif = cache.get(field); // Should at least return the placeholder, NPE if not is OK.
-          if (uif.isPlaceholder == false) { // OK, another thread put this in the cache we should be good.
+          if (uif != uifPlaceholder) { // OK, another thread put this in the cache we should be good.
             return uif;
           }
           cache.wait();

@@ -2402,7 +2402,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
   @Override
   public String getSource() {
-    return "$URL$";
+    return null;
   }
 
   @Override

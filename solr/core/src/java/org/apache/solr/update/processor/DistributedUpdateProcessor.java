@@ -312,7 +312,6 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
         forwardToLeader = false;
         return nodes;
       }
-      String coreName = req.getCore().getName();
 
       ClusterState cstate = zkController.getClusterState();      
       DocCollection coll = cstate.getCollection(collection);
@@ -361,7 +360,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
             slice = coll.getSlice(myShardId);
             shardId = myShardId;
             leaderReplica = zkController.getZkStateReader().getLeaderRetry(collection, myShardId);
-            List<ZkCoreNodeProps> myReplicas = zkController.getZkStateReader().getReplicaProps(collection, shardId, leaderReplica.getName(), coreName, null, ZkStateReader.DOWN);
+            List<ZkCoreNodeProps> myReplicas = zkController.getZkStateReader().getReplicaProps(collection, shardId, leaderReplica.getName(), null, ZkStateReader.DOWN);
           }
         }
 
@@ -379,8 +378,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
           // so get the replicas...
           forwardToLeader = false;
           List<ZkCoreNodeProps> replicaProps = zkController.getZkStateReader()
-              .getReplicaProps(collection, shardId, leaderReplica.getName(),
-                  coreName, null, ZkStateReader.DOWN);
+              .getReplicaProps(collection, shardId, leaderReplica.getName(), null, ZkStateReader.DOWN);
 
           if (replicaProps != null) {
             if (nodes == null)  {
@@ -625,8 +623,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
 
       forwardToLeader = false;
       List<ZkCoreNodeProps> replicaProps = zkController.getZkStateReader()
-          .getReplicaProps(collection, shardId, leaderReplica.getName(),
-              req.getCore().getName());
+          .getReplicaProps(collection, shardId, leaderReplica.getName());
       if (replicaProps != null) {
         nodes = new ArrayList<>(replicaProps.size());
         for (ZkCoreNodeProps props : replicaProps) {
@@ -1415,8 +1412,7 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
           Replica leaderReplica = zkController.getZkStateReader().getLeaderRetry(
               collection, myShardId);
           List<ZkCoreNodeProps> replicaProps = zkController.getZkStateReader()
-              .getReplicaProps(collection, myShardId, leaderReplica.getName(),
-                  req.getCore().getName(), null, ZkStateReader.DOWN);
+              .getReplicaProps(collection, myShardId, leaderReplica.getName(), null, ZkStateReader.DOWN);
           if (replicaProps != null) {
             List<Node> myReplicas = new ArrayList<>();
             for (ZkCoreNodeProps replicaProp : replicaProps) {
