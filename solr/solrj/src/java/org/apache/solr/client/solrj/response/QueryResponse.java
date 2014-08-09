@@ -25,6 +25,7 @@ import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.params.CursorMarkParams;
 
 import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * 
@@ -43,6 +44,7 @@ public class QueryResponse extends SolrResponseBase
   private NamedList<Object> _highlightingInfo = null;
   private NamedList<NamedList<Object>> _spellInfo = null;
   private NamedList<Object> _statsInfo = null;
+  private NamedList<Object> _facetStatsInfo = null;
   private NamedList<NamedList<Number>> _termsInfo = null;
   private String _cursorMarkNext = null;
 
@@ -60,8 +62,13 @@ public class QueryResponse extends SolrResponseBase
   private List<FacetField> _facetDates = null;
   private List<RangeFacet> _facetRanges = null;
   private NamedList<List<PivotField>> _facetPivot = null;
+  
+  // Facet stats Response
+  private Map<String,FacetStatsInfo> _facetFieldStatsInfo = null;
 
-  // Highlight Info
+
+
+// Highlight Info
   private Map<String,Map<String,List<String>>> _highlighting = null;
 
   // SpellCheck Response
@@ -144,11 +151,17 @@ public class QueryResponse extends SolrResponseBase
       else if ( CursorMarkParams.CURSOR_MARK_NEXT.equals( n ) ) {
         _cursorMarkNext = (String) res.getVal( i );
       }
+      else if( "facets".equals( n ) ) {
+    	  _facetStatsInfo = (NamedList<Object>) res.getVal( i );
+    	  extractFacetStats(_facetStatsInfo);    	  
+      }
     }
     if(_facetInfo != null) extractFacetInfo( _facetInfo );
   }
 
-  private void extractSpellCheckInfo(NamedList<NamedList<Object>> spellInfo) {
+
+
+private void extractSpellCheckInfo(NamedList<NamedList<Object>> spellInfo) {
     _spellResponse = new SpellCheckResponse(spellInfo);
   }
 
@@ -256,6 +269,17 @@ public class QueryResponse extends SolrResponseBase
         fieldMap.put( field.getKey(), field.getValue() );
       }
     }
+  }
+  
+  private void extractFacetStats(NamedList<Object> info) {
+	  if( info != null ) {
+		  _facetFieldStatsInfo =  new HashMap<>();
+		  for (Entry<String, Object> entry : info){
+			  String key = entry.getKey();
+			  NamedList<Object> value = (NamedList<Object>)entry.getValue();
+			  _facetFieldStatsInfo.put(key,  new FacetStatsInfo(value,key));
+		  }
+	    }
   }
 
   private void extractFacetInfo( NamedList<Object> info )
@@ -511,6 +535,10 @@ public class QueryResponse extends SolrResponseBase
 
   public String getNextCursorMark() {
     return _cursorMarkNext;
+  }
+  
+  public Map<String, FacetStatsInfo> getFacetFieldStatsInfo() {
+	return _facetFieldStatsInfo;
   }
 }
 
