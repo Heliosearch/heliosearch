@@ -152,8 +152,8 @@ public class QueryResponse extends SolrResponseBase
         _cursorMarkNext = (String) res.getVal( i );
       }
       else if( "facets".equals( n ) ) {
-    	  _facetStatsInfo = (NamedList<Object>) res.getVal( i );
-    	  extractFacetStats(_facetStatsInfo);    	  
+          _facetStatsInfo = (NamedList<Object>) res.getVal( i );
+          extractFacetStats(_facetStatsInfo);             
       }
     }
     if(_facetInfo != null) extractFacetInfo( _facetInfo );
@@ -272,14 +272,14 @@ private void extractSpellCheckInfo(NamedList<NamedList<Object>> spellInfo) {
   }
   
   private void extractFacetStats(NamedList<Object> info) {
-	  if( info != null ) {
-		  _facetFieldStatsInfo =  new HashMap<>();
-		  for (Entry<String, Object> entry : info){
-			  String key = entry.getKey();
-			  NamedList<Object> value = (NamedList<Object>)entry.getValue();
-			  _facetFieldStatsInfo.put(key,  new FacetStatsInfo(value,key));
-		  }
-	    }
+          if( info != null ) {
+                  _facetFieldStatsInfo =  new HashMap<>();
+                  for (Entry<String, Object> entry : info){
+                          String key = entry.getKey();
+                          NamedList<Object> value = (NamedList<Object>)entry.getValue();
+                          _facetFieldStatsInfo.put(key,  new FacetStatsInfo(value,key));
+                  }
+            }
   }
 
   private void extractFacetInfo( NamedList<Object> info )
@@ -538,7 +538,7 @@ private void extractSpellCheckInfo(NamedList<NamedList<Object>> spellInfo) {
   }
   
   public Map<String, FacetStatsInfo> getFacetFieldStatsInfo() {
-	return _facetFieldStatsInfo;
+        return _facetFieldStatsInfo;
   }
 }
 

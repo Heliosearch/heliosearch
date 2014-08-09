@@ -287,7 +287,7 @@ public class SolrQuery extends ModifiableSolrParams
   }
   
   public String[] getFacetStats(){
-	  return this.getParams(FacetParams.FACET_STAT);  
+          return this.getParams(FacetParams.FACET_STAT);  
   }
   
   /** get the facet fields

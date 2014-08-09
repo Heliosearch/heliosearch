@@ -32,107 +32,107 @@ import org.apache.solr.common.util.SimpleOrderedMap;
  * 
  */
 public class FacetStatsBucketInfo implements Serializable {
-	String fieldName;
-	
-	String value;
+        String fieldName;
+        
+        String value;
 
-	Object sum;
-	Object avg;
-	Double sumOfSquares;
-	Object min;
-	Object max;
+        Object sum;
+        Object avg;
+        Double sumOfSquares;
+        Object min;
+        Object max;
 
-	Number count;
+        Number count;
 
-	@SuppressWarnings("unchecked")
-	public FacetStatsBucketInfo(final NamedList<Object> nl) {
-		
+        @SuppressWarnings("unchecked")
+        public FacetStatsBucketInfo(final NamedList<Object> nl) {
+                
 
-		for (final Map.Entry<String, Object> entry : nl) {
-			
-			String szKey = entry.getKey();
-			if (szKey.startsWith("sum")) {
-				this.sum = entry.getValue();
-			} else if (szKey.startsWith("avg")) {
-				String szAggFunc = szKey;
-				int pos1 = szAggFunc.indexOf('(');
-				int pos2 = szAggFunc.indexOf(')');
-				if (pos1 != -1 && pos2 != -1){					
-					this.fieldName = szAggFunc.substring(pos1+1, pos2);
-				}
-				this.avg = entry.getValue();
-			} else if (szKey.startsWith("sumOfSquares")) {
-				this.sumOfSquares = (Double) entry.getValue();
-			} else if (szKey.startsWith("min")) {
-				this.min = entry.getValue();
-			} else if (szKey.startsWith("max")) {
-				this.max = entry.getValue();
-			} else if (szKey.startsWith("count")) {
-				this.count = (Integer) entry.getValue();
-			} else if (szKey.equals("val")) {
-				this.value = (String)entry.getValue();
-				
-			} else {
-				throw new RuntimeException("unknown key: " + szKey
-						+ " ["
-						+ entry.getValue()
-						+ "]");
-			}
-		}
-	}
+                for (final Map.Entry<String, Object> entry : nl) {
+                        
+                        String szKey = entry.getKey();
+                        if (szKey.startsWith("sum")) {
+                                this.sum = entry.getValue();
+                        } else if (szKey.startsWith("avg")) {
+                                String szAggFunc = szKey;
+                                int pos1 = szAggFunc.indexOf('(');
+                                int pos2 = szAggFunc.indexOf(')');
+                                if (pos1 != -1 && pos2 != -1){                                  
+                                        this.fieldName = szAggFunc.substring(pos1+1, pos2);
+                                }
+                                this.avg = entry.getValue();
+                        } else if (szKey.startsWith("sumOfSquares")) {
+                                this.sumOfSquares = (Double) entry.getValue();
+                        } else if (szKey.startsWith("min")) {
+                                this.min = entry.getValue();
+                        } else if (szKey.startsWith("max")) {
+                                this.max = entry.getValue();
+                        } else if (szKey.startsWith("count")) {
+                                this.count = (Integer) entry.getValue();
+                        } else if (szKey.equals("val")) {
+                                this.value = (String)entry.getValue();
+                                
+                        } else {
+                                throw new RuntimeException("unknown key: " + szKey
+                                                + " ["
+                                                + entry.getValue()
+                                                + "]");
+                        }
+                }
+        }
 
-//	public String getName() {
-//		return this.name;
-//	}
-
-
-
-	public Object getMin() {
-		return this.min;
-	}
+//      public String getName() {
+//              return this.name;
+//      }
 
 
-	@Override
-	public String toString() {
-		return "FacetStatsBucketInfo [" + (fieldName != null ? "fieldName=" + fieldName
-				+ ", " : "")
-				+ (value != null ? "value=" + value
-						+ ", " : "")
-				+ (sum != null ? "sum=" + sum
-						+ ", " : "")
-				+ (avg != null ? "avg=" + avg
-						+ ", " : "")
-				+ (sumOfSquares != null ? "sumOfSquares=" + sumOfSquares
-						+ ", " : "")
-				+ (min != null ? "min=" + min
-						+ ", " : "")
-				+ (max != null ? "max=" + max
-						+ ", " : "")
-				+ (count != null ? "count=" + count : "")
-				+ "]";
-	}
 
-	public Object getMax() {
-		return this.max;
-	}
+        public Object getMin() {
+                return this.min;
+        }
 
-	public Object getSum() {
-		return this.sum;
-	}
 
-	public Integer getCount() {
-		if (this.count == null)
-			return null;
-		return this.count.intValue();
-	}
+        @Override
+        public String toString() {
+                return "FacetStatsBucketInfo [" + (fieldName != null ? "fieldName=" + fieldName
+                                + ", " : "")
+                                + (value != null ? "value=" + value
+                                                + ", " : "")
+                                + (sum != null ? "sum=" + sum
+                                                + ", " : "")
+                                + (avg != null ? "avg=" + avg
+                                                + ", " : "")
+                                + (sumOfSquares != null ? "sumOfSquares=" + sumOfSquares
+                                                + ", " : "")
+                                + (min != null ? "min=" + min
+                                                + ", " : "")
+                                + (max != null ? "max=" + max
+                                                + ", " : "")
+                                + (count != null ? "count=" + count : "")
+                                + "]";
+        }
 
-	public Object getAvg() {
-		return avg;
-	}
+        public Object getMax() {
+                return this.max;
+        }
 
-	public String getValue() {
-		return value;
-	}
-	
+        public Object getSum() {
+                return this.sum;
+        }
+
+        public Integer getCount() {
+                if (this.count == null)
+                        return null;
+                return this.count.intValue();
+        }
+
+        public Object getAvg() {
+                return avg;
+        }
+
+        public String getValue() {
+                return value;
+        }
+        
 
 }
