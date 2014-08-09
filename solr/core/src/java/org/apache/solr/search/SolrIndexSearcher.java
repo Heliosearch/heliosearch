@@ -1282,6 +1282,18 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
 
   // query must be positive
   DocSet getDocSetNC(Query query, DocSet filter) throws IOException {
+    if (query instanceof DocSetProducer) {
+      QueryContext queryContext = QueryContext.newContext(this);
+      DocSet answer = ((DocSetProducer)query).createDocSet(queryContext);
+      if (filter != null) {
+        // TODO: do this in-place?
+        DocSet union = answer.union(filter);
+        answer.decref();
+        answer = union;
+      }
+      return answer;
+    }
+
     try (
         DocSetCollector collector = new DocSetCollector(smallSetSize, maxDoc())
     ) {
