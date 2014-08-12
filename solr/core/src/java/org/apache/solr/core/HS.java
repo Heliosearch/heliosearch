@@ -493,6 +493,17 @@ public class HS
     unsafe.copyMemory(src+srcOffBytes, dest+destOffBytes, nBytes);
   }
 
+  //////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////
+
+  /** Sorts a list of integers.  The maximum possible value an integer in the list is passed as a hint.
+   * maxPossible may be larger than any values in the array, but should not be smaller.
+   * For sorting docids, simply pass maxDoc.
+   */
+  public static native int sortDedupInts(long intPointer, int numInts, int maxPossible);
+
+
 
 
   public static String hex(long arr, long offset) {
