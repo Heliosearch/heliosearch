@@ -1,0 +1,182 @@
+package org.apache.solr.search;
+
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.Scorer;
+import org.apache.solr.core.HS;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * DedupDocSetCollector must be closed after use.
+ */
+
+public class DedupDocSetCollector extends Collector implements AutoCloseable {
+  private long buffer;
+  private BitDocSetNative bits;
+  private int pos=0;
+  private final int maxDoc;
+  private final int smallSetSize;
+  private int base;
+  private final int bufferSize = 2048;
+  private List<Long> bufferList;
+
+  public DedupDocSetCollector(int smallSetSize, int maxDoc) {
+    this.smallSetSize = smallSetSize;
+    this.maxDoc = maxDoc;
+    allocBuffer();
+  }
+
+  private void allocBuffer() {
+    this.buffer = HS.allocArray(bufferSize, 4, false);
+  }
+
+  @Override
+  public void collect(int doc) throws IOException {
+    if (pos >= bufferSize) {
+      newBuffer();
+    }
+
+    doc += base;
+    HS.setInt(buffer, pos, doc);
+    pos++;
+  }
+
+  private int bufferedSize() {
+    int nBuffers = bufferList==null ? 0 : bufferList.size();
+    return (nBuffers * bufferSize) + pos;
+  }
+
+  private void newBuffer() {
+    if (bits == null && bufferedSize() > smallSetSize) {
+      bits = new  BitDocSetNative(maxDoc);
+    }
+
+    // if we've already transitioned to a bitset, then just set the bits
+    // and reuse this buffer.
+    if (bits != null) {
+      assert pos == bufferSize;
+      setBits(buffer, pos);
+      pos = 0;
+      return;
+    }
+
+    if (bufferList == null) {
+      bufferList = new ArrayList<>();
+    }
+
+    bufferList.add(buffer);
+    allocBuffer();
+    pos = 0;
+  }
+
+  private void setBits(long buf, int sz) {
+    // TODO: make native?
+    for (int i=0; i<sz; i++) {
+      bits.fastSet( HS.getInt(buf, i) );
+    }
+  }
+
+
+
+  public DocSet getDocSet() {
+    int sz = bufferedSize();
+    if (bits==null && sz > smallSetSize) {
+      bits = new BitDocSetNative(maxDoc);
+    }
+
+    if (bits != null) {
+      setBits(buffer, pos);
+
+      if (bufferList != null) {
+        for (long buf : bufferList) {
+          setBits(buf, bufferSize);
+        }
+      }
+
+      DocSet answer = bits;
+      bits = null; // null out so we know we don't need to free later
+      return answer;
+    }
+
+    // make a small set
+    long all;
+    if (bufferList == null) {
+      all = buffer;
+      buffer = 0;
+    } else {
+      all = HS.allocArray(sz, 4, false);
+      int allPos = 0;
+      for (long buf : bufferList) {
+        HS.copyInts(buf, 0, all, allPos, bufferSize);
+        allPos += bufferSize;
+      }
+      HS.copyInts(buffer, 0, all, allPos, pos);
+      allPos += pos;
+      assert allPos == sz;
+    }
+
+    int nDocs = HS.sortDedupInts(all, sz, maxDoc);
+
+    // resize if more than 1/16 slop
+    if (nDocs < sz - (sz>>4)) {
+      long arr2 = HS.allocArray(nDocs, 4, false);
+      HS.copyInts(all, 0, arr2, 0, nDocs);
+      HS.freeArray(all);  // TODO: could be from buffer pool!  But that should be OK?  can tell by buferList==null
+      all = arr2;
+    }
+
+    return new SortedIntDocSetNative(all, nDocs);
+  }
+
+  @Override
+  public void setScorer(Scorer scorer) throws IOException {
+  }
+
+  @Override
+  public void setNextReader(AtomicReaderContext context) throws IOException {
+    this.base = context.docBase;
+  }
+
+  @Override
+  public boolean acceptsDocsOutOfOrder() {
+    return false;
+  }
+
+  @Override
+  public void close() {
+    if (bits != null) {
+      bits.decref();
+      bits = null;
+    }
+    if (buffer != 0) {
+      HS.freeArray(buffer);
+      buffer = 0;
+    }
+    if (bufferList != null) {
+      for (long buf : bufferList) {
+        HS.freeArray(buf);
+      }
+      bufferList = null;
+    }
+  }
+}

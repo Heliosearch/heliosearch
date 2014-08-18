@@ -177,4 +177,64 @@ public class TestDocSetNative extends TestDocSet {
   }
 
 
+  public void doDedupDocSetCollector(IndexReader reader) throws Exception {
+    Random r = random();
+    int maxDoc = reader.maxDoc();
+    int smallSetSize = (maxDoc>>6) + 5;
+
+    FixedBitSet reference = new FixedBitSet(maxDoc);
+    DedupDocSetCollector ddc = new DedupDocSetCollector(smallSetSize, maxDoc);
+
+    for (AtomicReaderContext readerContext : reader.getContext().leaves()) {
+      ddc.setNextReader(readerContext);
+
+      int max = readerContext.reader().maxDoc();
+      if (max==0) continue;
+      int n = random().nextInt(max);
+      int base = readerContext.docBase;
+      int last=-1;
+      for (int i=0; i<n; i++) {
+        int doc = random().nextInt(max);
+        reference.set(doc + base);
+
+        ddc.collect(doc);
+        if (random().nextInt(10) == 0) {
+          if (last != -1) {
+            ddc.collect(last);
+          }
+          if (random().nextBoolean()) {
+            last = doc;
+          }
+        }
+      }
+    }
+
+    DocSet answer = ddc.getDocSet();
+    ddc.close();
+
+    checkEqual(reference, answer);
+    answer.decref();
+  }
+
+
+  public void testDedupDocSetCollector() throws Exception {
+    // keeping these numbers smaller help hit more edge cases
+    int maxSeg=4;
+    int maxDoc=5;    // increase if future changes add more edge cases (like probing a certain distance in the bin search)
+
+    for (int i=0; i<500; i++) {
+      if (random().nextBoolean()) {
+        maxSeg = random().nextInt(10) + 2;
+        maxDoc = random().nextInt(10000) + 2;  // need something big enough to go over buffer size occasionally
+      } else {
+        maxSeg = 4;
+        maxDoc = 5;
+      }
+      IndexReader r = dummyMultiReader(maxSeg, maxDoc);
+      for (int j=0; j<10; j++) {
+        doDedupDocSetCollector(r);
+      }
+    }
+  }
+
 }

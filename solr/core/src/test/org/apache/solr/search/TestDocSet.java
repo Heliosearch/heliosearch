@@ -429,7 +429,7 @@ public class TestDocSet extends LuceneTestCase {
   }
   ***/
 
-  public AtomicReader dummyIndexReader(final int maxDoc) {
+  public static AtomicReader dummyIndexReader(final int maxDoc) {
     return new AtomicReader() {
       @Override
       public int maxDoc() {
