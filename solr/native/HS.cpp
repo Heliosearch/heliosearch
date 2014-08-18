@@ -30,7 +30,7 @@ int dedup2(int* arr, int numInts) {
   int dups = 0;
   int last = arr[0];
   for (int i = 1; i<numInts; i++) {
-    int val = arr[numInts];
+    int val = arr[i];
     if (val == last) {
       dups++;
     } else {
@@ -45,7 +45,7 @@ int dedup2(int* arr, int numInts) {
 // and calls dedup2 at the point the first dup is found.
 int dedup(int* arr, int numInts) {
   for (int i = 0; i<(numInts-1); i++) {
-    if (arr[i] != arr[i+1]) {
+    if (arr[i] == arr[i+1]) {
       return i + dedup2(arr+i, numInts-i);
     }
   }

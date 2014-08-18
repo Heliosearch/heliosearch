@@ -576,4 +576,42 @@ public class TestHS extends LuceneTestCase {
   }
 
 
+  public void testSortDedup() throws Exception {
+    long arr = HS.allocArray(5, 4, false);
+
+    HS.setInt(arr, 0, 5);
+    int sz = HS.sortDedupInts(arr, 1, 7);
+    assertEquals(1, sz);
+    assertEquals(5, HS.getInt(arr,0));
+
+    HS.setInt(arr, 0, 7);
+    HS.setInt(arr, 1, 5);
+    sz = HS.sortDedupInts(arr, 2, 7);
+    assertEquals(2, sz);
+    assertEquals(5, HS.getInt(arr,0));
+    assertEquals(7, HS.getInt(arr,1));
+
+    HS.setInt(arr, 0, 7);
+    HS.setInt(arr, 1, 5);
+    HS.setInt(arr, 2, 7);
+    HS.setInt(arr, 3, 5);
+    HS.setInt(arr, 4, 7);
+    sz = HS.sortDedupInts(arr, 5, 7);
+    assertEquals(2, sz);
+    assertEquals(5, HS.getInt(arr,0));
+    assertEquals(7, HS.getInt(arr,1));
+
+    HS.setInt(arr, 0, 7);
+    HS.setInt(arr, 1, 7);
+    HS.setInt(arr, 2, 7);
+    HS.setInt(arr, 3, 7);
+    HS.setInt(arr, 4, 7);
+    sz = HS.sortDedupInts(arr, 5, 7);
+    assertEquals(1, sz);
+    assertEquals(7, HS.getInt(arr,0));
+
+
+    HS.freeArray(arr);
+  }
+
 }
