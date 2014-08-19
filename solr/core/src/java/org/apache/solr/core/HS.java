@@ -240,6 +240,51 @@ public class HS
     return numFree.get();
   }
 
+
+  // buffer pool - guaranteed to be power of two sized so it can be used in hash tables, etc.
+  // 8K was picked to be small compared to the typical L1 data cache size of 32K.
+  public static final int BUFFER_SIZE_BYTES = 8192;
+  private static final long[] bufferList = new long[1024];
+  private static int numCached = 0;
+  private static long cachedBufferRetrievals;  // number of cache "hits"
+
+  /** Returns a buffer of BUFFER_SIZE_BYTES in bytes.
+   *  Scale size according to your element size.
+   */
+  public static long getBuffer() {
+    synchronized (bufferList) {
+      if (numCached > 0) {
+        cachedBufferRetrievals++;
+        return bufferList[--numCached];
+      }
+    }
+    return allocArray(BUFFER_SIZE_BYTES, 1, false);
+  }
+
+  public static void releaseBuffer(long buffer) {
+    assert arraySizeBytes(buffer) == BUFFER_SIZE_BYTES;
+    synchronized (bufferList) {
+      if (numCached < bufferList.length) {
+        bufferList[numCached++] = buffer;
+        return;
+      }
+    }
+    freeArray(buffer);
+  }
+
+  public static void clearBufferPool() {
+    synchronized (bufferList) {
+      while (numCached > 0) {
+        freeArray( bufferList[--numCached] );
+      }
+    }
+  }
+
+  public static long getCachedBufferRetrievals() {
+    return cachedBufferRetrievals;
+  }
+
+
   public static long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
     return allocator.allocArray(numElements, elementSize, zero);
   }

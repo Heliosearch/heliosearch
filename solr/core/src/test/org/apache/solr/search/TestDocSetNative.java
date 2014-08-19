@@ -222,10 +222,10 @@ public class TestDocSetNative extends TestDocSet {
     int maxSeg=4;
     int maxDoc=5;    // increase if future changes add more edge cases (like probing a certain distance in the bin search)
 
-    for (int i=0; i<500; i++) {
+    for (int i=0; i<100; i++) {
       if (random().nextBoolean()) {
         maxSeg = random().nextInt(10) + 2;
-        maxDoc = random().nextInt(10000) + 2;  // need something big enough to go over buffer size occasionally
+        maxDoc = random().nextInt(100000) + 2;  // need something big enough to go over buffer size occasionally
       } else {
         maxSeg = 4;
         maxDoc = 5;

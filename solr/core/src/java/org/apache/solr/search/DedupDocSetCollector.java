@@ -37,7 +37,7 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
   private final int maxDoc;
   private final int smallSetSize;
   private int base;
-  private final int bufferSize = 2048;
+  private final int bufferSize = HS.BUFFER_SIZE_BYTES >>> 2;
   private List<Long> bufferList;
 
   public DedupDocSetCollector(int smallSetSize, int maxDoc) {
@@ -47,7 +47,7 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
   }
 
   private void allocBuffer() {
-    this.buffer = HS.allocArray(bufferSize, 4, false);
+    buffer = HS.getBuffer();
   }
 
   @Override
@@ -85,6 +85,7 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
     }
 
     bufferList.add(buffer);
+    buffer = 0;  // zero out in case allocBuffer fails
     allocBuffer();
     pos = 0;
   }
@@ -100,7 +101,7 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
 
   public DocSet getDocSet() {
     int sz = bufferedSize();
-    if (bits==null && sz > smallSetSize) {
+    if (bits == null && sz > smallSetSize) {
       bits = new BitDocSetNative(maxDoc);
     }
 
@@ -121,7 +122,7 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
     // make a small set
     long all;
     if (bufferList == null) {
-      all = buffer;
+      all = buffer;  // steal the buffer
       buffer = 0;
     } else {
       all = HS.allocArray(sz, 4, false);
@@ -137,11 +138,15 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
 
     int nDocs = HS.sortDedupInts(all, sz, maxDoc);
 
-    // resize if more than 1/16 slop
-    if (nDocs < sz - (sz>>4)) {
+    // resize if more than 1/16 slop after dedup, or if we are using a buffer pool buffer
+    if (bufferList==null || nDocs < sz - (sz>>4)) {
       long arr2 = HS.allocArray(nDocs, 4, false);
       HS.copyInts(all, 0, arr2, 0, nDocs);
-      HS.freeArray(all);  // TODO: could be from buffer pool!  But that should be OK?  can tell by buferList==null
+      if (bufferList == null) {
+        HS.releaseBuffer(all);
+      } else {
+        HS.freeArray(all);
+      }
       all = arr2;
     }
 
@@ -169,12 +174,12 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
       bits = null;
     }
     if (buffer != 0) {
-      HS.freeArray(buffer);
+      HS.releaseBuffer(buffer);
       buffer = 0;
     }
     if (bufferList != null) {
       for (long buf : bufferList) {
-        HS.freeArray(buf);
+        HS.releaseBuffer(buf);
       }
       bufferList = null;
     }

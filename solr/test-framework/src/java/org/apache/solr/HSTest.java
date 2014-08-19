@@ -21,14 +21,18 @@ public class HSTest {
 
   public static long startAllocations;
   public static long startFrees;
+  public static long startBufferRetrievals;
 
   public static void startTrackingMemory() {
     assert HS.loaded;
     startAllocations = HS.getNumAllocations();
     startFrees = HS.getNumFrees();
+    startBufferRetrievals = HS.getCachedBufferRetrievals();
   }
 
   public static void endTrackingMemory() {
+    HS.clearBufferPool();
+
     DocSetBaseNative.debug(true);
 
     HS.allocator.debug();
@@ -39,8 +43,9 @@ public class HSTest {
     long numAllocations = endAllocations - startAllocations;
     long numFrees = endFrees - startFrees;
     long numLeaks = numAllocations - numFrees;
+    long numBufferRetrievals = HS.getCachedBufferRetrievals() - startBufferRetrievals;
 
-    log.info("numAllocations="+numAllocations);
+    log.info("numAllocations="+numAllocations + " cachedBufferRetrievals="+numBufferRetrievals);
     if (numLeaks != 0) {
       String msg = "HS ERROR: MEMORY LEAKS = " + numLeaks;
       log.error(msg);
