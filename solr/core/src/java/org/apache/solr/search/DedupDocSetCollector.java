@@ -142,11 +142,7 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
     if (bufferList==null || nDocs < sz - (sz>>4)) {
       long arr2 = HS.allocArray(nDocs, 4, false);
       HS.copyInts(all, 0, arr2, 0, nDocs);
-      if (bufferList == null) {
-        HS.releaseBuffer(all);
-      } else {
-        HS.freeArray(all);
-      }
+      HS.freeArray(all);
       all = arr2;
     }
 
@@ -174,12 +170,12 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
       bits = null;
     }
     if (buffer != 0) {
-      HS.releaseBuffer(buffer);
+      HS.freeArray(buffer);
       buffer = 0;
     }
     if (bufferList != null) {
       for (long buf : bufferList) {
-        HS.releaseBuffer(buf);
+        HS.freeArray(buf);
       }
       bufferList = null;
     }

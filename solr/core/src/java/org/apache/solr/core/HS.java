@@ -125,9 +125,88 @@ public class HS
 
 
   public static class Allocator {
+    // buffer pool - guaranteed to be power of two sized so it can be used in hash tables, etc.
+    // 8K was picked to be small compared to the typical L1 data cache size of 32K.
+    private final long[] bufferList;
+    private int numCached = 0;  // number of buffers in the pool
+    private long cachedBufferRetrievals;  // number of cache "hits"
+
+    public Allocator() {
+      this(1024);
+    }
+
+    public Allocator(int bufferPoolSize) {
+      bufferList = new long[bufferPoolSize];
+    }
+
+    /** Returns a buffer of BUFFER_SIZE_BYTES in bytes.
+     *  Scale size according to your element size.
+     */
+    public long getBuffer() {
+      synchronized (bufferList) {
+        if (numCached > 0) {
+          cachedBufferRetrievals++;
+          return bufferList[--numCached];
+        }
+      }
+      return allocator.allocArray(BUFFER_SIZE_BYTES, 1, false);
+    }
+
+    public long tryGetBuffer() {
+      synchronized (bufferList) {
+        if (numCached > 0) {
+          cachedBufferRetrievals++;
+          return bufferList[--numCached];
+        }
+      }
+      return 0;
+    }
+
+    public void releaseBuffer(long buffer) {
+      if (!tryAddPool(buffer)) {
+        freeArray(buffer);
+      }
+    }
+
+    public boolean tryAddPool(long buffer) {
+      assert arraySizeBytes(buffer) == BUFFER_SIZE_BYTES;
+      synchronized (bufferList) {
+        if (numCached < bufferList.length) {
+          bufferList[numCached++] = buffer;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    public void clearBufferPool() {
+      synchronized (bufferList) {
+        while (numCached > 0) {
+          allocator.doFree( bufferList[--numCached] );
+        }
+      }
+    }
+
+    public long getCachedBufferRetrievals() {
+      return cachedBufferRetrievals;
+    }
+
+
     public long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
       // any JVM accounting for memory allocated this way?
       long sz = numElements * elementSize;
+
+      // try to use buffer pool
+      if (sz == BUFFER_SIZE_BYTES) {
+        long ret = tryGetBuffer();
+        if (ret != 0) {
+          if (zero) {
+            unsafe.setMemory(ret, sz, (byte)0);
+          }
+          return ret;
+        }
+      }
+
       long addr = unsafe.allocateMemory(sz + HEADER_SIZE);
 
       numAlloc.incrementAndGet();
@@ -145,7 +224,15 @@ public class HS
     }
 
     public void freeArray(long ptr) {
-      assert arraySizeBytes(ptr) >= 0;
+      long sz = arraySizeBytes(ptr);
+      assert sz >= 0;
+      if (sz == BUFFER_SIZE_BYTES && tryAddPool(ptr)) {
+        return;
+      }
+      doFree(ptr);
+    }
+
+    private void doFree(long ptr) {
       numFree.incrementAndGet();
       unsafe.putLong(ptr - SIZE_OFFSET, -123456789L);  // put negative length to trip asserts
       unsafe.freeMemory(ptr - HEADER_SIZE);
@@ -168,6 +255,10 @@ public class HS
     }
 
     Map<Long, Info> map = new LinkedHashMap<>();
+
+    public TrackingAllocator() {
+      super(0); // effectively disable buffer pool to ease debugging
+    }
 
     @Override
     public long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
@@ -243,47 +334,12 @@ public class HS
 
   // buffer pool - guaranteed to be power of two sized so it can be used in hash tables, etc.
   // 8K was picked to be small compared to the typical L1 data cache size of 32K.
-  public static final int BUFFER_SIZE_BYTES = 8192;
-  private static final long[] bufferList = new long[1024];
-  private static int numCached = 0;
-  private static long cachedBufferRetrievals;  // number of cache "hits"
+  public static final int BUFFER_SIZE_BITS = 13;
+  public static final int BUFFER_SIZE_BYTES = 1<<BUFFER_SIZE_BITS;
 
-  /** Returns a buffer of BUFFER_SIZE_BYTES in bytes.
-   *  Scale size according to your element size.
-   */
   public static long getBuffer() {
-    synchronized (bufferList) {
-      if (numCached > 0) {
-        cachedBufferRetrievals++;
-        return bufferList[--numCached];
-      }
-    }
-    return allocArray(BUFFER_SIZE_BYTES, 1, false);
+    return allocator.getBuffer();
   }
-
-  public static void releaseBuffer(long buffer) {
-    assert arraySizeBytes(buffer) == BUFFER_SIZE_BYTES;
-    synchronized (bufferList) {
-      if (numCached < bufferList.length) {
-        bufferList[numCached++] = buffer;
-        return;
-      }
-    }
-    freeArray(buffer);
-  }
-
-  public static void clearBufferPool() {
-    synchronized (bufferList) {
-      while (numCached > 0) {
-        freeArray( bufferList[--numCached] );
-      }
-    }
-  }
-
-  public static long getCachedBufferRetrievals() {
-    return cachedBufferRetrievals;
-  }
-
 
   public static long allocArray(long numElements, int elementSize, boolean zero) throws OutOfMemoryError {
     return allocator.allocArray(numElements, elementSize, zero);

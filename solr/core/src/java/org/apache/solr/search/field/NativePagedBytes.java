@@ -69,10 +69,6 @@ public final class NativePagedBytes implements Closeable {
   }
 
   public void copyUsingLengthPrefix(BytesRef bytes) {
-    if (bytes.length >= blockSize) {
-      throw new IllegalArgumentException("max length is " + blockSize + " (got " + bytes.length + ")");
-    }
-
     if (upto + bytes.length + 2 > blockSize) {
       if (bytes.length + 2 > blockSize) {
         throw new IllegalArgumentException("block size " + blockSize + " is too small to store length " + bytes.length + " bytes");
@@ -134,8 +130,6 @@ public final class NativePagedBytes implements Closeable {
     assert pos == sz;
     return arr;
   }
-
-
 
   @Override
   public void close() throws IOException {

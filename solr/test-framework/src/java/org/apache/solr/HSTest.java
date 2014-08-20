@@ -27,11 +27,11 @@ public class HSTest {
     assert HS.loaded;
     startAllocations = HS.getNumAllocations();
     startFrees = HS.getNumFrees();
-    startBufferRetrievals = HS.getCachedBufferRetrievals();
+    startBufferRetrievals = HS.allocator.getCachedBufferRetrievals();
   }
 
   public static void endTrackingMemory() {
-    HS.clearBufferPool();
+    HS.allocator.clearBufferPool();
 
     DocSetBaseNative.debug(true);
 
@@ -43,7 +43,7 @@ public class HSTest {
     long numAllocations = endAllocations - startAllocations;
     long numFrees = endFrees - startFrees;
     long numLeaks = numAllocations - numFrees;
-    long numBufferRetrievals = HS.getCachedBufferRetrievals() - startBufferRetrievals;
+    long numBufferRetrievals = HS.allocator.getCachedBufferRetrievals() - startBufferRetrievals;
 
     log.info("numAllocations="+numAllocations + " cachedBufferRetrievals="+numBufferRetrievals);
     if (numLeaks != 0) {
