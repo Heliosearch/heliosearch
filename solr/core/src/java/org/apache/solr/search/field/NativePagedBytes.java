@@ -132,7 +132,7 @@ public final class NativePagedBytes implements Closeable {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     for (Long block : blocks) {
       HS.freeArray(block);
     }

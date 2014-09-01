@@ -1,5 +1,6 @@
 #include "HS.h"
 #include "org_apache_solr_search_SortedIntDocSetNative.h"
+#include "org_apache_solr_search_BitDocSetNative.h"
 
 
 int intersectionSize(const int* const a, int32_t a_size, const int* const b, int32_t b_size);
@@ -12,7 +13,7 @@ class BitSetIterator;
 
 class BitDocSet : public DocSet {
   public:
-    const uint64_t* bits;
+    uint64_t* bits;
     int wlen;
     // TODO: what about number of bits set?
 
@@ -21,6 +22,11 @@ class BitDocSet : public DocSet {
     BitDocSet(uint64_t* bits, int wlen) : bits(bits), wlen(wlen) {
     }
 
+    void fastSet(int index) {
+      int wordNum = index>>6;
+      long bitmask = 1L << (index & 0x3f);
+      bits[wordNum] |= bitmask; 
+    }
 
     int nextSetBit(int index) const {
       assert(index >= 0);

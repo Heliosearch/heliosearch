@@ -92,4 +92,14 @@ int intersectionSize(const int* const a, int32_t a_size, const int* const b, int
 }
 
 
+JNIEXPORT void JNICALL Java_org_apache_solr_search_BitDocSetNative_setBits
+  (JNIEnv *env, jclass clazz, jlong words, jlong wlen, jlong intArr, jint sz)
+{
+  uint64_t* bits = (uint64_t*)words;
+  BitDocSet docs = BitDocSet(bits, wlen);
+  int* docsToSet = (int*)intArr;
+  for (int i=0; i<sz; i++) {
+    docs.fastSet( docsToSet[i] );
+  }
+}
 

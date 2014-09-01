@@ -251,6 +251,8 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
     return size;
   }
 
+  public static native void setBits(long words, long wlen, long intArr, int size);
+
   /**
    * The number of set bits - size - is cached.  If the bitset is changed externally,
    * this method should be used to invalidate the previously cached size.

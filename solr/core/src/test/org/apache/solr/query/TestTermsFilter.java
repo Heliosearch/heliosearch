@@ -18,17 +18,12 @@ package org.apache.solr.query;
  * limitations under the License.
  */
 
-import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.SolrTestCaseJ4;
-import org.apache.solr.common.SolrException;
-import org.apache.solr.common.params.SolrParams;
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.search.DelegatingCollector;
+import org.apache.solr.core.HS;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Random;
 
 public class TestTermsFilter extends SolrTestCaseJ4 {
 
@@ -38,41 +33,9 @@ public class TestTermsFilter extends SolrTestCaseJ4 {
     initCore("solrconfig.xml","schema_latest.xml");
   }
 
-
-  public void testTerms() throws Exception {
-    clearIndex();
-    assertU(adoc("id","4", "val_i","1"));
-    assertU(adoc("id","1", "val_i","2", "val_s", "AAAAAAAAAA1"));
-    assertU(adoc("id","3", "val_i","3", "val_s", "AAAAAAAAAA3"));
-    assertU(commit());
-    assertU(adoc("id","2", "val_i","5"));  // deleted
-    assertU(adoc("id","2", "val_i","4", "val_s", "AAAAAAAAAA2"));
-    assertU(commit());
-
-    assertJQ(req("q","*:*", "fq","{!terms f=id}1")
-        ,"/response/numFound==1"
-    );
-
-    assertJQ(req("q","*:*", "fq","{!terms f=id}2")
-        ,"/response/numFound==1"
-    );
-
-    assertJQ(req("q","*:*", "fq","{!terms f=id}1,2,3")
-        ,"/response/numFound==3"
-    );
-
-    assertJQ(req("q","*:*", "fq","{!terms f=id}3,2,1")
-        ,"/response/numFound==3"
-    );
-
-    // test integers (needs transformation)
-    assertJQ(req("q","*:*", "fq","{!terms f=val_i}3,2,1")
-        ,"/response/numFound==3"
-    );
-    // test integers (needs transformation)
-    assertJQ(req("q","*:*", "fq","{!terms f=val_i}1,2,3")
-        ,"/response/numFound==3"
-    );
+  @Test
+  public void testTermsFilter() throws Exception {
+    doIndex("foo_s", false);
 
     // test some prefix compression
     assertJQ(req("q","*:*", "fq","{!terms f=val_s}AAAAAAAAAA1,AAAAAAAAAA3,AAAAAAAAAA2,AAAAAAAAAA4")
@@ -91,7 +54,106 @@ public class TestTermsFilter extends SolrTestCaseJ4 {
         ,"/response/numFound==3"
     );
 
+    doQuery("id", "1" ,"/response/numFound==1");
+    doQuery("id", "2" ,"/response/numFound==1");
+    doQuery("id", "3,2,1" ,"/response/numFound==3");
+    doQuery("id", "3,999,2,noway,1,what" ,"/response/numFound==3");
+    doQuery("id", "" ,"/response/numFound==0");
 
+   // doTerms("id");
+    doTerms("foo_s");
+
+    for (String f : new String[] {"foo_s","foo_i","foo_f"}) {
+      doIndex(f, false);
+      doTerms(f);
+      assertU(optimize());
+      doTerms(f);
+    }
+
+  }
+
+
+  public void doQuery(String field, String terms, String... tests) throws Exception {
+    assertJQ(req("q","*:*", "fq","{!terms f=" + field + "}" + terms)
+        , tests
+    );
+
+    assertJQ(req("q","*:*", "fq","{!terms f=" + field + " cache=false}" + terms)
+        , tests
+    );
+
+    //
+    // test as main query instead of filter
+    //
+    assertJQ(req("q","{!terms f=" + field + "}" + terms)
+        , tests
+    );
+
+    assertJQ(req("q","{!terms f=" + field + " cache=false}" + terms)
+        , tests
+    );
+
+
+    assertJQ(req("q","*:*", "fq","{!terms f=" + field + " sort=false}" + terms)
+        , tests
+    );
+  }
+
+  public void doIndex(String field, boolean optimize) {
+    clearIndex();
+    assertU(adoc("id", "4", field, "3"));
+    assertU(adoc("id", "1", field, "1", "val_s", "AAAAAAAAAA1"));
+    assertU(adoc("id", "3", field, "1", "val_s", "AAAAAAAAAA3"));
+    assertU(commit());
+    assertU(adoc("id", "2", field, "1"));  // deleted
+    assertU(adoc("id", "2", field, "2", "val_s", "AAAAAAAAAA2"));
+    assertU(commit());
+    assertU(adoc("id","5", field,"1"));
+    assertU(adoc("id","6", field,"4"));
+    assertU(adoc("id","7", field,"2"));
+    assertU(adoc("id","8", field,"3"));
+
+    if (optimize) {
+      assertU(optimize());
+    } else {
+      assertU(commit());
+    }
+  }
+
+  public void doTerms(String field) throws Exception {
+    doQuery(field, "1" ,"/response/numFound==3");
+    doQuery(field, "2" ,"/response/numFound==2");
+    doQuery(field, "3" ,"/response/numFound==2");
+    doQuery(field, "4" ,"/response/numFound==1");
+    doQuery(field, "5" ,"/response/numFound==0");
+    doQuery(field, "" ,"/response/numFound==0");
+    doQuery(field, "3,2,1" ,"/response/numFound==7");
+  }
+
+  @Test
+  public void testBig() throws Exception {
+    clearIndex();
+
+    Random r = random();
+    int max = r.nextInt(10)+1;  // anywhere from 1 to 10 terms
+    int nDocs = 0;
+
+    int docsToIndex=(HS.BUFFER_SIZE_BYTES>>2)+5;
+
+    for (int i=0; i<docsToIndex*2; i++) {
+      assertU(adoc("id", "0"+i, "foo_s", "" + r.nextInt(max)));
+    }
+    assertU(commit());
+    max = r.nextInt(10)+1;  // anywhere from 1 to 10 terms
+
+    for (int i=0; i<docsToIndex; i++) {
+      assertU(adoc("id", "1"+i, "foo_s", "" + r.nextInt(max)));
+    }
+    assertU(commit());
+
+    int totalDocs=docsToIndex*3;
+
+    doQuery("foo_s", "5,4,3,2,1,0,9,8,7,6", "/response/numFound=="+totalDocs);
   }
 
 }

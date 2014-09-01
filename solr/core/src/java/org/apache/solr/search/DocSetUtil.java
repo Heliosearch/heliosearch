@@ -19,17 +19,23 @@ package org.apache.solr.search;
 
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.search.BulkScorer;
+import org.apache.lucene.search.CollectionTerminatedException;
+import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.Bits;
+import org.apache.solr.request.SolrRequestInfo;
 
 import java.io.IOException;
 
 public class DocSetUtil {
 
-  public static DocSet createDocSet(QueryContext queryContext, Filter filter) throws IOException {
+  private static DocSet createDocSetByIterator(QueryContext queryContext, Filter filter) throws IOException {
     IndexSearcher searcher = queryContext.searcher();
     int maxDoc = searcher.getIndexReader().maxDoc();
 
@@ -37,7 +43,7 @@ public class DocSetUtil {
       ((SolrFilter) filter).createWeight(queryContext, queryContext.indexSearcher());
     }
 
-    try ( DocSetCollector collector = new DocSetCollector(maxDoc, (maxDoc>>6)+5) ) {
+    try ( DocSetCollector collector = new DocSetCollector((maxDoc>>6)+5, maxDoc) ) {
 
       for (AtomicReaderContext readerContext : searcher.getIndexReader().getContext().leaves()) {
         collector.setNextReader(readerContext);
@@ -64,5 +70,24 @@ public class DocSetUtil {
     }
   }
 
+  public static DocSet createDocSet(QueryContext queryContext, Filter filter) throws IOException {
+    if (filter instanceof DocSetProducer) {
+      return ((DocSetProducer) filter).createDocSet(queryContext);
+    } else {
+      return createDocSetByIterator(queryContext, filter);
+    }
+  }
 
-}
+
+   public static DocSet createDocSet(QueryContext queryContext, Query query) throws IOException {
+     IndexSearcher searcher = queryContext.searcher();
+     int maxDoc = searcher.getIndexReader().maxDoc();
+
+     try ( DocSetCollector collector = new DocSetCollector((maxDoc>>6)+5, maxDoc) ) {
+       queryContext.searcher().search(query, null, collector);
+       return collector.getDocSet();
+     }
+   }
+
+
+ }

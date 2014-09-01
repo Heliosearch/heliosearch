@@ -91,10 +91,12 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
   }
 
   private void setBits(long buf, int sz) {
-    // TODO: make native?
+    BitDocSetNative.setBits(bits.array, bits.wlen, buf, sz);
+    /**
     for (int i=0; i<sz; i++) {
       bits.fastSet( HS.getInt(buf, i) );
     }
+    **/
   }
 
 

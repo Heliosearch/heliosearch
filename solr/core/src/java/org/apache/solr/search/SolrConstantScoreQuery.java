@@ -99,11 +99,7 @@ public class SolrConstantScoreQuery extends ConstantScoreQuery implements Extend
 
   @Override
   public DocSet createDocSet(QueryContext queryContext) throws IOException {
-    if (filter instanceof DocSetProducer) {
-      return ((DocSetProducer)filter).createDocSet(queryContext);
-    } else {
       return DocSetUtil.createDocSet(queryContext, filter);
-    }
   }
 
 
@@ -202,7 +198,7 @@ public class SolrConstantScoreQuery extends ConstantScoreQuery implements Extend
     public float score() throws IOException {
       return theScore;
     }
-    
+
     @Override
     public int freq() throws IOException {
       return 1;

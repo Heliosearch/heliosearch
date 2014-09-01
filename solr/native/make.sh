@@ -63,6 +63,7 @@ CLASSES="$SOLR/build/solr-core/classes/java${JSEP}$SOLR/build/solr-solrj/classes
 
 javah -d $BUILD/inc -force -classpath ${CLASSES} ${FULLCLASS}
 javah -d $BUILD/inc -force -classpath ${CLASSES} org.apache.solr.search.SortedIntDocSetNative
+javah -d $BUILD/inc -force -classpath ${CLASSES} org.apache.solr.search.BitDocSetNative
 javah -d $BUILD/inc -force -classpath ${CLASSES} org.apache.solr.search.facet.SimpleFacets
 
 CPPFILES="$CLASS.cpp docset.cpp facet.cpp"
