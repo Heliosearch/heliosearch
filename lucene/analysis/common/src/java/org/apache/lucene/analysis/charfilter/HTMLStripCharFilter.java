@@ -26,10 +26,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.lucene.util.Version;
 import org.apache.lucene.analysis.util.CharArrayMap;
 import org.apache.lucene.analysis.util.CharArraySet;
 import org.apache.lucene.analysis.util.OpenStringBuilder;
+import org.apache.lucene.util.Version;
 
 /**
  * A CharFilter that wraps another Reader and attempts to strip out HTML constructs.
@@ -29979,7 +29979,7 @@ public final class HTMLStripCharFilter extends BaseCharFilter {
           escapeSTYLE = true;
         } else {
           if (null == this.escapedTags) {
-            this.escapedTags = new CharArraySet(Version.LUCENE_CURRENT, 16, true);
+            this.escapedTags = new CharArraySet(16, true);
           }
           this.escapedTags.add(tag);
         }

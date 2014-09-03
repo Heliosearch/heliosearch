@@ -114,16 +114,18 @@ public class HdfsUpdateLog extends UpdateLog {
       }
     }
     
+    FileSystem oldFs = fs;
+    
     try {
-      if (fs != null) {
-        fs.close();
-      }
+      fs = FileSystem.newInstance(new Path(dataDir).toUri(), getConf());
     } catch (IOException e) {
       throw new SolrException(ErrorCode.SERVER_ERROR, e);
     }
     
     try {
-      fs = FileSystem.newInstance(new Path(dataDir).toUri(), getConf());
+      if (oldFs != null) {
+        oldFs.close();
+      }
     } catch (IOException e) {
       throw new SolrException(ErrorCode.SERVER_ERROR, e);
     }
@@ -278,8 +280,14 @@ public class HdfsUpdateLog extends UpdateLog {
   
   @Override
   public void close(boolean committed) {
-    synchronized (this) {
-      super.close(committed);
+    close(committed, false);
+  }
+  
+  @Override
+  public void close(boolean committed, boolean deleteOnClose) {
+    try {
+      super.close(committed, deleteOnClose);
+    } finally {
       IOUtils.closeQuietly(fs);
     }
   }
@@ -305,7 +313,7 @@ public class HdfsUpdateLog extends UpdateLog {
     if (ulogPluginInfo == null) return;
     Path tlogDir = new Path(getTlogDir(core, ulogPluginInfo));
     try {
-      if (fs.exists(tlogDir)) {
+      if (fs != null && fs.exists(tlogDir)) {
         String[] files = getLogList(tlogDir);
         for (String file : files) {
           Path f = new Path(tlogDir, file);

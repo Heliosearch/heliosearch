@@ -17,8 +17,8 @@ import org.apache.lucene.codecs.lucene41.Lucene41RWCodec;
 import org.apache.lucene.codecs.lucene42.Lucene42RWCodec;
 import org.apache.lucene.codecs.lucene45.Lucene45DocValuesFormat;
 import org.apache.lucene.codecs.lucene45.Lucene45RWCodec;
-import org.apache.lucene.codecs.lucene49.Lucene49Codec;
-import org.apache.lucene.codecs.lucene49.Lucene49DocValuesFormat;
+import org.apache.lucene.codecs.lucene410.Lucene410Codec;
+import org.apache.lucene.codecs.lucene410.Lucene410DocValuesFormat;
 import org.apache.lucene.document.BinaryDocValuesField;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field.Store;
@@ -27,6 +27,7 @@ import org.apache.lucene.document.SortedDocValuesField;
 import org.apache.lucene.document.SortedSetDocValuesField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.store.NRTCachingDirectory;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
@@ -493,10 +494,10 @@ public class TestBinaryDocValuesUpdates extends LuceneTestCase {
   public void testDifferentDVFormatPerField() throws Exception {
     Directory dir = newDirectory();
     IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
-    conf.setCodec(new Lucene49Codec() {
+    conf.setCodec(new Lucene410Codec() {
       @Override
       public DocValuesFormat getDocValuesFormatForField(String field) {
-        return new Lucene49DocValuesFormat();
+        return new Lucene410DocValuesFormat();
       }
     });
     IndexWriter writer = new IndexWriter(dir, conf);
@@ -1060,10 +1061,10 @@ public class TestBinaryDocValuesUpdates extends LuceneTestCase {
     Directory dir = newDirectory();
     IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     conf.setMergePolicy(NoMergePolicy.INSTANCE); // disable merges to simplify test assertions.
-    conf.setCodec(new Lucene49Codec() {
+    conf.setCodec(new Lucene410Codec() {
       @Override
       public DocValuesFormat getDocValuesFormatForField(String field) {
-        return new Lucene49DocValuesFormat();
+        return new Lucene410DocValuesFormat();
       }
     });
     IndexWriter writer = new IndexWriter(dir, conf);
@@ -1077,7 +1078,7 @@ public class TestBinaryDocValuesUpdates extends LuceneTestCase {
     // change format
     conf = newIndexWriterConfig(new MockAnalyzer(random()));
     conf.setMergePolicy(NoMergePolicy.INSTANCE); // disable merges to simplify test assertions.
-    conf.setCodec(new Lucene49Codec() {
+    conf.setCodec(new Lucene410Codec() {
       @Override
       public DocValuesFormat getDocValuesFormatForField(String field) {
         return new AssertingDocValuesFormat();
@@ -1163,6 +1164,10 @@ public class TestBinaryDocValuesUpdates extends LuceneTestCase {
 
   public void testDeleteUnusedUpdatesFiles() throws Exception {
     Directory dir = newDirectory();
+    // test explicitly needs files to always be actually deleted
+    if (dir instanceof MockDirectoryWrapper) {
+      ((MockDirectoryWrapper)dir).setEnableVirusScanner(false);
+    }
     IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()));
     IndexWriter writer = new IndexWriter(dir, conf);
     

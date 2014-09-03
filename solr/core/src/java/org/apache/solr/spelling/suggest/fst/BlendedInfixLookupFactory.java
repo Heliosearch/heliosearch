@@ -82,6 +82,9 @@ public class BlendedInfixLookupFactory extends AnalyzingInfixLookupFactory {
     String indexPath = params.get(INDEX_PATH) != null
     ? params.get(INDEX_PATH).toString()
     : DEFAULT_INDEX_PATH;
+    if (new File(indexPath).isAbsolute() == false) {
+      indexPath = core.getDataDir() + File.separator + indexPath;
+    }
     
     int minPrefixChars = params.get(MIN_PREFIX_CHARS) != null
     ? Integer.parseInt(params.get(MIN_PREFIX_CHARS).toString())
@@ -97,7 +100,7 @@ public class BlendedInfixLookupFactory extends AnalyzingInfixLookupFactory {
       return new BlendedInfixSuggester(core.getSolrConfig().luceneMatchVersion, 
                                        FSDirectory.open(new File(indexPath)),
                                        indexAnalyzer, queryAnalyzer, minPrefixChars,
-                                       blenderType, numFactor);
+                                       blenderType, numFactor, true);
     } catch (IOException e) {
       throw new RuntimeException();
     }

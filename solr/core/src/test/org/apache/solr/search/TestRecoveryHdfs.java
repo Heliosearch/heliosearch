@@ -78,6 +78,7 @@ public class TestRecoveryHdfs extends SolrTestCaseJ4 {
   @BeforeClass
   public static void beforeClass() throws Exception {
     dfsCluster = HdfsTestUtil.setupClass(createTempDir().getAbsolutePath());
+    System.setProperty("solr.hdfs.home", dfsCluster.getURI().toString() + "/solr");
     hdfsUri = dfsCluster.getFileSystem().getUri().toString();
     
     try {
@@ -89,8 +90,6 @@ public class TestRecoveryHdfs extends SolrTestCaseJ4 {
       throw new RuntimeException(e);
     }
     
-    //hdfsDataDir = hdfsUri + "/solr/shard1";
-    // System.setProperty("solr.data.dir", hdfsUri + "/solr/shard1");
     System.setProperty("solr.ulog.dir", hdfsUri + "/solr/shard1");
     
     initCore("solrconfig-tlog.xml","schema15.xml");
@@ -99,7 +98,6 @@ public class TestRecoveryHdfs extends SolrTestCaseJ4 {
   @AfterClass
   public static void afterClass() throws Exception {
     System.clearProperty("solr.ulog.dir");
-    System.clearProperty("solr.data.dir");
     System.clearProperty("test.build.data");
     System.clearProperty("test.cache.data");
     deleteCore();

@@ -3,6 +3,53 @@ Lucene Change Log
 For more information on past and future Lucene versions, please see:
 http://s.apache.org/luceneversions
 
+======================= Lucene 4.11.0 ======================
+
+New Features
+
+* LUCENE-5895: Lucene now stores a unique id per-segment and per-commit to aid
+  in accurate replication of index files (Robert Muir, Mike McCandless)
+
+* LUCENE-5889: Add commit method to AnalyzingInfixSuggester, and allow just using .add
+  to build up the suggester.  (Varun Thacker via Mike McCandless)
+
+* LUCENE-5123: Add a "push" option to the postings writing API, so
+  that a PostingsFormat now receives a Fields instance and it is
+  responsible for iterating through all fields, terms, documents and
+  positions.  (Robert Muir, Mike McCandless)
+
+* LUCENE-5268: Full cutover of all postings formats to the "pull"
+  FieldsConsumer API, removing PushFieldsConsumer.  Added new
+  PushPostingsWriterBase for single-pass push of docs/positions to the
+  postings format.  (Mike McCandless)
+
+API Changes:
+
+* LUCENE-5900: Deprecated more constructors taking Version in *InfixSuggester and
+  ICUCollationKeyAnalyzer, and removed TEST_VERSION_CURRENT from the test framework.
+  (Ryan Ernst)
+
+Bug Fixes
+
+* LUCENE-5650: Enforce read-only access to any path outside the temporary
+  folder via security manager, and make test temp dirs absolute.
+  (Ryan Ernst, Dawid Weiss)
+
+* LUCENE-5904: Fixed a corruption case that can happen when 1)
+  IndexWriter is uncleanly shut-down (OS crash, power loss, etc.), 2)
+  on startup, when a new IndexWriter is created, a virus checker is
+  holding some of the previously written but unused files open and
+  preventing deletion, 3) IndexWriter writes these files again during
+  the course of indexing, then the files can later be deleted, causing
+  corruption.  This case was detected by adding evilness to
+  MockDirectoryWrapper to have it simulate a virus checker holding a
+  file open and preventing deletion (Robert Muir, Mike McCandless)
+
+Build
+
+* LUCENE-5909: Smoke tester now has better command line parsing and
+  optionally also runs on Java 8.  (Ryan Ernst, Uwe Schindler)
+
 ======================= Lucene 4.10.0 ======================
 
 New Features
@@ -64,9 +111,24 @@ API Changes
   CoveredBy. The area requirement on the predicates was removed, and Overlaps' definition
   was fixed. (David Smiley)
 
-* LUCENE-5850: CheckIndex now prints the Lucene version used to write
-  each segment.  (Robert Muir, Mike McCandless)
+* LUCENE-5850: Made Version handling more robust and extensible. Deprecated Constants.LUCENE_MAIN_VERSION, Constants.LUCENE_VERSION and current Version constants of the form LUCENE_X_Y. Added version constants that include bugfix number of form LUCENE_X_Y_Z.  Changed Version.LUCENE_CURRENT to Version.LATEST. CheckIndex now prints the Lucene version used to write
+  each segment.  (Ryan Ernst, Uwe Schindler, Robert Muir, Mike McCandless)
 
+* LUCENE-5836: BytesRef has been splitted into BytesRef, whose intended usage is
+  to be just a reference to a section of a larger byte[] and BytesRefBuilder
+  which is a StringBuilder-like class for BytesRef instances. (Adrien Grand)
+
+* LUCENE-5883: You can now change the MergePolicy instance on a live IndexWriter,
+  without first closing and reopening the writer. This allows to e.g. run a special
+  merge with UpgradeIndexMergePolicy without reopening the writer. Also, MergePolicy
+  no longer implements Closeable; if you need to release your custom MegePolicy's
+  resources, you need to implement close() and call it explicitly. (Shai Erera)
+
+* LUCENE-5859: Deprecate Analyzer constructors taking Version.  Use Analyzer.setVersion()
+  to set the version an analyzer to replicate behavior from a specific release.
+  (Ryan Ernst, Robert Muir)
+
+  
 Optimizations
 
 * LUCENE-5780: Make OrdinalMap more memory-efficient, especially in case the
@@ -107,6 +169,17 @@ Optimizations
 * LUCENE-5856: Optimize Fixed/Open/LongBitSet to remove unnecessary AND. 
   (Robert Muir)
 
+* LUCENE-5884: Optimize FST.ramBytesUsed.  (Adrien Grand, Robert Muir,
+  Mike McCandless)
+
+* LUCENE-5882: Add Lucene410DocValuesFormat, with faster term lookups
+  for SORTED/SORTED_SET fields.  (Robert Muir)
+
+* LUCENE-5887: Remove WeakIdentityMap caching in AttributeFactory,
+  AttributeSource, and VirtualMethod in favour of Java 7's ClassValue.
+  Always use MethodHandles to create AttributeImpl classes.
+  (Uwe Schindler)
+
 Bug Fixes
 
 * LUCENE-5796: Fixes the Scorer.getChildren() method for two combinations 
@@ -140,13 +213,35 @@ Bug Fixes
   would be exceeded, instead of silently creating an unusable
   index.  (Mike McCandless)
 
-* LUCENE-5869: Added restriction to positive values for maxExpansions in FuzzyQuery.
-  (Ryan Ernst)
+* LUCENE-5869: Added restriction to positive values for maxExpansions in
+  FuzzyQuery.  (Ryan Ernst)
+
+* LUCENE-5672: IndexWriter.addIndexes() calls maybeMerge(), to ensure the index stays
+  healthy. If you don't want merging use NoMergePolicy instead. (Robert Muir)
+  
+* LUCENE-5897, LUCENE-5400: JFlex-based tokenizers StandardTokenizer and
+  UAX29URLEmailTokenizer tokenize extremely slowly over long sequences of
+  text partially matching certain grammar rules.  The scanner default
+  buffer size was reduced, and scanner buffer growth was disabled, resulting
+  in much, much faster tokenization for these text sequences.  
+  (Chris Geeringh, Robert Muir, Steve Rowe)
+
+* LUCENE-5907: Fix corruption case when opening a pre-4.x index with
+  IndexWriter, then opening an NRT reader from that writer, then
+  calling commit from the writer, then closing the NRT reader.  This
+  case would remove the wrong files from the index leading to a
+  corrupt index.  (Mike McCandless)
+
+* LUCENE-5908: Fix Lucene43NGramTokenizer to be final
   
 Test Framework
 
 * LUCENE-5786: Unflushed/ truncated events file (hung testing subprocess).
   (Dawid Weiss)
+
+* LUCENE-5881: Add "beasting" of tests: repeats the whole "test" Ant target
+  N times with "ant beast -Dbeast.iters=N".  (Uwe Schindler, Robert Muir,
+  Ryan Ernst, Dawid Weiss)
 
 Build
  
@@ -154,6 +249,9 @@ Build
   supplementary code points - as a result, ICU4J is no longer used
   to generate surrogate pairs to augment JFlex scanner specifications.
   (Steve Rowe)
+
+* SOLR-6358: Remove VcsDirectoryMappings from idea configuration 
+  vcs.xml (Ramkumar Aiyengar via Steve Rowe)
 
 ======================= Lucene 4.9.0 =======================
 

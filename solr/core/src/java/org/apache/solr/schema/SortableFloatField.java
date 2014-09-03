@@ -119,7 +119,7 @@ public class SortableFloatField extends PrimitiveFieldType implements FloatValue
     }
     String sortableString = NumberUtils.float2sortableStr(value.toString());
     BytesRef bytes = new BytesRef();
-    UnicodeUtil.UTF16toUTF8(sortableString, 0, sortableString.length(), bytes);
+    UnicodeUtil.UTF16toUTF8(sortableString, bytes);
     return bytes;
   }
 }

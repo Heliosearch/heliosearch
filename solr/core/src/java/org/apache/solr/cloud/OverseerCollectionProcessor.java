@@ -17,7 +17,34 @@ package org.apache.solr.cloud;
  * limitations under the License.
  */
 
-import com.google.common.collect.ImmutableSet;
+import static org.apache.solr.cloud.Assign.getNodesForNewShard;
+import static org.apache.solr.common.cloud.ZkStateReader.COLLECTION_PROP;
+import static org.apache.solr.common.cloud.ZkStateReader.REPLICA_PROP;
+import static org.apache.solr.common.cloud.ZkStateReader.SHARD_ID_PROP;
+import static org.apache.solr.common.params.CollectionParams.CollectionAction.ADDREPLICA;
+import static org.apache.solr.common.params.CollectionParams.CollectionAction.ADDROLE;
+import static org.apache.solr.common.params.CollectionParams.CollectionAction.CLUSTERSTATUS;
+import static org.apache.solr.common.params.CollectionParams.CollectionAction.LIST;
+import static org.apache.solr.common.params.CollectionParams.CollectionAction.OVERSEERSTATUS;
+import static org.apache.solr.common.params.CollectionParams.CollectionAction.REMOVEROLE;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.solr.client.solrj.SolrResponse;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -26,12 +53,12 @@ import org.apache.solr.client.solrj.request.AbstractUpdateRequest;
 import org.apache.solr.client.solrj.request.CoreAdminRequest;
 import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.client.solrj.response.UpdateResponse;
+import org.apache.solr.cloud.Assign.Node;
 import org.apache.solr.cloud.DistributedQueue.QueueEvent;
 import org.apache.solr.cloud.Overseer.LeaderStatus;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.common.cloud.Aliases;
-import org.apache.solr.common.cloud.ClosableThread;
 import org.apache.solr.common.cloud.ClusterState;
 import org.apache.solr.common.cloud.CompositeIdRouter;
 import org.apache.solr.common.cloud.DocCollection;
@@ -71,44 +98,17 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-
-import static org.apache.solr.cloud.Assign.Node;
-import static org.apache.solr.cloud.Assign.getNodesForNewShard;
-import static org.apache.solr.common.cloud.ZkStateReader.COLLECTION_PROP;
-import static org.apache.solr.common.cloud.ZkStateReader.REPLICA_PROP;
-import static org.apache.solr.common.cloud.ZkStateReader.SHARD_ID_PROP;
-import static org.apache.solr.common.params.CollectionParams.CollectionAction.ADDREPLICA;
-import static org.apache.solr.common.params.CollectionParams.CollectionAction.ADDROLE;
-import static org.apache.solr.common.params.CollectionParams.CollectionAction.CLUSTERSTATUS;
-import static org.apache.solr.common.params.CollectionParams.CollectionAction.LIST;
-import static org.apache.solr.common.params.CollectionParams.CollectionAction.OVERSEERSTATUS;
-import static org.apache.solr.common.params.CollectionParams.CollectionAction.REMOVEROLE;
+import com.google.common.collect.ImmutableSet;
 
 
-public class OverseerCollectionProcessor implements Runnable, ClosableThread {
+public class OverseerCollectionProcessor implements Runnable, Closeable {
   
   public static final String NUM_SLICES = "numShards";
   
+  // @Deprecated- see on ZkStateReader
   public static final String REPLICATION_FACTOR = "replicationFactor";
   
+  // @Deprecated- see on ZkStateReader
   public static final String MAX_SHARDS_PER_NODE = "maxShardsPerNode";
   
   public static final String CREATE_NODE_SET = "createNodeSet";
@@ -151,10 +151,9 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
 
   public static final Map<String,Object> COLL_PROPS = ZkNodeProps.makeMap(
       ROUTER, DocRouter.DEFAULT_NAME,
-      REPLICATION_FACTOR, "1",
-      MAX_SHARDS_PER_NODE, "1",
-      "external",null );
-
+      ZkStateReader.REPLICATION_FACTOR, "1",
+      ZkStateReader.MAX_SHARDS_PER_NODE, "1",
+      ZkStateReader.AUTO_ADD_REPLICAS, "false");
 
   public ExecutorService tpe ;
   
@@ -343,14 +342,11 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
           }
 
         } catch (KeeperException e) {
-          if (e.code() == KeeperException.Code.SESSIONEXPIRED
-              || e.code() == KeeperException.Code.CONNECTIONLOSS) {
+          if (e.code() == KeeperException.Code.SESSIONEXPIRED) {
             log.warn("Overseer cannot talk to ZK");
             return;
           }
           SolrException.log(log, "", e);
-          throw new ZooKeeperException(
-              SolrException.ErrorCode.SERVER_ERROR, "", e);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           return;
@@ -908,8 +904,15 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     boolean deleted = false;
     while (System.nanoTime() < waitUntil) {
       Thread.sleep(100);
-      deleted = zkStateReader.getClusterState().getCollection(collectionName).getSlice(shard).getReplica(replicaName) == null;
-      if (deleted) break;
+      DocCollection docCollection = zkStateReader.getClusterState().getCollection(collectionName);
+      if(docCollection != null) {
+        Slice slice = docCollection.getSlice(shard);
+        if(slice == null || slice.getReplica(replicaName) == null) {
+          deleted =  true;
+        }
+      }
+      // Return true if either someone already deleted the collection/slice/replica.
+      if (docCollection == null || deleted) break;
     }
     return deleted;
   }
@@ -1098,8 +1101,8 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
 
     ShardHandler shardHandler = shardHandlerFactory.getShardHandler();
     DocCollection collection = clusterState.getCollection(collectionName);
-    int maxShardsPerNode = collection.getInt(MAX_SHARDS_PER_NODE, 1);
-    int repFactor = message.getInt(REPLICATION_FACTOR, collection.getInt(REPLICATION_FACTOR, 1));
+    int maxShardsPerNode = collection.getInt(ZkStateReader.MAX_SHARDS_PER_NODE, 1);
+    int repFactor = message.getInt(ZkStateReader.REPLICATION_FACTOR, collection.getInt(ZkStateReader.REPLICATION_FACTOR, 1));
     String createNodeSetStr = message.getStr(CREATE_NODE_SET);
 
     ArrayList<Node> sortedNodeList = getNodesForNewShard(clusterState, collectionName, numSlices, maxShardsPerNode, repFactor, createNodeSetStr);
@@ -1676,11 +1679,11 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     if (slice == null) {
       if(clusterState.hasCollection(collection)) {
         throw new SolrException(ErrorCode.BAD_REQUEST,
-            "No shard with the specified name exists: " + slice.getName());
+            "No shard with name " + sliceId + " exists for collection " + collection);
       } else {
         throw new SolrException(ErrorCode.BAD_REQUEST,
             "No collection with the specified name exists: " + collection);
-      }      
+      }
     }
     // For now, only allow for deletions of Inactive slices or custom hashes (range==null).
     // TODO: Add check for range gaps on Slice deletion
@@ -1872,7 +1875,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     Map<String, Object> props = ZkNodeProps.makeMap(
         Overseer.QUEUE_OPERATION, CREATECOLLECTION,
         "name", tempSourceCollectionName,
-        REPLICATION_FACTOR, 1,
+        ZkStateReader.REPLICATION_FACTOR, 1,
         NUM_SLICES, 1,
         COLL_CONF, configName,
         CREATE_NODE_SET, sourceLeader.getNodeName());
@@ -2074,7 +2077,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
       // look at the replication factor and see if it matches reality
       // if it does not, find best nodes to create more cores
       
-      int repFactor = message.getInt( REPLICATION_FACTOR, 1);
+      int repFactor = message.getInt(ZkStateReader.REPLICATION_FACTOR, 1);
 
       ShardHandler shardHandler = shardHandlerFactory.getShardHandler();
       String async = null;
@@ -2091,15 +2094,15 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
       }
 
       if (numSlices == null ) {
-        throw new SolrException(ErrorCode.BAD_REQUEST, NUM_SLICES + " is a required param");
+        throw new SolrException(ErrorCode.BAD_REQUEST, NUM_SLICES + " is a required param (when using CompositeId router).");
       }
 
-      int maxShardsPerNode = message.getInt(MAX_SHARDS_PER_NODE, 1);
+      int maxShardsPerNode = message.getInt(ZkStateReader.MAX_SHARDS_PER_NODE, 1);
       String createNodeSetStr; 
       List<String> createNodeList = ((createNodeSetStr = message.getStr(CREATE_NODE_SET)) == null)?null:StrUtils.splitSmart(createNodeSetStr, ",", true);
       
       if (repFactor <= 0) {
-        throw new SolrException(ErrorCode.BAD_REQUEST, REPLICATION_FACTOR + " must be greater than 0");
+        throw new SolrException(ErrorCode.BAD_REQUEST, ZkStateReader.REPLICATION_FACTOR + " must be greater than 0");
       }
       
       if (numSlices <= 0) {
@@ -2126,7 +2129,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
       
       if (repFactor > nodeList.size()) {
         log.warn("Specified "
-            + REPLICATION_FACTOR
+            + ZkStateReader.REPLICATION_FACTOR
             + " of "
             + repFactor
             + " on collection "
@@ -2140,11 +2143,11 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
       int requestedShardsToCreate = numSlices * repFactor;
       if (maxShardsAllowedToCreate < requestedShardsToCreate) {
         throw new SolrException(ErrorCode.BAD_REQUEST, "Cannot create collection " + collectionName + ". Value of "
-            + MAX_SHARDS_PER_NODE + " is " + maxShardsPerNode
+            + ZkStateReader.MAX_SHARDS_PER_NODE + " is " + maxShardsPerNode
             + ", and the number of live nodes is " + nodeList.size()
             + ". This allows a maximum of " + maxShardsAllowedToCreate
             + " to be created. Value of " + NUM_SLICES + " is " + numSlices
-            + " and value of " + REPLICATION_FACTOR + " is " + repFactor
+            + " and value of " + ZkStateReader.REPLICATION_FACTOR + " is " + repFactor
             + ". This requires " + requestedShardsToCreate
             + " shards to be created (higher than the allowed number)");
       }
@@ -2295,7 +2298,7 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     ShardHandler shardHandler = shardHandlerFactory.getShardHandler();
 
     if (node == null) {
-      node = getNodesForNewShard(clusterState, collection, coll.getSlices().size(), coll.getInt(MAX_SHARDS_PER_NODE, 1), coll.getInt(REPLICATION_FACTOR, 1), null).get(0).nodeName;
+      node = getNodesForNewShard(clusterState, collection, coll.getSlices().size(), coll.getInt(ZkStateReader.MAX_SHARDS_PER_NODE, 1), coll.getInt(ZkStateReader.REPLICATION_FACTOR, 1), null).get(0).nodeName;
       log.info("Node not provided, Identified {} for creating new replica", node);
     }
 
@@ -2498,7 +2501,6 @@ public class OverseerCollectionProcessor implements Runnable, ClosableThread {
     }
   }
 
-  @Override
   public boolean isClosed() {
     return isClosed;
   }

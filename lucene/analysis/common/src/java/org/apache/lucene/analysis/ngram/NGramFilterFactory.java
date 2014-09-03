@@ -18,8 +18,11 @@ package org.apache.lucene.analysis.ngram;
  */
 
 import java.util.Map;
+
+import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.util.TokenFilterFactory;
+import org.apache.lucene.util.Version;
 
 /**
  * Factory for {@link NGramTokenFilter}.
@@ -46,7 +49,10 @@ public class NGramFilterFactory extends TokenFilterFactory {
   }
 
   @Override
-  public NGramTokenFilter create(TokenStream input) {
+  public TokenFilter create(TokenStream input) {
+    if (luceneMatchVersion == null) {
+      return new NGramTokenFilter(input, minGramSize, maxGramSize);
+    }
     return new NGramTokenFilter(luceneMatchVersion, input, minGramSize, maxGramSize);
   }
 }

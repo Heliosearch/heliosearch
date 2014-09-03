@@ -18,7 +18,6 @@ package org.apache.solr.cloud;
  */
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -597,8 +596,8 @@ public class BasicDistributedZkTest extends AbstractFullDistribZkTestBase {
     params.set("action", CollectionAction.CREATE.toString());
 
     params.set(OverseerCollectionProcessor.NUM_SLICES, numShards);
-    params.set(OverseerCollectionProcessor.REPLICATION_FACTOR, numReplicas);
-    params.set(OverseerCollectionProcessor.MAX_SHARDS_PER_NODE, maxShardsPerNode);
+    params.set(ZkStateReader.REPLICATION_FACTOR, numReplicas);
+    params.set(ZkStateReader.MAX_SHARDS_PER_NODE, maxShardsPerNode);
     if (createNodeSetStr != null) params.set(OverseerCollectionProcessor.CREATE_NODE_SET, createNodeSetStr);
 
     int clientIndex = clients.size() > 1 ? random().nextInt(2) : 0;
@@ -1148,16 +1147,12 @@ public class BasicDistributedZkTest extends AbstractFullDistribZkTestBase {
   protected CloudSolrServer getCommonCloudSolrServer() {
     if (commondCloudSolrServer == null) {
       synchronized(this) {
-        try {
-          commondCloudSolrServer = new CloudSolrServer(zkServer.getZkAddress(), random().nextBoolean());
-          commondCloudSolrServer.setParallelUpdates(random().nextBoolean());
-          commondCloudSolrServer.setDefaultCollection(DEFAULT_COLLECTION);
-          commondCloudSolrServer.getLbServer().setConnectionTimeout(15000);
-          commondCloudSolrServer.getLbServer().setSoTimeout(30000);
-          commondCloudSolrServer.connect();
-        } catch (MalformedURLException e) {
-          throw new RuntimeException(e);
-        }
+        commondCloudSolrServer = new CloudSolrServer(zkServer.getZkAddress(), random().nextBoolean());
+        commondCloudSolrServer.setParallelUpdates(random().nextBoolean());
+        commondCloudSolrServer.setDefaultCollection(DEFAULT_COLLECTION);
+        commondCloudSolrServer.getLbServer().setConnectionTimeout(15000);
+        commondCloudSolrServer.getLbServer().setSoTimeout(30000);
+        commondCloudSolrServer.connect();
       }
     }
     return commondCloudSolrServer;

@@ -36,7 +36,9 @@ import org.apache.lucene.replicator.IndexAndTaxonomyRevision.SnapshotDirectoryTa
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
+import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.util.IOUtils;
+import org.apache.lucene.util.Version;
 import org.junit.Test;
 
 public class IndexAndTaxonomyRevisionTest extends ReplicatorTestCase {
@@ -51,7 +53,7 @@ public class IndexAndTaxonomyRevisionTest extends ReplicatorTestCase {
   @Test
   public void testNoCommit() throws Exception {
     Directory indexDir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter indexWriter = new IndexWriter(indexDir, conf);
     
@@ -70,12 +72,16 @@ public class IndexAndTaxonomyRevisionTest extends ReplicatorTestCase {
   @Test
   public void testRevisionRelease() throws Exception {
     Directory indexDir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter indexWriter = new IndexWriter(indexDir, conf);
     
     Directory taxoDir = newDirectory();
     SnapshotDirectoryTaxonomyWriter taxoWriter = new SnapshotDirectoryTaxonomyWriter(taxoDir);
+    // we look to see that certain files are deleted:
+    if (indexDir instanceof MockDirectoryWrapper) {
+      ((MockDirectoryWrapper)indexDir).setEnableVirusScanner(false);
+    }
     try {
       indexWriter.addDocument(newDocument(taxoWriter));
       indexWriter.commit();
@@ -95,13 +101,17 @@ public class IndexAndTaxonomyRevisionTest extends ReplicatorTestCase {
       assertFalse(slowFileExists(indexDir, IndexFileNames.SEGMENTS + "_1"));
     } finally {
       IOUtils.close(indexWriter, taxoWriter, taxoDir, indexDir);
+      if (indexDir instanceof MockDirectoryWrapper) {
+        // set back to on for other tests
+        ((MockDirectoryWrapper)indexDir).setEnableVirusScanner(true);
+      }
     }
   }
   
   @Test
   public void testSegmentsFileLast() throws Exception {
     Directory indexDir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter indexWriter = new IndexWriter(indexDir, conf);
     
@@ -126,7 +136,7 @@ public class IndexAndTaxonomyRevisionTest extends ReplicatorTestCase {
   @Test
   public void testOpen() throws Exception {
     Directory indexDir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
+    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter indexWriter = new IndexWriter(indexDir, conf);
     

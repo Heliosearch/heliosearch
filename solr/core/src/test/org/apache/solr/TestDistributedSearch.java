@@ -68,6 +68,7 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
 
   @Override
   public void doTest() throws Exception {
+    QueryResponse rsp = null;
     int backupStress = stress; // make a copy so we can restore
 
 
@@ -174,17 +175,28 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
     // then the primary sort should always be a tie and then the secondary should always decide
     query("q","{!func}ms(NOW)", "sort","score desc,"+i1+" desc","fl","id");    
 
-    query("q","*:*", "rows",0, "facet","true", "facet.field",t1);
+    query("q","*:*", "rows",0, "facet","true", "facet.field",t1, "facet.fieldX",t1);
     query("q","*:*", "rows",0, "facet","true", "facet.field",t1,"facet.limit",1);
-    query("q","*:*", "rows",0, "facet","true", "facet.query","quick", "facet.query","all", "facet.query","*:*");
+    query("q","*:*", "rows",0, "facet","true", "facet.query","quick", "facet.queryX","quick", "facet.query","all", "facet.query","*:*");
     query("q","*:*", "rows",0, "facet","true", "facet.field",t1, "facet.mincount",2);
 
     // a facet query to test out chars out of the ascii range
     query("q","*:*", "rows",0, "facet","true", "facet.query","{!term f=foo_s}international\u00ff\u01ff\u2222\u3333");
+    
+    // simple field facet on date fields
+    rsp = query("q","*:*", "rows", 0, 
+                "facet","true", "facet.limit", 1, // TODO: limit shouldn't be needed: SOLR-6386
+                "facet.field", tdate_a);
+    assertEquals(1, rsp.getFacetFields().size());
+    rsp = query("q","*:*", "rows", 0, 
+                "facet","true", "facet.limit", 1, // TODO: limit shouldn't be needed: SOLR-6386
+                "facet.field", tdate_b, "facet.field", tdate_a);
+    assertEquals(2, rsp.getFacetFields().size());
 
     // simple date facet on one field
     query("q","*:*", "rows",100, "facet","true", 
-          "facet.date",tdate_a, 
+          "facet.date",tdate_a,
+          "facet.dateX",tdate_a,
           "facet.date.other", "all", 
           "facet.date.start","2010-05-01T11:00:00Z", 
           "facet.date.gap","+1DAY", 
@@ -192,8 +204,9 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
 
     // date facet on multiple fields
     query("q","*:*", "rows",100, "facet","true", 
-          "facet.date",tdate_a, 
-          "facet.date",tdate_b, 
+          "facet.date",tdate_a,
+          "facet.date",tdate_b,
+          "facet.dateX",tdate_a,
           "facet.date.other", "all", 
           "f."+tdate_b+".facet.date.start","2009-05-01T11:00:00Z", 
           "f."+tdate_b+".facet.date.gap","+3MONTHS", 
@@ -203,7 +216,8 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
 
     // simple range facet on one field
     query("q","*:*", "rows",100, "facet","true", 
-          "facet.range",tlong, 
+          "facet.range",tlong,
+          "facet.rangeX",tlong,
           "facet.range.start",200, 
           "facet.range.gap",100, 
           "facet.range.end",900);
@@ -344,7 +358,7 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
     q.set("q", "*:*");
     q.set(ShardParams.SHARDS_INFO, true);
     setDistributedParams(q);
-    QueryResponse rsp = queryServer(q);
+    rsp = queryServer(q);
     NamedList<?> sinfo = (NamedList<?>) rsp.getResponse().get(ShardParams.SHARDS_INFO);
     String shards = getShardsString();
     int cnt = StringUtils.countMatches(shards, ",")+1;
@@ -374,6 +388,7 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
           "q","*:*",
           "facet","true", 
           "facet.field",t1,
+          "facet.fieldX",t1,
           "facet.limit",5,
           ShardParams.SHARDS_INFO,"true",
           ShardParams.SHARDS_TOLERANT,"true");
@@ -381,6 +396,7 @@ public class TestDistributedSearch extends BaseDistributedSearchTestCase {
       queryPartialResults(upShards, upClients,
           "q", "*:*",
           "facet", "true",
+          "facet.queryX", i1 + ":[1 TO 50]",
           "facet.query", i1 + ":[1 TO 50]",
           ShardParams.SHARDS_INFO, "true",
           ShardParams.SHARDS_TOLERANT, "true");

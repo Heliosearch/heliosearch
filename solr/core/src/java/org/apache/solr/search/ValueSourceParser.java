@@ -17,6 +17,7 @@
 package org.apache.solr.search;
 
 import com.spatial4j.core.distance.DistanceUtils;
+
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Term;
 import org.apache.solr.search.field.StrFieldValues;
@@ -35,12 +36,12 @@ import org.apache.lucene.search.spell.LevensteinDistance;
 import org.apache.lucene.search.spell.NGramDistance;
 import org.apache.lucene.search.spell.StringDistance;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.schema.*;
-
 import org.apache.solr.search.function.CollapseScoreFunction;
 import org.apache.solr.search.function.distance.*;
 import org.apache.solr.search.facet.SimpleAggValueSource;
@@ -860,7 +861,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
         tinfo.indexedField = term.field();
         indexedVal = term.text();
       }
-      UnicodeUtil.UTF16toUTF8(indexedVal, 0, indexedVal.length(), tinfo.indexedBytes);
+      tinfo.indexedBytes.copyChars(indexedVal);
     } else {
       ft.readableToIndexed(tinfo.val, tinfo.indexedBytes);
     }

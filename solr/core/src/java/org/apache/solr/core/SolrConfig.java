@@ -23,6 +23,8 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.util.Version;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
+import org.apache.solr.common.util.NamedList;
+import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.handler.component.SearchComponent;
 import org.apache.solr.request.SolrRequestHandler;
 import org.apache.solr.response.QueryResponseWriter;
@@ -57,10 +59,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -81,7 +86,7 @@ public class SolrConfig extends Config {
   
   public static final String DEFAULT_CONF_FILE = "solrconfig.xml";
 
-  static enum PluginOpts { 
+  static enum PluginOpts {
     MULTI_OK, 
     REQUIRE_NAME,
     REQUIRE_CLASS,
@@ -163,19 +168,19 @@ public class SolrConfig extends Config {
     luceneMatchVersion = getLuceneVersion("luceneMatchVersion");
     String indexConfigPrefix;
 
-    // Old indexDefaults and mainIndex sections are deprecated and fails fast for luceneMatchVersion=>LUCENE_4_0.
+    // Old indexDefaults and mainIndex sections are deprecated and fails fast for luceneMatchVersion=>LUCENE_4_0_0.
     // For older solrconfig.xml's we allow the old sections, but never mixed with the new <indexConfig>
     boolean hasDeprecatedIndexConfig = (getNode("indexDefaults", false) != null) || (getNode("mainIndex", false) != null);
     boolean hasNewIndexConfig = getNode("indexConfig", false) != null;
     if(hasDeprecatedIndexConfig){
-      if(luceneMatchVersion.onOrAfter(Version.LUCENE_4_0)) {
+      if(luceneMatchVersion.onOrAfter(Version.LUCENE_4_0_0)) {
         throw new SolrException(ErrorCode.FORBIDDEN, "<indexDefaults> and <mainIndex> configuration sections are discontinued. Use <indexConfig> instead.");
       } else {
         // Still allow the old sections for older LuceneMatchVersion's
         if(hasNewIndexConfig) {
           throw new SolrException(ErrorCode.FORBIDDEN, "Cannot specify both <indexDefaults>, <mainIndex> and <indexConfig> at the same time. Please use <indexConfig> only.");
         }
-        log.warn("<indexDefaults> and <mainIndex> configuration sections are deprecated and will fail for luceneMatchVersion=LUCENE_4_0 and later. Please use <indexConfig> instead.");
+        log.warn("<indexDefaults> and <mainIndex> configuration sections are deprecated and will fail for luceneMatchVersion=LUCENE_4_0_0 and later. Please use <indexConfig> instead.");
         defaultIndexConfig = new SolrIndexConfig(this, "indexDefaults", null);
         mainIndexConfig = new SolrIndexConfig(this, "mainIndex", defaultIndexConfig);
         indexConfigPrefix = "mainIndex";
@@ -324,12 +329,27 @@ public class SolrConfig extends Config {
          "requestDispatcher/@handleSelect", true ); 
      
      addHttpRequestToContext = getBool( 
-         "requestDispatcher/requestParsers/@addHttpRequestToContext", false ); 
+         "requestDispatcher/requestParsers/@addHttpRequestToContext", false );
+
+    loadPluginInfo(ParamSet.class,ParamSet.TYPE);
+    List<PluginInfo> paramSetInfos =  pluginStore.get(ParamSet.class.getName()) ;
+    if(paramSetInfos!=null){
+      Map<String,ParamSet> paramSets = new HashMap<>();
+      for (PluginInfo p : paramSetInfos) {
+        ParamSet paramSet = new ParamSet(p);
+        paramSets.put(paramSet.name == null ? String.valueOf(paramSet.hashCode()) : paramSet.name , paramSet );
+      }
+      this.paramSets = Collections.unmodifiableMap(paramSets);
+
+    }
 
     solrRequestParsers = new SolrRequestParsers(this);
     Config.log.info("Loaded SolrConfig: " + name);
   }
-
+  private Map<String,ParamSet>  paramSets = Collections.emptyMap();
+  public Map<String, ParamSet> getParamSets() {
+    return paramSets;
+  }
   protected UpdateHandlerInfo loadUpdatehandlerInfo() {
     return new UpdateHandlerInfo(get("updateHandler/@class",null),
             getInt("updateHandler/autoCommit/maxDocs",-1),
@@ -626,4 +646,6 @@ public class SolrConfig extends Config {
   public boolean isEnableRemoteStreams() {
     return enableRemoteStreams;
   }
+
+
 }

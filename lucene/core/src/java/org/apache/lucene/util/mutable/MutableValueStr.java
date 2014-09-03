@@ -17,6 +17,7 @@
 package org.apache.lucene.util.mutable;
 
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 
 /**
  * {@link MutableValue} implementation of type {@link String}.

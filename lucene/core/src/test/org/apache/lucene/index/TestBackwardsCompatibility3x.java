@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,11 +56,10 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.Constants;
-import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -72,7 +70,7 @@ import org.junit.BeforeClass;
 // don't use 3.x codec, its unrealistic since it means
 // we won't even be running the actual code, only the impostor
 // Sep codec cannot yet handle the offsets we add when changing indexes!
-@SuppressCodecs({"Lucene3x", "MockFixedIntBlock", "MockVariableIntBlock", "MockSep", "MockRandom", "Lucene40", "Lucene41", "Appending", "Lucene42", "Lucene45", "Lucene46"})
+@SuppressCodecs({"Lucene3x", "MockFixedIntBlock", "MockVariableIntBlock", "MockSep", "MockRandom", "Lucene40", "Lucene41", "Appending", "Lucene42", "Lucene45", "Lucene46", "Lucene49"})
 public class TestBackwardsCompatibility3x extends LuceneTestCase {
 
   // Uncomment these cases & run them on an older Lucene
@@ -228,7 +226,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       }
       Directory dir = newDirectory(oldIndexDirs.get(name));
       IndexWriter w = new IndexWriter(dir, new IndexWriterConfig(
-          TEST_VERSION_CURRENT, new MockAnalyzer(random())));
+          Version.LATEST, new MockAnalyzer(random())));
       w.forceMerge(1);
       w.close();
       
@@ -307,7 +305,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       assertEquals(35, ir.numDocs());
       ir.close();
 
-      IndexWriter iw = new IndexWriter(dir, new IndexWriterConfig(TEST_VERSION_CURRENT, null));
+      IndexWriter iw = new IndexWriter(dir, new IndexWriterConfig(Version.LATEST, null));
       iw.deleteDocuments(new Term("id", "3"));
       iw.close();
 
@@ -316,7 +314,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       ir.close();
 
       // Delete all but 1 document:
-      iw = new IndexWriter(dir, new IndexWriterConfig(TEST_VERSION_CURRENT, null));
+      iw = new IndexWriter(dir, new IndexWriterConfig(Version.LATEST, null));
       for(int i=0;i<35;i++) {
         iw.deleteDocuments(new Term("id", ""+i));
       }
@@ -553,7 +551,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
     mp.setNoCFSRatio(doCFS ? 1.0 : 0.0);
     mp.setMaxCFSSegmentSizeMB(Double.POSITIVE_INFINITY);
     // TODO: remove randomness
-    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
+    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
       .setMaxBufferedDocs(10).setMergePolicy(mp).setUseCompoundFile(doCFS);
     IndexWriter writer = new IndexWriter(dir, conf);
     
@@ -571,7 +569,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       mp = new LogByteSizeMergePolicy();
       mp.setNoCFSRatio(doCFS ? 1.0 : 0.0);
       // TODO: remove randomness
-      conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
+      conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
         .setMaxBufferedDocs(10).setMergePolicy(mp).setUseCompoundFile(doCFS);
       writer = new IndexWriter(dir, conf);
       addNoProxDoc(writer);
@@ -718,12 +716,10 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
     riw.close();
     DirectoryReader ir = DirectoryReader.open(currentDir);
     SegmentReader air = (SegmentReader)ir.leaves().get(0).reader();
-    String currentVersion = air.getSegmentInfo().info.getVersion();
+    Version currentVersion = air.getSegmentInfo().info.getVersion();
     assertNotNull(currentVersion); // only 3.0 segments can have a null version
     ir.close();
     currentDir.close();
-    
-    Comparator<String> comparator = StringHelper.getVersionComparator();
     
     // now check all the old indexes, their version should be < the current version
     for (String name : oldNames) {
@@ -731,11 +727,11 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       DirectoryReader r = DirectoryReader.open(dir);
       for (AtomicReaderContext context : r.leaves()) {
         air = (SegmentReader) context.reader();
-        String oldVersion = air.getSegmentInfo().info.getVersion();
+        Version oldVersion = air.getSegmentInfo().info.getVersion();
         // TODO: does preflex codec actually set "3.0" here? This is safe to do I think.
         // assertNotNull(oldVersion);
         assertTrue("current Constants.LUCENE_MAIN_VERSION is <= an old index: did you forget to bump it?!",
-            oldVersion == null || comparator.compare(oldVersion, currentVersion) < 0);
+            oldVersion == null || currentVersion.onOrAfter(oldVersion));
       }
       r.close();
     }
@@ -792,7 +788,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       System.out.println("checkAllSegmentsUpgraded: " + infos);
     }
     for (SegmentCommitInfo si : infos) {
-      assertEquals(Constants.LUCENE_MAIN_VERSION, si.info.getVersion());
+      assertEquals(Version.LATEST.toString(), si.info.getVersion().toString());
     }
     return infos.size();
   }
@@ -837,7 +833,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       for (int i = 0; i < 3; i++) {
         // only use Log- or TieredMergePolicy, to make document addition predictable and not suddenly merge:
         MergePolicy mp = random().nextBoolean() ? newLogMergePolicy() : newTieredMergePolicy();
-        IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
+        IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
           .setMergePolicy(mp);
         IndexWriter w = new IndexWriter(ramDir, iwc);
         // add few more docs:
@@ -850,7 +846,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       // add dummy segments (which are all in current
       // version) to single segment index
       MergePolicy mp = random().nextBoolean() ? newLogMergePolicy() : newTieredMergePolicy();
-      IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, null)
+      IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, null)
         .setMergePolicy(mp);
       IndexWriter w = new IndexWriter(dir, iwc);
       w.addIndexes(ramDir);
@@ -948,5 +944,40 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
     ir.close();
     TestUtil.checkIndex(dir);
     dir.close();
+  }
+
+  // LUCENE-5907
+  public void testUpgradeWithNRTReader() throws Exception {
+    for (String name : oldNames) {
+      Directory dir = newDirectory(oldIndexDirs.get(name));
+
+      IndexWriter writer = new IndexWriter(dir, newIndexWriterConfig(new MockAnalyzer(random()))
+                                           .setOpenMode(OpenMode.APPEND));
+      writer.addDocument(new Document());
+      DirectoryReader r = DirectoryReader.open(writer, true);
+      writer.commit();
+      r.close();
+      writer.forceMerge(1);
+      writer.commit();
+      writer.rollback();
+      new SegmentInfos().read(dir);
+      dir.close();
+    }
+  }
+
+  // LUCENE-5907
+  public void testUpgradeThenMultipleCommits() throws Exception {
+    for (String name : oldNames) {
+      Directory dir = newDirectory(oldIndexDirs.get(name));
+
+      IndexWriter writer = new IndexWriter(dir, newIndexWriterConfig(new MockAnalyzer(random()))
+                                           .setOpenMode(OpenMode.APPEND));
+      writer.addDocument(new Document());
+      writer.commit();
+      writer.addDocument(new Document());
+      writer.commit();
+      writer.close();
+      dir.close();
+    }
   }
 }

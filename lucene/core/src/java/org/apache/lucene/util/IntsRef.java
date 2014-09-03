@@ -132,6 +132,10 @@ public final class IntsRef implements Comparable<IntsRef>, Cloneable {
     return this.length - other.length;
   }
 
+  /**
+   * @deprecated {@link IntsRef} should not be used as a buffer, use {@link IntsRefBuilder} instead
+   */
+  @Deprecated
   public void copyInts(IntsRef other) {
     if (ints.length - offset < other.length) {
       ints = new int[other.length];
@@ -145,7 +149,9 @@ public final class IntsRef implements Comparable<IntsRef>, Cloneable {
    * Used to grow the reference array. 
    * 
    * In general this should not be used as it does not take the offset into account.
+   * @deprecated {@link IntsRef} should not be used as a buffer, use {@link IntsRefBuilder} instead
    * @lucene.internal */
+  @Deprecated
   public void grow(int newLength) {
     assert offset == 0;
     if (ints.length < newLength) {

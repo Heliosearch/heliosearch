@@ -17,15 +17,6 @@ package org.apache.lucene.codecs.simpletext;
  * limitations under the License.
  */
 
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_DIAG_KEY;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_DIAG_VALUE;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_DOCCOUNT;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_FILE;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_NUM_DIAG;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_NUM_FILES;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_USECOMPOUND;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_VERSION;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -39,9 +30,20 @@ import org.apache.lucene.index.SegmentInfo;
 import org.apache.lucene.store.ChecksumIndexInput;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
-import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.StringHelper;
+import org.apache.lucene.util.Version;
+
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_DIAG_KEY;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_DIAG_VALUE;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_DOCCOUNT;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_FILE;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_NUM_DIAG;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_NUM_FILES;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_USECOMPOUND;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_ID;
+import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_VERSION;
 
 /**
  * reads plaintext segments files
@@ -53,55 +55,59 @@ public class SimpleTextSegmentInfoReader extends SegmentInfoReader {
 
   @Override
   public SegmentInfo read(Directory directory, String segmentName, IOContext context) throws IOException {
-    BytesRef scratch = new BytesRef();
+    BytesRefBuilder scratch = new BytesRefBuilder();
     String segFileName = IndexFileNames.segmentFileName(segmentName, "", SimpleTextSegmentInfoFormat.SI_EXTENSION);
     ChecksumIndexInput input = directory.openChecksumInput(segFileName, context);
     boolean success = false;
     try {
       SimpleTextUtil.readLine(input, scratch);
-      assert StringHelper.startsWith(scratch, SI_VERSION);
-      final String version = readString(SI_VERSION.length, scratch);
+      assert StringHelper.startsWith(scratch.get(), SI_VERSION);
+      final Version version = Version.parse(readString(SI_VERSION.length, scratch));
     
       SimpleTextUtil.readLine(input, scratch);
-      assert StringHelper.startsWith(scratch, SI_DOCCOUNT);
+      assert StringHelper.startsWith(scratch.get(), SI_DOCCOUNT);
       final int docCount = Integer.parseInt(readString(SI_DOCCOUNT.length, scratch));
     
       SimpleTextUtil.readLine(input, scratch);
-      assert StringHelper.startsWith(scratch, SI_USECOMPOUND);
+      assert StringHelper.startsWith(scratch.get(), SI_USECOMPOUND);
       final boolean isCompoundFile = Boolean.parseBoolean(readString(SI_USECOMPOUND.length, scratch));
     
       SimpleTextUtil.readLine(input, scratch);
-      assert StringHelper.startsWith(scratch, SI_NUM_DIAG);
+      assert StringHelper.startsWith(scratch.get(), SI_NUM_DIAG);
       int numDiag = Integer.parseInt(readString(SI_NUM_DIAG.length, scratch));
       Map<String,String> diagnostics = new HashMap<>();
 
       for (int i = 0; i < numDiag; i++) {
         SimpleTextUtil.readLine(input, scratch);
-        assert StringHelper.startsWith(scratch, SI_DIAG_KEY);
+        assert StringHelper.startsWith(scratch.get(), SI_DIAG_KEY);
         String key = readString(SI_DIAG_KEY.length, scratch);
       
         SimpleTextUtil.readLine(input, scratch);
-        assert StringHelper.startsWith(scratch, SI_DIAG_VALUE);
+        assert StringHelper.startsWith(scratch.get(), SI_DIAG_VALUE);
         String value = readString(SI_DIAG_VALUE.length, scratch);
         diagnostics.put(key, value);
       }
       
       SimpleTextUtil.readLine(input, scratch);
-      assert StringHelper.startsWith(scratch, SI_NUM_FILES);
+      assert StringHelper.startsWith(scratch.get(), SI_NUM_FILES);
       int numFiles = Integer.parseInt(readString(SI_NUM_FILES.length, scratch));
       Set<String> files = new HashSet<>();
 
       for (int i = 0; i < numFiles; i++) {
         SimpleTextUtil.readLine(input, scratch);
-        assert StringHelper.startsWith(scratch, SI_FILE);
+        assert StringHelper.startsWith(scratch.get(), SI_FILE);
         String fileName = readString(SI_FILE.length, scratch);
         files.add(fileName);
       }
       
+      SimpleTextUtil.readLine(input, scratch);
+      assert StringHelper.startsWith(scratch.get(), SI_ID);
+      final String id = readString(SI_ID.length, scratch);
+
       SimpleTextUtil.checkFooter(input);
 
-      SegmentInfo info = new SegmentInfo(directory, version, segmentName, docCount, 
-                                         isCompoundFile, null, diagnostics);
+      SegmentInfo info = new SegmentInfo(directory, version, segmentName, docCount,
+                                         isCompoundFile, null, diagnostics, null, id);
       info.setFiles(files);
       success = true;
       return info;
@@ -114,7 +120,7 @@ public class SimpleTextSegmentInfoReader extends SegmentInfoReader {
     }
   }
 
-  private String readString(int offset, BytesRef scratch) {
-    return new String(scratch.bytes, scratch.offset+offset, scratch.length-offset, StandardCharsets.UTF_8);
+  private String readString(int offset, BytesRefBuilder scratch) {
+    return new String(scratch.bytes(), offset, scratch.length()-offset, StandardCharsets.UTF_8);
   }
 }

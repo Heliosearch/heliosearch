@@ -41,9 +41,9 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.store.TrackingDirectoryWrapper;
-import org.apache.lucene.util.Constants;
 import org.apache.lucene.util.InfoStream;
 import org.apache.lucene.util.LuceneTestCase;
+import org.apache.lucene.util.Version;
 
 
 /** JUnit adaptation of an older test case DocTest. */
@@ -119,6 +119,8 @@ public class TestDoc extends LuceneTestCase {
         // We create unreferenced files (we don't even write
         // a segments file):
         ((MockDirectoryWrapper) directory).setAssertNoUnrefencedFilesOnClose(false);
+        // this test itself deletes files (has no retry mechanism)
+        ((MockDirectoryWrapper) directory).setEnableVirusScanner(false);
       }
 
       IndexWriter writer = new IndexWriter(
@@ -161,6 +163,8 @@ public class TestDoc extends LuceneTestCase {
         // We create unreferenced files (we don't even write
         // a segments file):
         ((MockDirectoryWrapper) directory).setAssertNoUnrefencedFilesOnClose(false);
+        // this test itself deletes files (has no retry mechanism)
+        ((MockDirectoryWrapper) directory).setEnableVirusScanner(false);
       }
 
       writer = new IndexWriter(
@@ -217,7 +221,7 @@ public class TestDoc extends LuceneTestCase {
 
       final Codec codec = Codec.getDefault();
       TrackingDirectoryWrapper trackingDir = new TrackingDirectoryWrapper(si1.info.dir);
-      final SegmentInfo si = new SegmentInfo(si1.info.dir, Constants.LUCENE_MAIN_VERSION, merged, -1, false, codec, null);
+      final SegmentInfo si = new SegmentInfo(si1.info.dir, Version.LATEST, merged, -1, false, codec, null);
 
       SegmentMerger merger = new SegmentMerger(Arrays.<AtomicReader>asList(r1, r2),
           si, InfoStream.getDefault(), trackingDir, IndexWriterConfig.DEFAULT_TERM_INDEX_INTERVAL,
@@ -226,7 +230,7 @@ public class TestDoc extends LuceneTestCase {
       MergeState mergeState = merger.merge();
       r1.close();
       r2.close();
-      final SegmentInfo info = new SegmentInfo(si1.info.dir, Constants.LUCENE_MAIN_VERSION, merged,
+      final SegmentInfo info = new SegmentInfo(si1.info.dir, Version.LATEST, merged,
                                                si1.info.getDocCount() + si2.info.getDocCount(),
                                                false, codec, null);
       info.setFiles(new HashSet<>(trackingDir.getCreatedFiles()));

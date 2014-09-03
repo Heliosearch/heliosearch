@@ -44,6 +44,7 @@ import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.ThrottledIndexOutput;
+import org.apache.lucene.util.Version;
 
 /**
  * This is a Directory Wrapper that adds methods
@@ -75,6 +76,7 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
   boolean trackDiskUsage = false;
   boolean wrapLockFactory = true;
   boolean useSlowOpenClosers = true;
+  boolean enableVirusScanner = true;
   boolean allowRandomFileNotFoundException = true;
   boolean allowReadingFilesStillOpenForWrite = false;
   private Set<String> unSyncedFiles;
@@ -101,11 +103,16 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
   // Only tracked if noDeleteOpenFile is true: if an attempt
   // is made to delete an open file, we enroll it here.
   private Set<String> openFilesDeleted;
+  
+  // only tracked if virus scanner is enabled:
+  // set of files it prevented deletion for
+  private Set<String> triedToDelete;
 
   private synchronized void init() {
     if (openFiles == null) {
       openFiles = new HashMap<>();
       openFilesDeleted = new HashSet<>();
+      triedToDelete = new HashSet<>();
     }
 
     if (createdFiles == null)
@@ -153,6 +160,18 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
    *  that is still open for writes. */
   public void setAllowReadingFilesStillOpenForWrite(boolean value) {
     allowReadingFilesStillOpenForWrite = value;
+  }
+  
+  /** Returns true if the virus scanner is enabled */
+  public boolean getEnableVirusScanner() {
+    return enableVirusScanner;
+  }
+  
+  /** If set to true (the default), deleteFile sometimes
+   *  fails because a virus scanner is open.
+   */
+  public void setEnableVirusScanner(boolean value) {
+    this.enableVirusScanner = value;
   }
 
   /**
@@ -465,7 +484,21 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
         openFilesDeleted.remove(name);
       }
     }
+    if (!forced && enableVirusScanner && (randomState.nextInt(4) == 0)) {
+      triedToDelete.add(name);
+      if (LuceneTestCase.VERBOSE) {
+        System.out.println("MDW: now refuse to delete file: " + name);
+      }
+      throw new IOException("cannot delete file: " + name + ", a virus scanner has it open");
+    }
+    triedToDelete.remove(name);
     in.deleteFile(name);
+  }
+
+  /** Returns true if {@link #deleteFile} was called with this
+   *  fileName, but the virus checker prevented the deletion. */
+  public boolean didTryToDelete(String fileName) {
+    return triedToDelete.contains(fileName);
   }
 
   public synchronized Set<String> getOpenDeletedFiles() {
@@ -654,7 +687,10 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
   public synchronized void close() throws IOException {
     // files that we tried to delete, but couldn't because readers were open.
     // all that matters is that we tried! (they will eventually go away)
+    //   still open when we tried to delete
     Set<String> pendingDeletions = new HashSet<>(openFilesDeleted);
+    //   virus scanner when we tried to delete
+    pendingDeletions.addAll(triedToDelete);
     maybeYield();
     if (openFiles == null) {
       openFiles = new HashMap<>();
@@ -700,7 +736,7 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
           Set<String> allFiles = new HashSet<>(Arrays.asList(listAll()));
           allFiles.removeAll(pendingDeletions);
           String[] startFiles = allFiles.toArray(new String[0]);
-          IndexWriterConfig iwc = new IndexWriterConfig(LuceneTestCase.TEST_VERSION_CURRENT, null);
+          IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, null);
           iwc.setIndexDeletionPolicy(NoDeletionPolicy.INSTANCE);
           new IndexWriter(in, iwc).rollback();
           String[] endFiles = in.listAll();
@@ -791,7 +827,7 @@ public class MockDirectoryWrapper extends BaseDirectoryWrapper {
           DirectoryReader ir1 = DirectoryReader.open(this);
           int numDocs1 = ir1.numDocs();
           ir1.close();
-          new IndexWriter(this, new IndexWriterConfig(LuceneTestCase.TEST_VERSION_CURRENT, null)).close();
+          new IndexWriter(this, new IndexWriterConfig(Version.LATEST, null)).close();
           DirectoryReader ir2 = DirectoryReader.open(this);
           int numDocs2 = ir2.numDocs();
           ir2.close();

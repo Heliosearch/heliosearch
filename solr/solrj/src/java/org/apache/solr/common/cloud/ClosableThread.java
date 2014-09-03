@@ -17,6 +17,10 @@ package org.apache.solr.common.cloud;
  * limitations under the License.
  */
 
+/**
+ * @deprecated because this class is no longer used internally and will be removed
+ */
+@Deprecated
 public interface ClosableThread {
   public void close();
   public boolean isClosed();

@@ -17,15 +17,73 @@ In this release, there is an example Solr server including a bundled
 servlet container in the directory named "example".
 See the tutorial at http://lucene.apache.org/solr/tutorial.html
 
+==================  4.11.0 =================
 
-* SOLR-5868: HttpClient should be configured to use ALLOW_ALL_HOSTNAME hostname
-  verifier to simplify SSL setup. (Steve Davids via Mark Miller)
-
-==================  4.10.0 =================
+Consult the LUCENE_CHANGES.txt file for additional, low level, changes in this release
 
 Versions of Major Components
 ---------------------
-Apache Tika 1.5
+Apache Tika 1.5 (with upgraded Apache POI 3.10.1)
+Carrot2 3.9.0
+Velocity 1.7 and Velocity Tools 2.0
+Apache UIMA 2.3.1
+Apache ZooKeeper 3.4.6
+
+Detailed Change List
+----------------------
+
+New Features
+----------------------
+
+* SOLR-6403: TransactionLog replay status logging. (Mark Miller)
+
+* SOLR-4580: Support for protecting content in ZooKeeper. (Per Steffensen, Mark Miller)
+
+* SOLR-6365: specify appends, defaults, invariants outside of the request handler.
+  (Noble Paul, Erik Hatcher, shalin)
+
+Bug Fixes
+----------------------
+
+* SOLR-4895: An error should be returned when a rollback is attempted in SolrCloud mode.
+  (Vamsee Yarlagadda via Mark Miller)
+
+* LUCENE-5650: Tests can no longer write to CWD. Update log dir is now made relative
+  to the instance dir if it is not an absolute path. (Ryan Ernst, Dawid Weiss)
+
+* SOLR-6424: The hdfs block cache BLOCKCACHE_WRITE_ENABLED is not defaulting to false like it 
+  should. (Mark Miller)
+
+* SOLR-6425: If you using the new global hdfs block cache option, you can end up reading corrupt 
+  files on file name reuse. (Mark Miller, Gregory Chanan)
+
+* SOLR-6426: SolrZkClient clean can fail due to a race with children nodes. (Mark Miller)
+
+* SOLR-5966: Admin UI Menu is fixed and doesn't respect smaller viewports.
+  (Aman Tandon, steffkes via shalin)
+
+Other Changes
+---------------------
+
+* SOLR-6400: SolrCloud tests are not properly testing session expiration. (Mark Miller)
+
+* LUCENE-5650: Tests can no longer write to CWD. Update log dir is now made relative
+  to the instance dir if it is not an absolute path. (Ryan Ernst, Dawid Weiss)
+
+* SOLR-6390: Remove unnecessary checked exception for CloudSolrServer
+  constructors, improve javadocs for CloudSolrServer constructors.
+  (Steve Davids via Shawn Heisey)
+
+* LUCENE-5901: Replaced all occurences of LUCENE_CURRENT with LATEST for luceneMatchVersion.
+  (Ryan Ernst)
+
+==================  4.10.0 =================
+
+Consult the LUCENE_CHANGES.txt file for additional, low level, changes in this release
+
+Versions of Major Components
+---------------------
+Apache Tika 1.5 (with upgraded Apache POI 3.10.1)
 Carrot2 3.9.0
 Velocity 1.7 and Velocity Tools 2.0
 Apache UIMA 2.3.1
@@ -97,7 +155,7 @@ New Features
   a UUID into the unique Key field.
   (Vitaliy Zhovtyuk, hossman, Steve Rowe, Erik Hatcher, shalin)
 
-* SOLR-6294: Remove the restriction of adding json by only wrapping it in an array in a
+* SOLR-6294: SOLR-6437: Remove the restriction of adding json by only wrapping it in an array in a
   new path /update/json/docs (Noble Paul , hossman, Yonik Seeley, Steve Rowe)
 
 * SOLR-6302: UpdateRequestHandlers are registered implicitly /update ,
@@ -107,6 +165,21 @@ New Features
   many values, it's more appropriate than a boolean query. (David Smiley)
 
 * SOLR-6283: Add support for Interval Faceting in SolrJ. (Tomás Fernández Löbbe)
+
+* SOLR-6304 : JsonLoader should be able to flatten an input JSON to multiple docs (Noble Paul)
+
+* SOLR-2894: Distributed query support for facet.pivot (Dan Cooper, Erik Hatcher, Chris Russell,
+  Andrew Muldowney, Brett Lucey, Mark Miller, hossman)
+  
+* SOLR-5656: Add autoAddReplicas feature for shared file systems. (Mark Miller, Gregory Chanan)
+
+* SOLR-5244: Exporting Full Sorted Result Sets (Erik Hatcher, Joel Bernstein)
+
+* SOLR-3617: bin/solr and bin/solr.cmd scripts for starting, stopping, and running Solr examples
+  (Timothy Potter)
+
+* SOLR-6233: Provide basic command line tools for checking Solr status and health.
+  (Timothy Potter)
 
 Bug Fixes
 ----------------------
@@ -177,6 +250,55 @@ Bug Fixes
 * SOLR-6336: DistributedQueue can easily create too many ZooKeeper Watches.
   (Ramkumar Aiyengar via Mark Miller)
 
+* SOLR-6347: DELETEREPLICA throws a NPE while removing the last Replica in a Custom
+  sharded collection. (Anshum Gupta)
+
+* SOLR-6062: Fix undesirable edismax query parser effect (introduced in SOLR-2058) in how phrase queries
+  generated from pf, pf2, and pf3 are merged into the main query.  (Michael Dodsworth via ehatcher)
+
+* SOLR-6372: HdfsDirectoryFactory should use supplied Configuration for communicating with secure kerberos.
+  (Gregory Chanan via Mark Miller)
+
+* SOLR-6284: Fix NPE in OCP when non-existent sliceId is used for a
+  deleteShard request (Ramkumar Aiyengar via Anshum Gupta)
+
+* SOLR-6380: Added missing context info to log message if IOException occurs in processing tlog
+  (Steven Bower via hossman)
+
+* SOLR-6383: RegexTransformer returns no results after replaceAll if regex does not match a value.
+  (Alexander Kingson, shalin)
+
+* SOLR-6387: Add better error messages throughout Solr and supply a work around for
+  Java bug #8047340 to SystemInfoHandler: On Turkish default locale, some JVMs fail
+  to fork on MacOSX, BSD, AIX, and Solaris platforms.  (hossman, Uwe Schindler)
+
+* SOLR-6338: coreRootDirectory requires trailing slash, or SolrCloud cores are created in wrong location.
+    (Primož Skale via Erick Erickson)
+
+* SOLR-6314: Facet counts duplicated in the response if specified more than once on the request.
+  (Vamsee Yarlagadda, Erick Erickson)
+
+* SOLR-6378: Fixed example/example-DIH/ issues with "tika" and "solr" configurations, and tidied up README.txt
+  (Daniel Shchyokin via ehatcher)
+  
+* SOLR-6393: TransactionLog replay performance on HDFS is very poor. (Mark Miller)  
+
+* SOLR-6268: HdfsUpdateLog has a race condition that can expose a closed HDFS FileSystem instance and should 
+  close it's FileSystem instance if either inherited close method is called. (Mark Miller)
+
+* SOLR-6089: When using the HDFS block cache, when a file is deleted, it's underlying data entries in the 
+  block cache are not removed, which is a problem with the global block cache option. 
+  (Mark Miller, Patrick Hunt)
+
+* SOLR-6402: OverseerCollectionProcessor should not exit for ZooKeeper ConnectionLoss.
+  (Jessica Cheng via Mark Miller)
+  
+* SOLR-6405: ZooKeeper calls can easily not be retried enough on ConnectionLoss.
+  (Jessica Cheng, Mark Miller)
+
+* SOLR-6410: Ensure all Lookup instances are closed via CloseHook
+  (hossman, Areek Zillur, Ryan Ernst, Dawid Weiss)
+
 Optimizations
 ---------------------
 
@@ -199,9 +321,6 @@ Other Changes
 ---------------------
 
 * SOLR-6173: Fixed wrong failure message in TestDistributedSearch. (shalin)
-
-* SOLR-6178, LUCENE-5775: Deprecate JaspellLookupFactory. (Uwe Schindler,
-  Mike McCandless)
 
 * SOLR-5902: Corecontainer level mbeans are not exposed (noble)
 
@@ -270,6 +389,17 @@ Other Changes
 * SOLR-5664: Added support for multi-valued field highlighting in /browse UI. (ehatcher)
 
 * SOLR-6313: Improve SolrCloud cloud-dev scripts. (Mark Miller, Vamsee Yarlagadda)
+
+* SOLR-6360: Remove bogus "Content-Charset" header in HttpSolrServer. (Michael Ryan,
+  Uwe Schindler)
+
+* SOLR-6362: Fix bug in TestSqlEntityProcessorDelta. (James Dyer)
+
+* SOLR-6388: Force upgrade of Apache POI dependency in Solr Cell to version
+  3.10.1 to fix CVE-2014-3529 and CVE-2014-3574.  (Uwe Schindler)
+
+* SOLR-6391: Improve message for CREATECOLLECTION failure due to missing
+  numShards (Anshum Gupta)
 
 ==================  4.9.0 ==================
 
@@ -442,6 +572,10 @@ Other Changes
 
 * SOLR-6128: Removed deprecated analysis factories and fieldTypes from the example
   schema.xml (hossman)
+
+* SOLR-5868: HttpClient should be configured to use ALLOW_ALL_HOSTNAME hostname
+  verifier to simplify SSL setup. (Steve Davids via Mark Miller)
+
 
 Optimizations
 ----------------------
@@ -1919,7 +2053,7 @@ New Features
 * SOLR-4921: Admin UI now supports adding documents to Solr (gsingers, steffkes)
 
 * SOLR-4916: Add support to write and read Solr index files and transaction log
-  files to and from HDFS. (phunt, Mark Miller, Greg Chanan)
+  files to and from HDFS. (phunt, Mark Miller, Gregory Chanan)
   
 * SOLR-4892: Add FieldMutatingUpdateProcessorFactory subclasses 
   Parse{Date,Integer,Long,Float,Double,Boolean}UpdateProcessorFactory. These

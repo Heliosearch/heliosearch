@@ -55,6 +55,9 @@ import java.util.logging.Logger;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.codecs.Codec;
+import org.apache.lucene.codecs.SegmentInfoFormat;
+import org.apache.lucene.codecs.lucene46.Lucene46SegmentInfoFormat;
+import org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoFormat;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field.Store;
 import org.apache.lucene.document.Field;
@@ -163,7 +166,6 @@ import com.carrotsearch.randomizedtesting.rules.NoClassHooksShadowingRule;
 import com.carrotsearch.randomizedtesting.rules.NoInstanceHooksOverridesRule;
 import com.carrotsearch.randomizedtesting.rules.StaticFieldsInvariantRule;
 import com.carrotsearch.randomizedtesting.rules.SystemPropertiesInvariantRule;
-import com.carrotsearch.randomizedtesting.rules.TestRuleAdapter;
 
 import static com.carrotsearch.randomizedtesting.RandomizedTest.systemPropertyAsBoolean;
 import static com.carrotsearch.randomizedtesting.RandomizedTest.systemPropertyAsInt;
@@ -372,13 +374,6 @@ public abstract class LuceneTestCase extends Assert {
   // for all suites ever since.
   // -----------------------------------------------------------------
 
-  // :Post-Release-Update-Version.LUCENE_XY:
-  /** 
-   * Use this constant when creating Analyzers and any other version-dependent stuff.
-   * <p><b>NOTE:</b> Change this when development starts for new Lucene version:
-   */
-  public static final Version TEST_VERSION_CURRENT = Version.LUCENE_4_10;
-
   /**
    * True if and only if tests are run in verbose mode. If this flag is false
    * tests are not expected to print any messages. Enforced with {@link TestRuleLimitSysouts}.
@@ -509,6 +504,11 @@ public abstract class LuceneTestCase extends Assert {
    * Suite failure marker (any error in the test or suite scope).
    */
   private static TestRuleMarkFailure suiteFailureMarker;
+  
+  /**
+   * Temporary files cleanup rule.
+   */
+  private static TestRuleTemporaryFilesCleanup tempFilesCleanupRule;
 
   /**
    * Ignore tests after hitting a designated number of initial failures. This
@@ -585,7 +585,7 @@ public abstract class LuceneTestCase extends Assert {
     .around(suiteFailureMarker = new TestRuleMarkFailure())
     .around(new TestRuleAssertionsRequired())
     .around(new TestRuleLimitSysouts(suiteFailureMarker))
-    .around(new TemporaryFilesCleanupRule())
+    .around(tempFilesCleanupRule = new TestRuleTemporaryFilesCleanup(suiteFailureMarker))
     .around(new StaticFieldsInvariantRule(STATIC_LEAK_THRESHOLD, true) {
       @Override
       protected boolean accept(java.lang.reflect.Field field) {
@@ -921,7 +921,7 @@ public abstract class LuceneTestCase extends Assert {
 
   /** create a new index writer config with random defaults */
   public static IndexWriterConfig newIndexWriterConfig(Analyzer a) {
-    return newIndexWriterConfig(random(), TEST_VERSION_CURRENT, a);
+    return newIndexWriterConfig(random(), Version.LATEST, a);
   }
   
   /** create a new index writer config with random defaults using the specified random */
@@ -941,8 +941,8 @@ public abstract class LuceneTestCase extends Assert {
     if (r.nextBoolean()) {
       c.setMergeScheduler(new SerialMergeScheduler());
     } else if (rarely(r)) {
-      int maxThreadCount = TestUtil.nextInt(random(), 1, 4);
-      int maxMergeCount = TestUtil.nextInt(random(), maxThreadCount, maxThreadCount+4);
+      int maxThreadCount = TestUtil.nextInt(r, 1, 4);
+      int maxMergeCount = TestUtil.nextInt(r, maxThreadCount, maxThreadCount+4);
       ConcurrentMergeScheduler cms = new ConcurrentMergeScheduler();
       cms.setMaxMergesAndThreads(maxMergeCount, maxThreadCount);
       c.setMergeScheduler(cms);
@@ -1034,7 +1034,7 @@ public abstract class LuceneTestCase extends Assert {
       mergePolicy.setNoCFSRatio(r.nextBoolean() ? 1.0 : 0.0);
     }
     
-    if (rarely()) {
+    if (rarely(r)) {
       mergePolicy.setMaxCFSSegmentSizeMB(0.2 + r.nextDouble() * 2.0);
     } else {
       mergePolicy.setMaxCFSSegmentSizeMB(Double.POSITIVE_INFINITY);
@@ -1104,7 +1104,7 @@ public abstract class LuceneTestCase extends Assert {
           flushByRAM = false;
           break;
         case EITHER:
-          flushByRAM = random().nextBoolean();
+          flushByRAM = r.nextBoolean();
           break;
         default:
           throw new AssertionError();
@@ -1810,6 +1810,12 @@ public abstract class LuceneTestCase extends Assert {
     return true;
   }
 
+  /** Returns true if the codec "supports" writing segment and commit ids. */
+  public static boolean defaultCodecSupportsSegmentIds() {
+    SegmentInfoFormat siFormat = Codec.getDefault().segmentInfoFormat();
+    return siFormat instanceof SimpleTextSegmentInfoFormat || siFormat instanceof Lucene46SegmentInfoFormat;
+  }
+
   public void assertReaderEquals(String info, IndexReader leftReader, IndexReader rightReader) throws IOException {
     assertReaderStatisticsEquals(info, leftReader, rightReader);
     assertFieldsEquals(info, leftReader, MultiFields.getFields(leftReader), MultiFields.getFields(rightReader), true);
@@ -2497,52 +2503,12 @@ public abstract class LuceneTestCase extends Assert {
   }
 
   /**
-   * A base location for temporary files of a given test. Helps in figuring out
-   * which tests left which files and where.
-   */
-  private static File tempDirBase;
-  
-  /**
-   * Retry to create temporary file name this many times.
-   */
-  private static final int TEMP_NAME_RETRY_THRESHOLD = 9999;
-
-  /**
    * This method is deprecated for a reason. Do not use it. Call {@link #createTempDir()}
    * or {@link #createTempDir(String)} or {@link #createTempFile(String, String)}.
    */
   @Deprecated
   public static File getBaseTempDirForTestClass() {
-    synchronized (LuceneTestCase.class) {
-      if (tempDirBase == null) {
-        File directory = new File(System.getProperty("tempDir", System.getProperty("java.io.tmpdir")));
-        assert directory.exists() && 
-               directory.isDirectory() && 
-               directory.canWrite();
-
-        RandomizedContext ctx = RandomizedContext.current();
-        Class<?> clazz = ctx.getTargetClass();
-        String prefix = clazz.getName();
-        prefix = prefix.replaceFirst("^org.apache.lucene.", "lucene.");
-        prefix = prefix.replaceFirst("^org.apache.solr.", "solr.");
-
-        int attempt = 0;
-        File f;
-        do {
-          if (attempt++ >= TEMP_NAME_RETRY_THRESHOLD) {
-            throw new RuntimeException(
-                "Failed to get a temporary name too many times, check your temp directory and consider manually cleaning it: "
-                  + directory.getAbsolutePath());            
-          }
-          f = new File(directory, prefix + "-" + ctx.getRunnerSeedAsString() 
-                + "-" + String.format(Locale.ENGLISH, "%03d", attempt));
-        } while (!f.mkdirs());
-
-        tempDirBase = f;
-        registerToRemoveAfterSuite(tempDirBase);
-      }
-    }
-    return tempDirBase;
+    return tempFilesCleanupRule.getPerTestClassTempDir();
   }
 
 
@@ -2564,21 +2530,7 @@ public abstract class LuceneTestCase extends Assert {
    * the folder from being removed. 
    */
   public static File createTempDir(String prefix) {
-    File base = getBaseTempDirForTestClass();
-
-    int attempt = 0;
-    File f;
-    do {
-      if (attempt++ >= TEMP_NAME_RETRY_THRESHOLD) {
-        throw new RuntimeException(
-            "Failed to get a temporary name too many times, check your temp directory and consider manually cleaning it: "
-              + base.getAbsolutePath());            
-      }
-      f = new File(base, prefix + "-" + String.format(Locale.ENGLISH, "%03d", attempt));
-    } while (!f.mkdirs());
-
-    registerToRemoveAfterSuite(f);
-    return f;
+    return tempFilesCleanupRule.createTempDir(prefix);
   }
   
   /**
@@ -2590,21 +2542,7 @@ public abstract class LuceneTestCase extends Assert {
    * the folder from being removed. 
    */
   public static File createTempFile(String prefix, String suffix) throws IOException {
-    File base = getBaseTempDirForTestClass();
-
-    int attempt = 0;
-    File f;
-    do {
-      if (attempt++ >= TEMP_NAME_RETRY_THRESHOLD) {
-        throw new RuntimeException(
-            "Failed to get a temporary name too many times, check your temp directory and consider manually cleaning it: "
-              + base.getAbsolutePath());            
-      }
-      f = new File(base, prefix + "-" + String.format(Locale.ENGLISH, "%03d", attempt) + suffix);
-    } while (!f.createNewFile());
-
-    registerToRemoveAfterSuite(f);
-    return f;
+    return tempFilesCleanupRule.createTempFile(prefix, suffix);
   }
 
   /**
@@ -2614,80 +2552,5 @@ public abstract class LuceneTestCase extends Assert {
    */
   public static File createTempFile() throws IOException {
     return createTempFile("tempFile", ".tmp");
-  }
-
-  /**
-   * A queue of temporary resources to be removed after the
-   * suite completes.
-   * @see #registerToRemoveAfterSuite(File)
-   */
-  private final static List<File> cleanupQueue = new ArrayList<File>();
-
-  /**
-   * Register temporary folder for removal after the suite completes.
-   */
-  private static void registerToRemoveAfterSuite(File f) {
-    assert f != null;
-
-    if (LuceneTestCase.LEAVE_TEMPORARY) {
-      System.err.println("INFO: Will leave temporary file: " + f.getAbsolutePath());
-      return;
-    }
-
-    synchronized (cleanupQueue) {
-      cleanupQueue.add(f);
-    }
-  }
-
-  /**
-   * Checks and cleans up temporary files.
-   * 
-   * @see LuceneTestCase#createTempDir()
-   * @see LuceneTestCase#createTempFile()
-   */
-  private static class TemporaryFilesCleanupRule extends TestRuleAdapter {
-    @Override
-    protected void before() throws Throwable {
-      super.before();
-      assert tempDirBase == null;
-    }
-
-    @Override
-    protected void afterAlways(List<Throwable> errors) throws Throwable {
-      // Drain cleanup queue and clear it.
-      final File [] everything;
-      final String tempDirBasePath;
-      synchronized (cleanupQueue) {
-        tempDirBasePath = (tempDirBase != null ? tempDirBase.getAbsolutePath() : null);
-        tempDirBase = null;
-
-        Collections.reverse(cleanupQueue);
-        everything = new File [cleanupQueue.size()];
-        cleanupQueue.toArray(everything);
-        cleanupQueue.clear();
-      }
-
-      // Only check and throw an IOException on un-removable files if the test
-      // was successful. Otherwise just report the path of temporary files
-      // and leave them there.
-      if (LuceneTestCase.suiteFailureMarker.wasSuccessful()) {
-        try {
-          TestUtil.rm(everything);
-        } catch (IOException e) {
-          Class<?> suiteClass = RandomizedContext.current().getTargetClass();
-          if (suiteClass.isAnnotationPresent(SuppressTempFileChecks.class)) {
-            System.err.println("WARNING: Leftover undeleted temporary files (bugUrl: "
-                + suiteClass.getAnnotation(SuppressTempFileChecks.class).bugUrl() + "): "
-                + e.getMessage());
-            return;
-          }
-          throw e;
-        }
-      } else {
-        if (tempDirBasePath != null) {
-          System.err.println("NOTE: leaving temporary files on disk at: " + tempDirBasePath);
-        }
-      }
-    }
   }
 }

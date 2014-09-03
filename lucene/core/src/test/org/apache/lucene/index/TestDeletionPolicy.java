@@ -34,8 +34,10 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.Version;
 
 /*
   Verify we can read the pre-2.1 file format, do searches
@@ -221,6 +223,10 @@ public class TestDeletionPolicy extends LuceneTestCase {
     final double SECONDS = 2.0;
 
     Directory dir = newDirectory();
+    if (dir instanceof MockDirectoryWrapper) {
+      // test manually deletes files
+      ((MockDirectoryWrapper)dir).setEnableVirusScanner(false);
+    }
     IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()))
         .setIndexDeletionPolicy(new ExpirationTimeDeletionPolicy(dir, SECONDS));
     MergePolicy mp = conf.getMergePolicy();
@@ -314,6 +320,10 @@ public class TestDeletionPolicy extends LuceneTestCase {
       boolean useCompoundFile = (pass % 2) != 0;
 
       Directory dir = newDirectory();
+      if (dir instanceof MockDirectoryWrapper) {
+        // test manually deletes files
+        ((MockDirectoryWrapper)dir).setEnableVirusScanner(false);
+      }
 
       IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()))
           .setIndexDeletionPolicy(new KeepAllDeletionPolicy(dir))
@@ -562,6 +572,10 @@ public class TestDeletionPolicy extends LuceneTestCase {
       boolean useCompoundFile = (pass % 2) != 0;
 
       Directory dir = newDirectory();
+      if (dir instanceof MockDirectoryWrapper) {
+        // test manually deletes files
+        ((MockDirectoryWrapper)dir).setEnableVirusScanner(false);
+      }
 
       KeepLastNDeletionPolicy policy = new KeepLastNDeletionPolicy(N);
       for(int j=0;j<N+1;j++) {
@@ -623,6 +637,10 @@ public class TestDeletionPolicy extends LuceneTestCase {
       boolean useCompoundFile = (pass % 2) != 0;
 
       Directory dir = newDirectory();
+      if (dir instanceof MockDirectoryWrapper) {
+        // test manually deletes files
+        ((MockDirectoryWrapper)dir).setEnableVirusScanner(false);
+      }
       IndexWriterConfig conf = newIndexWriterConfig(new MockAnalyzer(random()))
           .setOpenMode(OpenMode.CREATE)
           .setIndexDeletionPolicy(new KeepLastNDeletionPolicy(N))
@@ -650,7 +668,7 @@ public class TestDeletionPolicy extends LuceneTestCase {
         }
         // this is a commit
         writer.close();
-        conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
+        conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
           .setIndexDeletionPolicy(policy)
           .setMergePolicy(NoMergePolicy.INSTANCE);
         writer = new IndexWriter(dir, conf);

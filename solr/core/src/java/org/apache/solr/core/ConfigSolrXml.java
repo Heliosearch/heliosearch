@@ -153,13 +153,19 @@ public class ConfigSolrXml extends ConfigSolr {
     storeConfigPropertyAsInt(s, nl, CfgProp.SOLR_LEADERVOTEWAIT, "leaderVoteWait");
     storeConfigPropertyAsInt(s, nl, CfgProp.SOLR_LEADERCONFLICTRESOLVEWAIT, "leaderConflictResolveWait");
     storeConfigPropertyAsInt(s, nl, CfgProp.SOLR_ZKCLIENTTIMEOUT, "zkClientTimeout");
-
+    storeConfigPropertyAsInt(s, nl, CfgProp.SOLR_AUTOREPLICAFAILOVERBADNODEEXPIRATION, "autoReplicaFailoverBadNodeExpiration");
+    storeConfigPropertyAsInt(s, nl, CfgProp.SOLR_AUTOREPLICAFAILOVERWAITAFTEREXPIRATION, "autoReplicaFailoverWaitAfterExpiration");
+    storeConfigPropertyAsInt(s, nl, CfgProp.SOLR_AUTOREPLICAFAILOVERWORKLOOPDELAY, "autoReplicaFailoverWorkLoopDelay");
+    
     storeConfigPropertyAsString(s, nl, CfgProp.SOLR_HOST, "host");
     storeConfigPropertyAsString(s, nl, CfgProp.SOLR_HOSTCONTEXT, "hostContext");
     storeConfigPropertyAsString(s, nl, CfgProp.SOLR_HOSTPORT, "hostPort");
     storeConfigPropertyAsString(s, nl, CfgProp.SOLR_ZKHOST, "zkHost");
 
     storeConfigPropertyAsBoolean(s, nl, CfgProp.SOLR_GENERICCORENODENAMES, "genericCoreNodeNames");
+    
+    storeConfigPropertyAsString(s, nl, CfgProp.SOLR_ZKACLPROVIDER, "zkACLProvider");
+    storeConfigPropertyAsString(s, nl, CfgProp.SOLR_ZKCREDENTIALPROVIDER, "zkCredentialProvider");
     
     errorOnLeftOvers(s, nl);
   }

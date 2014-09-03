@@ -27,8 +27,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.lucene.codecs.Codec;
@@ -48,6 +48,7 @@ import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.NoSuchDirectoryException;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.StringHelper;
+import org.apache.lucene.util.Version;
 
 /**
  * A collection of segmentInfo objects with methods for operating on those
@@ -142,6 +143,9 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
   /** The file format version for the segments_N codec header, since 4.9+ */
   public static final int VERSION_49 = 3;
 
+  /** The file format version for the segments_N codec header, since 4.11+ */
+  public static final int VERSION_411 = 4;
+
   // Used for the segments.gen file only!
   // Whenever you add a new format, make it 1 smaller (negative version logic)!
   private static final int FORMAT_SEGMENTS_GEN_47 = -2;
@@ -151,6 +155,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
   public static final int FORMAT_SEGMENTS_GEN_CURRENT = FORMAT_SEGMENTS_GEN_CHECKSUM;
 
   /** Used to name new segments. */
+  // TODO: should this be a long ...?
   public int counter;
   
   /** Counts how often the index has been changed.  */
@@ -171,6 +176,9 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
    * will be printed here.  @see #setInfoStream.
    */
   private static PrintStream infoStream = null;
+
+  /** Id for this commit; only written starting with Lucene 4.11 */
+  private String id;
 
   /** Sole constructor. Typically you call this and then
    *  use {@link #read(Directory) or
@@ -297,12 +305,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
     } catch (Throwable t) {
       // It's OK if we fail to write this file since it's
       // used only as one of the retry fallbacks.
-      try {
-        dir.deleteFile(IndexFileNames.SEGMENTS_GEN);
-      } catch (Throwable t2) {
-        // Ignore; this file is only used in a retry
-        // fallback on init.
-      }
+      IOUtils.deleteFilesIgnoringExceptions(dir, IndexFileNames.SEGMENTS_GEN);
     }
   }
 
@@ -320,6 +323,12 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
     return IndexFileNames.fileNameFromGeneration(IndexFileNames.SEGMENTS,
                                                  "",
                                                  nextGeneration);
+  }
+
+  /** Since Lucene 4.11, every commit (segments_N) writes a unique id.  This will
+   *  return that id, or null if this commit was pre-4.11. */
+  public String getId() {
+    return id;
   }
 
   /**
@@ -347,7 +356,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
       final int actualFormat;
       if (format == CodecUtil.CODEC_MAGIC) {
         // 4.0+
-        actualFormat = CodecUtil.checkHeaderNoMagic(input, "segments", VERSION_40, VERSION_49);
+        actualFormat = CodecUtil.checkHeaderNoMagic(input, "segments", VERSION_40, VERSION_411);
         version = input.readLong();
         counter = input.readInt();
         int numSegments = input.readInt();
@@ -412,6 +421,9 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
           add(siPerCommit);
         }
         userData = input.readStringStringMap();
+        if (actualFormat >= VERSION_411) {
+          id = input.readString();
+        }
       } else {
         actualFormat = -1;
         Lucene3xSegmentInfoReader.readLegacyInfos(this, directory, input, format);
@@ -485,7 +497,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
 
     try {
       segnOutput = directory.createOutput(segmentsFileName, IOContext.DEFAULT);
-      CodecUtil.writeHeader(segnOutput, "segments", VERSION_49);
+      CodecUtil.writeHeader(segnOutput, "segments", VERSION_411);
       segnOutput.writeLong(version); 
       segnOutput.writeInt(counter); // write counter
       segnOutput.writeInt(size()); // write infos
@@ -511,9 +523,9 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
         assert si.dir == directory;
 
         // If this segment is pre-4.x, perform a one-time
-        // "ugprade" to write the .si file for it:
-        String version = si.getVersion();
-        if (version == null || StringHelper.getVersionComparator().compare(version, "4.0") < 0) {
+        // "upgrade" to write the .si file for it:
+        Version version = si.getVersion();
+        if (version == null || version.onOrAfter(Version.LUCENE_4_0_0) == false) {
 
           if (!segmentWasUpgraded(directory, si)) {
 
@@ -541,6 +553,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
         }
       }
       segnOutput.writeStringStringMap(userData);
+      segnOutput.writeString(StringHelper.randomId());
       pendingSegnOutput = segnOutput;
       success = true;
     } finally {
@@ -557,13 +570,9 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
           }
         }
 
-        try {
-          // Try not to leave a truncated segments_N file in
-          // the index:
-          directory.deleteFile(segmentsFileName);
-        } catch (Throwable t) {
-          // Suppress so we keep throwing the original exception
-        }
+        // Try not to leave a truncated segments_N file in
+        // the index:
+        IOUtils.deleteFilesIgnoringExceptions(directory, segmentsFileName);
       }
     }
   }
@@ -609,7 +618,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
       CodecUtil.writeHeader(output, Lucene3xSegmentInfoFormat.UPGRADED_SI_CODEC_NAME, 
                                     Lucene3xSegmentInfoFormat.UPGRADED_SI_VERSION_CURRENT);
       // Write the Lucene version that created this segment, since 3.1
-      output.writeString(si.getVersion());
+      output.writeString(si.getVersion().toString());
       output.writeInt(si.getDocCount());
 
       output.writeStringStringMap(si.attributes());
@@ -642,6 +651,11 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
   
   @Override
   public SegmentInfos clone() {
+    return clone(false);
+  }
+
+  /** Deep clone of this {@code SegmentInfos}, optionally also fully cloning the {@link SegmentInfo}. */
+  SegmentInfos clone(boolean cloneSegmentInfo) {
     try {
       final SegmentInfos sis = (SegmentInfos) super.clone();
       // deep clone, first recreate all collections:
@@ -649,7 +663,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
       for(final SegmentCommitInfo info : this) {
         assert info.info.getCodec() != null;
         // dont directly access segments, use add method!!!
-        sis.add(info.clone());
+        sis.add(info.clone(cloneSegmentInfo));
       }
       sis.userData = new HashMap<>(userData);
       return sis;
@@ -739,7 +753,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
    * commit finishing.
    */
   public abstract static class FindSegmentsFile {
-    
+
     final Directory directory;
 
     /** Sole constructor. */ 
@@ -911,6 +925,9 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
           return v;
         } catch (IOException err) {
 
+          // TODO: we should use the new IO apis in Java7 to get better exceptions on why the open failed.  E.g. we don't want to fall back
+          // if the open failed for a "different" reason (too many open files, access denied) than "the commit was in progress"
+
           // Save the original root cause:
           if (exc == null) {
             exc = err;
@@ -974,6 +991,11 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
   void updateGeneration(SegmentInfos other) {
     lastGeneration = other.lastGeneration;
     generation = other.generation;
+  }
+
+  void setGeneration(long generation) {
+    this.generation = generation;
+    this.lastGeneration = generation;
   }
 
   final void rollbackCommit(Directory dir) {
@@ -1081,11 +1103,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
       success = true;
     } finally {
       if (!success) {
-        try {
-          dir.deleteFile(fileName);
-        } catch (Throwable t) {
-          // Suppress so we keep throwing the original exception
-        }
+        IOUtils.deleteFilesIgnoringExceptions(dir, fileName);
       }
     }
 

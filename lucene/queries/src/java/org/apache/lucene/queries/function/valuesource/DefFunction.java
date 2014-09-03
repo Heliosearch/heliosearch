@@ -16,16 +16,14 @@ package org.apache.lucene.queries.function.valuesource;
  * limitations under the License.
  */
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.queries.function.FunctionValues;
 import org.apache.lucene.queries.function.ValueSource;
-import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.BytesRef;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 
 /**
  * {@link ValueSource} implementation which only returns the values from the provided

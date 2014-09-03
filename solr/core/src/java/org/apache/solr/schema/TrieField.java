@@ -45,6 +45,7 @@ import org.apache.lucene.search.NumericRangeQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.SortField;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.NumericUtils;
 import org.apache.solr.search.mutable.MutableValueDate;
@@ -380,26 +381,28 @@ public class TrieField extends PrimitiveFieldType {
   @Override
   public void readableToIndexed(CharSequence val, BytesRef result) {
     String s = val.toString();
+    BytesRefBuilder b = new BytesRefBuilder();
     try {
       switch (type) {
         case INTEGER:
-          NumericUtils.intToPrefixCodedBytes(Integer.parseInt(s), 0, result);
+          NumericUtils.intToPrefixCodedBytes(Integer.parseInt(s), 0, b);
           break;
         case FLOAT:
-          NumericUtils.intToPrefixCodedBytes(NumericUtils.floatToSortableInt(Float.parseFloat(s)), 0, result);
+          NumericUtils.intToPrefixCodedBytes(NumericUtils.floatToSortableInt(Float.parseFloat(s)), 0, b);
           break;
         case LONG:
-          NumericUtils.longToPrefixCodedBytes(Long.parseLong(s), 0, result);
+          NumericUtils.longToPrefixCodedBytes(Long.parseLong(s), 0, b);
           break;
         case DOUBLE:
-          NumericUtils.longToPrefixCodedBytes(NumericUtils.doubleToSortableLong(Double.parseDouble(s)), 0, result);
+          NumericUtils.longToPrefixCodedBytes(NumericUtils.doubleToSortableLong(Double.parseDouble(s)), 0, b);
           break;
         case DATE:
-          NumericUtils.longToPrefixCodedBytes(dateField.parseMath(null, s).getTime(), 0, result);
+          NumericUtils.longToPrefixCodedBytes(dateField.parseMath(null, s).getTime(), 0, b);
           break;
         default:
           throw new SolrException(SolrException.ErrorCode.SERVER_ERROR, "Unknown type for trie field: " + type);
       }
+      result.copyBytes(b.get());
     } catch (NumberFormatException nfe) {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, 
                               "Invalid Number: " + val);
@@ -490,7 +493,7 @@ public class TrieField extends PrimitiveFieldType {
 
   @Override
   public String storedToIndexed(IndexableField f) {
-    final BytesRef bytes = new BytesRef(NumericUtils.BUF_SIZE_LONG);
+    final BytesRefBuilder bytes = new BytesRefBuilder();
     final Number val = f.numericValue();
     if (val != null) {
       switch (type) {
@@ -545,7 +548,7 @@ public class TrieField extends PrimitiveFieldType {
           throw new SolrException(SolrException.ErrorCode.SERVER_ERROR, "Unknown type for trie field: " + f.name());
       }
     }
-    return bytes.utf8ToString();
+    return bytes.get().utf8ToString();
   }
   
   @Override

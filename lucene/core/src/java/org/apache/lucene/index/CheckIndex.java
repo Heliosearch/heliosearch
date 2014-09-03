@@ -43,11 +43,12 @@ import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.CommandLineUtil;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.LongBitSet;
-import org.apache.lucene.util.StringHelper;
+import org.apache.lucene.util.Version;
 
 
 /**
@@ -423,21 +424,19 @@ public class CheckIndex {
     }
 
     // find the oldest and newest segment versions
-    String oldest = Integer.toString(Integer.MAX_VALUE), newest = Integer.toString(Integer.MIN_VALUE);
+    Version oldest = null;
+    Version newest = null;
     String oldSegs = null;
-    boolean foundNonNullVersion = false;
-    Comparator<String> versionComparator = StringHelper.getVersionComparator();
     for (SegmentCommitInfo si : sis) {
-      String version = si.info.getVersion();
+      Version version = si.info.getVersion();
       if (version == null) {
         // pre-3.1 segment
         oldSegs = "pre-3.1";
       } else {
-        foundNonNullVersion = true;
-        if (versionComparator.compare(version, oldest) < 0) {
+        if (oldest == null || version.onOrAfter(oldest) == false) {
           oldest = version;
         }
-        if (versionComparator.compare(version, newest) > 0) {
+        if (newest == null || version.onOrAfter(newest)) {
           newest = version;
         }
       }
@@ -489,19 +488,19 @@ public class CheckIndex {
       userDataString = "";
     }
 
-    String versionString = null;
+    String versionString = "";
     if (oldSegs != null) {
-      if (foundNonNullVersion) {
+      if (newest != null) {
         versionString = "versions=[" + oldSegs + " .. " + newest + "]";
       } else {
         versionString = "version=" + oldSegs;
       }
-    } else {
+    } else if (newest != null) { // implies oldest != null
       versionString = oldest.equals(newest) ? ( "version=" + oldest ) : ("versions=[" + oldest + " .. " + newest + "]");
     }
 
     msg(infoStream, "Segments file=" + segmentsFileName + " numSegments=" + numSegments
-        + " " + versionString + " format=" + sFormat + userDataString);
+        + " " + versionString + " id=" + sis.getId() + " format=" + sFormat + userDataString);
 
     if (onlySegments != null) {
       result.partial = true;
@@ -541,8 +540,8 @@ public class CheckIndex {
       segInfoStat.name = info.info.name;
       segInfoStat.docCount = info.info.getDocCount();
       
-      final String version = info.info.getVersion();
-      if (info.info.getDocCount() <= 0 && version != null && versionComparator.compare(version, "4.5") >= 0) {
+      final Version version = info.info.getVersion();
+      if (info.info.getDocCount() <= 0 && version != null && version.onOrAfter(Version.LUCENE_4_5_0)) {
         throw new RuntimeException("illegal number of documents: maxDoc=" + info.info.getDocCount());
       }
 
@@ -552,6 +551,7 @@ public class CheckIndex {
 
       try {
         msg(infoStream, "    version=" + (version == null ? "3.0" : version));
+        msg(infoStream, "    id=" + info.info.getId());
         final Codec codec = info.info.getCodec();
         msg(infoStream, "    codec=" + codec);
         segInfoStat.codec = codec;
@@ -872,7 +872,7 @@ public class CheckIndex {
       boolean hasOrd = true;
       final long termCountStart = status.delTermCount + status.termCount;
       
-      BytesRef lastTerm = null;
+      BytesRefBuilder lastTerm = null;
       
       Comparator<BytesRef> termComp = terms.getComparator();
       
@@ -892,9 +892,10 @@ public class CheckIndex {
         // make sure terms arrive in order according to
         // the comp
         if (lastTerm == null) {
-          lastTerm = BytesRef.deepCopyOf(term);
+          lastTerm = new BytesRefBuilder();
+          lastTerm.copyBytes(term);
         } else {
-          if (termComp.compare(lastTerm, term) >= 0) {
+          if (termComp.compare(lastTerm.get(), term) >= 0) {
             throw new RuntimeException("terms out of order: lastTerm=" + lastTerm + " term=" + term);
           }
           lastTerm.copyBytes(term);
@@ -1206,7 +1207,7 @@ public class CheckIndex {
         
         // Test seek to last term:
         if (lastTerm != null) {
-          if (termsEnum.seekCeil(lastTerm) != TermsEnum.SeekStatus.FOUND) { 
+          if (termsEnum.seekCeil(lastTerm.get()) != TermsEnum.SeekStatus.FOUND) { 
             throw new RuntimeException("seek to last term " + lastTerm + " failed");
           }
           

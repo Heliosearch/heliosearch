@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 
 import org.apache.hadoop.conf.Configuration;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -85,6 +86,8 @@ public class HdfsDirectoryFactory extends CachingDirectoryFactory {
     this.hdfsDataDir = params.get(HDFS_HOME);
     if (this.hdfsDataDir != null && this.hdfsDataDir.length() == 0) {
       this.hdfsDataDir = null;
+    } else {
+      LOG.info(HDFS_HOME + "=" + this.hdfsDataDir);
     }
     boolean kerberosEnabled = params.getBool(KERBEROS_ENABLED, false);
     LOG.info("Solr Kerberos Authentication "
@@ -107,7 +110,7 @@ public class HdfsDirectoryFactory extends CachingDirectoryFactory {
     boolean blockCacheEnabled = params.getBool(BLOCKCACHE_ENABLED, true);
     boolean blockCacheGlobal = params.getBool(BLOCKCACHE_GLOBAL, false); // default to false for back compat
     boolean blockCacheReadEnabled = params.getBool(BLOCKCACHE_READ_ENABLED, true);
-    boolean blockCacheWriteEnabled = params.getBool(BLOCKCACHE_WRITE_ENABLED, true);
+    boolean blockCacheWriteEnabled = params.getBool(BLOCKCACHE_WRITE_ENABLED, false);
     
     if (blockCacheWriteEnabled) {
       LOG.warn("Using " + BLOCKCACHE_WRITE_ENABLED + " is currently buggy and can result in readers seeing a corrupted view of the index.");
@@ -136,11 +139,11 @@ public class HdfsDirectoryFactory extends CachingDirectoryFactory {
       int bufferSize = params.getInt("solr.hdfs.blockcache.bufferstore.buffersize", 128);
       int bufferCount = params.getInt("solr.hdfs.blockcache.bufferstore.buffercount", 128 * 128);
       
-      BlockCache blockCache = getBlockDirectoryCache(path, numberOfBlocksPerBank,
+      BlockCache blockCache = getBlockDirectoryCache(numberOfBlocksPerBank,
           blockSize, bankCount, directAllocation, slabSize,
           bufferSize, bufferCount, blockCacheGlobal);
       
-      Cache cache = new BlockDirectoryCache(blockCache, path, metrics);
+      Cache cache = new BlockDirectoryCache(blockCache, path, metrics, blockCacheGlobal);
       HdfsDirectory hdfsDirectory = new HdfsDirectory(new Path(path), conf);
       dir = new BlockDirectory(path, hdfsDirectory, cache, null,
           blockCacheReadEnabled, blockCacheWriteEnabled);
@@ -161,17 +164,16 @@ public class HdfsDirectoryFactory extends CachingDirectoryFactory {
     return dir;
   }
 
-  private BlockCache getBlockDirectoryCache(String path,
-      int numberOfBlocksPerBank, int blockSize, int bankCount,
+  private BlockCache getBlockDirectoryCache(int numberOfBlocksPerBank, int blockSize, int bankCount,
       boolean directAllocation, int slabSize, int bufferSize, int bufferCount, boolean staticBlockCache) {
     if (!staticBlockCache) {
       LOG.info("Creating new single instance HDFS BlockCache");
       return createBlockCache(numberOfBlocksPerBank, blockSize, bankCount, directAllocation, slabSize, bufferSize, bufferCount);
     }
-    LOG.info("Creating new global HDFS BlockCache");
     synchronized (HdfsDirectoryFactory.class) {
       
       if (globalBlockCache == null) {
+        LOG.info("Creating new global HDFS BlockCache");
         globalBlockCache = createBlockCache(numberOfBlocksPerBank, blockSize, bankCount,
             directAllocation, slabSize, bufferSize, bufferCount);
       }
@@ -253,6 +255,11 @@ public class HdfsDirectoryFactory extends CachingDirectoryFactory {
   }
   
   @Override
+  public boolean isSharedStorage() {
+    return true;
+  }
+  
+  @Override
   public boolean searchersReserveCommitPoints() {
     return true;
   }
@@ -303,9 +310,18 @@ public class HdfsDirectoryFactory extends CachingDirectoryFactory {
     synchronized (HdfsDirectoryFactory.class) {
       if (kerberosInit == null) {
         kerberosInit = new Boolean(true);
-        Configuration conf = new Configuration();
-        conf.set("hadoop.security.authentication", "kerberos");
-        UserGroupInformation.setConfiguration(conf);
+        final Configuration conf = getConf();
+        final String authVal = conf.get(HADOOP_SECURITY_AUTHENTICATION);
+        final String kerberos = "kerberos";
+        if (authVal != null && !authVal.equals(kerberos)) {
+          throw new IllegalArgumentException(HADOOP_SECURITY_AUTHENTICATION
+              + " set to: " + authVal + ", not kerberos, but attempting to "
+              + " connect to HDFS via kerberos");
+        }
+        // let's avoid modifying the supplied configuration, just to be conservative
+        final Configuration ugiConf = new Configuration(getConf());
+        ugiConf.set(HADOOP_SECURITY_AUTHENTICATION, kerberos);
+        UserGroupInformation.setConfiguration(ugiConf);
         LOG.info(
             "Attempting to acquire kerberos ticket with keytab: {}, principal: {} ",
             keytabFile, principal);

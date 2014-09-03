@@ -164,7 +164,7 @@ import org.apache.lucene.util.packed.MonotonicBlockPackedWriter;
  * </ol>
  * @lucene.experimental
  */
-public final class Lucene49DocValuesFormat extends DocValuesFormat {
+public class Lucene49DocValuesFormat extends DocValuesFormat {
 
   /** Sole Constructor */
   public Lucene49DocValuesFormat() {

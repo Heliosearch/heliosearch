@@ -45,6 +45,7 @@ import org.apache.lucene.util.InfoStream;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.ThreadInterruptedException;
+import org.apache.lucene.util.Version;
 import org.junit.Test;
 
 public class TestIndexWriterReader extends LuceneTestCase {
@@ -577,7 +578,7 @@ public class TestIndexWriterReader extends LuceneTestCase {
   public static void createIndex(Random random, Directory dir1, String indexName,
       boolean multiSegment) throws IOException {
     IndexWriter w = new IndexWriter(dir1, LuceneTestCase.newIndexWriterConfig(random,
-        TEST_VERSION_CURRENT, new MockAnalyzer(random))
+        Version.LATEST, new MockAnalyzer(random))
         .setMergePolicy(new LogDocMergePolicy()));
     for (int i = 0; i < 100; i++) {
       w.addDocument(DocHelper.createDocument(i, indexName, 4));
@@ -1156,7 +1157,7 @@ public class TestIndexWriterReader extends LuceneTestCase {
     Directory dir = getAssertNoDeletesDirectory(newDirectory());
     // Don't use newIndexWriterConfig, because we need a
     // "sane" mergePolicy:
-    IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
+    IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
     IndexWriter w = new IndexWriter(dir, iwc);
     // Create 500 segments:
     for(int i=0;i<500;i++) {
@@ -1168,6 +1169,32 @@ public class TestIndexWriterReader extends LuceneTestCase {
       assertTrue(r.leaves().size() < 100);
       r.close();
     }
+    w.close();
+    dir.close();
+  }
+
+  // LUCENE-5912: make sure when you reopen an NRT reader using a commit point, the SegmentReaders are in fact shared:
+  public void testReopenNRTReaderOnCommit() throws Exception {
+    Directory dir = newDirectory();
+    IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
+    IndexWriter w = new IndexWriter(dir, iwc);
+    w.addDocument(new Document());
+
+    // Pull NRT reader; it has 1 segment:
+    DirectoryReader r1 = DirectoryReader.open(w, true);
+    assertEquals(1, r1.leaves().size());
+    w.addDocument(new Document());
+    w.commit();
+
+    List<IndexCommit> commits = DirectoryReader.listCommits(dir);
+    assertEquals(1, commits.size());
+    DirectoryReader r2 = DirectoryReader.openIfChanged(r1, commits.get(0));
+    assertEquals(2, r2.leaves().size());
+
+    // Make sure we shared same instance of SegmentReader w/ first reader:
+    assertTrue(r1.leaves().get(0).reader() == r2.leaves().get(0).reader());
+    r1.close();
+    r2.close();
     w.close();
     dir.close();
   }

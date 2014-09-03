@@ -80,13 +80,16 @@ public class BlockDirectory extends Directory {
     
     @Override
     public void renameCacheFile(String source, String dest) {}
+
+    @Override
+    public void releaseResources() {}
   };
   
-  private Directory directory;
-  private int blockSize;
-  private String dirName;
+  private final Directory directory;
+  private final int blockSize;
+  private final String dirName;
   private final Cache cache;
-  private Set<String> blockCacheFileTypes;
+  private final Set<String> blockCacheFileTypes;
   private final boolean blockCacheReadEnabled;
   private final boolean blockCacheWriteEnabled;
 
@@ -233,11 +236,14 @@ public class BlockDirectory extends Directory {
       for (String file : files) {
         cache.delete(getFileCacheName(file));
       }
+      // segments.gen won't be removed above
+      cache.delete(dirName + "/" + "segments.gen");
       
     } catch (FileNotFoundException e) {
       // the local file system folder may be gone
     } finally {
       directory.close();
+      cache.releaseResources();
     }
   }
   

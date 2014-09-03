@@ -23,6 +23,7 @@ import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.valuesource.EnumFieldSource;
 import org.apache.lucene.search.*;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.NumericUtils;
 import org.apache.solr.common.EnumFieldValue;
@@ -42,9 +43,9 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
-
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -277,7 +278,9 @@ public class EnumField extends PrimitiveFieldType {
       return;
 
     final Integer intValue = stringValueToIntValue(s);
-    NumericUtils.intToPrefixCoded(intValue, 0, result);
+    BytesRefBuilder b = new BytesRefBuilder();
+    NumericUtils.intToPrefixCoded(intValue, 0, b);
+    result.copyBytes(b.get());
   }
 
   /**
@@ -343,9 +346,9 @@ public class EnumField extends PrimitiveFieldType {
     final Number val = f.numericValue();
     if (val == null)
       return null;
-    final BytesRef bytes = new BytesRef(NumericUtils.BUF_SIZE_LONG);
+    final BytesRefBuilder bytes = new BytesRefBuilder();
     NumericUtils.intToPrefixCoded(val.intValue(), 0, bytes);
-    return bytes.utf8ToString();
+    return bytes.get().utf8ToString();
   }
 
   /**

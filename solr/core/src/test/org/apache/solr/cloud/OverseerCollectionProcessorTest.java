@@ -318,17 +318,6 @@ public class OverseerCollectionProcessorTest extends SolrTestCaseJ4 {
       }
     }).anyTimes();
 
-    solrZkClientMock.create(anyObject(String.class), anyObject(byte[].class), anyObject(List.class),anyObject(CreateMode.class), anyBoolean());
-    expectLastCall().andAnswer(new IAnswer<String>() {
-      @Override
-      public String answer() throws Throwable {
-        String key = (String) getCurrentArguments()[0];
-        zkMap.put(key, null);
-        handleCrateCollMessage((byte[]) getCurrentArguments()[1]);
-        return key;
-      }
-    }).anyTimes();
-
     solrZkClientMock.makePath(anyObject(String.class), anyObject(byte[].class), anyBoolean());
     expectLastCall().andAnswer(new IAnswer<String>() {
       @Override
@@ -402,22 +391,22 @@ public class OverseerCollectionProcessorTest extends SolrTestCaseJ4 {
     if (sendCreateNodeList) {
       props = new ZkNodeProps(Overseer.QUEUE_OPERATION,
           OverseerCollectionProcessor.CREATECOLLECTION,
-          OverseerCollectionProcessor.REPLICATION_FACTOR,
+          ZkStateReader.REPLICATION_FACTOR,
           replicationFactor.toString(), "name", COLLECTION_NAME,
           "collection.configName", CONFIG_NAME,
           OverseerCollectionProcessor.NUM_SLICES, numberOfSlices.toString(),
-          OverseerCollectionProcessor.MAX_SHARDS_PER_NODE,
+          ZkStateReader.MAX_SHARDS_PER_NODE,
           maxShardsPerNode.toString(),
           OverseerCollectionProcessor.CREATE_NODE_SET,
           (createNodeList != null)?StrUtils.join(createNodeList, ','):null);
     } else {
       props = new ZkNodeProps(Overseer.QUEUE_OPERATION,
           OverseerCollectionProcessor.CREATECOLLECTION,
-          OverseerCollectionProcessor.REPLICATION_FACTOR,
+          ZkStateReader.REPLICATION_FACTOR,
           replicationFactor.toString(), "name", COLLECTION_NAME,
           "collection.configName", CONFIG_NAME,
           OverseerCollectionProcessor.NUM_SLICES, numberOfSlices.toString(),
-          OverseerCollectionProcessor.MAX_SHARDS_PER_NODE,
+          ZkStateReader.MAX_SHARDS_PER_NODE,
           maxShardsPerNode.toString());
     }
     QueueEvent qe = new QueueEvent("id", ZkStateReader.toJSON(props), null){

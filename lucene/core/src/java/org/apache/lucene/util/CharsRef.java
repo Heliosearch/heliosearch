@@ -153,7 +153,9 @@ public final class CharsRef implements Comparable<CharsRef>, CharSequence, Clone
    * 
    * @param other
    *          the {@link CharsRef} to copy
+   * @deprecated {@link CharsRef} should not be used as a buffer, use {@link CharsRefBuilder} instead
    */
+  @Deprecated
   public void copyChars(CharsRef other) {
     copyChars(other.chars, other.offset, other.length);
   }
@@ -162,7 +164,9 @@ public final class CharsRef implements Comparable<CharsRef>, CharSequence, Clone
    * Used to grow the reference array. 
    * 
    * In general this should not be used as it does not take the offset into account.
+   * @deprecated {@link CharsRef} should not be used as a buffer, use {@link CharsRefBuilder} instead
    * @lucene.internal */
+  @Deprecated
   public void grow(int newLength) {
     assert offset == 0;
     if (chars.length < newLength) {
@@ -172,7 +176,9 @@ public final class CharsRef implements Comparable<CharsRef>, CharSequence, Clone
 
   /**
    * Copies the given array into this CharsRef.
+   * @deprecated {@link CharsRef} should not be used as a buffer, use {@link CharsRefBuilder} instead
    */
+  @Deprecated
   public void copyChars(char[] otherChars, int otherOffset, int otherLength) {
     if (chars.length - offset < otherLength) {
       chars = new char[otherLength];
@@ -184,7 +190,9 @@ public final class CharsRef implements Comparable<CharsRef>, CharSequence, Clone
 
   /**
    * Appends the given array to this CharsRef
+   * @deprecated {@link CharsRef} should not be used as a buffer, use {@link CharsRefBuilder} instead
    */
+  @Deprecated
   public void append(char[] otherChars, int otherOffset, int otherLength) {
     int newLen = length + otherLength;
     if (chars.length - offset < newLen) {

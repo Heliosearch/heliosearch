@@ -397,7 +397,7 @@ public abstract class FieldType extends FieldProperties {
   /** Given the readable value, return the term value that will match it. */
   public void readableToIndexed(CharSequence val, BytesRef result) {
     final String internal = readableToIndexed(val.toString());
-    UnicodeUtil.UTF16toUTF8(internal, 0, internal.length(), result);
+    UnicodeUtil.UTF16toUTF8(internal, result);
   }
 
   public void setIsExplicitQueryAnalyzer(boolean isExplicitQueryAnalyzer) {
@@ -1023,7 +1023,7 @@ public abstract class FieldType extends FieldProperties {
     }
     BytesRef spare = new BytesRef();
     String stringVal = (String)value;
-    UnicodeUtil.UTF16toUTF8(stringVal, 0, stringVal.length(), spare);
+    UnicodeUtil.UTF16toUTF8(stringVal, spare);
     return spare;
   }
 

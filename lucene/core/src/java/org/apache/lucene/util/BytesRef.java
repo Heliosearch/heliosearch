@@ -80,8 +80,8 @@ public final class BytesRef implements Comparable<BytesRef>,Cloneable {
    * unicode text, with no unpaired surrogates.
    */
   public BytesRef(CharSequence text) {
-    this();
-    copyChars(text);
+    this(new byte[UnicodeUtil.MAX_UTF8_BYTES_PER_CHAR * text.length()]);
+    length = UnicodeUtil.UTF16toUTF8(text, 0, text.length(), bytes);
   }
 
   /**
@@ -89,10 +89,12 @@ public final class BytesRef implements Comparable<BytesRef>,Cloneable {
    * 
    * @param text Must be well-formed unicode text, with no
    * unpaired surrogates or invalid UTF16 code units.
+   * @deprecated {@link BytesRef} should not be used as a buffer, use {@link BytesRefBuilder} instead
    */
+  @Deprecated
   public void copyChars(CharSequence text) {
     assert offset == 0;   // TODO broken if offset != 0
-    UnicodeUtil.UTF16toUTF8(text, 0, text.length(), this);
+    UnicodeUtil.UTF16toUTF8(text, this);
   }
   
   /**
@@ -155,9 +157,9 @@ public final class BytesRef implements Comparable<BytesRef>,Cloneable {
   /** Interprets stored bytes as UTF8 bytes, returning the
    *  resulting string */
   public String utf8ToString() {
-    final CharsRef ref = new CharsRef(length);
-    UnicodeUtil.UTF8toUTF16(bytes, offset, length, ref);
-    return ref.toString(); 
+    final char[] ref = new char[length];
+    final int len = UnicodeUtil.UTF8toUTF16(bytes, offset, length, ref);
+    return new String(ref, 0, len);
   }
 
   /** Returns hex encoded bytes, eg [0x6c 0x75 0x63 0x65 0x6e 0x65] */
@@ -181,7 +183,9 @@ public final class BytesRef implements Comparable<BytesRef>,Cloneable {
    * <p>
    * NOTE: if this would exceed the array size, this method creates a 
    * new reference array.
+   * @deprecated {@link BytesRef} should not be used as a buffer, use {@link BytesRefBuilder} instead
    */
+  @Deprecated
   public void copyBytes(BytesRef other) {
     if (bytes.length - offset < other.length) {
       bytes = new byte[other.length];
@@ -196,7 +200,9 @@ public final class BytesRef implements Comparable<BytesRef>,Cloneable {
    * <p>
    * NOTE: if this would exceed the array size, this method creates a 
    * new reference array.
+   * @deprecated {@link BytesRef} should not be used as a buffer, use {@link BytesRefBuilder} instead
    */
+  @Deprecated
   public void append(BytesRef other) {
     int newLen = length + other.length;
     if (bytes.length - offset < newLen) {
@@ -213,7 +219,9 @@ public final class BytesRef implements Comparable<BytesRef>,Cloneable {
    * Used to grow the reference array. 
    * 
    * In general this should not be used as it does not take the offset into account.
+   * @deprecated {@link BytesRef} should not be used as a buffer, use {@link BytesRefBuilder} instead
    * @lucene.internal */
+  @Deprecated
   public void grow(int newLength) {
     assert offset == 0; // NOTE: senseless if offset != 0
     bytes = ArrayUtil.grow(bytes, newLength);

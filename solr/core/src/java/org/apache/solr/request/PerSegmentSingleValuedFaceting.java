@@ -29,7 +29,9 @@ import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.CharsRef;
+import org.apache.lucene.util.CharsRefBuilder;
 import org.apache.lucene.util.PriorityQueue;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
@@ -168,7 +170,7 @@ class PerSegmentSingleValuedFaceting {
       collector = new IndexSortedFacetCollector(offset, limit, mincount);
     }
 
-    BytesRef val = new BytesRef();
+    BytesRefBuilder val = new BytesRefBuilder();
 
     while (queue.size() > 0) {
       SegFacet seg = queue.top();
@@ -193,9 +195,9 @@ class PerSegmentSingleValuedFaceting {
           seg.tempBR = seg.tenum.next();
           seg = queue.updateTop();
         }
-      } while (seg != null && val.compareTo(seg.tempBR) == 0);
+      } while (seg != null && val.get().compareTo(seg.tempBR) == 0);
 
-      boolean stop = collector.collect(val, count);
+      boolean stop = collector.collect(val.get(), count);
       if (stop) break;
     }
 
@@ -239,12 +241,13 @@ class PerSegmentSingleValuedFaceting {
       // SolrCore.log.info("reader= " + reader + "  FC=" + System.identityHashCode(si));
 
       if (prefix!=null) {
-        BytesRef prefixRef = new BytesRef(prefix);
-        startTermIndex = si.lookupTerm(prefixRef);
+        BytesRefBuilder prefixRef = new BytesRefBuilder();
+        prefixRef.copyChars(prefix);
+        startTermIndex = si.lookupTerm(prefixRef.get());
         if (startTermIndex<0) startTermIndex=-startTermIndex-1;
         prefixRef.append(UnicodeUtil.BIG_TERM);
         // TODO: we could constrain the lower endpoint if we had a binarySearch method that allowed passing start/end
-        endTermIndex = si.lookupTerm(prefixRef);
+        endTermIndex = si.lookupTerm(prefixRef.get());
         assert endTermIndex < 0;
         endTermIndex = -endTermIndex-1;
       } else {
@@ -294,7 +297,7 @@ abstract class FacetCollector {
 
 // This collector expects facets to be collected in index order
 class CountSortedFacetCollector extends FacetCollector {
-  private final CharsRef spare = new CharsRef();
+  private final CharsRefBuilder spare = new CharsRefBuilder();
 
   final int offset;
   final int limit;
@@ -317,8 +320,8 @@ class CountSortedFacetCollector extends FacetCollector {
       // NOTE: we use c>min rather than c>=min as an optimization because we are going in
       // index order, so we already know that the keys are ordered.  This can be very
       // important if a lot of the counts are repeated (like zero counts would be).
-      UnicodeUtil.UTF8toUTF16(term, spare);
-      queue.add(new org.apache.solr.request.SimpleFacets.CountPair<>(spare.toString(), count));
+      spare.copyUTF8Bytes(term);
+      queue.add(new SimpleFacets.CountPair<>(spare.toString(), count));
       if (queue.size()>=maxsize) min=queue.last().val;
     }
     return false;
@@ -341,7 +344,7 @@ class CountSortedFacetCollector extends FacetCollector {
 
 // This collector expects facets to be collected in index order
 class IndexSortedFacetCollector extends FacetCollector {
-  private final CharsRef spare = new CharsRef();
+  private final CharsRefBuilder spare = new CharsRefBuilder();
 
   int offset;
   int limit;
@@ -366,7 +369,7 @@ class IndexSortedFacetCollector extends FacetCollector {
     }
 
     if (limit > 0) {
-      UnicodeUtil.UTF8toUTF16(term, spare);
+      spare.copyUTF8Bytes(term);
       res.add(spare.toString(), count);
       limit--;
     }

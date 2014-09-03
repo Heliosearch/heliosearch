@@ -18,8 +18,8 @@ package org.apache.lucene.util;
  */
 
 import java.lang.reflect.Field;
-import java.util.Collections;
-import org.apache.lucene.LucenePackage;
+import java.util.StringTokenizer;
+
 
 /**
  * Some useful constants.
@@ -32,6 +32,7 @@ public final class Constants {
   public static final String JVM_VENDOR = System.getProperty("java.vm.vendor");
   public static final String JVM_VERSION = System.getProperty("java.vm.version");
   public static final String JVM_NAME = System.getProperty("java.vm.name");
+  public static final String JVM_SPEC_VERSION = System.getProperty("java.specification.version");
 
   /** The value of <tt>System.getProperty("java.version")</tt>. **/
   public static final String JAVA_VERSION = System.getProperty("java.version");
@@ -52,23 +53,21 @@ public final class Constants {
   public static final String OS_ARCH = System.getProperty("os.arch");
   public static final String OS_VERSION = System.getProperty("os.version");
   public static final String JAVA_VENDOR = System.getProperty("java.vendor");
-
-  /** @deprecated With Lucene 4.0, we are always on Java 6 */
-  @Deprecated
-  public static final boolean JRE_IS_MINIMUM_JAVA6 =
-    new Boolean(true).booleanValue(); // prevent inlining in foreign class files
-
-  /** @deprecated With Lucene 4.8, we are always on Java 7 */
-  @Deprecated
-  public static final boolean JRE_IS_MINIMUM_JAVA7 =
-    new Boolean(true).booleanValue(); // prevent inlining in foreign class files
-
-  public static final boolean JRE_IS_MINIMUM_JAVA8;
   
+  private static final int JVM_MAJOR_VERSION;
+  private static final int JVM_MINOR_VERSION;
+ 
   /** True iff running on a 64bit JVM */
   public static final boolean JRE_IS_64BIT;
   
   static {
+    final StringTokenizer st = new StringTokenizer(JVM_SPEC_VERSION, ".");
+    JVM_MAJOR_VERSION = Integer.parseInt(st.nextToken());
+    if (st.hasMoreTokens()) {
+      JVM_MINOR_VERSION = Integer.parseInt(st.nextToken());
+    } else {
+      JVM_MINOR_VERSION = 0;
+    }
     boolean is64Bit = false;
     try {
       final Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
@@ -92,56 +91,33 @@ public final class Constants {
       }
     }
     JRE_IS_64BIT = is64Bit;
-    
-    // this method only exists in Java 8:
-    boolean v8 = true;
-    try {
-      Collections.class.getMethod("emptySortedSet");
-    } catch (NoSuchMethodException nsme) {
-      v8 = false;
-    }
-    JRE_IS_MINIMUM_JAVA8 = v8;
   }
 
-  // this method prevents inlining the final version constant in compiled classes,
-  // see: http://www.javaworld.com/community/node/3400
-  private static String ident(final String s) {
-    return s.toString();
-  }
+  public static final boolean JRE_IS_MINIMUM_JAVA8 = JVM_MAJOR_VERSION > 1 || (JVM_MAJOR_VERSION == 1 && JVM_MINOR_VERSION >= 8);
+  public static final boolean JRE_IS_MINIMUM_JAVA9 = JVM_MAJOR_VERSION > 1 || (JVM_MAJOR_VERSION == 1 && JVM_MINOR_VERSION >= 9);
   
-  // We should never change index format with minor versions, so it should always be x.y or x.y.0.z for alpha/beta versions!
-  /**
-   * This is the internal Lucene version, recorded into each segment.
-   * NOTE: we track per-segment version as a String with the {@code "X.Y"} format
-   * (no minor version), e.g. {@code "4.0", "3.1", "3.0"}.
-   * <p>Alpha and Beta versions will have numbers like {@code "X.Y.0.Z"},
-   * anything else is not allowed. This is done to prevent people from
-   * using indexes created with ALPHA/BETA versions with the released version.
-   */
-  public static final String LUCENE_MAIN_VERSION = ident("4.10");
+  /** @deprecated With Lucene 4.0, we are always on Java 6 */
+  @Deprecated
+  public static final boolean JRE_IS_MINIMUM_JAVA6 =
+    new Boolean(true).booleanValue(); // prevent inlining in foreign class files
+
+  /** @deprecated With Lucene 4.8, we are always on Java 7 */
+  @Deprecated
+  public static final boolean JRE_IS_MINIMUM_JAVA7 =
+    new Boolean(true).booleanValue(); // prevent inlining in foreign class files
 
   /**
-   * This is the Lucene version for display purposes.
+   * This is the internal Lucene version, including bugfix versions, recorded into each segment.
+   * @deprecated Use {@link Version#LATEST}
    */
-  public static final String LUCENE_VERSION;
-  static {
-    Package pkg = LucenePackage.get();
-    String v = (pkg == null) ? null : pkg.getImplementationVersion();
-    if (v == null) {
-      v = mainVersionWithoutAlphaBeta() + "-SNAPSHOT";
-    }
-    LUCENE_VERSION = ident(v);
-  }
-  
+  @Deprecated
+  public static final String LUCENE_MAIN_VERSION = Version.LATEST.toString();
+
   /**
-   * Returns a LUCENE_MAIN_VERSION without any ALPHA/BETA qualifier
-   * Used by test only!
+   * Don't use this constant because the name is not self-describing!
+   * @deprecated Use {@link Version#LATEST}
    */
-  static String mainVersionWithoutAlphaBeta() {
-    final String parts[] = LUCENE_MAIN_VERSION.split("\\.");
-    if (parts.length == 4 && "0".equals(parts[2])) {
-      return parts[0] + "." + parts[1];
-    }
-    return LUCENE_MAIN_VERSION;
-  }
+  @Deprecated
+  public static final String LUCENE_VERSION = Version.LATEST.toString();
+  
 }

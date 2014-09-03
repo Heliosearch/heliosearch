@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.Filter;
+
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -123,34 +124,12 @@ public class ChaosMonkey {
     if (solrDispatchFilter != null) {
       CoreContainer cores = solrDispatchFilter.getCores();
       if (cores != null) {
-        causeConnectionLoss(jetty, cores.getZkController().getClientTimeout() + 200);
+        causeConnectionLoss(jetty);
+        long sessionId = cores.getZkController().getZkClient()
+            .getSolrZooKeeper().getSessionId();
+        zkServer.expire(sessionId);
       }
     }
-    
-
-//    Thread thread = new Thread() {
-//      {
-//        setDaemon(true);
-//      }
-//      public void run() {
-//        SolrDispatchFilter solrDispatchFilter = (SolrDispatchFilter) jetty.getDispatchFilter().getFilter();
-//        if (solrDispatchFilter != null) {
-//          CoreContainer cores = solrDispatchFilter.getCores();
-//          if (cores != null) {
-//            try {
-//              Thread.sleep(ZkTestServer.TICK_TIME * 2 + 800);
-//            } catch (InterruptedException e) {
-//              // we act as only connection loss
-//              return;
-//            }
-//            long sessionId = cores.getZkController().getZkClient().getSolrZooKeeper().getSessionId();
-//            zkServer.expire(sessionId);
-//          }
-//        }
-//      }
-//    };
-//    thread.start();
-
   }
   
   public void expireRandomSession() throws KeeperException, InterruptedException {
@@ -175,18 +154,13 @@ public class ChaosMonkey {
   }
   
   public static void causeConnectionLoss(JettySolrRunner jetty) {
-    causeConnectionLoss(jetty, ZkTestServer.TICK_TIME * 2 + 200);
-  }
-  
-  public static void causeConnectionLoss(JettySolrRunner jetty, int pauseTime) {
     SolrDispatchFilter solrDispatchFilter = (SolrDispatchFilter) jetty
         .getDispatchFilter().getFilter();
     if (solrDispatchFilter != null) {
       CoreContainer cores = solrDispatchFilter.getCores();
       if (cores != null) {
         SolrZkClient zkClient = cores.getZkController().getZkClient();
-        // must be at least double tick time...
-        zkClient.getSolrZooKeeper().pauseCnxn(pauseTime);
+        zkClient.getSolrZooKeeper().closeCnxn();
       }
     }
   }
@@ -230,8 +204,15 @@ public class ChaosMonkey {
     }
   }
   
-  public static void kill(CloudJettyRunner cjetty) throws Exception {
-    FilterHolder filterHolder = cjetty.jetty.getDispatchFilter();
+
+  public static void kill(List<JettySolrRunner> jettys) throws Exception {
+    for (JettySolrRunner jetty : jettys) {
+      kill(jetty);
+    }
+  }
+  
+  public static void kill(JettySolrRunner jetty) throws Exception {
+    FilterHolder filterHolder = jetty.getDispatchFilter();
     if (filterHolder != null) {
       Filter filter = filterHolder.getFilter();
       if (filter != null) {
@@ -244,9 +225,8 @@ public class ChaosMonkey {
       }
     }
 
-    IpTables.blockPort(cjetty.jetty.getLocalPort());
+    IpTables.blockPort(jetty.getLocalPort());
     
-    JettySolrRunner jetty = cjetty.jetty;
     monkeyLog("kill shard! " + jetty.getLocalPort());
     
     jetty.stop();
@@ -256,6 +236,10 @@ public class ChaosMonkey {
     if (!jetty.isStopped()) {
       throw new RuntimeException("could not kill jetty");
     }
+  }
+  
+  public static void kill(CloudJettyRunner cjetty) throws Exception {
+    kill(cjetty.jetty);
   }
   
   public void stopShard(String slice) throws Exception {
@@ -556,8 +540,20 @@ public class ChaosMonkey {
     return starts.get();
   }
 
+  public static void stop(List<JettySolrRunner> jettys) throws Exception {
+    for (JettySolrRunner jetty : jettys) {
+      stop(jetty);
+    }
+  }
+  
   public static void stop(JettySolrRunner jetty) throws Exception {
     stopJettySolrRunner(jetty);
+  }
+  
+  public static void start(List<JettySolrRunner> jettys) throws Exception {
+    for (JettySolrRunner jetty : jettys) {
+      start(jetty);
+    }
   }
   
   public static boolean start(JettySolrRunner jetty) throws Exception {
@@ -567,19 +563,25 @@ public class ChaosMonkey {
       jetty.start();
     } catch (Exception e) {
       jetty.stop();
-      Thread.sleep(2000);
+      Thread.sleep(3000);
       try {
         jetty.start();
       } catch (Exception e2) {
         jetty.stop();
-        Thread.sleep(5000);
+        Thread.sleep(10000);
         try {
           jetty.start();
         } catch (Exception e3) {
-          log.error("Could not get the port to start jetty again", e3);
-          // we coud not get the port
           jetty.stop();
-          return false;
+          Thread.sleep(30000);
+          try {
+            jetty.start();
+          } catch (Exception e4) {
+            log.error("Could not get the port to start jetty again", e4);
+            // we coud not get the port
+            jetty.stop();
+            return false;
+          }
         }
       }
     }

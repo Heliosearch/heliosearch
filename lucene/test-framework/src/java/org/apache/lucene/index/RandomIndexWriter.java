@@ -69,14 +69,14 @@ public class RandomIndexWriter implements Closeable {
     return new IndexWriter(dir, conf);
   }
 
-  /** create a RandomIndexWriter with a random config: Uses TEST_VERSION_CURRENT and MockAnalyzer */
+  /** create a RandomIndexWriter with a random config: Uses Version.LATEST and MockAnalyzer */
   public RandomIndexWriter(Random r, Directory dir) throws IOException {
-    this(r, dir, LuceneTestCase.newIndexWriterConfig(r, LuceneTestCase.TEST_VERSION_CURRENT, new MockAnalyzer(r)));
+    this(r, dir, LuceneTestCase.newIndexWriterConfig(r, Version.LATEST, new MockAnalyzer(r)));
   }
   
-  /** create a RandomIndexWriter with a random config: Uses TEST_VERSION_CURRENT */
+  /** create a RandomIndexWriter with a random config: Uses Version.LATEST */
   public RandomIndexWriter(Random r, Directory dir, Analyzer a) throws IOException {
-    this(r, dir, LuceneTestCase.newIndexWriterConfig(r, LuceneTestCase.TEST_VERSION_CURRENT, a));
+    this(r, dir, LuceneTestCase.newIndexWriterConfig(r, Version.LATEST, a));
   }
   
   /** create a RandomIndexWriter with a random config */
@@ -365,7 +365,7 @@ public class RandomIndexWriter implements Closeable {
     }
     // if someone isn't using getReader() API, we want to be sure to
     // forceMerge since presumably they might open a reader on the dir.
-    if (getReaderCalled == false && r.nextInt(8) == 2) {
+    if (getReaderCalled == false && r.nextInt(8) == 2 && w.isClosed() == false) {
       doRandomForceMerge();
       // index may have changed, must commit the changes, or otherwise they are discarded by the call to close()
       w.commit();

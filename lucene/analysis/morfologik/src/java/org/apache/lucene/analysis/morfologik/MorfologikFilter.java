@@ -48,7 +48,7 @@ public class MorfologikFilter extends TokenFilter {
   private final PositionIncrementAttribute posIncrAtt = addAttribute(PositionIncrementAttribute.class);
   private final KeywordAttribute keywordAttr = addAttribute(KeywordAttribute.class);
 
-  private final CharsRef scratch = new CharsRef(0);
+  private final CharsRefBuilder scratch = new CharsRefBuilder();
   private final CharacterUtils charUtils;
 
   private State current;
@@ -63,6 +63,14 @@ public class MorfologikFilter extends TokenFilter {
   /**
    * Creates a filter with the default (Polish) dictionary.
    */
+  public MorfologikFilter(final TokenStream in) {
+    this(in, MorfologikFilterFactory.DEFAULT_DICTIONARY_RESOURCE);
+  }
+
+  /**
+   * @deprecated Use {@link #MorfologikFilter(TokenStream)}
+   */
+  @Deprecated
   public MorfologikFilter(final TokenStream in, final Version version) {
     this(in, MorfologikFilterFactory.DEFAULT_DICTIONARY_RESOURCE, version);
   }
@@ -72,8 +80,15 @@ public class MorfologikFilter extends TokenFilter {
    *
    * @param in input token stream.
    * @param dict Dictionary resource from classpath.
-   * @param version Lucene version compatibility for lowercasing.
    */
+  public MorfologikFilter(final TokenStream in, final String dict) {
+    this(in, dict, Version.LATEST);
+  }
+
+  /**
+   * @deprecated Use {@link #MorfologikFilter(TokenStream,String)}
+   */
+  @Deprecated
   public MorfologikFilter(final TokenStream in, final String dict, final Version version) {
     super(in);
     this.input = in;
@@ -153,16 +168,17 @@ public class MorfologikFilter extends TokenFilter {
    * Convert to lowercase in-place.
    */
   private CharSequence toLowercase(CharSequence chs) {
-    final int length = scratch.length = chs.length();
+    final int length = chs.length();
+    scratch.setLength(length);
     scratch.grow(length);
 
-    char buffer[] = scratch.chars;
+    char buffer[] = scratch.chars();
     for (int i = 0; i < length;) {
       i += Character.toChars(
           Character.toLowerCase(charUtils.codePointAt(chs, i)), buffer, i);      
     }
 
-    return scratch;
+    return scratch.get();
   }
 
   /** Resets stems accumulator and hands over to superclass. */

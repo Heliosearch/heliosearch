@@ -167,7 +167,7 @@ public class SolrIndexSplitter {
     BytesRef term = null;
     DocsEnum docsEnum = null;
 
-    CharsRef idRef = new CharsRef(100);
+    CharsRef idRef = new CharsRef();
     for (;;) {
       term = termsEnum.next();
       if (term == null) break;
@@ -176,7 +176,7 @@ public class SolrIndexSplitter {
 
       // FUTURE: if conversion to strings costs too much, we could
       // specialize and use the hash function that can work over bytes.
-      idRef = field.getType().indexedToReadable(term, idRef);
+      field.getType().indexedToReadable(term, idRef);
       String idString = idRef.toString();
 
       if (splitKey != null) {

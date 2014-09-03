@@ -29,8 +29,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.CharsRef;
-import org.apache.lucene.util.UnicodeUtil;
+import org.apache.lucene.util.CharsRefBuilder;
 
 /**
  * <code>FieldTermStack</code> is a stack that keeps query terms in the specified field
@@ -42,13 +41,13 @@ public class FieldTermStack {
   LinkedList<TermInfo> termList = new LinkedList<>();
   
   //public static void main( String[] args ) throws Exception {
-  //  Analyzer analyzer = new WhitespaceAnalyzer(Version.LUCENE_CURRENT);
-  //  QueryParser parser = new QueryParser(Version.LUCENE_CURRENT,  "f", analyzer );
+  //  Analyzer analyzer = new WhitespaceAnalyzer(Version.LATEST);
+  //  QueryParser parser = new QueryParser(Version.LATEST,  "f", analyzer );
   //  Query query = parser.parse( "a x:b" );
   //  FieldQuery fieldQuery = new FieldQuery( query, true, false );
     
   //  Directory dir = new RAMDirectory();
-  //  IndexWriter writer = new IndexWriter(dir, new IndexWriterConfig(Version.LUCENE_CURRENT, analyzer));
+  //  IndexWriter writer = new IndexWriter(dir, new IndexWriterConfig(Version.LATEST, analyzer));
   //  Document doc = new Document();
   //  FieldType ft = new FieldType(TextField.TYPE_STORED);
   //  ft.setStoreTermVectors(true);
@@ -92,7 +91,7 @@ public class FieldTermStack {
       return;
     }
 
-    final CharsRef spare = new CharsRef();
+    final CharsRefBuilder spare = new CharsRefBuilder();
     final TermsEnum termsEnum = vector.iterator(null);
     DocsAndPositionsEnum dpEnum = null;
     BytesRef text;
@@ -100,7 +99,7 @@ public class FieldTermStack {
     int numDocs = reader.maxDoc();
     
     while ((text = termsEnum.next()) != null) {
-      UnicodeUtil.UTF8toUTF16(text, spare);
+      spare.copyUTF8Bytes(text);
       final String term = spare.toString();
       if (!termSet.contains(term)) {
         continue;

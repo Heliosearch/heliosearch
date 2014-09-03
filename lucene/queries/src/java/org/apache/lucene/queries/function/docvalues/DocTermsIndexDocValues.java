@@ -28,7 +28,7 @@ import org.apache.lucene.queries.function.ValueSourceScorer;
 import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
-import org.apache.lucene.util.UnicodeUtil;
+import org.apache.lucene.util.CharsRefBuilder;
 import org.apache.lucene.util.mutable.MutableValue;
 import org.apache.lucene.util.mutable.MutableValueStr;
 
@@ -40,6 +40,7 @@ public abstract class DocTermsIndexDocValues extends FunctionValues {
   protected final SortedDocValues termsIndex;
   protected final ValueSource vs;
   protected final MutableValueStr val = new MutableValueStr();
+  protected final CharsRefBuilder spareCharsBuilder = new CharsRefBuilder();
   protected final CharsRef spareChars = new CharsRef();
 
   public DocTermsIndexDocValues(ValueSource vs, AtomicReaderContext context, String field) throws IOException {
@@ -70,7 +71,6 @@ public abstract class DocTermsIndexDocValues extends FunctionValues {
 
   @Override
   public boolean bytesVal(int doc, BytesRef target) {
-    target.length = 0;
     target.copyBytes(termsIndex.get(doc));
     return target.length > 0;
   }
@@ -81,8 +81,8 @@ public abstract class DocTermsIndexDocValues extends FunctionValues {
     if (term.length == 0) {
       return null;
     }
-    UnicodeUtil.UTF8toUTF16(term, spareChars);
-    return spareChars.toString();
+    spareCharsBuilder.copyUTF8Bytes(term);
+    return spareCharsBuilder.toString();
   }
 
   @Override

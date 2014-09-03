@@ -26,7 +26,9 @@ import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.SegmentWriteState;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.ArrayUtil;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.IOUtils;
+import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.packed.PackedInts;
 
 import java.util.List;
@@ -95,15 +97,7 @@ public class FixedGapTermsIndexWriter extends TermsIndexWriterBase {
     // As long as codec sorts terms in unicode codepoint
     // order, we can safely strip off the non-distinguishing
     // suffix to save RAM in the loaded terms index.
-    final int idxTermOffset = indexedTerm.offset;
-    final int priorTermOffset = priorTerm.offset;
-    final int limit = Math.min(priorTerm.length, indexedTerm.length);
-    for(int byteIdx=0;byteIdx<limit;byteIdx++) {
-      if (priorTerm.bytes[priorTermOffset+byteIdx] != indexedTerm.bytes[idxTermOffset+byteIdx]) {
-        return byteIdx+1;
-      }
-    }
-    return Math.min(1+priorTerm.length, indexedTerm.length);
+    return StringHelper.sortKeyLength(priorTerm, indexedTerm);
   }
 
   private class SimpleFieldWriter extends FieldWriter {
@@ -123,7 +117,7 @@ public class FixedGapTermsIndexWriter extends TermsIndexWriterBase {
     private long lastTermsPointer;
     private long totTermLength;
 
-    private final BytesRef lastTerm = new BytesRef();
+    private final BytesRefBuilder lastTerm = new BytesRefBuilder();
 
     SimpleFieldWriter(FieldInfo fieldInfo, long termsFilePointer) {
       this.fieldInfo = fieldInfo;
@@ -151,7 +145,7 @@ public class FixedGapTermsIndexWriter extends TermsIndexWriterBase {
 
     @Override
     public void add(BytesRef text, TermStats stats, long termsFilePointer) throws IOException {
-      final int indexedTermLength = indexedTermPrefixLength(lastTerm, text);
+      final int indexedTermLength = indexedTermPrefixLength(lastTerm.get(), text);
       //System.out.println("FGW: add text=" + text.utf8ToString() + " " + text + " fp=" + termsFilePointer);
 
       // write only the min prefix that shows the diff

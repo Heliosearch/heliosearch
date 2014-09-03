@@ -25,23 +25,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.lucene.codecs.DocValuesProducer;
-import org.apache.lucene.index.BinaryDocValues;
+import org.apache.lucene.codecs.NormsProducer;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.SegmentInfo;
-import org.apache.lucene.index.SortedDocValues;
-import org.apache.lucene.index.SortedNumericDocValues;
-import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
-import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.RamUsageEstimator;
-import org.apache.lucene.util.StringHelper;
+import org.apache.lucene.util.Version;
 
 /**
  * Reads Lucene 3.x norms format and exposes it via DocValues API
@@ -49,7 +44,7 @@ import org.apache.lucene.util.StringHelper;
  * @deprecated Only for reading existing 3.x indexes
  */
 @Deprecated
-class Lucene3xNormsProducer extends DocValuesProducer {
+class Lucene3xNormsProducer extends NormsProducer {
   
   /** norms header placeholder */
   static final byte[] NORMS_HEADER = new byte[]{'N','R','M',-1};
@@ -106,9 +101,9 @@ class Lucene3xNormsProducer extends DocValuesProducer {
             // and don't need to do the sketchy file size check. otherwise, we check 
             // if the size is exactly equal to maxDoc to detect a headerless file.
             // NOTE: remove this check in Lucene 5.0!
-            String version = info.getVersion();
+            Version version = info.getVersion();
             final boolean isUnversioned = 
-                (version == null || StringHelper.getVersionComparator().compare(version, "3.2") < 0)
+                (version == null || Version.LUCENE_3_2_0.onOrAfter(version))
                 && normInput.length() == maxdoc;
             if (isUnversioned) {
               normSeek = 0;
@@ -200,35 +195,10 @@ class Lucene3xNormsProducer extends DocValuesProducer {
   }
 
   @Override
-  public NumericDocValues getNumeric(FieldInfo field) throws IOException {
+  public NumericDocValues getNorms(FieldInfo field) throws IOException {
     NormsDocValues dv = norms.get(field.name);
     assert dv != null;
     return dv.getInstance();
-  }
-
-  @Override
-  public BinaryDocValues getBinary(FieldInfo field) throws IOException {
-    throw new AssertionError();
-  }
-
-  @Override
-  public SortedDocValues getSorted(FieldInfo field) throws IOException {
-    throw new AssertionError();
-  }
-  
-  @Override
-  public SortedSetDocValues getSortedSet(FieldInfo field) throws IOException {
-    throw new AssertionError();
-  }
-
-  @Override
-  public SortedNumericDocValues getSortedNumeric(FieldInfo field) throws IOException {
-    throw new AssertionError();
-  }
-
-  @Override
-  public Bits getDocsWithField(FieldInfo field) throws IOException {
-    throw new AssertionError();
   }
   
   @Override

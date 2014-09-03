@@ -39,6 +39,7 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.IOUtils;
+import org.apache.lucene.util.Version;
 
 import java.io.Reader;
 
@@ -61,7 +62,7 @@ public class ShingleAnalyzerWrapperTest extends BaseTokenStreamTestCase {
     super.setUp();
     analyzer = new ShingleAnalyzerWrapper(new MockAnalyzer(random(), MockTokenizer.WHITESPACE, false), 2);
     directory = newDirectory();
-    IndexWriter writer = new IndexWriter(directory, new IndexWriterConfig(TEST_VERSION_CURRENT, analyzer));
+    IndexWriter writer = new IndexWriter(directory, new IndexWriterConfig(Version.LATEST, analyzer));
 
     Document doc;
     doc = new Document();
@@ -318,9 +319,9 @@ public class ShingleAnalyzerWrapperTest extends BaseTokenStreamTestCase {
     Analyzer delegate = new Analyzer() {
       @Override
       protected TokenStreamComponents createComponents(String fieldName, Reader reader) {
-        CharArraySet stopSet = StopFilter.makeStopSet(TEST_VERSION_CURRENT, "into");
+        CharArraySet stopSet = StopFilter.makeStopSet("into");
         Tokenizer tokenizer = new MockTokenizer(reader, MockTokenizer.WHITESPACE, false);
-        TokenFilter filter = new StopFilter(TEST_VERSION_CURRENT, tokenizer, stopSet);
+        TokenFilter filter = new StopFilter(tokenizer, stopSet);
         return new TokenStreamComponents(tokenizer, filter);
       }
     };

@@ -18,7 +18,9 @@ package org.apache.solr.handler.component;
 
 import org.apache.lucene.index.*;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.CharsRef;
+import org.apache.lucene.util.CharsRefBuilder;
 import org.apache.lucene.util.StringHelper;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.*;
@@ -29,7 +31,6 @@ import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.StrField;
 import org.apache.solr.request.SimpleFacets.CountPair;
 import org.apache.solr.util.BoundedTreeSet;
-
 import org.apache.solr.client.solrj.response.TermsResponse;
 
 import java.io.IOException;
@@ -138,8 +139,9 @@ public class TermsComponent extends SearchComponent {
 
       BytesRef upperBytes = null;
       if (upperStr != null) {
-        upperBytes = new BytesRef();
-        ft.readableToIndexed(upperStr, upperBytes);
+        BytesRef b = new BytesRef();
+        ft.readableToIndexed(upperStr, b);
+        upperBytes = b;
       }
 
       BytesRef lowerBytes;
@@ -153,8 +155,9 @@ public class TermsComponent extends SearchComponent {
           // perhaps we detect if the FieldType is non-character and expect hex if so?
           lowerBytes = new BytesRef(lowerStr);
         } else {
-          lowerBytes = new BytesRef();
-          ft.readableToIndexed(lowerStr, lowerBytes);
+          BytesRef b = new BytesRef();
+          ft.readableToIndexed(lowerStr, b);
+          lowerBytes = b;
         }
       }
 

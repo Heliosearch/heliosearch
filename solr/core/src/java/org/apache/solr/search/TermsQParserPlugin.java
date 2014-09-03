@@ -29,6 +29,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.QueryWrapperFilter;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.automaton.Automata;
 import org.apache.lucene.util.automaton.Automaton;
 import org.apache.solr.common.params.SolrParams;
@@ -121,16 +122,16 @@ public class TermsQParserPlugin extends QParserPlugin {
         assert splitVals.length > 0;
 
         BytesRef[] bytesRefs = new BytesRef[splitVals.length];
+        BytesRef term = new BytesRef();
         for (int i = 0; i < splitVals.length; i++) {
           String stringVal = splitVals[i];
           //logic same as TermQParserPlugin
-          BytesRef term = new BytesRef();
           if (ft != null) {
             ft.readableToIndexed(stringVal, term);
           } else {
             term.copyChars(stringVal);
           }
-          bytesRefs[i] = term;
+          bytesRefs[i] = BytesRef.deepCopyOf(term);
         }
 
         return new SolrConstantScoreQuery(method.makeFilter(fname, bytesRefs));

@@ -29,6 +29,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.IOUtils;
 
 /**
@@ -47,6 +48,7 @@ public class SimpleTextSegmentInfoWriter extends SegmentInfoWriter {
   final static BytesRef SI_DIAG_VALUE       = new BytesRef("      value ");
   final static BytesRef SI_NUM_FILES        = new BytesRef("    files ");
   final static BytesRef SI_FILE             = new BytesRef("      file ");
+  final static BytesRef SI_ID               = new BytesRef("    id ");
   
   @Override
   public void write(Directory dir, SegmentInfo si, FieldInfos fis, IOContext ioContext) throws IOException {
@@ -58,10 +60,10 @@ public class SimpleTextSegmentInfoWriter extends SegmentInfoWriter {
     IndexOutput output = dir.createOutput(segFileName, ioContext);
 
     try {
-      BytesRef scratch = new BytesRef();
+      BytesRefBuilder scratch = new BytesRefBuilder();
     
       SimpleTextUtil.write(output, SI_VERSION);
-      SimpleTextUtil.write(output, si.getVersion(), scratch);
+      SimpleTextUtil.write(output, si.getVersion().toString(), scratch);
       SimpleTextUtil.writeNewline(output);
     
       SimpleTextUtil.write(output, SI_DOCCOUNT);
@@ -103,16 +105,17 @@ public class SimpleTextSegmentInfoWriter extends SegmentInfoWriter {
           SimpleTextUtil.writeNewline(output);
         }
       }
+
+      SimpleTextUtil.write(output, SI_ID);
+      SimpleTextUtil.write(output, si.getId(), scratch);
+      SimpleTextUtil.writeNewline(output);
       
       SimpleTextUtil.writeChecksum(output, scratch);
       success = true;
     } finally {
       if (!success) {
         IOUtils.closeWhileHandlingException(output);
-        try {
-          dir.deleteFile(segFileName);
-        } catch (Throwable t) {
-        }
+        IOUtils.deleteFilesIgnoringExceptions(dir, segFileName);
       } else {
         output.close();
       }

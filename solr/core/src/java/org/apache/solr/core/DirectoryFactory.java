@@ -162,6 +162,13 @@ public abstract class DirectoryFactory implements NamedListInitializedPlugin,
   public abstract boolean isPersistent();
   
   /**
+   * @return true if storage is shared.
+   */
+  public boolean isSharedStorage() {
+    return false;
+  }
+  
+  /**
    * Releases the Directory so that it may be closed when it is no longer
    * referenced.
    * 
@@ -245,6 +252,7 @@ public abstract class DirectoryFactory implements NamedListInitializedPlugin,
 
   public String getDataHome(CoreDescriptor cd) throws IOException {
     // by default, we go off the instance directory
-    return normalize(SolrResourceLoader.normalizeDir(cd.getInstanceDir()) + cd.getDataDir());
+    String instanceDir = new File(cd.getInstanceDir()).getAbsolutePath();
+    return normalize(SolrResourceLoader.normalizeDir(instanceDir) + cd.getDataDir());
   }
 }

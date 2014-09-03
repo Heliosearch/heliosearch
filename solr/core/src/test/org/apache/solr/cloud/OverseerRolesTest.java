@@ -18,9 +18,9 @@ package org.apache.solr.cloud;
  */
 
 
-import static org.apache.solr.cloud.OverseerCollectionProcessor.MAX_SHARDS_PER_NODE;
 import static org.apache.solr.cloud.OverseerCollectionProcessor.NUM_SLICES;
-import static org.apache.solr.cloud.OverseerCollectionProcessor.REPLICATION_FACTOR;
+import static org.apache.solr.common.cloud.ZkStateReader.REPLICATION_FACTOR;
+import static org.apache.solr.common.cloud.ZkStateReader.MAX_SHARDS_PER_NODE;
 import static org.apache.solr.cloud.OverseerCollectionProcessor.getSortedOverseerNodeNames;
 import static org.apache.solr.cloud.OverseerCollectionProcessor.getLeaderNode;
 import static org.apache.solr.common.cloud.ZkNodeProps.makeMap;
@@ -31,8 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.solr.SolrTestCaseJ4.SuppressSSL;
@@ -52,7 +50,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 @LuceneTestCase.Slow
-@SuppressSSL     // Currently unknown why SSL does not work
+@SuppressSSL     // See SOLR-5776
 public class OverseerRolesTest  extends AbstractFullDistribZkTestBase{
   private CloudSolrServer client;
 
@@ -84,7 +82,7 @@ public class OverseerRolesTest  extends AbstractFullDistribZkTestBase{
     fixShardCount = true;
 
     sliceCount = 2;
-    shardCount = 6;
+    shardCount = TEST_NIGHTLY ? 6 : 2;
 
     checkCreatedVsState = false;
   }
@@ -93,7 +91,6 @@ public class OverseerRolesTest  extends AbstractFullDistribZkTestBase{
   public void doTest() throws Exception {
     testQuitCommand();
     testOverseerRole();
-
   }
 
   private void testQuitCommand() throws Exception{

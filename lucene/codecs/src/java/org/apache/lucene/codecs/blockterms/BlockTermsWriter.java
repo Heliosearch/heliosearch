@@ -17,27 +17,32 @@ package org.apache.lucene.codecs.blockterms;
  * limitations under the License.
  */
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.lucene.codecs.BlockTermState;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.FieldsConsumer;
-import org.apache.lucene.codecs.PostingsConsumer;
 import org.apache.lucene.codecs.PostingsWriterBase;
 import org.apache.lucene.codecs.TermStats;
-import org.apache.lucene.codecs.BlockTermState;
-import org.apache.lucene.codecs.TermsConsumer;
-import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfo.IndexOptions;
+import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
+import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.SegmentWriteState;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.RAMOutputStream;
 import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.BytesRefBuilder;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.RamUsageEstimator;
 
@@ -53,7 +58,7 @@ import org.apache.lucene.util.RamUsageEstimator;
  * @lucene.experimental
  */
 
-public class BlockTermsWriter extends FieldsConsumer {
+public class BlockTermsWriter extends FieldsConsumer implements Closeable {
 
   final static String CODEC_NAME = "BLOCK_TERMS_DICT";
 
@@ -72,6 +77,7 @@ public class BlockTermsWriter extends FieldsConsumer {
   final FieldInfos fieldInfos;
   FieldInfo currentField;
   private final TermsIndexWriterBase termsIndexWriter;
+  private final int maxDoc;
 
   private static class FieldMetaData {
     public final FieldInfo fieldInfo;
@@ -103,6 +109,7 @@ public class BlockTermsWriter extends FieldsConsumer {
       throws IOException {
     final String termsFileName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, TERMS_EXTENSION);
     this.termsIndexWriter = termsIndexWriter;
+    maxDoc = state.segmentInfo.getDocCount();
     out = state.directory.createOutput(termsFileName, state.context);
     boolean success = false;
     try {
@@ -128,7 +135,33 @@ public class BlockTermsWriter extends FieldsConsumer {
   }
 
   @Override
-  public TermsConsumer addField(FieldInfo field) throws IOException {
+  public void write(Fields fields) throws IOException {
+
+    for(String field : fields) {
+
+      Terms terms = fields.terms(field);
+      if (terms == null) {
+        continue;
+      }
+
+      TermsEnum termsEnum = terms.iterator(null);
+
+      TermsWriter termsWriter = addField(fieldInfos.fieldInfo(field));
+
+      while (true) {
+        BytesRef term = termsEnum.next();
+        if (term == null) {
+          break;
+        }
+
+        termsWriter.write(term, termsEnum);
+      }
+
+      termsWriter.finish();
+    }
+  }
+
+  private TermsWriter addField(FieldInfo field) throws IOException {
     //System.out.println("\nBTW.addField seg=" + segment + " field=" + field.name);
     assert currentField == null || currentField.name.compareTo(field.name) < 0;
     currentField = field;
@@ -170,16 +203,17 @@ public class BlockTermsWriter extends FieldsConsumer {
   }
   
   private static class TermEntry {
-    public final BytesRef term = new BytesRef();
+    public final BytesRefBuilder term = new BytesRefBuilder();
     public BlockTermState state;
   }
 
-  class TermsWriter extends TermsConsumer {
+  class TermsWriter {
     private final FieldInfo fieldInfo;
     private final PostingsWriterBase postingsWriter;
     private final long termsStartPointer;
     private long numTerms;
     private final TermsIndexWriterBase.FieldWriter fieldIndexWriter;
+    private final FixedBitSet docsSeen;
     long sumTotalTermFreq;
     long sumDocFreq;
     int docCount;
@@ -196,6 +230,7 @@ public class BlockTermsWriter extends FieldsConsumer {
     {
       this.fieldInfo = fieldInfo;
       this.fieldIndexWriter = fieldIndexWriter;
+      this.docsSeen = new FixedBitSet(maxDoc);
       pendingTerms = new TermEntry[32];
       for(int i=0;i<pendingTerms.length;i++) {
         pendingTerms[i] = new TermEntry();
@@ -205,26 +240,22 @@ public class BlockTermsWriter extends FieldsConsumer {
       this.longsSize = postingsWriter.setField(fieldInfo);
     }
     
-    @Override
-    public Comparator<BytesRef> getComparator() {
-      return BytesRef.getUTF8SortedAsUnicodeComparator();
-    }
+    private final BytesRefBuilder lastPrevTerm = new BytesRefBuilder();
 
-    @Override
-    public PostingsConsumer startTerm(BytesRef text) throws IOException {
-      //System.out.println("BTW: startTerm term=" + fieldInfo.name + ":" + text.utf8ToString() + " " + text + " seg=" + segment);
-      postingsWriter.startTerm();
-      return postingsWriter;
-    }
+    void write(BytesRef text, TermsEnum termsEnum) throws IOException {
 
-    private final BytesRef lastPrevTerm = new BytesRef();
+      BlockTermState state = postingsWriter.writeTerm(text, termsEnum, docsSeen);
+      if (state == null) {
+        // No docs for this term:
+        return;
+      }
+      sumDocFreq += state.docFreq;
+      sumTotalTermFreq += state.totalTermFreq;
 
-    @Override
-    public void finishTerm(BytesRef text, TermStats stats) throws IOException {
-
-      assert stats.docFreq > 0;
+      assert state.docFreq > 0;
       //System.out.println("BTW: finishTerm term=" + fieldInfo.name + ":" + text.utf8ToString() + " " + text + " seg=" + segment + " df=" + stats.docFreq);
 
+      TermStats stats = new TermStats(state.docFreq, state.totalTermFreq);
       final boolean isIndexTerm = fieldIndexWriter.checkIndexTerm(text, stats);
 
       if (isIndexTerm) {
@@ -239,27 +270,21 @@ public class BlockTermsWriter extends FieldsConsumer {
       }
 
       if (pendingTerms.length == pendingCount) {
-        final TermEntry[] newArray = new TermEntry[ArrayUtil.oversize(pendingCount+1, RamUsageEstimator.NUM_BYTES_OBJECT_REF)];
-        System.arraycopy(pendingTerms, 0, newArray, 0, pendingCount);
-        for(int i=pendingCount;i<newArray.length;i++) {
-          newArray[i] = new TermEntry();
+        pendingTerms = Arrays.copyOf(pendingTerms, ArrayUtil.oversize(pendingCount+1, RamUsageEstimator.NUM_BYTES_OBJECT_REF));
+        for(int i=pendingCount;i<pendingTerms.length;i++) {
+          pendingTerms[i] = new TermEntry();
         }
-        pendingTerms = newArray;
       }
       final TermEntry te = pendingTerms[pendingCount];
       te.term.copyBytes(text);
-      te.state = postingsWriter.newTermState();
-      te.state.docFreq = stats.docFreq;
-      te.state.totalTermFreq = stats.totalTermFreq;
-      postingsWriter.finishTerm(te.state);
+      te.state = state;
 
       pendingCount++;
       numTerms++;
     }
 
     // Finishes all terms in this field
-    @Override
-    public void finish(long sumTotalTermFreq, long sumDocFreq, int docCount) throws IOException {
+    void finish() throws IOException {
       if (pendingCount > 0) {
         flushBlock();
       }
@@ -274,9 +299,9 @@ public class BlockTermsWriter extends FieldsConsumer {
         fields.add(new FieldMetaData(fieldInfo,
                                      numTerms,
                                      termsStartPointer,
-                                     sumTotalTermFreq,
+                                     fieldInfo.getIndexOptions().compareTo(IndexOptions.DOCS_AND_FREQS) >= 0 ? sumTotalTermFreq : -1,
                                      sumDocFreq,
-                                     docCount,
+                                     docsSeen.cardinality(),
                                      longsSize));
       }
     }
@@ -306,11 +331,11 @@ public class BlockTermsWriter extends FieldsConsumer {
       // First pass: compute common prefix for all terms
       // in the block, against term before first term in
       // this block:
-      int commonPrefix = sharedPrefix(lastPrevTerm, pendingTerms[0].term);
+      int commonPrefix = sharedPrefix(lastPrevTerm.get(), pendingTerms[0].term.get());
       for(int termCount=1;termCount<pendingCount;termCount++) {
         commonPrefix = Math.min(commonPrefix,
-                                sharedPrefix(lastPrevTerm,
-                                             pendingTerms[termCount].term));
+                                sharedPrefix(lastPrevTerm.get(),
+                                             pendingTerms[termCount].term.get()));
       }        
 
       out.writeVInt(pendingCount);
@@ -318,11 +343,11 @@ public class BlockTermsWriter extends FieldsConsumer {
 
       // 2nd pass: write suffixes, as separate byte[] blob
       for(int termCount=0;termCount<pendingCount;termCount++) {
-        final int suffix = pendingTerms[termCount].term.length - commonPrefix;
+        final int suffix = pendingTerms[termCount].term.length() - commonPrefix;
         // TODO: cutover to better intblock codec, instead
         // of interleaving here:
         bytesWriter.writeVInt(suffix);
-        bytesWriter.writeBytes(pendingTerms[termCount].term.bytes, commonPrefix, suffix);
+        bytesWriter.writeBytes(pendingTerms[termCount].term.bytes(), commonPrefix, suffix);
       }
       out.writeVInt((int) bytesWriter.getFilePointer());
       bytesWriter.writeTo(out);
@@ -363,5 +388,10 @@ public class BlockTermsWriter extends FieldsConsumer {
       lastPrevTerm.copyBytes(pendingTerms[pendingCount-1].term);
       pendingCount = 0;
     }
+  }
+  
+  @Override
+  public Comparator<BytesRef> getComparator() {
+    return BytesRef.getUTF8SortedAsUnicodeComparator();
   }
 }

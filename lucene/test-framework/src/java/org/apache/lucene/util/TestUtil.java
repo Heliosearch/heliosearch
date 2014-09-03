@@ -45,7 +45,7 @@ import java.util.zip.ZipFile;
 import org.apache.lucene.codecs.Codec;
 import org.apache.lucene.codecs.DocValuesFormat;
 import org.apache.lucene.codecs.PostingsFormat;
-import org.apache.lucene.codecs.lucene49.Lucene49Codec;
+import org.apache.lucene.codecs.lucene410.Lucene410Codec;
 import org.apache.lucene.codecs.perfield.PerFieldDocValuesFormat;
 import org.apache.lucene.codecs.perfield.PerFieldPostingsFormat;
 import org.apache.lucene.document.BinaryDocValuesField;
@@ -678,7 +678,7 @@ public final class TestUtil {
     if (LuceneTestCase.VERBOSE) {
       System.out.println("forcing postings format to:" + format);
     }
-    return new Lucene49Codec() {
+    return new Lucene410Codec() {
       @Override
       public PostingsFormat getPostingsFormatForField(String field) {
         return format;
@@ -696,7 +696,7 @@ public final class TestUtil {
     if (LuceneTestCase.VERBOSE) {
       System.out.println("forcing docvalues format to:" + format);
     }
-    return new Lucene49Codec() {
+    return new Lucene410Codec() {
       @Override
       public DocValuesFormat getDocValuesFormatForField(String field) {
         return format;
@@ -902,9 +902,9 @@ public final class TestUtil {
   public static CharSequence bytesToCharSequence(BytesRef ref, Random random) {
     switch(random.nextInt(5)) {
     case 4:
-      CharsRef chars = new CharsRef(ref.length);
-      UnicodeUtil.UTF8toUTF16(ref.bytes, ref.offset, ref.length, chars);
-      return chars;
+      final char[] chars = new char[ref.length];
+      final int len = UnicodeUtil.UTF8toUTF16(ref.bytes, ref.offset, ref.length, chars);
+      return new CharsRef(chars, 0, len);
     case 3:
       return CharBuffer.wrap(ref.utf8ToString());
     default:

@@ -92,7 +92,6 @@ public class BytesRefFieldSource extends FieldCacheSource {
             @Override
             public void fillValue(int doc) {
               mval.exists = docsWithField.get(doc);
-              mval.value.length = 0;
               mval.value.copyBytes(binaryValues.get(doc));
             }
           };

@@ -55,7 +55,7 @@ public class Lucene40SegmentInfoWriter extends SegmentInfoWriter {
     try {
       CodecUtil.writeHeader(output, Lucene40SegmentInfoFormat.CODEC_NAME, Lucene40SegmentInfoFormat.VERSION_CURRENT);
       // Write the Lucene version that created this segment, since 3.1
-      output.writeString(si.getVersion());
+      output.writeString(si.getVersion().toString());
       output.writeInt(si.getDocCount());
 
       output.writeByte((byte) (si.getUseCompoundFile() ? SegmentInfo.YES : SegmentInfo.NO));
@@ -67,7 +67,8 @@ public class Lucene40SegmentInfoWriter extends SegmentInfoWriter {
     } finally {
       if (!success) {
         IOUtils.closeWhileHandlingException(output);
-        si.dir.deleteFile(fileName);
+        // TODO: why must we do this? do we not get tracking dir wrapper?
+        IOUtils.deleteFilesIgnoringExceptions(si.dir, fileName);
       } else {
         output.close();
       }

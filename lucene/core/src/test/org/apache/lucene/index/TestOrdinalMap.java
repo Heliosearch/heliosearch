@@ -22,7 +22,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 
 import org.apache.lucene.analysis.MockAnalyzer;
-import org.apache.lucene.codecs.lucene49.Lucene49DocValuesFormat;
+import org.apache.lucene.codecs.lucene410.Lucene410DocValuesFormat;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.SortedDocValuesField;
 import org.apache.lucene.document.SortedSetDocValuesField;
@@ -35,6 +35,7 @@ import org.apache.lucene.util.LongValues;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.RamUsageTester;
 import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.Version;
 
 public class TestOrdinalMap extends LuceneTestCase {
 
@@ -64,7 +65,7 @@ public class TestOrdinalMap extends LuceneTestCase {
 
   public void testRamBytesUsed() throws IOException {
     Directory dir = newDirectory();
-    IndexWriterConfig cfg = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setCodec(TestUtil.alwaysDocValuesFormat(new Lucene49DocValuesFormat()));
+    IndexWriterConfig cfg = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random())).setCodec(TestUtil.alwaysDocValuesFormat(new Lucene410DocValuesFormat()));
     RandomIndexWriter iw = new RandomIndexWriter(random(), dir, cfg);
     final int maxDoc = TestUtil.nextInt(random(), 10, 1000);
     final int maxTermLength = TestUtil.nextInt(random(), 1, 4);

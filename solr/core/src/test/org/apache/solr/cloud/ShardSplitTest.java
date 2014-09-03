@@ -52,9 +52,9 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.lucene.util.LuceneTestCase.Slow;
-import static org.apache.solr.cloud.OverseerCollectionProcessor.MAX_SHARDS_PER_NODE;
 import static org.apache.solr.cloud.OverseerCollectionProcessor.NUM_SLICES;
-import static org.apache.solr.cloud.OverseerCollectionProcessor.REPLICATION_FACTOR;
+import static org.apache.solr.common.cloud.ZkStateReader.REPLICATION_FACTOR;
+import static org.apache.solr.common.cloud.ZkStateReader.MAX_SHARDS_PER_NODE;
 
 @Slow
 public class ShardSplitTest extends BasicDistributedZkTest {
@@ -527,7 +527,7 @@ public class ShardSplitTest extends BasicDistributedZkTest {
     baseUrl = baseUrl.substring(0, baseUrl.length() - "collection1".length());
 
     HttpSolrServer baseServer = new HttpSolrServer(baseUrl);
-    baseServer.setConnectionTimeout(15000);
+    baseServer.setConnectionTimeout(30000);
     baseServer.setSoTimeout(60000 * 5);
     baseServer.request(request);
     baseServer.shutdown();
@@ -614,7 +614,7 @@ public class ShardSplitTest extends BasicDistributedZkTest {
   }
 
   @Override
-  protected CloudSolrServer createCloudClient(String defaultCollection) throws MalformedURLException {
+  protected CloudSolrServer createCloudClient(String defaultCollection) {
     CloudSolrServer client = super.createCloudClient(defaultCollection);
     client.getLbServer().getHttpClient().getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, 5 * 60 * 1000);
     return client;
