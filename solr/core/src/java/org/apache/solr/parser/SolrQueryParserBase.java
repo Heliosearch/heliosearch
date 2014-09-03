@@ -714,11 +714,11 @@ public abstract class SolrQueryParserBase extends QueryBuilder {
   }
 
 
-  private void checkNullField(String field) throws SolrException {
+  private void checkNullField(String field, String queryText) throws SolrException {
     if (field == null && defaultField == null) {
       throw new SolrException
           (SolrException.ErrorCode.BAD_REQUEST,
-              "no field name specified in query and no default specified via 'df' param");
+              "no field name specified in query and no default specified via 'df' param. query text='" + queryText + "'");
     }
   }
 
@@ -736,7 +736,7 @@ public abstract class SolrQueryParserBase extends QueryBuilder {
   private QParser subQParser = null;
 
   protected Query getFieldQuery(String field, String queryText, boolean quoted) throws SyntaxError {
-    checkNullField(field);
+    checkNullField(field, queryText);
     // intercept magic field name of "_" to use as a hook for our
     // own functions.
     if (field.charAt(0) == '_' && parser != null) {
@@ -764,14 +764,14 @@ public abstract class SolrQueryParserBase extends QueryBuilder {
 
   // called from parser
   protected Query getRangeQuery(String field, String part1, String part2, boolean startInclusive, boolean endInclusive) throws SyntaxError {
-    checkNullField(field);
+    checkNullField(field, part1);
     SchemaField sf = schema.getField(field);
     return sf.getType().getRangeQuery(parser, sf, part1, part2, startInclusive, endInclusive);
   }
 
   // called from parser
   protected Query getPrefixQuery(String field, String termStr) throws SyntaxError {
-    checkNullField(field);
+    checkNullField(field, termStr);
 
     termStr = analyzeIfMultitermTermText(field, termStr, schema.getFieldType(field));
 
@@ -781,7 +781,7 @@ public abstract class SolrQueryParserBase extends QueryBuilder {
 
   // called from parser
   protected Query getWildcardQuery(String field, String termStr) throws SyntaxError {
-    checkNullField(field);
+    checkNullField(field, termStr);
     // *:* -> MatchAllDocsQuery
     if ("*".equals(termStr)) {
       if ("*".equals(field) || getExplicitField() == null) {
