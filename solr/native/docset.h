@@ -24,7 +24,7 @@ class BitDocSet : public DocSet {
 
     void fastSet(int index) {
       int wordNum = index>>6;
-      long bitmask = 1L << (index & 0x3f);
+      uint64_t bitmask = ((uint64_t)1) << (index & 0x3f);
       bits[wordNum] |= bitmask; 
     }
 
