@@ -296,7 +296,7 @@ public class SimpleFacets {
           for (Object o : (Collection<?>)olst) {
             if (!(o instanceof QParser)) continue;
             QParser qp = (QParser)o;
-            excludeSet.put(qp.getQuery(), Boolean.TRUE);
+            excludeSet.put(qp.getFilter(), Boolean.TRUE);
           }
         }
         if (excludeSet.size() == 0) return;
@@ -427,7 +427,7 @@ public class SimpleFacets {
       NamedList<Object> res = version1Bucket != null && version<2 ? version1Bucket : bucket;
 
       // TODO: slight optimization would prevent double-parsing of any localParams
-      Query query = QParser.getParser(q, null, req).getQuery();
+      Query query = QParser.getParser(q, null, req).getFilter();
 
       if (query == null) {  // what causes a null query?
         res.add(key, 0);

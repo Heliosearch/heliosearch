@@ -26,12 +26,17 @@ import org.apache.lucene.search.Weight;
 import org.apache.lucene.util.ToStringUtils;
 import org.apache.solr.request.SolrRequestInfo;
 import org.apache.solr.search.DocSet;
+import org.apache.solr.search.DocSetProducer;
+import org.apache.solr.search.DocSetUtil;
+import org.apache.solr.search.ExtendedQueryBase;
+import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.WrappedQuery;
 
 import java.io.IOException;
 import java.util.Set;
 
-public class FilterQuery extends Query {
+public class FilterQuery extends ExtendedQueryBase implements DocSetProducer {
   protected final Query q;
 
   public FilterQuery(Query q) {
@@ -100,5 +105,10 @@ public class FilterQuery extends Query {
     ConstantScoreQuery csq = new ConstantScoreQuery( docs.getTopFilter() );
     csq.setBoost( this.getBoost() );
     return csq.createWeight(searcher);
+  }
+
+  @Override
+  public DocSet createDocSet(QueryContext queryContext) throws IOException {
+    return DocSetUtil.createDocSet(queryContext, q);
   }
 }

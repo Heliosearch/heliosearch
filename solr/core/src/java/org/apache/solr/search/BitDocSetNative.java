@@ -521,7 +521,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
   /** this = this AND other */
   public void intersectMe(BitDocSetNative other) {
-    assert this.wlen == other.wlen;
+    assert this.wlen == other.wlen && getRefCount() == 1; // can't be shared
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -533,7 +533,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
   /** this = this OR other */
   public void unionMe(BitDocSetNative other) {
-    assert this.wlen == other.wlen;
+    assert this.wlen == other.wlen && getRefCount() == 1; // can't be shared
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -545,7 +545,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
   /** Remove all elements set in other. this = this AND_NOT other */
   public void remove(BitDocSetNative other) {
-    assert this.wlen == other.wlen;
+    assert this.wlen == other.wlen && getRefCount() == 1; // can't be shared
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -557,7 +557,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
   /** Remove all elements set in other. this = this AND_NOT other */
   public void xorMe(BitDocSetNative other) {
-    assert this.wlen == other.wlen;
+    assert this.wlen == other.wlen && getRefCount() == 1; // can't be shared
     long thisArr = this.array;
     long otherArr = other.array;
     // testing against zero can be more efficient
@@ -642,7 +642,7 @@ public class BitDocSetNative extends DocSetBaseNative implements Bits, Cloneable
 
   @Override
   public void addAllTo(DocSet target) {
-
+    throw new UnsupportedOperationException();
   }
 
   @Override

@@ -17,9 +17,11 @@
 
 package org.apache.solr.search;
 
+import java.io.IOException;
+
 import org.apache.lucene.search.Query;
 
-public class ExtendedQueryBase extends Query implements ExtendedQuery {
+public class ExtendedQueryBase extends Query implements ExtendedQuery, DocSetProducer {
   private int cost;
   private boolean cache = true;
   private boolean cacheSep;
@@ -79,4 +81,18 @@ public class ExtendedQueryBase extends Query implements ExtendedQuery {
   public String toString(String field) {
     return getOptions();
   }
+
+  @Override
+  public DocSet createDocSet(QueryContext queryContext) throws IOException {
+    // Don't call the normal "createDocSet" here or it will call us back!
+    return DocSetUtil.createDocSetGeneric(queryContext, this);
+  }
+
+
+  public static void copyProperties(ExtendedQuery source, ExtendedQuery dest) {
+    dest.setCost( source.getCost() );
+    dest.setCache( source.getCache() );
+    dest.setCacheSep( source.getCacheSep() );
+  }
+
 }

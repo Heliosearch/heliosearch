@@ -92,5 +92,10 @@ public class WrappedQuery extends ExtendedQueryBase {
   public String toString(String field) {
     return getOptions() + q.toString();
   }
+
+  @Override
+  public DocSet createDocSet(QueryContext queryContext) throws IOException {
+    return DocSetUtil.createDocSet(queryContext, q);
+  }
 }
 

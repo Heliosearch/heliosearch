@@ -79,15 +79,23 @@ public class DocSetUtil {
   }
 
 
-   public static DocSet createDocSet(QueryContext queryContext, Query query) throws IOException {
-     IndexSearcher searcher = queryContext.searcher();
-     int maxDoc = searcher.getIndexReader().maxDoc();
+  // implementers of DocSetProducer should not call this with themselves or it will result in an infinite loop
+  public static DocSet createDocSet(QueryContext queryContext, Query query) throws IOException {
+    if (query instanceof DocSetProducer) {
+      return ((DocSetProducer)query).createDocSet(queryContext);
+    }
+    return createDocSetGeneric(queryContext, query);
+  }
 
-     try ( DocSetCollector collector = new DocSetCollector((maxDoc>>6)+5, maxDoc) ) {
-       queryContext.searcher().search(query, null, collector);
-       return collector.getDocSet();
-     }
-   }
+  // code to produce docsets for non-docsetproducer queries
+  public static DocSet createDocSetGeneric(QueryContext queryContext, Query query) throws IOException {
+    IndexSearcher searcher = queryContext.searcher();
+    int maxDoc = searcher.getIndexReader().maxDoc();
 
+    try ( DocSetCollector collector = new DocSetCollector((maxDoc>>6)+5, maxDoc) ) {
+      queryContext.searcher().search(query, null, collector);
+      return collector.getDocSet();
+    }
+  }
 
  }

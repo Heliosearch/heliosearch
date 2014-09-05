@@ -387,6 +387,7 @@ public abstract class DocSetBaseNative implements RefCount, DocSet, HS.NativeDat
 
   @Override
   public void setBitsOn(BitDocSetNative target) {
+    assert target.getRefCount() == 1; // can't be shared
     DocIterator iter = iterator();
     while (iter.hasNext()) {
       target.fastSet(iter.nextDoc());

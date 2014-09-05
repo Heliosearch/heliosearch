@@ -22,6 +22,7 @@ import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.core.HS;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.theories.suppliers.TestedOn;
 
 import java.util.Random;
 
@@ -74,27 +75,28 @@ public class TestTermsFilter extends SolrTestCaseJ4 {
 
 
   public void doQuery(String field, String terms, String... tests) throws Exception {
-    assertJQ(req("q","*:*", "fq","{!terms f=" + field + "}" + terms)
+    // turn on debugging to indirectly test toString
+    assertJQ(req("q","*:*", "debug","all", "fq","{!terms f=" + field + "}" + terms)
         , tests
     );
 
-    assertJQ(req("q","*:*", "fq","{!terms f=" + field + " cache=false}" + terms)
+    assertJQ(req("q","*:*", "debug","all","fq","{!terms f=" + field + " cache=false}" + terms)
         , tests
     );
 
     //
     // test as main query instead of filter
     //
-    assertJQ(req("q","{!terms f=" + field + "}" + terms)
+    assertJQ(req("q","{!terms f=" + field + "}" + terms, "debug","all")
         , tests
     );
 
-    assertJQ(req("q","{!terms f=" + field + " cache=false}" + terms)
+    assertJQ(req("q","{!terms f=" + field + " cache=false}" + terms, "debug","all")
         , tests
     );
 
 
-    assertJQ(req("q","*:*", "fq","{!terms f=" + field + " sort=false}" + terms)
+    assertJQ(req("q","*:*", "fq","{!terms f=" + field + " sort=false}" + terms, "debug","all")
         , tests
     );
   }
@@ -154,6 +156,68 @@ public class TestTermsFilter extends SolrTestCaseJ4 {
     int totalDocs=docsToIndex*3;
 
     doQuery("foo_s", "5,4,3,2,1,0,9,8,7,6", "/response/numFound=="+totalDocs);
+  }
+
+  @Test
+  public void testBQPromotion() throws Exception {
+    long start,end;
+    start = TFilter.num_creations;
+    assertJQ(req("q","*:*", "fq","id:(1 2 3 4 5)")
+        , "/response=="
+    );
+    end = TFilter.num_creations;
+    assertTrue( end > start );
+
+    // test that the same thing is created again
+    start = TFilter.num_creations;
+    assertJQ(req("q","*:*", "fq","id:1 id:2 id:3 id:4 id:5")
+        , "/response=="
+    );
+    end = TFilter.num_creations;
+    assertTrue( end > start );
+
+    // test nested
+    start = TFilter.num_creations;
+    assertJQ(req("q","*:*", "fq","id:1 id:2 (id:3 OR (id:4 OR id:5) OR id:6) OR id:7")
+        , "/response=="
+    );
+    end = TFilter.num_creations;
+    assertTrue( end > start );
+
+
+
+    // no promotion
+    start = TFilter.num_creations;
+    assertJQ(req("q","*:*", "fq","id:1 foo_s:2 id:3 id:4 id:5")
+        , "/response=="
+    );
+    end = TFilter.num_creations;
+    assertTrue( end == start );
+
+    // no promotion
+    start = TFilter.num_creations;
+    assertJQ(req("q","*:*", "fq","id:1 foo_s:2 id:3 id:4 -id:5")
+        , "/response=="
+    );
+    end = TFilter.num_creations;
+    assertTrue( end == start );
+
+    // no promotion
+    start = TFilter.num_creations;
+    assertJQ(req("q","*:*", "fq","id:1 foo_s:2 id:3 id:4 +id:5")
+        , "/response=="
+    );
+    end = TFilter.num_creations;
+    assertTrue( end == start );
+
+    // no promotion
+    start = TFilter.num_creations;
+    assertJQ(req("q","*:*", "fq","id:1 foo_s:2 id:3 id:4 id:[10 TO 100]")
+        , "/response=="
+    );
+    end = TFilter.num_creations;
+    assertTrue( end == start );
+
   }
 
 }

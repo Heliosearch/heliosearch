@@ -1286,7 +1286,7 @@ public class SolrIndexSearcher extends IndexSearcher implements Closeable,SolrIn
       QueryContext queryContext = QueryContext.newContext(this);
       DocSet answer = ((DocSetProducer)query).createDocSet(queryContext);
       if (filter != null) {
-        // TODO: do this in-place?
+        // TODO: do this in-place?  Only if refcount==1
         DocSet union = answer.union(filter);
         answer.decref();
         answer = union;

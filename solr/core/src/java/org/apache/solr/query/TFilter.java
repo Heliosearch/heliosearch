@@ -17,35 +17,47 @@ package org.apache.solr.query;
  * limitations under the License.
  */
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.DocIdSet;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.BytesRefIterator;
+import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.core.HS;
+import org.apache.solr.schema.FieldType;
+import org.apache.solr.schema.SchemaUtil;
 import org.apache.solr.search.DedupDocSetCollector;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.DocSetProducer;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.field.NativePagedBytes;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Comparator;
-
 // Builder with prefix coding, native array
-class TFilter extends Filter implements DocSetProducer {
+public class TFilter extends Filter implements DocSetProducer {
+  public static long num_creations; // keeps track of the number of creations for testing purposes
+
   private final String field;
   final byte[] termBytes;
   private final int nTerms;
@@ -53,6 +65,7 @@ class TFilter extends Filter implements DocSetProducer {
   private final int hash;
 
   private TFilter(String field, byte[] termBytes, int nTerms, int unsorted, int hash) {
+    this.num_creations++;
     this.field = field;
     this.termBytes = termBytes;
     this.nTerms = nTerms;
@@ -120,6 +133,10 @@ class TFilter extends Filter implements DocSetProducer {
 
     public TFilter build() {
       return new TFilter(field, getBytes(), nTerms, unsorted, hash);
+    }
+
+    public TQuery buildQuery() {
+      return new TQuery(build());
     }
 
     @Override
@@ -218,7 +235,46 @@ class TFilter extends Filter implements DocSetProducer {
 
   @Override
   public String toString() {
-    return "terms(f=" + field + ",num="+nTerms+",sorted="+(unsorted>0)+",nbytes="+termBytes.length + ")";
+    StringBuilder sb = new StringBuilder();
+    sb.append("{!terms f="+field+"}");
+
+    boolean needSep = false;
+    boolean truncated = false;
+    int numTerms = 0;
+
+    FieldType ft = SchemaUtil.getFieldTypeNoContext(field);
+
+    CharsRef charsOut = new CharsRef();
+
+    BytesRefIterator iter = iterator();
+    try {
+      for (;;) {
+        if (++numTerms > 20) {
+          truncated = true;
+          break;
+        }
+        BytesRef term = iter.next();
+        if (term == null) break;
+        if (needSep) {
+         sb.append(',');
+        } else {
+         needSep = true;
+        }
+
+        // TODO - make this more efficient
+        charsOut.length=0;
+        ft.indexedToReadable(term, charsOut);
+        sb.append(charsOut);
+      }
+    } catch (IOException e) {
+      throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
+    }
+
+    if (truncated) {
+      sb.append(",...(truncated=true, nTerms="+nTerms+",sorted="+(unsorted>0)+",nbytes="+termBytes.length+")");
+    }
+
+   return sb.toString();
   }
 
 
@@ -262,5 +318,58 @@ class TFilter extends Filter implements DocSetProducer {
     }
   }
 
+  /** returns null if the BooleanQuery can't be converted. */
+  public static Query convertBooleanQuery(BooleanQuery q) {
+    List<BytesRef> lst = new ArrayList<>(q.clauses().size());
+    String field = getTerms(q, null, lst);
+    if (field == null) {
+      return null;
+    }
+
+    Collections.sort(lst);
+
+    TFilter.Builder builder = new TFilter.Builder(field, lst.size()*8);
+    try {
+      BytesRef prev = new BytesRef();
+      for (BytesRef br : lst) {
+        builder.addTerm(prev, br);
+        prev = br;
+      }
+      return builder.buildQuery();
+    } finally {
+      builder.close();
+    }
+  }
+
+
+  private static String getTerms(BooleanQuery q, String field, List<BytesRef> out) {
+    if (q.getMinimumNumberShouldMatch() != 0) {
+      return null;
+    }
+
+    List<BooleanClause> clauses = q.clauses();
+    for (BooleanClause clause : clauses) {
+      if (clause.isProhibited() || clause.isRequired()) {
+        return null;
+      }
+      Query sub = clause.getQuery();
+      if (sub instanceof TermQuery) {
+        TermQuery tq = (TermQuery)sub;
+        String tqf = tq.getTerm().field();
+        if (field == null) {
+          field = tqf;
+        } else {
+          if (!field.equals(tqf)) {
+            return null;
+          }
+        }
+        out.add( tq.getTerm().bytes() );
+      } else if (sub instanceof BooleanQuery) {
+        return getTerms((BooleanQuery) sub, field, out);
+      }
+    }
+
+    return field;
+  }
 
 }

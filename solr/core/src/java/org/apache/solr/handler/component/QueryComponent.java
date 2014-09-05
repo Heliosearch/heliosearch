@@ -191,7 +191,7 @@ public class QueryComponent extends SearchComponent
         for (String fq : fqs) {
           if (fq != null && fq.trim().length()!=0) {
             QParser fqp = QParser.getParser(fq, null, req);
-            filters.add(fqp.getQuery());
+            filters.add(fqp.getFilter());
           }
         }
         // only set the filters if they are not empty otherwise

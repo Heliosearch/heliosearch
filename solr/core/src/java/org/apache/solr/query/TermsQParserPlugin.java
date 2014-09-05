@@ -88,8 +88,7 @@ public class TermsQParserPlugin extends QParserPlugin {
                builder.addTerm(prev, br);
                prev = br;
              }
-             TFilter tf = builder.build();
-             return new SolrConstantScoreQuery(tf);
+             return builder.buildQuery();
            } finally {
              builder.close();
            }
@@ -97,7 +96,6 @@ public class TermsQParserPlugin extends QParserPlugin {
 
 
          // if not sorting, build incrementally to avoid instantiating entire list
-         TFilter tfilter;
          try (TFilter.Builder builder = new TFilter.Builder(field, termStr.length())) {
 
            CharUtils.splitSmart(termStr, sepChar, true, new Callback<CharSequence>() {
@@ -117,10 +115,9 @@ public class TermsQParserPlugin extends QParserPlugin {
              }
            });
 
-           tfilter = builder.build();
+           return builder.buildQuery();
          }
 
-         return new SolrConstantScoreQuery(tfilter);
        }
 
 

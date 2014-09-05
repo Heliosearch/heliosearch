@@ -16,6 +16,7 @@
  */
 package org.apache.solr.search;
 
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
 import org.apache.solr.common.params.CommonParams;
@@ -23,6 +24,7 @@ import org.apache.solr.common.params.MapSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.StrUtils;
+import org.apache.solr.query.TFilter;
 import org.apache.solr.request.SolrQueryRequest;
 
 import java.util.*;
@@ -131,6 +133,30 @@ public abstract class QParser {
   public void setString(String s) {
     this.qstr = s;
   }
+
+  public Query getFilter() throws SyntaxError {
+    if (query != null) {
+      return query;
+    }
+    Query q = getQuery();
+    Query qq = q;
+    if (q instanceof WrappedQuery) {
+      qq = ((WrappedQuery)q).getWrappedQuery();
+    }
+    if (qq instanceof BooleanQuery) {
+      Query optimized = TFilter.convertBooleanQuery((BooleanQuery)qq);
+      if (optimized != null) {
+        if (q instanceof ExtendedQuery && optimized instanceof ExtendedQuery) {
+          ExtendedQueryBase.copyProperties((ExtendedQuery)q, (ExtendedQuery)optimized);
+        }
+        query = optimized;
+        query.setBoost( q.getBoost() );  // set original boost... needed?
+      }
+    }
+
+    return query;
+  }
+
 
   /**
    * Returns the resulting query from this QParser, calling parse() only the
