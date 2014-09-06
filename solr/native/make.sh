@@ -69,6 +69,7 @@ javah -d $BUILD/inc -force -classpath ${CLASSES} org.apache.solr.search.facet.Si
 CPPFILES="$CLASS.cpp docset.cpp facet.cpp"
 INC="$JNI_INC -I$BUILD/inc"
 $GPP $DEBUG $OPT -Wall $CFLAGS $INC -shared -fPIC $CPPFILES -o $BUILD/$OUT
+#$GPP -S $DEBUG $OPT -Wall $CFLAGS $INC -shared -fPIC docset.cpp
 
 $GPP $OPT -Wall $CFLAGS $INC         -fPIC $CPPFILES test.cpp -o $BUILD/test.exe
 # $GPP -S $OPT -Wall $CFLAGS $INC    -fPIC $CPPFILES test.cpp 

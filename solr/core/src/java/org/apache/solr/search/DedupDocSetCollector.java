@@ -19,6 +19,7 @@ package org.apache.solr.search;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Scorer;
 import org.apache.solr.core.HS;
 
@@ -33,15 +34,18 @@ import java.util.List;
 public class DedupDocSetCollector extends Collector implements AutoCloseable {
   private long buffer;
   private BitDocSetNative bits;
+  private int globalPos = 0;
   private int pos=0;
   private final int maxDoc;
   private final int smallSetSize;
+  private final int collectLimit;
   private int base;
   private final int bufferSize = HS.BUFFER_SIZE_BYTES >>> 2;
   private List<Long> bufferList;
 
   public DedupDocSetCollector(int smallSetSize, int maxDoc) {
     this.smallSetSize = smallSetSize;
+    this.collectLimit = Math.min((smallSetSize>>1) + 5, smallSetSize);
     this.maxDoc = maxDoc;
     allocBuffer();
   }
@@ -62,21 +66,22 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
   }
 
   private int bufferedSize() {
-    int nBuffers = bufferList==null ? 0 : bufferList.size();
-    return (nBuffers * bufferSize) + pos;
+    return globalPos + pos;
   }
 
   private void newBuffer() {
-    if (bits == null && bufferedSize() > smallSetSize) {
-      bits = new  BitDocSetNative(maxDoc);
+    assert pos == bufferSize;
+    globalPos += pos;
+    pos = 0;  // do this here so bufferedSize will work
+
+    if (bits == null && bufferedSize() > collectLimit) {
+      bits = new BitDocSetNative(maxDoc);
     }
 
     // if we've already transitioned to a bitset, then just set the bits
     // and reuse this buffer.
     if (bits != null) {
-      assert pos == bufferSize;
-      setBits(buffer, pos);
-      pos = 0;
+      setBits(buffer, bufferSize);
       return;
     }
 
@@ -87,7 +92,6 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
     bufferList.add(buffer);
     buffer = 0;  // zero out in case allocBuffer fails
     allocBuffer();
-    pos = 0;
   }
 
   private void setBits(long buf, int sz) {
@@ -99,11 +103,23 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
     **/
   }
 
+  private static DocSet makeSmallSet(BitDocSetNative bits) throws IOException {
+    int numDocs = (int)bits.cardinality();
+    long answer = HS.allocArray(numDocs, 4, false);
+    DocIdSetIterator iter = bits.docIterator();
+    for(int i=0; i<numDocs; i++) {
+      int docid = iter.nextDoc();
+      HS.setInt(answer, i, docid);
+    }
+    assert iter.nextDoc() == DocIdSetIterator.NO_MORE_DOCS;
+    return new SortedIntDocSetNative(answer, numDocs);
+  }
 
 
-  public DocSet getDocSet() {
+  public DocSet getDocSet() throws IOException {
     int sz = bufferedSize();
-    if (bits == null && sz > smallSetSize) {
+
+    if (bits == null && sz > collectLimit) {
       bits = new BitDocSetNative(maxDoc);
     }
 
@@ -116,9 +132,13 @@ public class DedupDocSetCollector extends Collector implements AutoCloseable {
         }
       }
 
-      DocSet answer = bits;
-      bits = null; // null out so we know we don't need to free later
-      return answer;
+      if (sz > smallSetSize) {
+        DocSet answer = bits;
+        bits = null; // null out so we know we don't need to free later
+        return answer;
+      } else {
+        return makeSmallSet(bits);
+      }
     }
 
     // make a small set
