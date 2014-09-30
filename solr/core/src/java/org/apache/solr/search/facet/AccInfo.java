@@ -30,6 +30,7 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.search.FunctionQParser;
 import org.apache.solr.search.FunctionQParserPlugin;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
@@ -48,7 +49,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 abstract class Acc extends Collector implements Closeable {
-  String key;
+  String key;  // TODO
 
   public void finish() {
   }
@@ -208,31 +209,9 @@ public class AccInfo {
       }
 
       // let's try it as a function instead
-      QParser parser = QParser.getParser(funcStr, FunctionQParserPlugin.NAME, req);
-      Query q = null;
-      ValueSource vs = null;
-      ValueSource inner = null;
-
-      q = parser.getQuery();
-
-      if (q instanceof FunctionQuery) {
-        vs = ((FunctionQuery)q).getValueSource();
-      } else {
-        throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Expected function syntax. Example: facet.stat=avg(myfield) Got: " + keyAndValue);
-      }
-
-      // special case min and max... optionally check in value source parser...
-      if (vs instanceof MinFloatFunction) {
-        vs = new SimpleAggValueSource("min", ((MinFloatFunction)vs).getChildren()[0]);
-      } else if (vs instanceof MaxFloatFunction) {
-        vs = new SimpleAggValueSource("max", ((MaxFloatFunction)vs).getChildren()[0]);
-      }
-
-      if (!(vs instanceof AggValueSource)) {
-        throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Expected aggregate function. Got: " + keyAndValue);
-      }
-
-      stat.agg = (AggValueSource)vs;
+      FunctionQParser parser = (FunctionQParser)QParser.getParser(funcStr, FunctionQParserPlugin.NAME, req);
+      AggValueSource agg = parser.parseAgg(FunctionQParser.FLAG_DEFAULT);
+      stat.agg = agg;
 
       return stat;
 
@@ -241,6 +220,9 @@ public class AccInfo {
     }
   }
 
+  public static AggValueSource parseStat(String str, SolrQueryRequest req) {
+return null;
+  }
 }
 
 

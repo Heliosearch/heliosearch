@@ -17,7 +17,15 @@ package org.apache.solr.search.facet;
  * limitations under the License.
  */
 
+import java.io.IOException;
+
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.mutable.MutableValueInt;
 
 
 // abstract class or interface?
@@ -38,8 +46,19 @@ public abstract class AggValueSource extends ValueSource {
 
   @Override
   public boolean equals(Object o) {
-    return this.getClass() == o.getClass() && name.equals( ((AggValueSource)o).name );
+    return this.getClass() == o.getClass() && name.equals(((AggValueSource) o).name);
   }
-}
 
+  @Override
+  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
+    // FUTURE
+    throw new UnsupportedOperationException("NOT IMPLEMENTED " + name + " " + this);
+  }
+
+  // TODO: make abstract
+  public SlotAcc createSlotAcc(MutableValueInt slot, QueryContext qContext, SolrQueryRequest req, int numDocs, int numSlots) throws IOException {
+    throw new UnsupportedOperationException("NOT IMPLEMENTED " + name + " " + this);
+  }
+
+}
 

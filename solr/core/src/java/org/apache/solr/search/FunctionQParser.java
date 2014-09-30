@@ -16,6 +16,7 @@
  */
 package org.apache.solr.search;
 
+import org.apache.solr.search.facet.AggValueSource;
 import org.apache.solr.search.function.FunctionQuery;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.function.valuesource.*;
@@ -30,6 +31,10 @@ import java.util.List;
 
 public class FunctionQParser extends QParser {
 
+  public static final int FLAG_CONSUME_DELIMITER = 0x01;  // consume delimiter after parsing arg
+  public static final int FLAG_IS_AGG = 0x02;
+  public static final int FLAG_DEFAULT = FLAG_CONSUME_DELIMITER;
+
   /** @lucene.internal */
   public QueryParsing.StrParser sp;
   boolean parseMultipleSources = true;
@@ -37,6 +42,15 @@ public class FunctionQParser extends QParser {
 
   public FunctionQParser(String qstr, SolrParams localParams, SolrParams params, SolrQueryRequest req) {
     super(qstr, localParams, params, req);
+    setString(qstr);
+  }
+
+  @Override
+  public void setString(String s) {
+    super.setString(s);
+    if (s != null) {
+      sp = new QueryParsing.StrParser( s );
+    }
   }
 
   public void setParseMultipleSources(boolean parseMultipleSources) {
@@ -59,13 +73,11 @@ public class FunctionQParser extends QParser {
 
   @Override
   public Query parse() throws SyntaxError {
-    sp = new QueryParsing.StrParser(getString());
-
     ValueSource vs = null;
     List<ValueSource> lst = null;
 
     for(;;) {
-      ValueSource valsource = parseValueSource(false);
+      ValueSource valsource = parseValueSource(FLAG_DEFAULT & ~FLAG_CONSUME_DELIMITER);
       sp.eatws();
       if (!parseMultipleSources) {
         vs = valsource; 
@@ -99,6 +111,7 @@ public class FunctionQParser extends QParser {
 
     return new FunctionQuery(vs);
   }
+
 
   /**
    * Are there more arguments in the argument list being parsed?
@@ -210,7 +223,7 @@ public class FunctionQParser extends QParser {
   public List<ValueSource> parseValueSourceList() throws SyntaxError {
     List<ValueSource> sources = new ArrayList<>(3);
     while (hasMoreArguments()) {
-      sources.add(parseValueSource(true));
+      sources.add(parseValueSource(FLAG_DEFAULT));
     }
     return sources;
   }
@@ -220,7 +233,7 @@ public class FunctionQParser extends QParser {
    */
   public ValueSource parseValueSource() throws SyntaxError {
     /* consume the delimiter afterward for an external call to parseValueSource */
-    return parseValueSource(true);
+    return parseValueSource(FLAG_DEFAULT);
   }
   
   /*
@@ -272,9 +285,9 @@ public class FunctionQParser extends QParser {
   /**
    * Parse an individual value source.
    * 
-   * @param doConsumeDelimiter whether to consume a delimiter following the ValueSource  
+   * @flags controls parsing of the value source
    */
-  protected ValueSource parseValueSource(boolean doConsumeDelimiter) throws SyntaxError {
+  protected ValueSource parseValueSource(int flags) throws SyntaxError {
     ValueSource valueSource;
     
     int ch = sp.peek();
@@ -365,11 +378,55 @@ public class FunctionQParser extends QParser {
 
     }
     
-    if (doConsumeDelimiter)
+    if ((flags & FLAG_CONSUME_DELIMITER) != 0) {
       consumeArgumentDelimiter();
+    }
     
     return valueSource;
   }
+
+  public AggValueSource parseAgg(int flags) throws SyntaxError {
+    String id = sp.getId();
+    AggValueSource vs = null;
+    boolean hasParen = false;
+
+    if ("agg".equals(id)) {
+      hasParen = sp.opt("(");
+      vs = parseAgg(flags | FLAG_IS_AGG);
+    } else {
+      // parse as an aggregation...
+      if (!id.startsWith("agg_")) {
+        id = "agg_" + id;
+      }
+
+      hasParen = sp.opt("(");
+
+      ValueSourceParser argParser = req.getCore().getValueSourceParser(id);
+      argParser = req.getCore().getValueSourceParser(id);
+      if (argParser == null) {
+        throw new SyntaxError("Unknown aggregation " + id + " in (" + sp + ")");
+      }
+
+      ValueSource vv = argParser.parse(this);
+      if (!(vv instanceof AggValueSource)) {
+        if (argParser == null) {
+          throw new SyntaxError("Expected aggregation from " + id + " but got (" + vv + ") in (" + sp + ")");
+        }
+      }
+      vs = (AggValueSource) vv;
+    }
+
+    if (hasParen) {
+      sp.expect(")");
+    }
+
+    if ((flags & FLAG_CONSUME_DELIMITER) != 0) {
+      consumeArgumentDelimiter();
+    }
+
+    return vs;
+  }
+
 
   /**
    * Consume an argument delimiter (a comma) from the token stream.

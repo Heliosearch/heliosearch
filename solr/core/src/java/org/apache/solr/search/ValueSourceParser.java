@@ -20,6 +20,14 @@ import com.spatial4j.core.distance.DistanceUtils;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Term;
+import org.apache.solr.search.facet.AggValueSource;
+import org.apache.solr.search.facet.AvgAgg;
+import org.apache.solr.search.facet.CountAgg;
+import org.apache.solr.search.facet.MaxAgg;
+import org.apache.solr.search.facet.MinAgg;
+import org.apache.solr.search.facet.SumAgg;
+import org.apache.solr.search.facet.SumsqAgg;
+import org.apache.solr.search.facet.UniqueAgg;
 import org.apache.solr.search.field.StrFieldValues;
 import org.apache.solr.search.function.BoostedQuery;
 import org.apache.solr.search.function.FuncValues;
@@ -796,47 +804,77 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
       }
     });
 
-    // aggregation operations
+    //////////////////////////////////////////////////////////////////////
+    // aggregations
+    //////////////////////////////////////////////////////////////////////
 
-    addParser("count", new ValueSourceParser() {
+    addParser("agg", new ValueSourceParser() {
       @Override
-      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
-        return new StrAggValueSource("count", fp.parseArg());
+      public AggValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return fp.parseAgg(FunctionQParser.FLAG_DEFAULT);
       }
     });
 
-    addParser("unique", new ValueSourceParser() {
+    addParser("agg_count", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
-        return new StrAggValueSource("unique", fp.parseArg());
+        return new CountAgg();
       }
     });
 
-    addParser("avg", new ValueSourceParser() {
+    addParser("agg_unique", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
-        return new SimpleAggValueSource("avg", fp.parseValueSource());
+        return new UniqueAgg(fp.parseArg());
       }
     });
 
-    addParser("sumsq", new ValueSourceParser() {
+    addParser("agg_sum", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
-        return new SimpleAggValueSource("sumsq", fp.parseValueSource());
+        return new SumAgg(fp.parseValueSource());
       }
     });
 
-    addParser("stdev", new ValueSourceParser() {
+    addParser("agg_avg", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new AvgAgg(fp.parseValueSource());
+      }
+    });
+
+    addParser("agg_sumsq", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new SumsqAgg(fp.parseValueSource());
+      }
+    });
+
+    addParser("agg_stdev", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
         return new SimpleAggValueSource("stdev", fp.parseValueSource());
       }
     });
 
-    addParser("multistat", new ValueSourceParser() {
+    addParser("agg_multistat", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
         return new SimpleAggValueSource("multistat", fp.parseValueSource());
+      }
+    });
+
+    addParser("agg_min", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new MinAgg(fp.parseValueSource());
+      }
+    });
+
+    addParser("agg_max", new ValueSourceParser() {
+      @Override
+      public ValueSource parse(FunctionQParser fp) throws SyntaxError {
+        return new MaxAgg(fp.parseValueSource());
       }
     });
 

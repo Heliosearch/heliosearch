@@ -17,49 +17,19 @@ package org.apache.solr.search.facet;
  * limitations under the License.
  */
 
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.search.QueryContext;
-import org.apache.solr.search.function.FuncValues;
-import org.apache.solr.search.function.ValueSource;
-import org.apache.solr.search.mutable.MutableValueInt;
-
 import java.io.IOException;
 
-public class StrAggValueSource extends AggValueSource {
-  protected String arg;
+import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.mutable.MutableValueInt;
 
-  public StrAggValueSource(String name, String arg) {
-    super(name);
-    this.arg = arg;
-  }
-
-  public String getArg() {
-    return arg;
+public class CountAgg extends SimpleAggValueSource {
+  public CountAgg() {
+    super("count", null);
   }
 
   @Override
-  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
-    return null;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (!super.equals(o)) return false;
-    String otherArg = ((StrAggValueSource)o).arg;
-    if (arg == otherArg) return true;
-    return (arg != null && arg.equals(otherArg));
-  }
-
-  @Override
-  public int hashCode() {
-    return getClass().hashCode() + (arg == null ? 0 : arg.hashCode());
-  }
-
-  @Override
-  public String description() {
-    return name() + "(" + arg + ")";
+  public SlotAcc createSlotAcc(MutableValueInt slot, QueryContext qContext, SolrQueryRequest req, int numDocs, int numSlots) throws IOException {
+    return new CountSlotAcc(slot,  qContext, numSlots);
   }
 }
-
-

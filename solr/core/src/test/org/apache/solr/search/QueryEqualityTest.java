@@ -923,13 +923,18 @@ public class QueryEqualityTest extends SolrTestCaseJ4 {
 
 
   public void testFuncHS() throws Exception {
-    assertFuncEquals("avg(foo_i)", "avg(foo_i)");
-    assertFuncEquals("sum(foo_i)", "sum(foo_i)");
-    assertFuncEquals("count(foo_i)", "count(foo_i)");
-    assertFuncEquals("unique(foo_i)", "unique(foo_i)");
-    assertFuncEquals("sumsq(foo_i)", "sumsq(foo_i)");
-    assertFuncEquals("stdev(foo_i)", "stdev(foo_i)");
-    assertFuncEquals("multistat(foo_i)", "multistat(foo_i)");
+    assertFuncEquals("agg(avg(foo_i))", "agg(avg(foo_i))");
+    assertFuncEquals("agg(avg(foo_i))", "agg_avg(foo_i)");
+    assertFuncEquals("agg_min(foo_i)", "agg(min(foo_i))");
+    assertFuncEquals("agg_max(foo_i)", "agg(max(foo_i))");
+
+    assertFuncEquals("agg_avg(foo_i)", "agg_avg(foo_i)");
+    assertFuncEquals("agg_sum(foo_i)", "agg_sum(foo_i)");
+    assertFuncEquals("agg_count()", "agg_count()");
+    assertFuncEquals("agg_unique(foo_i)", "agg_unique(foo_i)");
+    assertFuncEquals("agg_sumsq(foo_i)", "agg_sumsq(foo_i)");
+    assertFuncEquals("agg_stdev(foo_i)", "agg_stdev(foo_i)");
+    assertFuncEquals("agg_multistat(foo_i)", "agg_multistat(foo_i)");
 
     assertQueryEquals("terms", "{!terms f=foo_i}10,20,30,-10,-20,-30", "{!terms f=foo_i}10,20,30,-10,-20,-30");
   }

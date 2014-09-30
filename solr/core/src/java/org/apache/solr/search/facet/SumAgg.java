@@ -17,49 +17,26 @@ package org.apache.solr.search.facet;
  * limitations under the License.
  */
 
+import java.io.IOException;
+
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValueInt;
 
-import java.io.IOException;
+public class SumAgg extends SimpleAggValueSource {
 
-public class StrAggValueSource extends AggValueSource {
-  protected String arg;
 
-  public StrAggValueSource(String name, String arg) {
-    super(name);
-    this.arg = arg;
-  }
-
-  public String getArg() {
-    return arg;
+  public SumAgg(ValueSource vs) {
+    super("sum", vs);
   }
 
   @Override
-  public FuncValues getValues(QueryContext context, AtomicReaderContext readerContext) throws IOException {
-    return null;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (!super.equals(o)) return false;
-    String otherArg = ((StrAggValueSource)o).arg;
-    if (arg == otherArg) return true;
-    return (arg != null && arg.equals(otherArg));
-  }
-
-  @Override
-  public int hashCode() {
-    return getClass().hashCode() + (arg == null ? 0 : arg.hashCode());
-  }
-
-  @Override
-  public String description() {
-    return name() + "(" + arg + ")";
+  public SlotAcc createSlotAcc(MutableValueInt slot, QueryContext qContext, SolrQueryRequest req, int numDocs, int numSlots) throws IOException {
+    return new SumSlotAcc(slot, getArg(), qContext, numSlots);
   }
 }
-
 

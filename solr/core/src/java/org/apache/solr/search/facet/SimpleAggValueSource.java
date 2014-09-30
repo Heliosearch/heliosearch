@@ -18,9 +18,12 @@ package org.apache.solr.search.facet;
  */
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
+import org.apache.solr.search.mutable.MutableValueInt;
 
 import java.io.IOException;
 
@@ -60,3 +63,5 @@ public class SimpleAggValueSource extends AggValueSource {
   }
 
 }
+
+

@@ -250,12 +250,16 @@ class AvgSlotAcc extends DoubleFuncSlotAcc {
     counts[slotNum] += 1;
   }
 
+  private double avg(double tot, int count) {
+    return count==0 ? 0 : tot/count;  // returns 0 instead of NaN.. todo - make configurable? if NaN, we need to handle comparisons though...
+  }
+
   public Comparable getGlobalValue() {
-    return tot / count;  // todo: for count==0 return NaN or 0?
+    return avg(tot, count);
   }
 
   private double avg(int slot) {
-    return result[slot] / counts[slot];  // todo: calc once and cache in result?
+    return avg(result[slot], counts[slot]);  // calc once and cache in result?
   }
 
   @Override
@@ -323,7 +327,7 @@ class SortSlotAcc extends SlotAcc {
 }
 
 
-class UniqueSlotAcc extends SlotAcc {
+abstract class UniqueSlotAcc extends SlotAcc {
   FixedBitSet ords;
   FixedBitSet[] arr;
   int currentDocBase;
