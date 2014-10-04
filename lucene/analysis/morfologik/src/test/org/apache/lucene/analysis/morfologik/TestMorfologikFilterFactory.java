@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.lucene.analysis.BaseTokenStreamTestCase;
 import org.apache.lucene.analysis.MockTokenizer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.util.Version;
 
 /**
  * Test for {@link MorfologikFilterFactory}.
@@ -33,7 +32,7 @@ public class TestMorfologikFilterFactory extends BaseTokenStreamTestCase {
   public void testCreateDefaultDictionary() throws Exception {
     StringReader reader = new StringReader("rowery bilety");
     Map<String,String> initParams = new HashMap<>();
-    initParams.put("luceneMatchVersion", Version.LATEST.toString());
+    initParams.put("luceneMatchVersion", TEST_VERSION_CURRENT.toString());
     MorfologikFilterFactory factory = new MorfologikFilterFactory(initParams);
     TokenStream stream = new MockTokenizer(reader);
     stream = factory.create(stream);

@@ -35,7 +35,6 @@ import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 
 /**
  * Simple test that adds numeric terms, where each term has the 
@@ -50,7 +49,7 @@ public class TestBagOfPostings extends LuceneTestCase {
 
     boolean isSimpleText = "SimpleText".equals(TestUtil.getPostingsFormat("field"));
 
-    IndexWriterConfig iwc = newIndexWriterConfig(random(), Version.LATEST, new MockAnalyzer(random()));
+    IndexWriterConfig iwc = newIndexWriterConfig(random(), TEST_VERSION_CURRENT, new MockAnalyzer(random()));
 
     if ((isSimpleText || iwc.getMergePolicy() instanceof MockRandomMergePolicy) && (TEST_NIGHTLY || RANDOM_MULTIPLIER > 1)) {
       // Otherwise test can take way too long (> 2 hours)

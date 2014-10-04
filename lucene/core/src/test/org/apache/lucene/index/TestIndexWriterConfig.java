@@ -38,7 +38,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.InfoStream;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.SetOnce.AlreadySetException;
-import org.apache.lucene.util.Version;
 import org.junit.Test;
 
 public class TestIndexWriterConfig extends LuceneTestCase {
@@ -59,7 +58,7 @@ public class TestIndexWriterConfig extends LuceneTestCase {
 
   @Test
   public void testDefaults() throws Exception {
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     assertEquals(MockAnalyzer.class, conf.getAnalyzer().getClass());
     assertNull(conf.getIndexCommit());
     assertEquals(KeepOnlyLastCommitDeletionPolicy.class, conf.getIndexDeletionPolicy().getClass());
@@ -200,7 +199,7 @@ public class TestIndexWriterConfig extends LuceneTestCase {
 
   @Test
   public void testToString() throws Exception {
-    String str = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random())).toString();
+    String str = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).toString();
     for (Field f : IndexWriterConfig.class.getDeclaredFields()) {
       int modifiers = f.getModifiers();
       if (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers)) {
@@ -220,7 +219,7 @@ public class TestIndexWriterConfig extends LuceneTestCase {
 
   @Test
   public void testInvalidValues() throws Exception {
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
 
     // Test IndexDeletionPolicy
     assertEquals(KeepOnlyLastCommitDeletionPolicy.class, conf.getIndexDeletionPolicy().getClass());
@@ -345,7 +344,7 @@ public class TestIndexWriterConfig extends LuceneTestCase {
 
   public void testLiveChangeToCFS() throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
+    IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     iwc.setMergePolicy(newLogMergePolicy(true));
     // Start false:
     iwc.setUseCompoundFile(false); 

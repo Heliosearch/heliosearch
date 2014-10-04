@@ -149,7 +149,7 @@ public class SolrConfig extends Config {
       return new SolrConfig(loader, name, null);
     }
     catch (Exception e) {
-      String resource = loader.getInstanceDir() + name;
+      String resource = loader.getConfigDir() + name;
       throw new SolrException(ErrorCode.SERVER_ERROR, "Error loading solr config from " + resource, e);
     }
   }
@@ -173,7 +173,7 @@ public class SolrConfig extends Config {
     boolean hasDeprecatedIndexConfig = (getNode("indexDefaults", false) != null) || (getNode("mainIndex", false) != null);
     boolean hasNewIndexConfig = getNode("indexConfig", false) != null;
     if(hasDeprecatedIndexConfig){
-      if(luceneMatchVersion.onOrAfter(Version.LUCENE_4_0_0)) {
+      if(luceneMatchVersion.onOrAfter(Version.LUCENE_4_0_0_ALPHA)) {
         throw new SolrException(ErrorCode.FORBIDDEN, "<indexDefaults> and <mainIndex> configuration sections are discontinued. Use <indexConfig> instead.");
       } else {
         // Still allow the old sections for older LuceneMatchVersion's

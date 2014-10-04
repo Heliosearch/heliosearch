@@ -126,6 +126,6 @@ public class Lucene40TermVectorsFormat extends TermVectorsFormat {
 
   @Override
   public TermVectorsWriter vectorsWriter(Directory directory, SegmentInfo segmentInfo, IOContext context) throws IOException {
-    throw new UnsupportedOperationException("this codec can only be used for reading");
+    return new Lucene40TermVectorsWriter(directory, segmentInfo.name, context);
   }
 }

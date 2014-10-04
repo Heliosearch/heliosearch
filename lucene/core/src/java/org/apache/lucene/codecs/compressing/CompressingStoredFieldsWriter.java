@@ -17,6 +17,9 @@ package org.apache.lucene.codecs.compressing;
  * limitations under the License.
  */
 
+import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter.FIELDS_EXTENSION;
+import static org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter.FIELDS_INDEX_EXTENSION;
+
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -51,12 +54,6 @@ import org.apache.lucene.util.packed.PackedInts;
  */
 public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
 
-  /** Extension of stored fields file */
-  public static final String FIELDS_EXTENSION = "fdt";
-  
-  /** Extension of stored fields index file */
-  public static final String FIELDS_INDEX_EXTENSION = "fdx";
-  
   // hard limit on the maximum number of documents per chunk
   static final int MAX_DOCUMENTS_PER_CHUNK = 128;
 
@@ -334,11 +331,9 @@ public final class CompressingStoredFieldsWriter extends StoredFieldsWriter {
   public int merge(MergeState mergeState) throws IOException {
     int docCount = 0;
     int idx = 0;
-    
-    MatchingReaders matching = new MatchingReaders(mergeState);
-    
+
     for (AtomicReader reader : mergeState.readers) {
-      final SegmentReader matchingSegmentReader = matching.matchingSegmentReaders[idx++];
+      final SegmentReader matchingSegmentReader = mergeState.matchingSegmentReaders[idx++];
       CompressingStoredFieldsReader matchingFieldsReader = null;
       if (matchingSegmentReader != null) {
         final StoredFieldsReader fieldsReader = matchingSegmentReader.getFieldsReader();

@@ -49,7 +49,6 @@ import org.apache.lucene.util.IndexableBinaryStringTools;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 
 /**
  * Base test class for testing Unicode collation.
@@ -85,7 +84,7 @@ public abstract class CollationTestBase extends LuceneTestCase {
                                             BytesRef secondEnd) throws Exception {
     Directory dir = newDirectory();
     IndexWriter writer = new IndexWriter(dir, new IndexWriterConfig(
-        Version.LATEST, analyzer));
+        TEST_VERSION_CURRENT, analyzer));
     Document doc = new Document();
     doc.add(new TextField("content", "\u0633\u0627\u0628", Field.Store.YES));
     doc.add(new StringField("body", "body", Field.Store.YES));
@@ -117,7 +116,7 @@ public abstract class CollationTestBase extends LuceneTestCase {
                                             BytesRef secondEnd) throws Exception {
     Directory dir = newDirectory();
     IndexWriter writer = new IndexWriter(dir, new IndexWriterConfig(
-        Version.LATEST, analyzer));
+        TEST_VERSION_CURRENT, analyzer));
     Document doc = new Document();
 
     // Unicode order would include U+0633 in [ U+062F - U+0698 ], but Farsi
@@ -146,7 +145,7 @@ public abstract class CollationTestBase extends LuceneTestCase {
 
     Directory farsiIndex = newDirectory();
     IndexWriter writer = new IndexWriter(farsiIndex, new IndexWriterConfig(
-        Version.LATEST, analyzer));
+        TEST_VERSION_CURRENT, analyzer));
     Document doc = new Document();
     doc.add(new TextField("content", "\u0633\u0627\u0628", Field.Store.YES));
     doc.add(new StringField("body", "body", Field.Store.YES));
@@ -192,7 +191,7 @@ public abstract class CollationTestBase extends LuceneTestCase {
                                    String dkResult) throws Exception {
     Directory indexStore = newDirectory();
     IndexWriter writer = new IndexWriter(indexStore, new IndexWriterConfig(
-        Version.LATEST, new MockAnalyzer(random(), MockTokenizer.WHITESPACE, false)));
+        TEST_VERSION_CURRENT, new MockAnalyzer(random(), MockTokenizer.WHITESPACE, false)));
 
     // document data:
     // the tracer field is used to determine which document was hit

@@ -23,18 +23,20 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.FieldsConsumer;
 import org.apache.lucene.codecs.FieldsProducer;
+import org.apache.lucene.codecs.PostingsConsumer;
 import org.apache.lucene.codecs.PostingsFormat;
+import org.apache.lucene.codecs.TermStats;
+import org.apache.lucene.codecs.TermsConsumer;
 import org.apache.lucene.codecs.bloom.FuzzySet.ContainsResult;
 import org.apache.lucene.index.DocsAndPositionsEnum;
 import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.FieldInfo;
-import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.SegmentReadState;
 import org.apache.lucene.index.SegmentWriteState;
@@ -112,7 +114,7 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
     this.delegatePostingsFormat = delegatePostingsFormat;
     this.bloomFilterFactory = bloomFilterFactory;
   }
-
+  
   /**
    * Creates Bloom filters for a selection of fields created in the index. This
    * is recorded as a set of Bitsets held as a segment summary in an additional
@@ -142,8 +144,9 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
       throw new UnsupportedOperationException("Error - " + getClass().getName()
           + " has been constructed without a choice of PostingsFormat");
     }
-    FieldsConsumer fieldsConsumer = delegatePostingsFormat.fieldsConsumer(state);
-    return new BloomFilteredFieldsConsumer(fieldsConsumer, state);
+    return new BloomFilteredFieldsConsumer(
+        delegatePostingsFormat.fieldsConsumer(state), state,
+        delegatePostingsFormat);
   }
   
   @Override
@@ -333,7 +336,7 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
         this.delegateTermsEnum = null;
       }
       
-      private TermsEnum delegate() throws IOException {
+      private final TermsEnum delegate() throws IOException {
         if (delegateTermsEnum == null) {
           /* pull the iterator only if we really need it -
            * this can be a relativly heavy operation depending on the 
@@ -369,33 +372,33 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
       }
       
       @Override
-      public SeekStatus seekCeil(BytesRef text)
+      public final SeekStatus seekCeil(BytesRef text)
           throws IOException {
         return delegate().seekCeil(text);
       }
       
       @Override
-      public void seekExact(long ord) throws IOException {
+      public final void seekExact(long ord) throws IOException {
         delegate().seekExact(ord);
       }
       
       @Override
-      public BytesRef term() throws IOException {
+      public final BytesRef term() throws IOException {
         return delegate().term();
       }
       
       @Override
-      public long ord() throws IOException {
+      public final long ord() throws IOException {
         return delegate().ord();
       }
       
       @Override
-      public int docFreq() throws IOException {
+      public final int docFreq() throws IOException {
         return delegate().docFreq();
       }
       
       @Override
-      public long totalTermFreq() throws IOException {
+      public final long totalTermFreq() throws IOException {
         return delegate().totalTermFreq();
       }
       
@@ -411,6 +414,8 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
           throws IOException {
         return delegate().docs(liveDocs, reuse, flags);
       }
+      
+      
     }
 
     @Override
@@ -434,62 +439,30 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
     private Map<FieldInfo,FuzzySet> bloomFilters = new HashMap<>();
     private SegmentWriteState state;
     
+    
     public BloomFilteredFieldsConsumer(FieldsConsumer fieldsConsumer,
-        SegmentWriteState state) {
+        SegmentWriteState state, PostingsFormat delegatePostingsFormat) {
       this.delegateFieldsConsumer = fieldsConsumer;
       this.state = state;
     }
-
+    
     @Override
-    public void write(Fields fields) throws IOException {
-
-      // Delegate must write first: it may have opened files
-      // on creating the class
-      // (e.g. Lucene41PostingsConsumer), and write() will
-      // close them; alternatively, if we delayed pulling
-      // the fields consumer until here, we could do it
-      // afterwards:
-      delegateFieldsConsumer.write(fields);
-
-      for(String field : fields) {
-        Terms terms = fields.terms(field);
-        if (terms == null) {
-          continue;
-        }
-        FieldInfo fieldInfo = state.fieldInfos.fieldInfo(field);
-        TermsEnum termsEnum = terms.iterator(null);
-
-        FuzzySet bloomFilter = null;
-
-        DocsEnum docsEnum = null;
-        while (true) {
-          BytesRef term = termsEnum.next();
-          if (term == null) {
-            break;
-          }
-          if (bloomFilter == null) {
-            bloomFilter = bloomFilterFactory.getSetForField(state, fieldInfo);
-            if (bloomFilter == null) {
-              // Field not bloom'd
-              break;
-            }
-            assert bloomFilters.containsKey(field) == false;
-            bloomFilters.put(fieldInfo, bloomFilter);
-          }
-          // Make sure there's at least one doc for this term:
-          docsEnum = termsEnum.docs(null, docsEnum, 0);
-          if (docsEnum.nextDoc() != DocsEnum.NO_MORE_DOCS) {
-            bloomFilter.addValue(term);
-          }
-        }
+    public TermsConsumer addField(FieldInfo field) throws IOException {
+      FuzzySet bloomFilter = bloomFilterFactory.getSetForField(state,field);
+      if (bloomFilter != null) {
+        assert bloomFilters.containsKey(field) == false;
+        bloomFilters.put(field, bloomFilter);
+        return new WrappedTermsConsumer(delegateFieldsConsumer.addField(field),bloomFilter);
+      } else {
+        // No, use the unfiltered fieldsConsumer - we are not interested in
+        // recording any term Bitsets.
+        return delegateFieldsConsumer.addField(field);
       }
     }
-
+    
     @Override
     public void close() throws IOException {
-
       delegateFieldsConsumer.close();
-
       // Now we are done accumulating values for these fields
       List<Entry<FieldInfo,FuzzySet>> nonSaturatedBlooms = new ArrayList<>();
       
@@ -524,11 +497,6 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
       bloomFilters.clear(); 
     }
     
-    @Override
-    public Comparator<BytesRef> getComparator() {
-      return delegateFieldsConsumer.getComparator();
-    }
-    
     private void saveAppropriatelySizedBloomFilter(IndexOutput bloomOutput,
         FuzzySet bloomFilter, FieldInfo fieldInfo) throws IOException {
       
@@ -539,10 +507,44 @@ public final class BloomFilteringPostingsFormat extends PostingsFormat {
       }
       rightSizedSet.serialize(bloomOutput);
     }
+    
   }
-
-  @Override
-  public String toString() {
-    return "BloomFilteringPostingsFormat(" + delegatePostingsFormat + ")";
+  
+  class WrappedTermsConsumer extends TermsConsumer {
+    private TermsConsumer delegateTermsConsumer;
+    private FuzzySet bloomFilter;
+    
+    public WrappedTermsConsumer(TermsConsumer termsConsumer,FuzzySet bloomFilter) {
+      this.delegateTermsConsumer = termsConsumer;
+      this.bloomFilter = bloomFilter;
+    }
+    
+    @Override
+    public PostingsConsumer startTerm(BytesRef text) throws IOException {
+      return delegateTermsConsumer.startTerm(text);
+    }
+    
+    @Override
+    public void finishTerm(BytesRef text, TermStats stats) throws IOException {
+      
+      // Record this term in our BloomFilter
+      if (stats.docFreq > 0) {
+        bloomFilter.addValue(text);
+      }
+      delegateTermsConsumer.finishTerm(text, stats);
+    }
+    
+    @Override
+    public void finish(long sumTotalTermFreq, long sumDocFreq, int docCount)
+        throws IOException {
+      delegateTermsConsumer.finish(sumTotalTermFreq, sumDocFreq, docCount);
+    }
+    
+    @Override
+    public Comparator<BytesRef> getComparator() throws IOException {
+      return delegateTermsConsumer.getComparator();
+    }
+    
   }
+  
 }

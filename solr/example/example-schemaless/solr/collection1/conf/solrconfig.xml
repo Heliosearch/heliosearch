@@ -35,7 +35,7 @@
        that you fully re-index after changing this setting as it can
        affect both how text is indexed and queried.
   -->
-  <luceneMatchVersion>4.11.0</luceneMatchVersion>
+  <luceneMatchVersion>4.10.1</luceneMatchVersion>
 
   <!-- <lib/> directives can be used to instruct Solr to load any Jars
        identified and use them to resolve any "plugins" specified in
@@ -1012,29 +1012,6 @@
       -->
     <lst name="defaults">
       <str name="update.chain">add-unknown-fields-to-the-schema</str>
-    </lst>
-  </requestHandler>
-
-  <requestHandler name="/update/json" class="solr.UpdateRequestHandler">
-    <!-- See below for information on defining
-         updateRequestProcessorChains that can be used by name
-         on each Update Request
-      -->
-    <lst name="defaults">
-      <str name="update.contentType">application/json</str>
-      <str name="update.chain">add-unknown-fields-to-the-schema</str>
-    </lst>
-  </requestHandler>
-
-  <requestHandler name="/update/json/docs" class="solr.UpdateRequestHandler">
-    <!-- See below for information on defining
-         updateRequestProcessorChains that can be used by name
-         on each Update Request
-      -->
-    <lst name="defaults">
-      <str name="update.contentType">application/json</str>
-      <str name="update.chain">add-unknown-fields-to-the-schema</str>
-      <bool name="json.command">false</bool>
     </lst>
   </requestHandler>
 

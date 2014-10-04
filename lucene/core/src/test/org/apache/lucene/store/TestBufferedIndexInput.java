@@ -42,7 +42,6 @@ import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.ArrayUtil;
-import org.apache.lucene.util.Version;
 
 public class TestBufferedIndexInput extends LuceneTestCase {
   
@@ -235,7 +234,7 @@ public class TestBufferedIndexInput extends LuceneTestCase {
       try {
         IndexWriter writer = new IndexWriter(
             dir,
-            new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random())).
+            new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).
                 setOpenMode(OpenMode.CREATE).
                 setMergePolicy(newLogMergePolicy(false))
         );

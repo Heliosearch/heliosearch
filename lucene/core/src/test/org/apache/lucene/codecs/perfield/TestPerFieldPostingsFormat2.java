@@ -45,7 +45,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 import org.junit.Test;
 
 /**
@@ -244,7 +243,7 @@ public class TestPerFieldPostingsFormat2 extends LuceneTestCase {
     for (int i = 0; i < numRounds; i++) {
       int num = TestUtil.nextInt(random(), 30, 60);
       IndexWriterConfig config = newIndexWriterConfig(random(),
-          Version.LATEST, new MockAnalyzer(random()));
+          TEST_VERSION_CURRENT, new MockAnalyzer(random()));
       config.setOpenMode(OpenMode.CREATE_OR_APPEND);
       IndexWriter writer = newWriter(dir, config);
       for (int j = 0; j < docsPerRound; j++) {

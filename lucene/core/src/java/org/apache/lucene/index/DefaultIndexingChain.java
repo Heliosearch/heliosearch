@@ -26,7 +26,6 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.codecs.DocValuesConsumer;
 import org.apache.lucene.codecs.DocValuesFormat;
 import org.apache.lucene.codecs.FieldInfosWriter;
-import org.apache.lucene.codecs.NormsConsumer;
 import org.apache.lucene.codecs.NormsFormat;
 import org.apache.lucene.codecs.StoredFieldsWriter;
 import org.apache.lucene.document.FieldType;
@@ -172,7 +171,7 @@ final class DefaultIndexingChain extends DocConsumer {
 
   private void writeNorms(SegmentWriteState state) throws IOException {
     boolean success = false;
-    NormsConsumer normsConsumer = null;
+    DocValuesConsumer normsConsumer = null;
     try {
       if (state.fieldInfos.hasNorms()) {
         NormsFormat normsFormat = state.segmentInfo.getCodec().normsFormat();
@@ -417,7 +416,7 @@ final class DefaultIndexingChain extends DocConsumer {
 
       case NUMERIC:
         if (fp.docValuesWriter == null) {
-          fp.docValuesWriter = new NumericDocValuesWriter(fp.fieldInfo, bytesUsed);
+          fp.docValuesWriter = new NumericDocValuesWriter(fp.fieldInfo, bytesUsed, true);
         }
         ((NumericDocValuesWriter) fp.docValuesWriter).addValue(docID, field.numericValue().longValue());
         break;
@@ -532,7 +531,7 @@ final class DefaultIndexingChain extends DocConsumer {
     PerField next;
 
     // Lazy init'd:
-    NormValuesWriter norms;
+    NumericDocValuesWriter norms;
     
     // reused
     TokenStream tokenStream;
@@ -559,7 +558,7 @@ final class DefaultIndexingChain extends DocConsumer {
       if (fieldInfo.omitsNorms() == false) {
         if (norms == null) {
           fieldInfo.setNormValueType(FieldInfo.DocValuesType.NUMERIC);
-          norms = new NormValuesWriter(fieldInfo, docState.docWriter.bytesUsed);
+          norms = new NumericDocValuesWriter(fieldInfo, docState.docWriter.bytesUsed, false);
         }
         norms.addValue(docState.docID, similarity.computeNorm(invertState));
       }
@@ -585,9 +584,6 @@ final class DefaultIndexingChain extends DocConsumer {
       // TODO: after we fix analyzers, also check if termVectorOffsets will be indexed.
       final boolean checkOffsets = fieldType.indexOptions() == IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS;
 
-      int lastStartOffset = 0;
-      int lastPosition = 0;
-        
       /*
        * To assist people in tracking down problems in analysis components, we wish to write the field name to the infostream
        * when we fail. We expect some caller to eventually deal with the real exception, so we don't want any 'catch' clauses,
@@ -613,13 +609,13 @@ final class DefaultIndexingChain extends DocConsumer {
 
           int posIncr = invertState.posIncrAttribute.getPositionIncrement();
           invertState.position += posIncr;
-          if (invertState.position < lastPosition) {
+          if (invertState.position < invertState.lastPosition) {
             if (posIncr == 0) {
               throw new IllegalArgumentException("first position increment must be > 0 (got 0) for field '" + field.name() + "'");
             }
             throw new IllegalArgumentException("position increments (and gaps) must be >= 0 (got " + posIncr + ") for field '" + field.name() + "'");
           }
-          lastPosition = invertState.position;
+          invertState.lastPosition = invertState.position;
           if (posIncr == 0) {
             invertState.numOverlap++;
           }
@@ -627,11 +623,11 @@ final class DefaultIndexingChain extends DocConsumer {
           if (checkOffsets) {
             int startOffset = invertState.offset + invertState.offsetAttribute.startOffset();
             int endOffset = invertState.offset + invertState.offsetAttribute.endOffset();
-            if (startOffset < lastStartOffset || endOffset < startOffset) {
+            if (startOffset < invertState.lastStartOffset || endOffset < startOffset) {
               throw new IllegalArgumentException("startOffset must be non-negative, and endOffset must be >= startOffset, and offsets must not go backwards "
-                                                 + "startOffset=" + startOffset + ",endOffset=" + endOffset + ",lastStartOffset=" + lastStartOffset + " for field '" + field.name() + "'");
+                                                 + "startOffset=" + startOffset + ",endOffset=" + endOffset + ",lastStartOffset=" + invertState.lastStartOffset + " for field '" + field.name() + "'");
             }
-            lastStartOffset = startOffset;
+            invertState.lastStartOffset = startOffset;
           }
 
           //System.out.println("  term=" + invertState.termAttribute);

@@ -27,8 +27,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.lucene.codecs.Codec;
@@ -143,9 +143,6 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
   /** The file format version for the segments_N codec header, since 4.9+ */
   public static final int VERSION_49 = 3;
 
-  /** The file format version for the segments_N codec header, since 4.11+ */
-  public static final int VERSION_411 = 4;
-
   // Used for the segments.gen file only!
   // Whenever you add a new format, make it 1 smaller (negative version logic)!
   private static final int FORMAT_SEGMENTS_GEN_47 = -2;
@@ -176,9 +173,6 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
    * will be printed here.  @see #setInfoStream.
    */
   private static PrintStream infoStream = null;
-
-  /** Id for this commit; only written starting with Lucene 4.11 */
-  private String id;
 
   /** Sole constructor. Typically you call this and then
    *  use {@link #read(Directory) or
@@ -325,12 +319,6 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
                                                  nextGeneration);
   }
 
-  /** Since Lucene 4.11, every commit (segments_N) writes a unique id.  This will
-   *  return that id, or null if this commit was pre-4.11. */
-  public String getId() {
-    return id;
-  }
-
   /**
    * Read a particular segmentFileName.  Note that this may
    * throw an IOException if a commit is in process.
@@ -356,7 +344,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
       final int actualFormat;
       if (format == CodecUtil.CODEC_MAGIC) {
         // 4.0+
-        actualFormat = CodecUtil.checkHeaderNoMagic(input, "segments", VERSION_40, VERSION_411);
+        actualFormat = CodecUtil.checkHeaderNoMagic(input, "segments", VERSION_40, VERSION_49);
         version = input.readLong();
         counter = input.readInt();
         int numSegments = input.readInt();
@@ -421,9 +409,6 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
           add(siPerCommit);
         }
         userData = input.readStringStringMap();
-        if (actualFormat >= VERSION_411) {
-          id = input.readString();
-        }
       } else {
         actualFormat = -1;
         Lucene3xSegmentInfoReader.readLegacyInfos(this, directory, input, format);
@@ -497,7 +482,7 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
 
     try {
       segnOutput = directory.createOutput(segmentsFileName, IOContext.DEFAULT);
-      CodecUtil.writeHeader(segnOutput, "segments", VERSION_411);
+      CodecUtil.writeHeader(segnOutput, "segments", VERSION_49);
       segnOutput.writeLong(version); 
       segnOutput.writeInt(counter); // write counter
       segnOutput.writeInt(size()); // write infos
@@ -523,9 +508,15 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
         assert si.dir == directory;
 
         // If this segment is pre-4.x, perform a one-time
-        // "upgrade" to write the .si file for it:
+        // "ugprade" to write the .si file for it:
         Version version = si.getVersion();
-        if (version == null || version.onOrAfter(Version.LUCENE_4_0_0) == false) {
+        if (version == null || version.onOrAfter(Version.LUCENE_4_0_0_ALPHA) == false) {
+
+          // Defensive check: we are about to write this SI in 3.x format, dropping all codec information, etc.
+          // so it had better be a 3.x segment or you will get very confusing errors later.
+          if ((si.getCodec() instanceof Lucene3xCodec) == false) {
+            throw new IllegalStateException("cannot write 3x SegmentInfo unless codec is Lucene3x (got: " + si.getCodec() + ")");
+          }
 
           if (!segmentWasUpgraded(directory, si)) {
 
@@ -553,7 +544,6 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
         }
       }
       segnOutput.writeStringStringMap(userData);
-      segnOutput.writeString(StringHelper.randomId());
       pendingSegnOutput = segnOutput;
       success = true;
     } finally {
@@ -562,12 +552,8 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
         // but suppress any exception:
         IOUtils.closeWhileHandlingException(segnOutput);
 
-        for(String fileName : upgradedSIFiles) {
-          try {
-            directory.deleteFile(fileName);
-          } catch (Throwable t) {
-            // Suppress so we keep throwing the original exception
-          }
+        for (String fileName : upgradedSIFiles) {
+          IOUtils.deleteFilesIgnoringExceptions(directory, fileName);
         }
 
         // Try not to leave a truncated segments_N file in
@@ -597,9 +583,14 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
     return false;
   }
 
-
   @Deprecated
   public static String write3xInfo(Directory dir, SegmentInfo si, IOContext context) throws IOException {
+
+    // Defensive check: we are about to write this SI in 3.x format, dropping all codec information, etc.
+    // so it had better be a 3.x segment or you will get very confusing errors later.
+    if ((si.getCodec() instanceof Lucene3xCodec) == false) {
+      throw new IllegalStateException("cannot write 3x SegmentInfo unless codec is Lucene3x (got: " + si.getCodec() + ")");
+    }
 
     // NOTE: this is NOT how 3.x is really written...
     String fileName = IndexFileNames.segmentFileName(si.name, "", Lucene3xSegmentInfoFormat.UPGRADED_SI_EXTENSION);
@@ -609,12 +600,6 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
     boolean success = false;
     IndexOutput output = dir.createOutput(fileName, context);
     try {
-      // we are about to write this SI in 3.x format, dropping all codec information, etc.
-      // so it had better be a 3.x segment or you will get very confusing errors later.
-      if ((si.getCodec() instanceof Lucene3xCodec) == false) {
-        throw new IllegalStateException("cannot write 3x SegmentInfo unless codec is Lucene3x (got: " + si.getCodec() + ")");
-      }
-
       CodecUtil.writeHeader(output, Lucene3xSegmentInfoFormat.UPGRADED_SI_CODEC_NAME, 
                                     Lucene3xSegmentInfoFormat.UPGRADED_SI_VERSION_CURRENT);
       // Write the Lucene version that created this segment, since 3.1
@@ -1058,11 +1043,13 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
     return files;
   }
 
-  final void finishCommit(Directory dir) throws IOException {
+  /** Returns the committed segments_N filename. */
+  final String finishCommit(Directory dir) throws IOException {
     if (pendingSegnOutput == null) {
       throw new IllegalStateException("prepareCommit was not called");
     }
     boolean success = false;
+    final String dest;
     try {
       CodecUtil.writeFooter(pendingSegnOutput);
       success = true;
@@ -1109,6 +1096,8 @@ public final class SegmentInfos implements Cloneable, Iterable<SegmentCommitInfo
 
     lastGeneration = generation;
     writeSegmentsGen(dir, generation);
+
+    return fileName;
   }
 
   /** Writes & syncs to the Directory dir, taking care to

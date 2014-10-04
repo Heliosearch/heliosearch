@@ -26,19 +26,25 @@
     for standalone use.
   </description>
 
-  <dirname file="${ant.file.common}" property="common.dir"/>
+  <!-- !!! RELEASE MANAGER: Change version numbers only here: !!! -->
   
+  <!-- The base version of the next release (including bugfix number, e.g., x.y.z+): -->
+  <property name="version.base" value="4.10.1"/>
+  
+  <!-- !!! RELEASE MANAGER: Don't change anything after this line! !!! -->
+
+  <dirname file="${ant.file.common}" property="common.dir"/>
+  <property name="dev-tools.dir" location="${common.dir}/../dev-tools"/>
+  <property name="prettify.dir" location="${common.dir}/tools/prettify"/>
+  <property name="maven.build.dir" location="${build.dir}/maven"/>
+  <property name="license.dir" location="${common.dir}/licenses"/>
+
   <!-- Give user a chance to override without editing this file
       (and without typing -D each time it compiles it -->
   <property file="${user.home}/lucene.build.properties"/>
   <property file="${user.home}/build.properties"/>
   <property file="${basedir}/build.properties"/>
   <property file="${common.dir}/build.properties"/>
-
-  <property name="dev-tools.dir" location="${common.dir}/../dev-tools"/>
-  <property name="prettify.dir" location="${common.dir}/tools/prettify"/>
-  <property name="maven.build.dir" location="${build.dir}/maven"/>
-  <property name="license.dir" location="${common.dir}/licenses"/>
 
   <tstamp>
     <format property="current.year" pattern="yyyy"/>
@@ -51,20 +57,23 @@
   <property name="Name" value="Lucene"/>
   <property name="name" value="${ant.project.name}"/>
 
-  <!-- include version number from property file (includes "version.*" properties) -->
-  <loadproperties srcFile="${common.dir}/version.properties"/>
-  
-  <fail message="'version.base' property must be 'x.y.z' (major, minor, bugfix) or 'x.y.z.1/2' (+ prerelease) and numeric only: ${version.base}">
-    <condition>
-      <not><matches pattern="^\d+\.\d+\.\d+(|\.1|\.2)$" casesensitive="true" string="${version.base}"/></not>
-    </condition>
-  </fail>
+  <!--TODO: remove once Jenkins jobs are updated:--><property name="dev.version.suffix" value="SNAPSHOT"/>
 
+  <!-- Suffix of the version, by default SNAPSHOT: -->
+  <property name="version.suffix" value="${dev.version.suffix}"/>
+  <property name="version" value="${version.base}-${version.suffix}"/>
+  
+  <!-- must be in format x.y with only digits, so we use version.base: -->
+  <property name="spec.version" value="${version.base}"/>
+
+  
+  <!-- HS: remove version check
   <fail message="If you pass -Dversion=... to set a release version, it must match &quot;${version.base}&quot;, optionally followed by a suffix (e.g., &quot;-SNAPSHOT&quot;).">
     <condition>
       <not><matches pattern="^\Q${version.base}\E(|\-.*)$" casesensitive="true" string="${version}"/></not>
     </condition>
   </fail>
+  -->
 
   <property name="year" value="2000-${current.year}"/>
   
@@ -972,7 +981,7 @@
             <jvmarg line="${tests.heapdump.args}"/>
             <jvmarg line="${tests.clover.args}"/>
 
-            <!-- for heliosearch tests -->
+            <!-- HS: for heliosearch tests -->
             <sysproperty key="solr.dir" value="${common-solr.dir}/example"/>
 
             <!-- set the number of times tests should run -->
@@ -1016,9 +1025,9 @@
             <!-- TODO: create propertyset for test properties, so each project can have its own set -->
             <sysproperty key="tests.multiplier" value="@{tests.multiplier}"/>
             
-            <!-- Temporary directory a subdir of the cwd. -->
-            <sysproperty key="tempDir" value="./temp" />
-            <sysproperty key="java.io.tmpdir" value="./temp" />
+            <!-- Temporary directory in the cwd. -->
+            <sysproperty key="tempDir" value="." />
+            <sysproperty key="java.io.tmpdir" value="." />
 
             <!-- Restrict access to certain Java features and install security manager: -->
             <sysproperty key="junit4.tempDir" file="@{workDir}/temp" />
@@ -1248,8 +1257,8 @@ ant test -Dtests.dups=N ...
 # master seed. You can combine beasting with any other parameter,
 # just replace "test" with "beast" and give -Dbeast.iters=P
 # (P >> 1).
-ant test -Dtests.dups=N -Dtests.iters=M -Dbeast.iters=P \
-  -Dtestcase=ClassName beast
+ant beast -Dtests.dups=N -Dtests.iters=M -Dbeast.iters=P \
+  -Dtestcase=ClassName
 
 #
 # Test groups. ----------------------------------------------------
@@ -1429,7 +1438,7 @@ ${tests-output}/junit4-*.suites     - per-JVM executed suites
   
 ]]></fail>
     <echo>Code coverage with Atlassian Clover enabled.</echo>
-    <ivy:cachepath organisation="com.atlassian.clover" module="clover" revision="4.0.0"
+    <ivy:cachepath organisation="com.cenqua.clover" module="clover" revision="3.3.0"
       inline="true" conf="master" pathid="clover.classpath"/>
     <taskdef resource="cloverlib.xml" classpathref="clover.classpath" />
     <mkdir dir="${clover.db.dir}"/>
@@ -1704,7 +1713,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
   </target>
 
   <target name="rat-sources-typedef" unless="rat.loaded">
-    <ivy:cachepath organisation="org.apache.rat" module="apache-rat" revision="0.11" transitive="false" inline="true" conf="master" type="jar" pathid="rat.classpath"/>
+    <ivy:cachepath organisation="org.apache.rat" module="apache-rat" revision="0.10" transitive="false" inline="true" conf="master" type="jar" pathid="rat.classpath"/>
     <typedef resource="org/apache/rat/anttasks/antlib.xml" uri="antlib:org.apache.rat.anttasks" classpathref="rat.classpath"/>
     <property name="rat.loaded" value="true"/>
   </target>
@@ -2289,7 +2298,7 @@ ${ant.project.name}.test.dependencies=${test.classpath.list}
 
   <!-- GROOVY scripting engine for ANT tasks -->
   <target name="resolve-groovy" unless="groovy.loaded" depends="ivy-availability-check,ivy-configure">
-    <ivy:cachepath organisation="org.codehaus.groovy" module="groovy-all" revision="2.3.6"
+    <ivy:cachepath organisation="org.codehaus.groovy" module="groovy-all" revision="2.3.1"
       inline="true" conf="default" type="jar" transitive="true" pathid="groovy.classpath"/>
     <taskdef name="groovy"
       classname="org.codehaus.groovy.ant.Groovy"

@@ -23,15 +23,20 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.lucene.codecs.CodecUtil;
-import org.apache.lucene.codecs.NormsProducer;
+import org.apache.lucene.codecs.DocValuesProducer;
+import org.apache.lucene.index.BinaryDocValues;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfos;
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.SegmentReadState;
+import org.apache.lucene.index.SortedDocValues;
+import org.apache.lucene.index.SortedNumericDocValues;
+import org.apache.lucene.index.SortedSetDocValues;
 import org.apache.lucene.store.ChecksumIndexInput;
 import org.apache.lucene.store.IndexInput;
+import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.RamUsageEstimator;
 import org.apache.lucene.util.packed.BlockPackedReader;
@@ -47,7 +52,7 @@ import static org.apache.lucene.codecs.lucene49.Lucene49NormsConsumer.UNCOMPRESS
 /**
  * Reader for {@link Lucene49NormsFormat}
  */
-class Lucene49NormsProducer extends NormsProducer {
+class Lucene49NormsProducer extends DocValuesProducer {
   // metadata maps (just file pointers and minimal stuff)
   private final Map<Integer,NormsEntry> norms = new HashMap<>();
   private final IndexInput data;
@@ -129,7 +134,7 @@ class Lucene49NormsProducer extends NormsProducer {
   }
 
   @Override
-  public synchronized NumericDocValues getNorms(FieldInfo field) throws IOException {
+  public synchronized NumericDocValues getNumeric(FieldInfo field) throws IOException {
     NumericDocValues instance = instances.get(field.number);
     if (instance == null) {
       instance = loadNorms(field);
@@ -201,6 +206,31 @@ class Lucene49NormsProducer extends NormsProducer {
       default:
         throw new AssertionError();
     }
+  }
+
+  @Override
+  public BinaryDocValues getBinary(FieldInfo field) throws IOException {
+    throw new IllegalStateException();
+  }
+  
+  @Override
+  public SortedDocValues getSorted(FieldInfo field) throws IOException {
+    throw new IllegalStateException();
+  }
+  
+  @Override
+  public SortedSetDocValues getSortedSet(FieldInfo field) throws IOException {
+    throw new IllegalStateException();
+  }
+  
+  @Override
+  public SortedNumericDocValues getSortedNumeric(FieldInfo field) throws IOException {
+    throw new IllegalStateException();
+  }
+
+  @Override
+  public Bits getDocsWithField(FieldInfo field) throws IOException {
+    throw new IllegalStateException();
   }
 
   @Override

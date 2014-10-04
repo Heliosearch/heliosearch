@@ -127,7 +127,6 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
   final Version matchVersion;
   private final Directory dir;
   final int minPrefixChars;
-  private final boolean commitOnBuild;
 
   /** Used for ongoing NRT additions/updates. */
   private IndexWriter writer;
@@ -147,18 +146,9 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
    *  private to the infix suggester (i.e., not an external
    *  Lucene index).  Note that {@link #close}
    *  will also close the provided directory. */
-  public AnalyzingInfixSuggester(Directory dir, Analyzer analyzer) throws IOException {
-    this(dir, analyzer, analyzer, DEFAULT_MIN_PREFIX_CHARS, false);
-  }
-
-  /**
-   * @deprecated Use {@link #AnalyzingInfixSuggester(Directory, Analyzer)}
-   */
-  @Deprecated
   public AnalyzingInfixSuggester(Version matchVersion, Directory dir, Analyzer analyzer) throws IOException {
-    this(matchVersion, dir, analyzer, analyzer, DEFAULT_MIN_PREFIX_CHARS, false);
+    this(matchVersion, dir, analyzer, analyzer, DEFAULT_MIN_PREFIX_CHARS);
   }
-
 
   /** Create a new instance, loading from a previously built
    *  AnalyzingInfixSuggester directory, if it exists.  This directory must be
@@ -171,21 +161,8 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
    *     Prefixes shorter than this are indexed as character
    *     ngrams (increasing index size but making lookups
    *     faster).
-   *
-   *  @param commitOnBuild Call commit after the index has finished building. This would persist the
-   *                       suggester index to disk and future instances of this suggester can use this pre-built dictionary.
    */
-  public AnalyzingInfixSuggester(Directory dir, Analyzer indexAnalyzer, Analyzer queryAnalyzer, int minPrefixChars,
-                                 boolean commitOnBuild) throws IOException {
-     this(indexAnalyzer.getVersion(), dir, indexAnalyzer, queryAnalyzer, minPrefixChars, commitOnBuild);
-  }
-
-  /**
-   * @deprecated Use {@link #AnalyzingInfixSuggester(Directory, Analyzer, Analyzer, int, boolean)}
-   */
-  @Deprecated
-  public AnalyzingInfixSuggester(Version matchVersion, Directory dir, Analyzer indexAnalyzer, Analyzer queryAnalyzer, int minPrefixChars,
-                                 boolean commitOnBuild) throws IOException {
+  public AnalyzingInfixSuggester(Version matchVersion, Directory dir, Analyzer indexAnalyzer, Analyzer queryAnalyzer, int minPrefixChars) throws IOException {
 
     if (minPrefixChars < 0) {
       throw new IllegalArgumentException("minPrefixChars must be >= 0; got: " + minPrefixChars);
@@ -196,7 +173,6 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
     this.matchVersion = matchVersion;
     this.dir = dir;
     this.minPrefixChars = minPrefixChars;
-    this.commitOnBuild = commitOnBuild;
 
     if (DirectoryReader.indexExists(dir)) {
       // Already built; open it:
@@ -263,9 +239,7 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
       }
 
       //System.out.println("initial indexing time: " + ((System.nanoTime()-t0)/1000000) + " msec");
-      if (commitOnBuild) {
-        commit();
-      }
+
       searcherMgr = new SearcherManager(writer, true, null);
       success = true;
     } finally {
@@ -276,16 +250,6 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
         writer = null;
       }
     }
-  }
-
-  /** Commits all pending changes made to this suggester to disk.
-   *
-   *  @see IndexWriter#commit */
-  public void commit() throws IOException {
-    if (writer == null) {
-      throw new IllegalStateException("Cannot commit on an closed writer. Add documents first");
-    }
-    writer.commit();
   }
 
   private Analyzer getGramAnalyzer() {
@@ -310,25 +274,12 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
     };
   }
 
-  private synchronized void ensureOpen() throws IOException {
-    if (writer == null) {
-      if (searcherMgr != null) {
-        searcherMgr.close();
-        searcherMgr = null;
-      }
-      writer = new IndexWriter(dir,
-                               getIndexWriterConfig(matchVersion, getGramAnalyzer(), IndexWriterConfig.OpenMode.CREATE));
-      searcherMgr = new SearcherManager(writer, true, null);
-    }
-  }
-
   /** Adds a new suggestion.  Be sure to use {@link #update}
    *  instead if you want to replace a previous suggestion.
    *  After adding or updating a batch of new suggestions,
    *  you must call {@link #refresh} in the end in order to
    *  see the suggestions in {@link #lookup} */
   public void add(BytesRef text, Set<BytesRef> contexts, long weight, BytesRef payload) throws IOException {
-    ensureOpen();
     writer.addDocument(buildDocument(text, contexts, weight, payload));
   }
 
@@ -340,7 +291,6 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
    *  new suggestions, you must call {@link #refresh} in the
    *  end in order to see the suggestions in {@link #lookup} */
   public void update(BytesRef text, Set<BytesRef> contexts, long weight, BytesRef payload) throws IOException {
-    ensureOpen();
     writer.updateDocument(new Term(EXACT_TEXT_FIELD_NAME, text.utf8ToString()),
                           buildDocument(text, contexts, weight, payload));
   }
@@ -372,9 +322,6 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
    *  up" many additions/updates, and then call refresh
    *  once in the end. */
   public void refresh() throws IOException {
-    if (searcherMgr == null) {
-      throw new IllegalStateException("suggester was not built");
-    }
     searcherMgr.maybeRefreshBlocking();
   }
 
@@ -735,9 +682,6 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
 
   @Override
   public long getCount() throws IOException {
-    if (searcherMgr == null) {
-      return 0;
-    }
     IndexSearcher searcher = searcherMgr.acquire();
     try {
       return searcher.getIndexReader().numDocs();

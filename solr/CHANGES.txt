@@ -17,65 +17,38 @@ In this release, there is an example Solr server including a bundled
 servlet container in the directory named "example".
 See the tutorial at http://lucene.apache.org/solr/tutorial.html
 
-==================  4.11.0 =================
+==================  4.10.2 ==================
 
-Consult the LUCENE_CHANGES.txt file for additional, low level, changes in this release
-
-Versions of Major Components
----------------------
-Apache Tika 1.5 (with upgraded Apache POI 3.10.1)
-Carrot2 3.9.0
-Velocity 1.7 and Velocity Tools 2.0
-Apache UIMA 2.3.1
-Apache ZooKeeper 3.4.6
-
-Detailed Change List
-----------------------
-
-New Features
-----------------------
-
-* SOLR-6403: TransactionLog replay status logging. (Mark Miller)
-
-* SOLR-4580: Support for protecting content in ZooKeeper. (Per Steffensen, Mark Miller)
-
-* SOLR-6365: specify appends, defaults, invariants outside of the request handler.
-  (Noble Paul, Erik Hatcher, shalin)
+==================  4.10.1 ==================
 
 Bug Fixes
 ----------------------
 
-* SOLR-4895: An error should be returned when a rollback is attempted in SolrCloud mode.
-  (Vamsee Yarlagadda via Mark Miller)
+* SOLR-6425: If using the new global hdfs block cache option, you can end up
+  reading corrupt files on file name reuse. (Mark Miller, Gregory Chanan)
 
-* LUCENE-5650: Tests can no longer write to CWD. Update log dir is now made relative
-  to the instance dir if it is not an absolute path. (Ryan Ernst, Dawid Weiss)
+* SOLR-5814: CoreContainer reports incorrect & missleading path for solrconfig.xml 
+  when there are loading problems (Pradeep via hossman)
 
-* SOLR-6424: The hdfs block cache BLOCKCACHE_WRITE_ENABLED is not defaulting to false like it 
-  should. (Mark Miller)
+* SOLR-6024: Fix StatsComponent when using docValues="true" multiValued="true"
+  (Vitaliy Zhovtyuk & Tomas Fernandez-Lobbe via hossman)
 
-* SOLR-6425: If you using the new global hdfs block cache option, you can end up reading corrupt 
-  files on file name reuse. (Mark Miller, Gregory Chanan)
+* SOLR-6493: Fix fq exclusion via "ex" local param in multivalued stats.field (hossman)
 
-* SOLR-6426: SolrZkClient clean can fail due to a race with children nodes. (Mark Miller)
+* SOLR-6447: bin/solr script needs to pass -DnumShards=1 for boostrapping collection1
+  when starting Solr in cloud mode. (Timothy Potter)
 
-* SOLR-5966: Admin UI Menu is fixed and doesn't respect smaller viewports.
-  (Aman Tandon, steffkes via shalin)
+* SOLR-6501: Binary Response Writer does not return wildcard fields.
+  (Mike Hugo, Constantin Mitocaru, sarowe, shalin)
 
 Other Changes
 ---------------------
 
-* SOLR-6400: SolrCloud tests are not properly testing session expiration. (Mark Miller)
-
-* LUCENE-5650: Tests can no longer write to CWD. Update log dir is now made relative
-  to the instance dir if it is not an absolute path. (Ryan Ernst, Dawid Weiss)
-
-* SOLR-6390: Remove unnecessary checked exception for CloudSolrServer
-  constructors, improve javadocs for CloudSolrServer constructors.
-  (Steve Davids via Shawn Heisey)
-
-* LUCENE-5901: Replaced all occurences of LUCENE_CURRENT with LATEST for luceneMatchVersion.
-  (Ryan Ernst)
+* SOLR-6503: Removed support for parsing netcdf files in Solr Cell because
+  of license issues. If you need support for this format, download the parser
+  JAR yourself (version 4.2) and add it to contrib/extraction/lib folder:
+  http://www.unidata.ucar.edu/software/thredds/current/netcdf-java/
+  (Uwe Schindler)
 
 ==================  4.10.0 =================
 

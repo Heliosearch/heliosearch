@@ -28,14 +28,15 @@ import java.util.TreeMap;
 import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.codecs.FieldsConsumer;
 import org.apache.lucene.codecs.FieldsProducer;
+import org.apache.lucene.codecs.PostingsConsumer;
 import org.apache.lucene.codecs.PostingsFormat;
 import org.apache.lucene.codecs.TermStats;
+import org.apache.lucene.codecs.TermsConsumer;
 import org.apache.lucene.index.DocsAndPositionsEnum;
 import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.FieldInfo;
 import org.apache.lucene.index.FieldInfo.IndexOptions;
 import org.apache.lucene.index.FieldInfos;
-import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.SegmentReadState;
 import org.apache.lucene.index.SegmentWriteState;
@@ -51,7 +52,6 @@ import org.apache.lucene.util.Accountable;
 import org.apache.lucene.util.ArrayUtil;
 import org.apache.lucene.util.Bits;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.IntsRef;
 import org.apache.lucene.util.IntsRefBuilder;
@@ -109,7 +109,7 @@ public final class MemoryPostingsFormat extends PostingsFormat {
     return "PostingsFormat(name=" + getName() + " doPackFST= " + doPackFST + ")";
   }
 
-  private final static class TermsWriter {
+  private final static class TermsWriter extends TermsConsumer {
     private final IndexOutput out;
     private final FieldInfo field;
     private final Builder<BytesRef> builder;
@@ -126,7 +126,7 @@ public final class MemoryPostingsFormat extends PostingsFormat {
       builder = new Builder<>(FST.INPUT_TYPE.BYTE1, 0, 0, true, true, Integer.MAX_VALUE, outputs, doPackFST, acceptableOverheadRatio, true, 15);
     }
 
-    private class PostingsWriter {
+    private class PostingsWriter extends PostingsConsumer {
       private int lastDocID;
       private int lastPos;
       private int lastPayloadLen;
@@ -138,6 +138,7 @@ public final class MemoryPostingsFormat extends PostingsFormat {
       int lastOffsetLength;
       int lastOffset;
 
+      @Override
       public void startDoc(int docID, int termDocFreq) throws IOException {
         //System.out.println("    startDoc docID=" + docID + " freq=" + termDocFreq);
         final int delta = docID - lastDocID;
@@ -159,6 +160,7 @@ public final class MemoryPostingsFormat extends PostingsFormat {
         lastOffset = 0;
       }
 
+      @Override
       public void addPosition(int pos, BytesRef payload, int startOffset, int endOffset) throws IOException {
         assert payload == null || field.hasPayloads();
 
@@ -203,6 +205,10 @@ public final class MemoryPostingsFormat extends PostingsFormat {
         }
       }
 
+      @Override
+      public void finishDoc() {
+      }
+
       public PostingsWriter reset() {
         assert buffer.getFilePointer() == 0;
         lastDocID = 0;
@@ -214,7 +220,13 @@ public final class MemoryPostingsFormat extends PostingsFormat {
       }
     }
 
-    final PostingsWriter postingsWriter = new PostingsWriter();
+    private final PostingsWriter postingsWriter = new PostingsWriter();
+
+    @Override
+    public PostingsConsumer startTerm(BytesRef text) {
+      //System.out.println("  startTerm term=" + text.utf8ToString());
+      return postingsWriter.reset();
+    }
 
     private final RAMOutputStream buffer2 = new RAMOutputStream();
     private final BytesRef spare = new BytesRef();
@@ -222,11 +234,9 @@ public final class MemoryPostingsFormat extends PostingsFormat {
 
     private final IntsRefBuilder scratchIntsRef = new IntsRefBuilder();
 
-    private void finishTerm(BytesRef text, TermStats stats) throws IOException {
+    @Override
+    public void finishTerm(BytesRef text, TermStats stats) throws IOException {
 
-      if (stats.docFreq == 0) {
-        return;
-      }
       assert postingsWriter.docCount == stats.docFreq;
 
       assert buffer2.getFilePointer() == 0;
@@ -258,6 +268,7 @@ public final class MemoryPostingsFormat extends PostingsFormat {
       termCount++;
     }
 
+    @Override
     public void finish(long sumTotalTermFreq, long sumDocFreq, int docCount) throws IOException {
       if (termCount > 0) {
         out.writeVInt(termCount);
@@ -272,148 +283,6 @@ public final class MemoryPostingsFormat extends PostingsFormat {
         //System.out.println("finish field=" + field.name + " fp=" + out.getFilePointer());
       }
     }
-  }
-
-  private static String EXTENSION = "ram";
-  private static final String CODEC_NAME = "MemoryPostings";
-  private static final int VERSION_START = 0;
-  private static final int VERSION_CURRENT = VERSION_START;
-
-  private class MemoryFieldsConsumer extends FieldsConsumer {
-    private final SegmentWriteState state;
-    private final IndexOutput out;
-
-    private MemoryFieldsConsumer(SegmentWriteState state) throws IOException {
-      final String fileName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, EXTENSION);
-      out = state.directory.createOutput(fileName, state.context);
-      boolean success = false;
-      try {
-        CodecUtil.writeHeader(out, CODEC_NAME, VERSION_CURRENT);
-        success = true;
-      } finally {
-        if (!success) {
-          IOUtils.closeWhileHandlingException(out);
-        }
-      }
-      this.state = state;
-    }
-
-    @Override
-    public void write(Fields fields) throws IOException {
-      for(String field : fields) {
-
-        Terms terms = fields.terms(field);
-        if (terms == null) {
-          continue;
-        }
-
-        TermsEnum termsEnum = terms.iterator(null);
-
-        FieldInfo fieldInfo = state.fieldInfos.fieldInfo(field);
-        TermsWriter termsWriter = new TermsWriter(out, fieldInfo,
-                                                  doPackFST, acceptableOverheadRatio);
-
-        FixedBitSet docsSeen = new FixedBitSet(state.segmentInfo.getDocCount());
-        long sumTotalTermFreq = 0;
-        long sumDocFreq = 0;
-        DocsEnum docsEnum = null;
-        DocsAndPositionsEnum posEnum = null;
-        int enumFlags;
-
-        IndexOptions indexOptions = fieldInfo.getIndexOptions();
-        boolean writeFreqs = indexOptions.compareTo(IndexOptions.DOCS_AND_FREQS) >= 0;
-        boolean writePositions = indexOptions.compareTo(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS) >= 0;
-        boolean writeOffsets = indexOptions.compareTo(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS) >= 0;        
-        boolean writePayloads = fieldInfo.hasPayloads();
-
-        if (writeFreqs == false) {
-          enumFlags = 0;
-        } else if (writePositions == false) {
-          enumFlags = DocsEnum.FLAG_FREQS;
-        } else if (writeOffsets == false) {
-          if (writePayloads) {
-            enumFlags = DocsAndPositionsEnum.FLAG_PAYLOADS;
-          } else {
-            enumFlags = 0;
-          }
-        } else {
-          if (writePayloads) {
-            enumFlags = DocsAndPositionsEnum.FLAG_PAYLOADS | DocsAndPositionsEnum.FLAG_OFFSETS;
-          } else {
-            enumFlags = DocsAndPositionsEnum.FLAG_OFFSETS;
-          }
-        }
-
-        while (true) {
-          BytesRef term = termsEnum.next();
-          if (term == null) {
-            break;
-          }
-          termsWriter.postingsWriter.reset();
-
-          if (writePositions) {
-            posEnum = termsEnum.docsAndPositions(null, posEnum, enumFlags);
-            docsEnum = posEnum;
-          } else {
-            docsEnum = termsEnum.docs(null, docsEnum, enumFlags);
-            posEnum = null;
-          }
-
-          int docFreq = 0;
-          long totalTermFreq = 0;
-          while (true) {
-            int docID = docsEnum.nextDoc();
-            if (docID == DocsEnum.NO_MORE_DOCS) {
-              break;
-            }
-            docsSeen.set(docID);
-            docFreq++;
-
-            int freq;
-            if (writeFreqs) {
-              freq = docsEnum.freq();
-              totalTermFreq += freq;
-            } else {
-              freq = -1;
-            }
-
-            termsWriter.postingsWriter.startDoc(docID, freq);
-            if (writePositions) {
-              for (int i=0;i<freq;i++) {
-                int pos = posEnum.nextPosition();
-                BytesRef payload = writePayloads ? posEnum.getPayload() : null;
-                int startOffset;
-                int endOffset;
-                if (writeOffsets) {
-                  startOffset = posEnum.startOffset();
-                  endOffset = posEnum.endOffset();
-                } else {
-                  startOffset = -1;
-                  endOffset = -1;
-                }
-                termsWriter.postingsWriter.addPosition(pos, payload, startOffset, endOffset);
-              }
-            }
-          }
-          termsWriter.finishTerm(term, new TermStats(docFreq, totalTermFreq));
-          sumDocFreq += docFreq;
-          sumTotalTermFreq += totalTermFreq;
-        }
-
-        termsWriter.finish(sumTotalTermFreq, sumDocFreq, docsSeen.cardinality());
-      }
-    }
-
-    @Override
-    public void close() throws IOException {
-      // EOF marker:
-      try {
-        out.writeVInt(0);
-        CodecUtil.writeFooter(out);
-      } finally {
-        out.close();
-      }
-    }
 
     @Override
     public Comparator<BytesRef> getComparator() {
@@ -421,9 +290,44 @@ public final class MemoryPostingsFormat extends PostingsFormat {
     }
   }
 
+  private static String EXTENSION = "ram";
+  private static final String CODEC_NAME = "MemoryPostings";
+  private static final int VERSION_START = 0;
+  private static final int VERSION_CURRENT = VERSION_START;
+
   @Override
   public FieldsConsumer fieldsConsumer(SegmentWriteState state) throws IOException {
-    return new MemoryFieldsConsumer(state);
+
+    final String fileName = IndexFileNames.segmentFileName(state.segmentInfo.name, state.segmentSuffix, EXTENSION);
+    final IndexOutput out = state.directory.createOutput(fileName, state.context);
+    boolean success = false;
+    try {
+      CodecUtil.writeHeader(out, CODEC_NAME, VERSION_CURRENT);
+      success = true;
+    } finally {
+      if (!success) {
+        IOUtils.closeWhileHandlingException(out);
+      }
+    }
+    
+    return new FieldsConsumer() {
+      @Override
+      public TermsConsumer addField(FieldInfo field) {
+        //System.out.println("\naddField field=" + field.name);
+        return new TermsWriter(out, field, doPackFST, acceptableOverheadRatio);
+      }
+
+      @Override
+      public void close() throws IOException {
+        // EOF marker:
+        try {
+          out.writeVInt(0);
+          CodecUtil.writeFooter(out);
+        } finally {
+          out.close();
+        }
+      }
+    };
   }
 
   private final static class FSTDocsEnum extends DocsEnum {
@@ -1027,7 +931,7 @@ public final class MemoryPostingsFormat extends PostingsFormat {
         }
         return sizeInBytes;
       }
-
+      
       @Override
       public void checkIntegrity() throws IOException {}
     };

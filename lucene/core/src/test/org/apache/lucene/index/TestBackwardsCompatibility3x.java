@@ -109,12 +109,28 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
 */  
   final static String[] oldNames = {"30.cfs",
                              "30.nocfs",
+                             "301.cfs",
+                             "301.nocfs",
+                             "302.cfs",
+                             "302.nocfs",
+                             "303.cfs",
+                             "303.nocfs",
                              "31.cfs",
                              "31.nocfs",
                              "32.cfs",
                              "32.nocfs",
+                             "33.cfs",
+                             "33.nocfs",
                              "34.cfs",
                              "34.nocfs",
+                             "35.cfs",
+                             "35.nocfs",
+                             "36.cfs",
+                             "36.nocfs",
+                             "361.cfs",
+                             "361.nocfs",
+                             "362.cfs",
+                             "362.nocfs"
   };
   
   final String[] unsupportedNames = {"19.cfs",
@@ -129,8 +145,18 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
                                      "23.nocfs",
                                      "24.cfs",
                                      "24.nocfs",
+                                     "241.cfs",
+                                     "241.nocfs",
                                      "29.cfs",
                                      "29.nocfs",
+                                     "291.cfs",
+                                     "291.nocfs",
+                                     "292.cfs",
+                                     "292.nocfs",
+                                     "293.cfs",
+                                     "293.nocfs",
+                                     "294.cfs",
+                                     "294.nocfs"
   };
   
   final static String[] oldSingleSegmentNames = {"31.optimized.cfs",
@@ -226,7 +252,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       }
       Directory dir = newDirectory(oldIndexDirs.get(name));
       IndexWriter w = new IndexWriter(dir, new IndexWriterConfig(
-          Version.LATEST, new MockAnalyzer(random())));
+          TEST_VERSION_CURRENT, new MockAnalyzer(random())));
       w.forceMerge(1);
       w.close();
       
@@ -305,7 +331,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       assertEquals(35, ir.numDocs());
       ir.close();
 
-      IndexWriter iw = new IndexWriter(dir, new IndexWriterConfig(Version.LATEST, null));
+      IndexWriter iw = new IndexWriter(dir, new IndexWriterConfig(TEST_VERSION_CURRENT, null));
       iw.deleteDocuments(new Term("id", "3"));
       iw.close();
 
@@ -314,7 +340,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       ir.close();
 
       // Delete all but 1 document:
-      iw = new IndexWriter(dir, new IndexWriterConfig(Version.LATEST, null));
+      iw = new IndexWriter(dir, new IndexWriterConfig(TEST_VERSION_CURRENT, null));
       for(int i=0;i<35;i++) {
         iw.deleteDocuments(new Term("id", ""+i));
       }
@@ -551,7 +577,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
     mp.setNoCFSRatio(doCFS ? 1.0 : 0.0);
     mp.setMaxCFSSegmentSizeMB(Double.POSITIVE_INFINITY);
     // TODO: remove randomness
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
       .setMaxBufferedDocs(10).setMergePolicy(mp).setUseCompoundFile(doCFS);
     IndexWriter writer = new IndexWriter(dir, conf);
     
@@ -569,7 +595,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       mp = new LogByteSizeMergePolicy();
       mp.setNoCFSRatio(doCFS ? 1.0 : 0.0);
       // TODO: remove randomness
-      conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+      conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
         .setMaxBufferedDocs(10).setMergePolicy(mp).setUseCompoundFile(doCFS);
       writer = new IndexWriter(dir, conf);
       addNoProxDoc(writer);
@@ -738,15 +764,23 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
   }
   
   public void testNumericFields() throws Exception {
+    boolean testedSomething = false;
     for (String name : oldNames) {
+      if (name.compareTo("32") < 0) {
+        // we didn't have numeric fields in back compat indexes until 3.2
+        // https://issues.apache.org/jira/browse/LUCENE-2352
+        
+        continue;
+      }
       
+      testedSomething = true;
       Directory dir = oldIndexDirs.get(name);
       IndexReader reader = DirectoryReader.open(dir);
       IndexSearcher searcher = new IndexSearcher(reader);
       
       for (int id=10; id<15; id++) {
         ScoreDoc[] hits = searcher.search(NumericRangeQuery.newIntRange("trieInt", 4, Integer.valueOf(id), Integer.valueOf(id), true, true), 100).scoreDocs;
-        assertEquals("wrong number of hits", 1, hits.length);
+        assertEquals("wrong number of hits for index " + name, 1, hits.length);
         Document d = searcher.doc(hits[0].doc);
         assertEquals(String.valueOf(id), d.get("id"));
         
@@ -779,6 +813,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       
       reader.close();
     }
+    assertTrue("the conditional logic around numeric fields is broken, didnt test anything", testedSomething);
   }
   
   private int checkAllSegmentsUpgraded(Directory dir) throws IOException {
@@ -833,7 +868,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       for (int i = 0; i < 3; i++) {
         // only use Log- or TieredMergePolicy, to make document addition predictable and not suddenly merge:
         MergePolicy mp = random().nextBoolean() ? newLogMergePolicy() : newTieredMergePolicy();
-        IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+        IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
           .setMergePolicy(mp);
         IndexWriter w = new IndexWriter(ramDir, iwc);
         // add few more docs:
@@ -846,7 +881,7 @@ public class TestBackwardsCompatibility3x extends LuceneTestCase {
       // add dummy segments (which are all in current
       // version) to single segment index
       MergePolicy mp = random().nextBoolean() ? newLogMergePolicy() : newTieredMergePolicy();
-      IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, null)
+      IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, null)
         .setMergePolicy(mp);
       IndexWriter w = new IndexWriter(dir, iwc);
       w.addIndexes(ramDir);

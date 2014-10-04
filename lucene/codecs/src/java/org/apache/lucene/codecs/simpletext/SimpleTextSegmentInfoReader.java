@@ -19,12 +19,14 @@ package org.apache.lucene.codecs.simpletext;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.lucene.codecs.SegmentInfoReader;
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexFileNames;
 import org.apache.lucene.index.SegmentInfo;
 import org.apache.lucene.store.ChecksumIndexInput;
@@ -42,7 +44,6 @@ import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI
 import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_NUM_DIAG;
 import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_NUM_FILES;
 import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_USECOMPOUND;
-import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_ID;
 import static org.apache.lucene.codecs.simpletext.SimpleTextSegmentInfoWriter.SI_VERSION;
 
 /**
@@ -62,7 +63,12 @@ public class SimpleTextSegmentInfoReader extends SegmentInfoReader {
     try {
       SimpleTextUtil.readLine(input, scratch);
       assert StringHelper.startsWith(scratch.get(), SI_VERSION);
-      final Version version = Version.parse(readString(SI_VERSION.length, scratch));
+      final Version version;
+      try {
+        version = Version.parse(readString(SI_VERSION.length, scratch));
+      } catch (ParseException pe) {
+        throw new CorruptIndexException("unable to parse version string (resource=" + input + "): " + pe.getMessage(), pe);
+      }
     
       SimpleTextUtil.readLine(input, scratch);
       assert StringHelper.startsWith(scratch.get(), SI_DOCCOUNT);
@@ -100,14 +106,10 @@ public class SimpleTextSegmentInfoReader extends SegmentInfoReader {
         files.add(fileName);
       }
       
-      SimpleTextUtil.readLine(input, scratch);
-      assert StringHelper.startsWith(scratch.get(), SI_ID);
-      final String id = readString(SI_ID.length, scratch);
-
       SimpleTextUtil.checkFooter(input);
 
-      SegmentInfo info = new SegmentInfo(directory, version, segmentName, docCount,
-                                         isCompoundFile, null, diagnostics, null, id);
+      SegmentInfo info = new SegmentInfo(directory, version, segmentName, docCount, 
+                                         isCompoundFile, null, diagnostics);
       info.setFiles(files);
       success = true;
       return info;

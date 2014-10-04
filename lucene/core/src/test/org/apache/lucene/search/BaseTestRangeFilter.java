@@ -29,7 +29,6 @@ import org.apache.lucene.index.RandomIndexWriter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -123,7 +122,7 @@ public class BaseTestRangeFilter extends LuceneTestCase {
     doc.add(bodyField);
 
     RandomIndexWriter writer = new RandomIndexWriter(random, index.index, 
-                                                     newIndexWriterConfig(random, Version.LATEST, new MockAnalyzer(random))
+                                                     newIndexWriterConfig(random, TEST_VERSION_CURRENT, new MockAnalyzer(random))
                                                      .setOpenMode(OpenMode.CREATE).setMaxBufferedDocs(TestUtil.nextInt(random, 50, 1000)).setMergePolicy(newLogMergePolicy()));
     TestUtil.reduceOpenFiles(writer.w);
 

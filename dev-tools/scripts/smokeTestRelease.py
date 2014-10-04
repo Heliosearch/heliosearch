@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
 import os
 import zipfile
 import codecs
@@ -41,8 +40,6 @@ import checkJavaDocs
 import checkJavadocLinks
 import io
 import codecs
-import textwrap
-from collections import namedtuple
 
 # This tool expects to find /lucene and /solr off the base URL.  You
 # must have a working gpg, tar, unzip in your path.  This has been
@@ -60,6 +57,30 @@ def unshortenURL(url):
     if int(response.status/100) == 3 and response.getheader('Location'):
       return response.getheader('Location')
   return url  
+
+def javaExe(version):
+  if version == '1.7':
+    path = JAVA7_HOME
+  else:
+    raise RuntimeError("unknown Java version '%s'" % version)
+  if cygwin:
+    path = os.popen('cygpath -u "%s"' % path).read().strip()
+  return 'export JAVA_HOME="%s" PATH="%s/bin:$PATH" JAVACMD="%s/bin/java"' % (path, path, path)
+
+def verifyJavaVersion(version):
+  s = os.popen('%s; java -version 2>&1' % javaExe(version)).read()
+  if s.find(' version "%s.' % version) == -1:
+    raise RuntimeError('got wrong version for java %s:\n%s' % (version, s))
+
+# http://s.apache.org/lusolr32rc2
+env = os.environ
+try:
+  JAVA7_HOME = env['JAVA7_HOME']
+except KeyError:
+  raise RuntimeError('please set JAVA7_HOME in the env before running smokeTestRelease')
+print('JAVA7_HOME is %s' % JAVA7_HOME)
+
+verifyJavaVersion('1.7')
 
 # TODO
 #   + verify KEYS contains key that signed the release
@@ -593,7 +614,7 @@ def getDirEntries(urlString):
       if text == 'Parent Directory' or text == '..':
         return links[(i+1):]
 
-def unpackAndVerify(java, project, tmpDir, artifact, svnRevision, version, testArgs, baseURL):
+def unpackAndVerify(project, tmpDir, artifact, svnRevision, version, testArgs, baseURL):
   destDir = '%s/unpack' % tmpDir
   if os.path.exists(destDir):
     shutil.rmtree(destDir)
@@ -613,14 +634,14 @@ def unpackAndVerify(java, project, tmpDir, artifact, svnRevision, version, testA
     raise RuntimeError('unpack produced entries %s; expected only %s' % (l, expected))
 
   unpackPath = '%s/%s' % (destDir, expected)
-  verifyUnpacked(java, project, artifact, unpackPath, svnRevision, version, testArgs, tmpDir, baseURL)
+  verifyUnpacked(project, artifact, unpackPath, svnRevision, version, testArgs, tmpDir, baseURL)
 
 LUCENE_NOTICE = None
 LUCENE_LICENSE = None
 SOLR_NOTICE = None
 SOLR_LICENSE = None
 
-def verifyUnpacked(java, project, artifact, unpackPath, svnRevision, version, testArgs, tmpDir, baseURL):
+def verifyUnpacked(project, artifact, unpackPath, svnRevision, version, testArgs, tmpDir, baseURL):
   global LUCENE_NOTICE
   global LUCENE_LICENSE
   global SOLR_NOTICE
@@ -628,6 +649,7 @@ def verifyUnpacked(java, project, artifact, unpackPath, svnRevision, version, te
 
   os.chdir(unpackPath)
   isSrc = artifact.find('-src') != -1
+  
   l = os.listdir(unpackPath)
   textFiles = ['LICENSE', 'NOTICE', 'README']
   if project == 'lucene':
@@ -636,7 +658,7 @@ def verifyUnpacked(java, project, artifact, unpackPath, svnRevision, version, te
       textFiles.append('BUILD')
   elif not isSrc:
     textFiles.append('SYSTEM_REQUIREMENTS')
-    
+
   for fileName in textFiles:
     fileName += '.txt'
     if fileName not in l:
@@ -671,7 +693,7 @@ def verifyUnpacked(java, project, artifact, unpackPath, svnRevision, version, te
     # TODO: clean this up to not be a list of modules that we must maintain
     extras = ('analysis', 'benchmark', 'classification', 'codecs', 'core', 'demo', 'docs', 'expressions', 'facet', 'grouping', 'highlighter', 'join', 'memory', 'misc', 'queries', 'queryparser', 'replicator', 'sandbox', 'spatial', 'suggest', 'test-framework', 'licenses')
     if isSrc:
-      extras += ('build.xml', 'common-build.xml', 'module-build.xml', 'ivy-settings.xml', 'ivy-versions.properties', 'ivy-ignore-conflicts.properties', 'version.properties', 'backwards', 'tools', 'site')
+      extras += ('build.xml', 'common-build.xml', 'module-build.xml', 'ivy-settings.xml', 'ivy-versions.properties', 'ivy-ignore-conflicts.properties', 'backwards', 'tools', 'site')
   else:
     extras = ()
 
@@ -704,97 +726,68 @@ def verifyUnpacked(java, project, artifact, unpackPath, svnRevision, version, te
       raise RuntimeError('source release has WARs...')
 
     print('    run "ant validate"')
-    java.run_java7('ant validate', '%s/validate.log' % unpackPath)
+    run('%s; ant validate' % javaExe('1.7'), '%s/validate.log' % unpackPath)
 
     if project == 'lucene':
       print("    run tests w/ Java 7 and testArgs='%s'..." % testArgs)
-      java.run_java7('ant clean test %s' % testArgs, '%s/test.log' % unpackPath)
-      java.run_java7('ant jar', '%s/compile.log' % unpackPath)
-      testDemo(java.run_java7, isSrc, version, '1.7')
+      run('%s; ant clean test %s' % (javaExe('1.7'), testArgs), '%s/test.log' % unpackPath)
+      run('%s; ant jar' % javaExe('1.7'), '%s/compile.log' % unpackPath)
+      testDemo(isSrc, version, '1.7')
 
       print('    generate javadocs w/ Java 7...')
-      java.run_java7('ant javadocs', '%s/javadocs.log' % unpackPath)
+      run('%s; ant javadocs' % javaExe('1.7'), '%s/javadocs.log' % unpackPath)
       checkJavadocpathFull('%s/build/docs' % unpackPath)
-
-      if java.run_java8:
-        print("    run tests w/ Java 8 and testArgs='%s'..." % testArgs)
-        java.run_java8('ant clean test %s' % testArgs, '%s/test.log' % unpackPath)
-        java.run_java8('ant jar', '%s/compile.log' % unpackPath)
-        testDemo(java.run_java8, isSrc, version, '1.8')
-
-        print('    generate javadocs w/ Java 8...')
-        java.run_java8('ant javadocs', '%s/javadocs.log' % unpackPath)
-        checkJavadocpathFull('%s/build/docs' % unpackPath)
 
     else:
       os.chdir('solr')
 
       print("    run tests w/ Java 7 and testArgs='%s'..." % testArgs)
-      java.run_java7('ant clean test -Dtests.slow=false %s' % testArgs, '%s/test.log' % unpackPath)
-
+      run('%s; ant clean test -Dtests.slow=false %s' % (javaExe('1.7'), testArgs), '%s/test.log' % unpackPath)
+ 
       # test javadocs
       print('    generate javadocs w/ Java 7...')
-      java.run_java7('ant clean javadocs', '%s/javadocs.log' % unpackPath)
+      run('%s; ant clean javadocs' % javaExe('1.7'), '%s/javadocs.log' % unpackPath)
       checkJavadocpathFull('%s/solr/build/docs' % unpackPath, False)
 
       print('    test solr example w/ Java 7...')
-      java.run_java7('ant clean example', '%s/antexample.log' % unpackPath)
-      testSolrExample(unpackPath, java.java7_home, True)
-
-      if java.run_java8:
-        print("    run tests w/ Java 8 and testArgs='%s'..." % testArgs)
-        java.run_java8('ant clean test -Dtests.slow=false %s' % testArgs, '%s/test.log' % unpackPath)
-
-        print('    generate javadocs w/ Java 8...')
-        java.run_java8('ant clean javadocs', '%s/javadocs.log' % unpackPath)
-        checkJavadocpathFull('%s/solr/build/docs' % unpackPath, False)
-
-        print('    test solr example w/ Java 8...')
-        java.run_java8('ant clean example', '%s/antexample.log' % unpackPath)
-        testSolrExample(unpackPath, java.java8_home, True)
-
+      run('%s; ant clean example' % javaExe('1.7'), '%s/antexample.log' % unpackPath)
+      testSolrExample(unpackPath, JAVA7_HOME, True)
       os.chdir('..')
+
       print('    check NOTICE')
       testNotice(unpackPath)
 
   else:
 
     checkAllJARs(os.getcwd(), project, svnRevision, version, tmpDir, baseURL)
-    
-    if project == 'lucene':
-      testDemo(java.run_java7, isSrc, version, '1.7')
-      if java.run_java8:
-        testDemo(java.run_java8, isSrc, version, '1.8')
 
-      print('    check Lucene\'s javadoc JAR')
-      checkJavadocpath('%s/docs' % unpackPath)
+    if project == 'lucene':
+      testDemo(isSrc, version, '1.7')
 
     else:
       checkSolrWAR('%s/example/webapps/solr.war' % unpackPath, svnRevision, version, tmpDir, baseURL)
 
       print('    copying unpacked distribution for Java 7 ...')
-      java7UnpackPath = '%s-java7' % unpackPath
+      java7UnpackPath = '%s-java7' %unpackPath
       if os.path.exists(java7UnpackPath):
         shutil.rmtree(java7UnpackPath)
       shutil.copytree(unpackPath, java7UnpackPath)
       os.chdir(java7UnpackPath)
       print('    test solr example w/ Java 7...')
-      testSolrExample(java7UnpackPath, java.java7_home, False)
-
-      if java.run_java8:
-        print('    copying unpacked distribution for Java 8 ...')
-        java8UnpackPath = '%s-java8' % unpackPath
-        if os.path.exists(java8UnpackPath):
-          shutil.rmtree(java8UnpackPath)
-        shutil.copytree(unpackPath, java8UnpackPath)
-        os.chdir(java8UnpackPath)
-        print('    test solr example w/ Java 8...')
-        testSolrExample(java8UnpackPath, java.java8_home, False)
+      testSolrExample(java7UnpackPath, JAVA7_HOME, False)
 
       os.chdir(unpackPath)
 
   testChangesText('.', version, project)
 
+  if project == 'lucene' and not isSrc:
+    print('    check Lucene\'s javadoc JAR')
+    checkJavadocpath('%s/docs' % unpackPath)
+
+  if project == 'lucene' and isSrc:
+    print('  confirm all releases have coverage in TestBackwardsCompatibility/3x')
+    confirmAllReleasesAreTestedForBackCompat(unpackPath)
+    
 def testNotice(unpackPath):
   solrNotice = open('%s/NOTICE.txt' % unpackPath, encoding='UTF-8').read()
   luceneNotice = open('%s/lucene/NOTICE.txt' % unpackPath, encoding='UTF-8').read()
@@ -928,7 +921,7 @@ def checkJavadocpathFull(path, failOnMissing=True):
   if checkJavadocLinks.checkAll(path):
     raise RuntimeError('broken javadocs links found!')
 
-def testDemo(run_java, isSrc, version, jdk):
+def testDemo(isSrc, version, jdk):
   if os.path.exists('index'):
     shutil.rmtree('index') # nuke any index from any previous iteration
 
@@ -940,8 +933,8 @@ def testDemo(run_java, isSrc, version, jdk):
   else:
     cp = 'core/lucene-core-{0}.jar{1}demo/lucene-demo-{0}.jar{1}analysis/common/lucene-analyzers-common-{0}.jar{1}queryparser/lucene-queryparser-{0}.jar'.format(version, sep)
     docsDir = 'docs'
-  run_java('java -cp "%s" org.apache.lucene.demo.IndexFiles -index index -docs %s' % (cp, docsDir), 'index.log')
-  run_java('java -cp "%s" org.apache.lucene.demo.SearchFiles -index index -query lucene' % cp, 'search.log')
+  run('%s; java -cp "%s" org.apache.lucene.demo.IndexFiles -index index -docs %s' % (javaExe(jdk), cp, docsDir), 'index.log')
+  run('%s; java -cp "%s" org.apache.lucene.demo.SearchFiles -index index -query lucene' % (javaExe(jdk), cp), 'search.log')
   reMatchingDocs = re.compile('(\d+) total matching documents')
   m = reMatchingDocs.search(open('search.log', encoding='UTF-8').read())
   if m is None:
@@ -952,7 +945,7 @@ def testDemo(run_java, isSrc, version, jdk):
       raise RuntimeError('lucene demo\'s SearchFiles found too few results: %s' % numHits)
     print('      got %d hits for query "lucene"' % numHits)
   print('    checkindex with %s...' % jdk)
-  run_java('java -ea -cp "%s" org.apache.lucene.index.CheckIndex index' % cp, 'checkindex.log')
+  run('%s; java -ea -cp "%s" org.apache.lucene.index.CheckIndex index' % (javaExe(jdk), cp), 'checkindex.log')
   s = open('checkindex.log').read()
   m = re.search(r'^\s+version=(.*?)$', s, re.MULTILINE)
   if m is None:
@@ -1264,91 +1257,158 @@ def crawl(downloadedFiles, urlString, targetDir, exclusions=set()):
         downloadedFiles.append(path)
         sys.stdout.write('.')
 
-def make_java_config(parser, java8_home):
-  def _make_runner(java_home, version):
-    print('Java %s JAVA_HOME=%s' % (version, java_home))
-    if cygwin:
-      java_home = subprocess.check_output('cygpath -u "%s"' % java_home).read().decode('utf-8').strip()
-    cmd_prefix = 'export JAVA_HOME="%s" PATH="%s/bin:$PATH" JAVACMD="%s/bin/java"' % \
-                 (java_home, java_home, java_home)
-    s = subprocess.check_output('%s; java -version' % cmd_prefix,
-                                shell=True, stderr=subprocess.STDOUT).decode('utf-8')
-    if s.find(' version "%s.' % version) == -1:
-      parser.error('got wrong version for java %s:\n%s' % (version, s)) 
-    def run_java(cmd, logfile):
-      run('%s; %s' % (cmd_prefix, cmd), logfile)
-    return run_java
-  java7_home =  os.environ.get('JAVA_HOME')
-  if java7_home is None:
-    parser.error('JAVA_HOME must be set')
-  run_java7 = _make_runner(java7_home, '1.7')
-  run_java8 = None
-  if java8_home is not None:
-    run_java8 = _make_runner(java8_home, '1.8')
-
-  jc = namedtuple('JavaConfig', 'run_java7 java7_home run_java8 java8_home')
-  return jc(run_java7, java7_home, run_java8, java8_home)
-
-version_re = re.compile(r'(\d+\.\d+\.\d+(-ALPHA|-BETA)?)')
-revision_re = re.compile(r'rev(\d+)')
-def parse_config():
-  epilogue = textwrap.dedent('''
-    Example usage:
-    python3.2 -u dev-tools/scripts/smokeTestRelease.py http://people.apache.org/~whoever/staging_area/lucene-solr-4.3.0-RC1-rev1469340')
-  ''')
-  description = 'Utility to test a release.'
-  parser = argparse.ArgumentParser(description=description, epilog=epilogue,
-                                   formatter_class=argparse.RawDescriptionHelpFormatter)
-  parser.add_argument('--tmp-dir', metavar='PATH',
-                      help='Temporary directory to test inside, defaults to /tmp/smoke_lucene_$version_$revision')
-  parser.add_argument('--not-signed', dest='is_signed', action='store_false', default=True,
-                      help='Indicates the release is not signed')
-  parser.add_argument('--revision',
-                      help='SVN revision number that release was built with, defaults to that in URL')
-  parser.add_argument('--version', metavar='X.Y.Z(-ALPHA|-BETA)?',
-                      help='Version of the release, defaults to that in URL')
-  parser.add_argument('--test-java8', metavar='JAVA8_HOME',
-                      help='Path to Java8 home directory, to run tests with if specified')
-  parser.add_argument('url', help='Url pointing to release to test')
-  parser.add_argument('test_args', nargs=argparse.REMAINDER,
-                      help='Arguments to pass to ant for testing, e.g. -Dwhat=ever.')
-  c = parser.parse_args()
-
-  if c.version is not None:
-    if not version_re.match(c.version):
-      parser.error('version "%s" does not match format X.Y.Z[-ALPHA|-BETA]' % c.version)
-  else:
-    version_match = version_re.search(c.url)
-    if version_match is None:
-      parser.error('Could not find version in URL')
-    c.version = version_match.group(1)
-
-  if c.revision is None:
-    revision_match = revision_re.search(c.url)
-    if revision_match is None:
-      parser.error('Could not find revision in URL')
-    c.revision = revision_match.group(1)
-  
-  c.java = make_java_config(parser, c.test_java8)
-
-  if c.tmp_dir:
-    c.tmp_dir = os.path.abspath(c.tmp_dir)
-  else:
-    tmp = '/tmp/smoke_lucene_%s_%s' % (c.version, c.revision)
-    c.tmp_dir = tmp
-    i = 1
-    while os.path.exists(c.tmp_dir):
-      c.tmp_dir = tmp + '_%d' % i
-      i += 1
-
-  return c
+reAllowedVersion = re.compile(r'^\d+\.\d+\.\d+(-ALPHA|-BETA)?$')
 
 def main():
-  c = parse_config()
-  print('NOTE: output encoding is %s' % sys.stdout.encoding)
-  smokeTest(c.java, c.url, c.revision, c.version, c.tmp_dir, c.is_signed, ' '.join(c.test_args))
 
-def smokeTest(java, baseURL, svnRevision, version, tmpDir, isSigned, testArgs):
+  if len(sys.argv) < 5:
+    print()
+    print('Usage python -u %s BaseURL SvnRevision version tmpDir [ isSigned(True|False) ] [ -testArgs "-Dwhat=ever [ ... ]" ]'
+          % sys.argv[0])
+    print()
+    print('  example: python3.2 -u dev-tools/scripts/smokeTestRelease.py http://people.apache.org/~whoever/staging_area/lucene-solr-4.3.0-RC1-rev1469340 1469340 4.3.0 /path/to/a/tmp/dir')
+    print()
+    sys.exit(1)
+
+  baseURL = sys.argv[1]
+  svnRevision = sys.argv[2]
+  version = sys.argv[3]
+
+  if not reAllowedVersion.match(version):
+    raise RuntimeError('version "%s" does not match format X.Y.Z[-ALPHA|-BETA]' % version)
+  
+  tmpDirArgNum = 4
+  tmpDir = os.path.abspath(sys.argv[tmpDirArgNum])
+
+  # TODO: yuck: positional-only args with more than one optional arg totally sucks
+  # TODO: consider naming all args
+  isSigned = True
+  testArgs = ''
+  lastArgNum = len(sys.argv) - 1
+  if lastArgNum > tmpDirArgNum:
+    nextArgNum = tmpDirArgNum + 1
+    if sys.argv[nextArgNum] == '-testArgs':
+      if nextArgNum == lastArgNum:
+        raise RuntimeError('missing expected argument to -testArgs')
+      else:
+        # TODO: should there be arg validation here?  E.g. starts with '-D'?
+        testArgs = sys.argv[nextArgNum + 1]
+        nextArgNum += 2
+    if nextArgNum <= lastArgNum:
+      isSigned = (sys.argv[nextArgNum].lower() == "true")
+      nextArgNum += 1
+    if nextArgNum <= lastArgNum and testArgs == '':
+      if sys.argv[nextArgNum] == '-testArgs':
+        if nextArgNum == lastArgNum:
+          raise RuntimeError('missing expected argument to -testArgs')
+        else:
+          # TODO: should there be arg validation here?  E.g. starts with '-D'?
+          testArgs = sys.argv[nextArgNum + 1]
+
+  smokeTest(baseURL, svnRevision, version, tmpDir, isSigned, testArgs)
+
+reVersion1 = re.compile(r'\>(\d+)\.(\d+)\.(\d+)(-alpha|-beta)?/\<', re.IGNORECASE)
+reVersion2 = re.compile(r'-(\d+)\.(\d+)\.(\d+)(-alpha|-beta)?\.', re.IGNORECASE)
+
+def getAllLuceneReleases():
+  s = urllib.request.urlopen('https://archive.apache.org/dist/lucene/java').read().decode('UTF-8')
+
+  releases = set()
+  for r in reVersion1, reVersion2:
+    for tup in r.findall(s):
+      if tup[-1].lower() == '-alpha':
+        tup = tup[:3] + ('0',)
+      elif tup[-1].lower() == '-beta':
+        tup = tup[:3] + ('1',)
+      elif tup[-1] == '':
+        tup = tup[:3]
+      else:
+        raise RuntimeError('failed to parse version: %s' % tup[-1])
+      releases.add(tuple(int(x) for x in tup))
+
+  l = list(releases)
+  l.sort()
+  return l
+
+def confirmAllReleasesAreTestedForBackCompat(unpackPath):
+
+  print('    find all past Lucene releases...')
+  allReleases = getAllLuceneReleases()
+  if False:
+    for tup in allReleases:
+      print('  %s' % '.'.join(str(x) for x in tup))
+
+  testedIndices = set()
+
+  os.chdir(unpackPath)
+
+  for suffix in '', '3x':
+    print('    run TestBackwardsCompatibility%s..' % suffix)
+    command = 'ant test -Dtestcase=TestBackwardsCompatibility%s -Dtests.verbose=true' % suffix
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    stdout, stderr = p.communicate()
+    if p.returncode is not 0:
+      # Not good: the test failed!
+      raise RuntimeError('%s failed:\n%s' % (command, stdout))
+    stdout = stdout.decode('utf-8')
+
+    if stderr is not None:
+      # Should not happen since we redirected stderr to stdout:
+      raise RuntimeError('stderr non-empty')
+
+    reIndexName = re.compile('TEST: index[= ](.*?)$', re.MULTILINE)
+
+    for s in reIndexName.findall(stdout):
+      # Fragile: decode the inconsistent naming schemes we've used in TestBWC's indices:
+      name = os.path.splitext(s)[0]
+      # print('parse name %s' % name)
+      if name == '410':
+        tup = 4, 10, 0
+      elif name == '40a':
+        tup = 4, 0, 0, 0
+      elif name == '40b':
+        tup = 4, 0, 0, 1
+      elif len(name) == 2:
+        tup = int(name[0]), int(name[1]), 0
+      elif len(name) == 3:
+        tup = int(name[0]), int(name[1]), int(name[2])
+      else:
+        raise RuntimeError('do not know how to parse index name %s' % name)
+      testedIndices.add(tup)
+
+  l = list(testedIndices)
+  l.sort()
+  if False:
+    for release in l:
+      print('  %s' % '.'.join(str(x) for x in release))
+
+  allReleases = set(allReleases)
+
+  for x in testedIndices:
+    if x not in allReleases:
+      # Curious: we test 1.9.0 index but it's not in the releases (I think it was pulled because of nasty bug?)
+      if x != (1, 9, 0):
+        raise RuntimeError('tested version=%s but it was not released?' % '.'.join(str(y) for y in x))
+
+  notTested = []
+  for x in allReleases:
+    if x not in testedIndices:
+      if '.'.join(str(y) for y in x) in ('1.4.3', '1.9.1', '2.3.1', '2.3.2'):
+        # Exempt the dark ages indices
+        continue
+      notTested.append(x)
+
+  if len(notTested) > 0:
+    notTested.sort()
+    print('Releases that don\'t seem to be tested:')
+    failed = True
+    for x in notTested:
+      print('  %s' % '.'.join(str(y) for y in x))
+    raise RuntimeError('some releases are not tested by TestBackwardsCompatibility/3x?')
+  else:
+    print('    success!')
+
+def smokeTest(baseURL, svnRevision, version, tmpDir, isSigned, testArgs):
 
   startTime = datetime.datetime.now()
   
@@ -1383,15 +1443,15 @@ def smokeTest(java, baseURL, svnRevision, version, tmpDir, isSigned, testArgs):
   print('Test Lucene...')
   checkSigs('lucene', lucenePath, version, tmpDir, isSigned)
   for artifact in ('lucene-%s.tgz' % version, 'lucene-%s.zip' % version):
-    unpackAndVerify(java, 'lucene', tmpDir, artifact, svnRevision, version, testArgs, baseURL)
-  unpackAndVerify(java, 'lucene', tmpDir, 'lucene-%s-src.tgz' % version, svnRevision, version, testArgs, baseURL)
+    unpackAndVerify('lucene', tmpDir, artifact, svnRevision, version, testArgs, baseURL)
+  unpackAndVerify('lucene', tmpDir, 'lucene-%s-src.tgz' % version, svnRevision, version, testArgs, baseURL)
 
   print()
   print('Test Solr...')
   checkSigs('solr', solrPath, version, tmpDir, isSigned)
   for artifact in ('solr-%s.tgz' % version, 'solr-%s.zip' % version):
-    unpackAndVerify(java, 'solr', tmpDir, artifact, svnRevision, version, testArgs, baseURL)
-  unpackAndVerify(java, 'solr', tmpDir, 'solr-%s-src.tgz' % version, svnRevision, version, testArgs, baseURL)
+    unpackAndVerify('solr', tmpDir, artifact, svnRevision, version, testArgs, baseURL)
+  unpackAndVerify('solr', tmpDir, 'solr-%s-src.tgz' % version, svnRevision, version, testArgs, baseURL)
 
   print()
   print('Test Maven artifacts for Lucene and Solr...')
@@ -1400,8 +1460,10 @@ def smokeTest(java, baseURL, svnRevision, version, tmpDir, isSigned, testArgs):
   print('\nSUCCESS! [%s]\n' % (datetime.datetime.now() - startTime))
 
 if __name__ == '__main__':
+  print('NOTE: output encoding is %s' % sys.stdout.encoding)
   try:
     main()
-  except KeyboardInterrupt:
-    print('Keyboard interrupt...exiting')
-
+  except:
+    traceback.print_exc()
+    sys.exit(1)
+  sys.exit(0)

@@ -269,19 +269,16 @@ final class TermInfosWriter implements Closeable {
 
   /** Called to complete TermInfos creation. */
   public void close() throws IOException {
-    if (output != null) {
+    try {
+      // the "real" 3.x seeked back to offset 4, and wrote 8 bytes there.
+      // we write 8 bytes at the end of the file
+      output.writeLong(size);
+    } finally {
       try {
-        // the "real" 3.x seeked back to offset 4, and wrote 8 bytes there.
-        // we write 8 bytes at the end of the file
-        output.writeLong(size);
+        output.close();
       } finally {
-        try {
-          output.close();
-        } finally {
-          output = null;
-          if (!isIndex) {
-            other.close();
-          }
+        if (!isIndex) {
+          other.close();
         }
       }
     }

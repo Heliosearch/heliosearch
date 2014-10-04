@@ -3,37 +3,34 @@ Lucene Change Log
 For more information on past and future Lucene versions, please see:
 http://s.apache.org/luceneversions
 
-======================= Lucene 4.11.0 ======================
+======================= Lucene 4.10.2 ======================
 
-New Features
+Bug fixes
 
-* LUCENE-5895: Lucene now stores a unique id per-segment and per-commit to aid
-  in accurate replication of index files (Robert Muir, Mike McCandless)
+* LUCENE-5977: Fix tokenstream safety checks in IndexWriter to properly
+  work across multi-valued fields. Previously some cases across multi-valued
+  fields would happily create a corrupt index. (Dawid Weiss, Robert Muir)
 
-* LUCENE-5889: Add commit method to AnalyzingInfixSuggester, and allow just using .add
-  to build up the suggester.  (Varun Thacker via Mike McCandless)
+======================= Lucene 4.10.1 ======================
 
-* LUCENE-5123: Add a "push" option to the postings writing API, so
-  that a PostingsFormat now receives a Fields instance and it is
-  responsible for iterating through all fields, terms, documents and
-  positions.  (Robert Muir, Mike McCandless)
+Bug fixes
 
-* LUCENE-5268: Full cutover of all postings formats to the "pull"
-  FieldsConsumer API, removing PushFieldsConsumer.  Added new
-  PushPostingsWriterBase for single-pass push of docs/positions to the
-  postings format.  (Mike McCandless)
+* LUCENE-5934: Fix backwards compatibility for 4.0 indexes.
+  (Ian Lea, Uwe Schindler, Robert Muir, Ryan Ernst)
 
-API Changes:
+* LUCENE-5939: Regenerate old backcompat indexes to ensure they were built with
+  the exact release
+  (Ryan Ernst, Uwe Schindler)
 
-* LUCENE-5900: Deprecated more constructors taking Version in *InfixSuggester and
-  ICUCollationKeyAnalyzer, and removed TEST_VERSION_CURRENT from the test framework.
-  (Ryan Ernst)
+* LUCENE-5952: Improve error messages when version cannot be parsed;
+  don't check for too old or too new major version (it's too low level
+  to enforce here); use simple string tokenizer.  (Ryan Ernst, Uwe Schindler,
+  Robert Muir, Mike McCandless)
 
-Bug Fixes
-
-* LUCENE-5650: Enforce read-only access to any path outside the temporary
-  folder via security manager, and make test temp dirs absolute.
-  (Ryan Ernst, Dawid Weiss)
+* LUCENE-5958: Don't let exceptions during checkpoint corrupt the index. 
+  Refactor existing OOM handling too, so you don't need to handle OOM special
+  for every IndexWriter method: instead such disasters will cause IW to close itself
+  defensively. (Robert Muir, Mike McCandless)
 
 * LUCENE-5904: Fixed a corruption case that can happen when 1)
   IndexWriter is uncleanly shut-down (OS crash, power loss, etc.), 2)
@@ -45,10 +42,18 @@ Bug Fixes
   MockDirectoryWrapper to have it simulate a virus checker holding a
   file open and preventing deletion (Robert Muir, Mike McCandless)
 
-Build
+* LUCENE-5916: Static scope test components should be consistent between
+  tests (and test iterations). Fix for FaultyIndexInput in particular.
+  (Dawid Weiss)
 
-* LUCENE-5909: Smoke tester now has better command line parsing and
-  optionally also runs on Java 8.  (Ryan Ernst, Uwe Schindler)
+* LUCENE-5975: Fix reading of 3.0-3.3 indexes, where bugs in these old
+  index formats would result in CorruptIndexException "did not read all
+  bytes from file" when reading the deleted docs file. (Patrick Mi, Robert MUir)
+
+Tests
+
+* LUCENE-5936: Add backcompat checks to verify what is tested matches known versions
+  (Ryan Ernst)
 
 ======================= Lucene 4.10.0 ======================
 
@@ -111,8 +116,12 @@ API Changes
   CoveredBy. The area requirement on the predicates was removed, and Overlaps' definition
   was fixed. (David Smiley)
 
-* LUCENE-5850: Made Version handling more robust and extensible. Deprecated Constants.LUCENE_MAIN_VERSION, Constants.LUCENE_VERSION and current Version constants of the form LUCENE_X_Y. Added version constants that include bugfix number of form LUCENE_X_Y_Z.  Changed Version.LUCENE_CURRENT to Version.LATEST. CheckIndex now prints the Lucene version used to write
-  each segment.  (Ryan Ernst, Uwe Schindler, Robert Muir, Mike McCandless)
+* LUCENE-5850: Made Version handling more robust and extensible. Deprecated
+  Constants.LUCENE_MAIN_VERSION, Constants.LUCENE_VERSION and current Version
+  constants of the form LUCENE_X_Y. Added version constants that include bugfix
+  number of form LUCENE_X_Y_Z.  Changed Version.LUCENE_CURRENT to Version.LATEST.
+  CheckIndex now prints the Lucene version used to write each segment.
+  (Ryan Ernst, Uwe Schindler, Robert Muir, Mike McCandless)
 
 * LUCENE-5836: BytesRef has been splitted into BytesRef, whose intended usage is
   to be just a reference to a section of a larger byte[] and BytesRefBuilder
@@ -198,20 +207,7 @@ Bug Fixes
 
 * LUCENE-5824: Fix hunspell 'long' flag handling. (Robert Muir)
 
-* LUCENE-5827: Make all Directory implementations correctly fail with
-  IllegalArgumentException if slices are out of bounds.  (Uwe SChindler)
-
 * LUCENE-5838: Fix hunspell when the .aff file has over 64k affixes. (Robert Muir)
-
-* LUCENE-5844: ArrayUtil.grow/oversize now returns a maximum of
-  Integer.MAX_VALUE - 8 for the maximum array size.  (Robert Muir,
-  Mike McCandless)
-
-* LUCENE-5843: Added IndexWriter.MAX_DOCS which is the maximum number
-  of documents allowed in a single index, and any operations that add
-  documents will now throw IllegalStateException if the max count
-  would be exceeded, instead of silently creating an unusable
-  index.  (Mike McCandless)
 
 * LUCENE-5869: Added restriction to positive values for maxExpansions in
   FuzzyQuery.  (Ryan Ernst)
@@ -219,19 +215,6 @@ Bug Fixes
 * LUCENE-5672: IndexWriter.addIndexes() calls maybeMerge(), to ensure the index stays
   healthy. If you don't want merging use NoMergePolicy instead. (Robert Muir)
   
-* LUCENE-5897, LUCENE-5400: JFlex-based tokenizers StandardTokenizer and
-  UAX29URLEmailTokenizer tokenize extremely slowly over long sequences of
-  text partially matching certain grammar rules.  The scanner default
-  buffer size was reduced, and scanner buffer growth was disabled, resulting
-  in much, much faster tokenization for these text sequences.  
-  (Chris Geeringh, Robert Muir, Steve Rowe)
-
-* LUCENE-5907: Fix corruption case when opening a pre-4.x index with
-  IndexWriter, then opening an NRT reader from that writer, then
-  calling commit from the writer, then closing the NRT reader.  This
-  case would remove the wrong files from the index leading to a
-  corrupt index.  (Mike McCandless)
-
 * LUCENE-5908: Fix Lucene43NGramTokenizer to be final
   
 Test Framework
@@ -252,6 +235,44 @@ Build
 
 * SOLR-6358: Remove VcsDirectoryMappings from idea configuration 
   vcs.xml (Ramkumar Aiyengar via Steve Rowe)
+
+======================= Lucene 4.9.1 ======================
+
+Bug fixes
+
+* LUCENE-5907: Fix corruption case when opening a pre-4.x index with
+  IndexWriter, then opening an NRT reader from that writer, then
+  calling commit from the writer, then closing the NRT reader.  This
+  case would remove the wrong files from the index leading to a
+  corrupt index.  (Mike McCandless)
+
+* LUCENE-5919: Fix exception handling inside IndexWriter when
+  deleteFile throws an exception, to not over-decRef index files,
+  possibly deleting a file that's still in use in the index, leading
+  to corruption.  (Mike McCandless)
+
+* LUCENE-5922: DocValuesDocIdSet on 5.x and FieldCacheDocIdSet on 4.x
+  are not cacheable. (Adrien Grand)
+
+* LUCENE-5843: Added IndexWriter.MAX_DOCS which is the maximum number
+  of documents allowed in a single index, and any operations that add
+  documents will now throw IllegalStateException if the max count
+  would be exceeded, instead of silently creating an unusable
+  index.  (Mike McCandless)
+
+* LUCENE-5844: ArrayUtil.grow/oversize now returns a maximum of
+  Integer.MAX_VALUE - 8 for the maximum array size.  (Robert Muir,
+  Mike McCandless)
+
+* LUCENE-5827: Make all Directory implementations correctly fail with
+  IllegalArgumentException if slices are out of bounds.  (Uwe SChindler)
+
+* LUCENE-5897, LUCENE-5400: JFlex-based tokenizers StandardTokenizer and
+  UAX29URLEmailTokenizer tokenize extremely slowly over long sequences of
+  text partially matching certain grammar rules.  The scanner default
+  buffer size was reduced, and scanner buffer growth was disabled, resulting
+  in much, much faster tokenization for these text sequences.  
+  (Chris Geeringh, Robert Muir, Steve Rowe)
 
 ======================= Lucene 4.9.0 =======================
 

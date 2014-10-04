@@ -39,7 +39,6 @@ import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.Version;
 
 /** tests for writing term vectors */
 public class TestTermVectorsWriter extends LuceneTestCase {
@@ -663,7 +662,7 @@ public class TestTermVectorsWriter extends LuceneTestCase {
   public void testNoAbortOnBadTVSettings() throws Exception {
     Directory dir = newDirectory();
     // Don't use RandomIndexWriter because we want to be sure both docs go to 1 seg:
-    IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
+    IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     IndexWriter iw = new IndexWriter(dir, iwc);
 
     Document doc = new Document();

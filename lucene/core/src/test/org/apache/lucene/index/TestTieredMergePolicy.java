@@ -23,7 +23,6 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 
 public class TestTieredMergePolicy extends BaseMergePolicyTestCase {
 
@@ -217,7 +216,7 @@ public class TestTieredMergePolicy extends BaseMergePolicyTestCase {
   // LUCENE-5668
   public void testUnbalancedMergeSelection() throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
+    IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     TieredMergePolicy tmp = (TieredMergePolicy) iwc.getMergePolicy();
     tmp.setFloorSegmentMB(0.00001);
     // We need stable sizes for each segment:

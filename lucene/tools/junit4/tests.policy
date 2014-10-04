@@ -25,10 +25,12 @@
 
 grant {
   // permissions for file access, write access only to sandbox:
-  permission java.io.FilePermission "<<ALL FILES>>", "read,execute";
-  permission java.io.FilePermission "${junit4.childvm.cwd}", "read,execute";
-  permission java.io.FilePermission "${junit4.childvm.cwd}${/}temp", "read,execute,write,delete";
-  permission java.io.FilePermission "${junit4.childvm.cwd}${/}temp${/}-", "read,execute,write,delete";
+  // permission java.io.FilePermission "<<ALL FILES>>", "read,execute";
+  // HS: heliosearch temporarily needs this because it got some LUCENE-5650 changes from the (now) 5x branch
+  //     We should be able to remove it when moving to the 5x branch fully.
+  permission java.io.FilePermission "<<ALL FILES>>", "read,execute,write,delete";
+  permission java.io.FilePermission "${junit4.childvm.cwd}", "read,execute,write";
+  permission java.io.FilePermission "${junit4.childvm.cwd}${/}-", "read,execute,write,delete";
   permission java.io.FilePermission "${junit4.tempDir}${/}*", "read,execute,write,delete";
   permission java.io.FilePermission "${clover.db.dir}${/}-", "read,execute,write,delete";
   

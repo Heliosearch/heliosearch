@@ -20,7 +20,6 @@ package org.apache.lucene.codecs.lucene3x;
 import java.io.IOException;
 
 import org.apache.lucene.codecs.DocValuesConsumer;
-import org.apache.lucene.codecs.NormsConsumer;
 import org.apache.lucene.index.SegmentWriteState;
 
 /**
@@ -30,7 +29,7 @@ import org.apache.lucene.index.SegmentWriteState;
 class PreFlexRWNormsFormat extends Lucene3xNormsFormat {
 
   @Override
-  public NormsConsumer normsConsumer(SegmentWriteState state) throws IOException {
+  public DocValuesConsumer normsConsumer(SegmentWriteState state) throws IOException {
     return new PreFlexRWNormsConsumer(state.directory, state.segmentInfo.name, state.context);
   }
 }

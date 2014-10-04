@@ -100,7 +100,7 @@ public class BlendedInfixLookupFactory extends AnalyzingInfixLookupFactory {
       return new BlendedInfixSuggester(core.getSolrConfig().luceneMatchVersion, 
                                        FSDirectory.open(new File(indexPath)),
                                        indexAnalyzer, queryAnalyzer, minPrefixChars,
-                                       blenderType, numFactor, true);
+                                       blenderType, numFactor);
     } catch (IOException e) {
       throw new RuntimeException();
     }

@@ -26,7 +26,6 @@ import org.apache.lucene.analysis.BaseTokenStreamTestCase;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.ar.ArabicLetterTokenizer;
 import org.apache.lucene.analysis.core.KeywordTokenizer;
-import org.apache.lucene.util.Version;
 
 /**
  * Test the Persian Normalization Filter
@@ -59,7 +58,7 @@ public class TestPersianNormalizationFilter extends BaseTokenStreamTestCase {
   }
 
   private void check(final String input, final String expected) throws IOException {
-    ArabicLetterTokenizer tokenStream = new ArabicLetterTokenizer(Version.LATEST,
+    ArabicLetterTokenizer tokenStream = new ArabicLetterTokenizer(TEST_VERSION_CURRENT, 
         new StringReader(input));
     PersianNormalizationFilter filter = new PersianNormalizationFilter(
         tokenStream);

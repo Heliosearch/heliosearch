@@ -45,7 +45,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.Version;
 
 public abstract class AbstractTestCase extends LuceneTestCase {
 
@@ -355,7 +354,7 @@ public abstract class AbstractTestCase extends LuceneTestCase {
   // make 1 doc with multi valued field
   protected void make1dmfIndex( Analyzer analyzer, String... values ) throws Exception {
     IndexWriter writer = new IndexWriter(dir, new IndexWriterConfig(
-        Version.LATEST, analyzer).setOpenMode(OpenMode.CREATE));
+        TEST_VERSION_CURRENT, analyzer).setOpenMode(OpenMode.CREATE));
     Document doc = new Document();
     FieldType customType = new FieldType(TextField.TYPE_STORED);
     customType.setStoreTermVectors(true);
@@ -373,7 +372,7 @@ public abstract class AbstractTestCase extends LuceneTestCase {
   // make 1 doc with multi valued & not analyzed field
   protected void make1dmfIndexNA( String... values ) throws Exception {
     IndexWriter writer = new IndexWriter(dir, new IndexWriterConfig(
-        Version.LATEST, analyzerK).setOpenMode(OpenMode.CREATE));
+        TEST_VERSION_CURRENT, analyzerK).setOpenMode(OpenMode.CREATE));
     Document doc = new Document();
     FieldType customType = new FieldType(TextField.TYPE_STORED);
     customType.setStoreTermVectors(true);

@@ -68,7 +68,6 @@ import org.slf4j.LoggerFactory;
 
 /** @lucene.experimental */
 public class UpdateLog implements PluginInfoInitialized {
-  private static final long STATUS_TIME = TimeUnit.NANOSECONDS.convert(60, TimeUnit.SECONDS);
   public static String LOG_FILENAME_PATTERN = "%s.%019d";
   public static String TLOG_NAME="tlog";
 
@@ -223,7 +222,15 @@ public class UpdateLog implements PluginInfoInitialized {
    * for an existing log whenever the core or update handler changes.
    */
   public void init(UpdateHandler uhandler, SolrCore core) {
-    dataDir = core.getUlogDir();
+    // ulogDir from CoreDescriptor overrides
+    String ulogDir = core.getCoreDescriptor().getUlogDir();
+    if (ulogDir != null) {
+      dataDir = ulogDir;
+    }
+
+    if (dataDir == null || dataDir.length()==0) {
+      dataDir = core.getDataDir();
+    }
 
     this.uhandler = uhandler;
 
@@ -1244,7 +1251,7 @@ public class UpdateLog implements PluginInfoInitialized {
     public void doReplay(TransactionLog translog) {
       try {
         loglog.warn("Starting log replay " + translog + " active="+activeLog + " starting pos=" + recoveryInfo.positionOfStart);
-        long lastStatusTime = System.nanoTime();
+
         tlogReader = translog.getReader(recoveryInfo.positionOfStart);
 
         // NOTE: we don't currently handle a core reload during recovery.  This would cause the core
@@ -1255,27 +1262,12 @@ public class UpdateLog implements PluginInfoInitialized {
 
         long commitVersion = 0;
         int operationAndFlags = 0;
-        long nextCount = 0;
 
         for(;;) {
           Object o = null;
           if (cancelApplyBufferUpdate) break;
           try {
             if (testing_logReplayHook != null) testing_logReplayHook.run();
-            if (nextCount++ % 1000 == 0) {
-              long now = System.nanoTime();
-              if (now - lastStatusTime > STATUS_TIME) {
-                lastStatusTime = now;
-                long cpos = tlogReader.currentPos();
-                long csize = tlogReader.currentSize();
-                loglog.info(
-                        "log replay status {} active={} starting pos={} current pos={} current size={} % read={}",
-                        translog, activeLog, recoveryInfo.positionOfStart, cpos, csize,
-                        Math.round(cpos / (double) csize * 100.));
-                
-              }
-            }
-            
             o = null;
             o = tlogReader.next();
             if (o == null && activeLog) {

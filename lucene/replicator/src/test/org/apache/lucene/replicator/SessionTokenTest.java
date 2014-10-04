@@ -30,7 +30,6 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.SnapshotDeletionPolicy;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.IOUtils;
-import org.apache.lucene.util.Version;
 import org.junit.Test;
 
 public class SessionTokenTest extends ReplicatorTestCase {
@@ -38,7 +37,7 @@ public class SessionTokenTest extends ReplicatorTestCase {
   @Test
   public void testSerialization() throws IOException {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter writer = new IndexWriter(dir, conf);
     writer.addDocument(new Document());

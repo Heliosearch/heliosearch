@@ -26,7 +26,7 @@ import java.util.Set;
 
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.codecs.Codec;
-import org.apache.lucene.codecs.compressing.CompressingStoredFieldsWriter;
+import org.apache.lucene.codecs.lucene40.Lucene40StoredFieldsWriter;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
@@ -34,7 +34,6 @@ import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.TestIndexWriterReader;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 
 public class TestFileSwitchDirectory extends BaseDirectoryTestCase {
 
@@ -43,8 +42,8 @@ public class TestFileSwitchDirectory extends BaseDirectoryTestCase {
    */
   public void testBasic() throws IOException {
     Set<String> fileExtensions = new HashSet<>();
-    fileExtensions.add(CompressingStoredFieldsWriter.FIELDS_EXTENSION);
-    fileExtensions.add(CompressingStoredFieldsWriter.FIELDS_INDEX_EXTENSION);
+    fileExtensions.add(Lucene40StoredFieldsWriter.FIELDS_EXTENSION);
+    fileExtensions.add(Lucene40StoredFieldsWriter.FIELDS_INDEX_EXTENSION);
     
     MockDirectoryWrapper primaryDir = new MockDirectoryWrapper(random(), new RAMDirectory());
     primaryDir.setCheckIndexOnClose(false); // only part of an index
@@ -57,7 +56,7 @@ public class TestFileSwitchDirectory extends BaseDirectoryTestCase {
     OLD_FORMAT_IMPERSONATION_IS_ACTIVE = true;
     IndexWriter writer = new IndexWriter(
         fsd,
-        new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random())).
+        new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).
             setMergePolicy(newLogMergePolicy(false)).setCodec(Codec.forName("Lucene40")).setUseCompoundFile(false)
     );
     TestIndexWriterReader.createIndexNoClose(true, "ram", writer);

@@ -32,7 +32,6 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.util.English;
 import org.apache.lucene.util.IOUtils;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 
 /**
  * JUnit testcase to test RAMDirectory. RAMDirectory itself is used in many testcases,
@@ -53,7 +52,7 @@ public class TestRAMDirectory extends BaseDirectoryTestCase {
     
     Directory dir = newFSDirectory(path);
     IndexWriter writer = new IndexWriter(dir, new IndexWriterConfig(
-        Version.LATEST, new MockAnalyzer(random())).setOpenMode(OpenMode.CREATE));
+        TEST_VERSION_CURRENT, new MockAnalyzer(random())).setOpenMode(OpenMode.CREATE));
     // add some documents
     Document doc = null;
     for (int i = 0; i < docsToAdd; i++) {
@@ -124,7 +123,7 @@ public class TestRAMDirectory extends BaseDirectoryTestCase {
     dir.close();
     
     final IndexWriter writer = new IndexWriter(ramDir, new IndexWriterConfig(
-        Version.LATEST, new MockAnalyzer(random())).setOpenMode(OpenMode.APPEND));
+        TEST_VERSION_CURRENT, new MockAnalyzer(random())).setOpenMode(OpenMode.APPEND));
     writer.forceMerge(1);
     
     assertEquals(ramDir.sizeInBytes(), ramDir.getRecomputedSizeInBytes());

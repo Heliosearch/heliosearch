@@ -21,12 +21,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.lucene.analysis.MockAnalyzer;
 import org.apache.lucene.document.BinaryDocValuesField;
@@ -146,7 +150,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     analyzer.setMaxTokenLength(TestUtil.nextInt(random(), 1, IndexWriter.MAX_TERM_LENGTH));
 
     // TODO: remove randomness
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, analyzer)
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, analyzer)
       .setMergePolicy(mp);
     conf.setCodec(Codec.forName("Lucene40"));
     IndexWriter writer = new IndexWriter(dir, conf);
@@ -182,7 +186,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     TestUtil.rm(indexDir);
     Directory dir = newFSDirectory(indexDir);
     
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
       .setUseCompoundFile(false).setMergePolicy(NoMergePolicy.INSTANCE);
     IndexWriter writer = new IndexWriter(dir, conf);
     // create an index w/ few doc-values fields, some with updates and some without
@@ -221,18 +225,48 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     dir.close();
   }*/
 
-  final static String[] oldNames = {"40.cfs",
+  final static String[] oldNames = {"40a.cfs",
+                                    "40a.nocfs",
+                                    "40b.cfs",
+                                    "40b.nocfs",
+                                    "40.cfs",
                                     "40.nocfs",
                                     "41.cfs",
                                     "41.nocfs",
                                     "42.cfs",
                                     "42.nocfs",
+                                    "421.cfs",
+                                    "421.nocfs",
+                                    "43.cfs",
+                                    "43.nocfs",
+                                    "431.cfs",
+                                    "431.nocfs",
+                                    "44.cfs",
+                                    "44.nocfs",
                                     "45.cfs",
                                     "45.nocfs",
+                                    "451.cfs",
+                                    "451.nocfs",
+                                    "46.cfs",
+                                    "46.nocfs",
                                     "461.cfs",
                                     "461.nocfs",
+                                    "47.cfs",
+                                    "47.nocfs",
+                                    "471.cfs",
+                                    "471.nocfs",
+                                    "472.cfs",
+                                    "472.nocfs",
+                                    "48.cfs",
+                                    "48.nocfs",
+                                    "481.cfs",
+                                    "481.nocfs",
                                     "49.cfs",
-                                    "49.nocfs"
+                                    "49.nocfs",
+                                    "491.cfs",
+                                    "491.nocfs",
+                                    "410.cfs",
+                                    "410.nocfs"
   };
   
   final String[] unsupportedNames = {"19.cfs",
@@ -251,8 +285,8 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
                                      "29.nocfs",
   };
   
-  final static String[] oldSingleSegmentNames = {"40.optimized.cfs",
-                                                 "40.optimized.nocfs",
+  final static String[] oldSingleSegmentNames = {"40a.optimized.cfs",
+                                                 "40a.optimized.nocfs",
   };
   
   static Map<String,Directory> oldIndexDirs;
@@ -264,8 +298,8 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     final boolean streamType = random().nextBoolean();
     final int choice = TestUtil.nextInt(random(), 0, 2);
     switch (choice) {
-      case 0: return new IndexUpgrader(dir, Version.LATEST);
-      case 1: return new IndexUpgrader(dir, Version.LATEST,
+      case 0: return new IndexUpgrader(dir, TEST_VERSION_CURRENT);
+      case 1: return new IndexUpgrader(dir, TEST_VERSION_CURRENT, 
                                        streamType ? null : InfoStream.NO_OUTPUT, false);
       case 2: return new IndexUpgrader(dir, newIndexWriterConfig(null), false);
       default: fail("case statement didn't get updated when random bounds changed");
@@ -294,6 +328,125 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
       d.close();
     }
     oldIndexDirs = null;
+  }
+
+  public void testAllVersionHaveCfsAndNocfs() {
+    // ensure all tested versions with cfs also have nocfs
+    String[] files = new String[oldNames.length];
+    System.arraycopy(oldNames, 0, files, 0, oldNames.length);
+    Arrays.sort(files);
+    String prevFile = "";
+    for (String file : files) {
+      if (prevFile.endsWith(".cfs")) {
+        String prefix = prevFile.replace(".cfs", "");
+        assertEquals("Missing .nocfs for backcompat index " + prefix, prefix + ".nocfs", file);
+      }
+    }
+  }
+
+  public void testAllVersionsTested() throws Exception {
+    Pattern constantPattern = Pattern.compile("LUCENE_(\\d+)_(\\d+)_(\\d+)(_ALPHA|_BETA)?");
+    // find the unique versions according to Version.java
+    List<String> expectedVersions = new ArrayList<>();
+    int lastPrevMinorIndex = -1;
+    Version lastPrevMajorVersion = null;
+    for (java.lang.reflect.Field field : Version.class.getDeclaredFields()) {
+      if (Modifier.isStatic(field.getModifiers()) && field.getType() == Version.class) {
+        Version v = (Version)field.get(Version.class);
+        if (v.equals(Version.LATEST)) continue;
+        if (v.major == 3) continue; // 3x codecs are tested in TestBackwardsCompatilibility3x
+
+        Matcher constant = constantPattern.matcher(field.getName());
+        if (constant.matches() == false) continue;
+
+        if (v.major == Version.LATEST.major - 1 &&
+            (lastPrevMajorVersion == null || v.onOrAfter(lastPrevMajorVersion))) {
+          lastPrevMajorVersion = v;
+          lastPrevMinorIndex = expectedVersions.size();
+        }
+
+        String major = constant.group(1);
+        String minor = constant.group(2);
+        String bugfix = constant.group(3);
+        if (bugfix.equals("0")) {
+          bugfix = "";
+        }
+        String prerelease = constant.group(4);
+        if (prerelease != null) {
+          if (prerelease.equals("_ALPHA")) {
+            prerelease = "a";
+          } else { // _BETA
+            prerelease = "b";
+          }
+        } else {
+          prerelease = "";
+        }
+        expectedVersions.add(major + minor + bugfix + prerelease + ".cfs");
+      }
+    }
+    if (Version.LATEST.minor == 0 && Version.LATEST.bugfix == 0 && Version.LATEST.prerelease == 0) {
+      // we are on trunk (latest is a first major release) so the last minor index
+      // for the previous major version is also not yet tested
+      assertNotNull(lastPrevMajorVersion);
+      expectedVersions.remove(lastPrevMinorIndex);
+    }
+    Collections.sort(expectedVersions);
+
+    // find what versions we are testing
+    List<String> testedVersions = new ArrayList<>();
+    for (String testedVersion : oldNames) {
+      if (testedVersion.endsWith(".cfs") == false) continue;
+      testedVersions.add(testedVersion);
+    }
+    Collections.sort(testedVersions);
+
+    int i = 0;
+    int j = 0;
+    List<String> missingFiles = new ArrayList<>();
+    List<String> extraFiles = new ArrayList<>();
+    while (i < expectedVersions.size() && j < testedVersions.size()) {
+      String expectedVersion = expectedVersions.get(i);
+      String testedVersion = testedVersions.get(j);
+      int compare = expectedVersion.compareTo(testedVersion);
+      if (compare == 0) { // equal, we can move on
+        ++i;
+        ++j;
+      } else if (compare < 0) { // didn't find test for version constant
+        missingFiles.add(expectedVersion);
+        ++i;
+      } else { // extra test file
+        extraFiles.add(testedVersion);
+        ++j;
+      }
+    }
+    while (i < expectedVersions.size()) {
+      missingFiles.add(expectedVersions.get(i));
+      ++i;
+    }
+    while (j < testedVersions.size()) {
+      extraFiles.add(testedVersions.get(j));
+      ++j;
+    }
+
+    if (missingFiles.isEmpty() && extraFiles.isEmpty()) {
+      // success
+      return;
+    }
+
+    StringBuffer msg = new StringBuffer();
+    if (missingFiles.isEmpty() == false) {
+      msg.append("Saw Version constant but no corresponding back-compat index:\n");
+      for (String missingFile : missingFiles) {
+        msg.append("  " + missingFile + "\n");
+      }
+    }
+    if (extraFiles.isEmpty() == false) {
+      msg.append("Saw back-compat index but no corresponding Version constant:\n");
+      for (String extraFile : extraFiles) {
+        msg.append("  " + extraFile + "\n");
+      }
+    }
+    fail(msg.toString());
   }
   
   /** This test checks that *only* IndexFormatTooOldExceptions are thrown when you open and operate on too old indexes! */
@@ -361,7 +514,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
       }
       Directory dir = newDirectory(oldIndexDirs.get(name));
       IndexWriter w = new IndexWriter(dir, new IndexWriterConfig(
-          Version.LATEST, new MockAnalyzer(random())));
+          TEST_VERSION_CURRENT, new MockAnalyzer(random())));
       w.forceMerge(1);
       w.close();
       
@@ -668,7 +821,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     mp.setNoCFSRatio(doCFS ? 1.0 : 0.0);
     mp.setMaxCFSSegmentSizeMB(Double.POSITIVE_INFINITY);
     // TODO: remove randomness
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
       .setUseCompoundFile(doCFS).setMaxBufferedDocs(10).setMergePolicy(mp);
     IndexWriter writer = new IndexWriter(dir, conf);
     
@@ -686,13 +839,13 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
       mp = new LogByteSizeMergePolicy();
       mp.setNoCFSRatio(doCFS ? 1.0 : 0.0);
       // TODO: remove randomness
-      conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random())).setUseCompoundFile(doCFS)
+      conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setUseCompoundFile(doCFS)
         .setMaxBufferedDocs(10).setMergePolicy(mp);
       writer = new IndexWriter(dir, conf);
       addNoProxDoc(writer);
       writer.close();
 
-      conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random())).setUseCompoundFile(doCFS)
+      conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random())).setUseCompoundFile(doCFS)
         .setMaxBufferedDocs(10).setMergePolicy(NoMergePolicy.INSTANCE);
       writer = new IndexWriter(dir, conf);
       Term searchTerm = new Term("id", "7");
@@ -1009,7 +1162,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
       for (int i = 0; i < 3; i++) {
         // only use Log- or TieredMergePolicy, to make document addition predictable and not suddenly merge:
         MergePolicy mp = random().nextBoolean() ? newLogMergePolicy() : newTieredMergePolicy();
-        IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+        IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
           .setMergePolicy(mp);
         IndexWriter w = new IndexWriter(ramDir, iwc);
         // add few more docs:
@@ -1022,7 +1175,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
       // add dummy segments (which are all in current
       // version) to single segment index
       MergePolicy mp = random().nextBoolean() ? newLogMergePolicy() : newTieredMergePolicy();
-      IndexWriterConfig iwc = new IndexWriterConfig(Version.LATEST, null)
+      IndexWriterConfig iwc = new IndexWriterConfig(TEST_VERSION_CURRENT, null)
         .setMergePolicy(mp);
       IndexWriter w = new IndexWriter(dir, iwc);
       w.addIndexes(ramDir);
@@ -1092,7 +1245,7 @@ public class TestBackwardsCompatibility extends LuceneTestCase {
     verifyDocValues(dir);
     
     // update fields and verify index
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()));
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()));
     IndexWriter writer = new IndexWriter(dir, conf);
     updateNumeric(writer, "1", "ndv1", "ndv1_c", 300L);
     updateNumeric(writer, "1", "ndv2", "ndv2_c", 300L);

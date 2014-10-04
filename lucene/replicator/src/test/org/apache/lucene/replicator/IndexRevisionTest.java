@@ -32,7 +32,6 @@ import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.util.IOUtils;
-import org.apache.lucene.util.Version;
 import org.junit.Test;
 
 public class IndexRevisionTest extends ReplicatorTestCase {
@@ -40,7 +39,7 @@ public class IndexRevisionTest extends ReplicatorTestCase {
   @Test
   public void testNoSnapshotDeletionPolicy() throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
     conf.setIndexDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
     IndexWriter writer = new IndexWriter(dir, conf);
     try {
@@ -56,7 +55,7 @@ public class IndexRevisionTest extends ReplicatorTestCase {
   @Test
   public void testNoCommit() throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter writer = new IndexWriter(dir, conf);
     try {
@@ -72,11 +71,12 @@ public class IndexRevisionTest extends ReplicatorTestCase {
   @Test
   public void testRevisionRelease() throws Exception {
     Directory dir = newDirectory();
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
+
     // we look to see that certain files are deleted:
     if (dir instanceof MockDirectoryWrapper) {
       ((MockDirectoryWrapper)dir).setEnableVirusScanner(false);
     }
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter writer = new IndexWriter(dir, conf);
     try {
@@ -101,7 +101,7 @@ public class IndexRevisionTest extends ReplicatorTestCase {
   @Test
   public void testSegmentsFileLast() throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter writer = new IndexWriter(dir, conf);
     try {
@@ -122,7 +122,7 @@ public class IndexRevisionTest extends ReplicatorTestCase {
   @Test
   public void testOpen() throws Exception {
     Directory dir = newDirectory();
-    IndexWriterConfig conf = new IndexWriterConfig(Version.LATEST, null);
+    IndexWriterConfig conf = new IndexWriterConfig(TEST_VERSION_CURRENT, null);
     conf.setIndexDeletionPolicy(new SnapshotDeletionPolicy(conf.getIndexDeletionPolicy()));
     IndexWriter writer = new IndexWriter(dir, conf);
     try {

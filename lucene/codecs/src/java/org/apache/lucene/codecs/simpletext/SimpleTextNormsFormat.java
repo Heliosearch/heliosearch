@@ -21,11 +21,7 @@ import java.io.IOException;
 
 import org.apache.lucene.codecs.DocValuesConsumer;
 import org.apache.lucene.codecs.DocValuesProducer;
-import org.apache.lucene.codecs.NormsConsumer;
 import org.apache.lucene.codecs.NormsFormat;
-import org.apache.lucene.codecs.NormsProducer;
-import org.apache.lucene.index.FieldInfo;
-import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.SegmentReadState;
 import org.apache.lucene.index.SegmentWriteState;
 
@@ -40,12 +36,12 @@ public class SimpleTextNormsFormat extends NormsFormat {
   private static final String NORMS_SEG_EXTENSION = "len";
   
   @Override
-  public NormsConsumer normsConsumer(SegmentWriteState state) throws IOException {
+  public DocValuesConsumer normsConsumer(SegmentWriteState state) throws IOException {
     return new SimpleTextNormsConsumer(state);
   }
   
   @Override
-  public NormsProducer normsProducer(SegmentReadState state) throws IOException {
+  public DocValuesProducer normsProducer(SegmentReadState state) throws IOException {
     return new SimpleTextNormsProducer(state);
   }
   
@@ -56,33 +52,11 @@ public class SimpleTextNormsFormat extends NormsFormat {
    * 
    * @lucene.experimental
    */
-  public static class SimpleTextNormsProducer extends NormsProducer {
-    private final SimpleTextDocValuesReader impl;
-    
+  public static class SimpleTextNormsProducer extends SimpleTextDocValuesReader {
     public SimpleTextNormsProducer(SegmentReadState state) throws IOException {
       // All we do is change the extension from .dat -> .len;
       // otherwise this is a normal simple doc values file:
-      impl = new SimpleTextDocValuesReader(state, NORMS_SEG_EXTENSION);
-    }
-    
-    @Override
-    public NumericDocValues getNorms(FieldInfo field) throws IOException {
-      return impl.getNumeric(field);
-    }
-    
-    @Override
-    public void close() throws IOException {
-      impl.close();
-    }
-    
-    @Override
-    public long ramBytesUsed() {
-      return impl.ramBytesUsed();
-    }
-    
-    @Override
-    public void checkIntegrity() throws IOException {
-      impl.checkIntegrity();
+      super(state, NORMS_SEG_EXTENSION);
     }
   }
   
@@ -93,23 +67,11 @@ public class SimpleTextNormsFormat extends NormsFormat {
    * 
    * @lucene.experimental
    */
-  public static class SimpleTextNormsConsumer extends NormsConsumer {
-    private final SimpleTextDocValuesWriter impl;
-    
+  public static class SimpleTextNormsConsumer extends SimpleTextDocValuesWriter {
     public SimpleTextNormsConsumer(SegmentWriteState state) throws IOException {
       // All we do is change the extension from .dat -> .len;
       // otherwise this is a normal simple doc values file:
-      impl = new SimpleTextDocValuesWriter(state, NORMS_SEG_EXTENSION);
-    }
-    
-    @Override
-    public void addNormsField(FieldInfo field, Iterable<Number> values) throws IOException {
-      impl.addNumericField(field, values);
-    }
-
-    @Override
-    public void close() throws IOException {
-      impl.close();
+      super(state, NORMS_SEG_EXTENSION);
     }
   }
 }

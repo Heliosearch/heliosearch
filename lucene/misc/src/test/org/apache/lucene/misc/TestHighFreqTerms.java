@@ -30,7 +30,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.TestUtil;
-import org.apache.lucene.util.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -45,7 +44,7 @@ public class TestHighFreqTerms extends LuceneTestCase {
   public static void setUpClass() throws Exception {
     dir = newDirectory();
     writer = new IndexWriter(dir, newIndexWriterConfig(random(),
-       Version.LATEST, new MockAnalyzer(random(), MockTokenizer.WHITESPACE, false))
+       TEST_VERSION_CURRENT, new MockAnalyzer(random(), MockTokenizer.WHITESPACE, false))
        .setMaxBufferedDocs(2));
     indexDocs(writer);
     reader = DirectoryReader.open(dir);

@@ -117,7 +117,6 @@ public class SegmentWriteState {
     this.segmentSuffix = segmentSuffix;
     segUpdates = state.segUpdates;
     delCountOnFlush = state.delCountOnFlush;
-    liveDocs = state.liveDocs;
   }
   
   // currently only used by assert? clean up and make real check?

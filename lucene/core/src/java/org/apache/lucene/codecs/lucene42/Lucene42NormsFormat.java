@@ -21,9 +21,7 @@ import java.io.IOException;
 
 import org.apache.lucene.codecs.DocValuesConsumer;
 import org.apache.lucene.codecs.DocValuesProducer;
-import org.apache.lucene.codecs.NormsConsumer;
 import org.apache.lucene.codecs.NormsFormat;
-import org.apache.lucene.codecs.NormsProducer;
 import org.apache.lucene.index.SegmentReadState;
 import org.apache.lucene.index.SegmentWriteState;
 import org.apache.lucene.util.packed.PackedInts;
@@ -68,13 +66,13 @@ public class Lucene42NormsFormat extends NormsFormat {
   }
   
   @Override
-  public NormsConsumer normsConsumer(SegmentWriteState state) throws IOException {
+  public DocValuesConsumer normsConsumer(SegmentWriteState state) throws IOException {
     throw new UnsupportedOperationException("this codec can only be used for reading");
   }
   
   @Override
-  public NormsProducer normsProducer(SegmentReadState state) throws IOException {
-    return new Lucene42NormsProducer(state, DATA_CODEC, DATA_EXTENSION, METADATA_CODEC, METADATA_EXTENSION);
+  public DocValuesProducer normsProducer(SegmentReadState state) throws IOException {
+    return new Lucene42DocValuesProducer(state, DATA_CODEC, DATA_EXTENSION, METADATA_CODEC, METADATA_EXTENSION);
   }
   
   static final String DATA_CODEC = "Lucene41NormsData";

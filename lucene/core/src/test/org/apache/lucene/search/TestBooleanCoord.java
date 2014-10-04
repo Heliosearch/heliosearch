@@ -33,7 +33,6 @@ import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.LuceneTestCase;
-import org.apache.lucene.util.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
@@ -48,7 +47,7 @@ public class TestBooleanCoord extends LuceneTestCase {
   @BeforeClass
   public static void beforeClass() throws Exception {
     dir = newDirectory();
-    IndexWriter iw = new IndexWriter(dir, new IndexWriterConfig(Version.LATEST, null));
+    IndexWriter iw = new IndexWriter(dir, new IndexWriterConfig(TEST_VERSION_CURRENT, null));
     
     // we only add two documents for testing:
     // the first document has 3 terms A,B,C (for positive matching). we test scores against this.

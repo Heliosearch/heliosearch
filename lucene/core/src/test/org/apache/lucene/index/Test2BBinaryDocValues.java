@@ -31,7 +31,6 @@ import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.TimeUnits;
 
 import com.carrotsearch.randomizedtesting.annotations.TimeoutSuite;
-import org.apache.lucene.util.Version;
 
 @SuppressCodecs({"SimpleText", "Memory", "Direct", "Lucene3x"})
 @TimeoutSuite(millis = 80 * TimeUnits.HOUR)
@@ -46,7 +45,7 @@ public class Test2BBinaryDocValues extends LuceneTestCase {
     }
     
     IndexWriter w = new IndexWriter(dir,
-        new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+        new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
         .setMaxBufferedDocs(IndexWriterConfig.DISABLE_AUTO_FLUSH)
         .setRAMBufferSizeMB(256.0)
         .setMergeScheduler(new ConcurrentMergeScheduler())
@@ -105,7 +104,7 @@ public class Test2BBinaryDocValues extends LuceneTestCase {
     }
     
     IndexWriter w = new IndexWriter(dir,
-        new IndexWriterConfig(Version.LATEST, new MockAnalyzer(random()))
+        new IndexWriterConfig(TEST_VERSION_CURRENT, new MockAnalyzer(random()))
         .setMaxBufferedDocs(IndexWriterConfig.DISABLE_AUTO_FLUSH)
         .setRAMBufferSizeMB(256.0)
         .setMergeScheduler(new ConcurrentMergeScheduler())

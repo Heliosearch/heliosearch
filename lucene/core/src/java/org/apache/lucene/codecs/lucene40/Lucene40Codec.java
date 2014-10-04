@@ -62,12 +62,12 @@ public class Lucene40Codec extends Codec {
   }
   
   @Override
-  public StoredFieldsFormat storedFieldsFormat() {
+  public final StoredFieldsFormat storedFieldsFormat() {
     return fieldsFormat;
   }
   
   @Override
-  public TermVectorsFormat termVectorsFormat() {
+  public final TermVectorsFormat termVectorsFormat() {
     return vectorsFormat;
   }
 

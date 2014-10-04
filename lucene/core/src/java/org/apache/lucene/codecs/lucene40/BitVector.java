@@ -359,9 +359,9 @@ final class BitVector implements Cloneable, MutableBits {
 
       if (version >= VERSION_CHECKSUM) {
         CodecUtil.checkFooter(input);
-      } else {
+      } else if (version >= VERSION_DGAPS_CLEARED) {
         CodecUtil.checkEOF(input);
-      }
+      } // otherwise, before this we cannot even check that we read the entire file due to bugs in those versions!!!!
       assert verifyCount();
     } finally {
       input.close();

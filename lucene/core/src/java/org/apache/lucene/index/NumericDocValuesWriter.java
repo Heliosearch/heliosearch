@@ -40,9 +40,9 @@ class NumericDocValuesWriter extends DocValuesWriter {
   private FixedBitSet docsWithField;
   private final FieldInfo fieldInfo;
 
-  public NumericDocValuesWriter(FieldInfo fieldInfo, Counter iwBytesUsed) {
+  public NumericDocValuesWriter(FieldInfo fieldInfo, Counter iwBytesUsed, boolean trackDocsWithField) {
     pending = PackedLongValues.deltaPackedBuilder(PackedInts.COMPACT);
-    docsWithField = new FixedBitSet(64);
+    docsWithField = trackDocsWithField ? new FixedBitSet(64) : null;
     bytesUsed = pending.ramBytesUsed() + docsWithFieldBytesUsed();
     this.fieldInfo = fieldInfo;
     this.iwBytesUsed = iwBytesUsed;
@@ -60,15 +60,17 @@ class NumericDocValuesWriter extends DocValuesWriter {
     }
 
     pending.add(value);
-    docsWithField = FixedBitSet.ensureCapacity(docsWithField, docID);
-    docsWithField.set(docID);
-    
+    if (docsWithField != null) {
+      docsWithField = FixedBitSet.ensureCapacity(docsWithField, docID);
+      docsWithField.set(docID);
+    }
+
     updateBytesUsed();
   }
   
   private long docsWithFieldBytesUsed() {
     // size of the long[] + some overhead
-    return RamUsageEstimator.sizeOf(docsWithField.getBits()) + 64;
+    return docsWithField == null ? 0 : RamUsageEstimator.sizeOf(docsWithField.getBits()) + 64;
   }
 
   private void updateBytesUsed() {
@@ -124,13 +126,13 @@ class NumericDocValuesWriter extends DocValuesWriter {
       Long value;
       if (upto < size) {
         long v = iter.next();
-        if (docsWithField.get(upto)) {
+        if (docsWithField == null || docsWithField.get(upto)) {
           value = v;
         } else {
           value = null;
         }
       } else {
-        value = null;
+        value = docsWithField != null ? null : MISSING;
       }
       upto++;
       return value;
