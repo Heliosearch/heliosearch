@@ -31,6 +31,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.solr.SolrTestCaseJ4.SuppressSSL;
@@ -50,7 +52,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 @LuceneTestCase.Slow
-@SuppressSSL     // See SOLR-5776
+@SuppressSSL     // Currently unknown why SSL does not work
 public class OverseerRolesTest  extends AbstractFullDistribZkTestBase{
   private CloudSolrServer client;
 
@@ -82,7 +84,7 @@ public class OverseerRolesTest  extends AbstractFullDistribZkTestBase{
     fixShardCount = true;
 
     sliceCount = 2;
-    shardCount = TEST_NIGHTLY ? 6 : 2;
+    shardCount = 6;
 
     checkCreatedVsState = false;
   }
@@ -91,6 +93,7 @@ public class OverseerRolesTest  extends AbstractFullDistribZkTestBase{
   public void doTest() throws Exception {
     testQuitCommand();
     testOverseerRole();
+
   }
 
   private void testQuitCommand() throws Exception{

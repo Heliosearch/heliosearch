@@ -421,16 +421,6 @@ public class HdfsTransactionLog extends TransactionLog {
         return "LogReader{" + "file=" + tlogFile + ", position=" + fis.position() + ", end=" + fos.size() + "}";
       }
     }
-    
-    @Override
-    public long currentPos() {
-      return fis.position();
-    }
-    
-    @Override
-    public long currentSize() {
-      return sz;
-    }
 
   }
 

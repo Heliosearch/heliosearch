@@ -527,7 +527,7 @@ public class ShardSplitTest extends BasicDistributedZkTest {
     baseUrl = baseUrl.substring(0, baseUrl.length() - "collection1".length());
 
     HttpSolrServer baseServer = new HttpSolrServer(baseUrl);
-    baseServer.setConnectionTimeout(30000);
+    baseServer.setConnectionTimeout(15000);
     baseServer.setSoTimeout(60000 * 5);
     baseServer.request(request);
     baseServer.shutdown();
@@ -614,7 +614,7 @@ public class ShardSplitTest extends BasicDistributedZkTest {
   }
 
   @Override
-  protected CloudSolrServer createCloudClient(String defaultCollection) {
+  protected CloudSolrServer createCloudClient(String defaultCollection) throws MalformedURLException {
     CloudSolrServer client = super.createCloudClient(defaultCollection);
     client.getLbServer().getHttpClient().getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT, 5 * 60 * 1000);
     return client;

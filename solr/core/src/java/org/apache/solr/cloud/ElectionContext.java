@@ -189,11 +189,6 @@ final class ShardLeaderElectionContext extends ShardLeaderElectionContextBase {
     syncStrategy.close();
   }
   
-  @Override
-  public ElectionContext copy() {
-    return new ShardLeaderElectionContext(leaderElector, shardId, collection, id, leaderProps, zkController, cc);
-  }
-  
   /* 
    * weAreReplacement: has someone else been the leader already?
    */

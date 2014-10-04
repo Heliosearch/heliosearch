@@ -38,7 +38,6 @@ import org.apache.lucene.search.spell.SuggestWord;
 import org.apache.lucene.search.spell.SuggestWordFrequencyComparator;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.LuceneTestCase.SuppressTempFileChecks;
-import org.apache.lucene.util.Version;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.SolrCore;
@@ -290,7 +289,7 @@ public class IndexBasedSpellCheckerTest extends SolrTestCaseJ4 {
     Directory dir = newFSDirectory(altIndexDir);
     IndexWriter iw = new IndexWriter(
         dir,
-        new IndexWriterConfig(Version.LATEST, new WhitespaceAnalyzer())
+        new IndexWriterConfig(TEST_VERSION_CURRENT, new WhitespaceAnalyzer())
     );
     for (int i = 0; i < ALT_DOCS.length; i++) {
       Document doc = new Document();

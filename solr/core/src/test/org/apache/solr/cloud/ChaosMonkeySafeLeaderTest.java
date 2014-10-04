@@ -19,11 +19,10 @@ package org.apache.solr.cloud;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
+import org.apache.lucene.util.LuceneTestCase.BadApple;
 import org.apache.lucene.util.LuceneTestCase.Slow;
 import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.core.Diagnostics;
@@ -89,15 +88,8 @@ public class ChaosMonkeySafeLeaderTest extends AbstractFullDistribZkTestBase {
   
   public ChaosMonkeySafeLeaderTest() {
     super();
-    sliceCount = Integer.parseInt(System.getProperty("solr.tests.cloud.cm.slicecount", "-1"));
-    shardCount = Integer.parseInt(System.getProperty("solr.tests.cloud.cm.shardcount", "-1"));
-    
-    if (sliceCount == -1) {
-      sliceCount = random().nextInt(TEST_NIGHTLY ? 5 : 3) + 1;
-    }
-    if (shardCount == -1) {
-      shardCount = sliceCount + random().nextInt(TEST_NIGHTLY ? 12 : 2);
-    }
+    sliceCount = Integer.parseInt(System.getProperty("solr.tests.cloud.cm.slicecount", "3"));
+    shardCount = Integer.parseInt(System.getProperty("solr.tests.cloud.cm.shardcount", "12"));
   }
   
   @Override
@@ -109,7 +101,7 @@ public class ChaosMonkeySafeLeaderTest extends AbstractFullDistribZkTestBase {
     // randomly turn on 1 seconds 'soft' commit
     randomlyEnableAutoSoftCommit();
 
-    tryDelete();
+    del("*:*");
     
     List<StopableIndexingThread> threads = new ArrayList<>();
     int threadCount = 2;
@@ -125,13 +117,8 @@ public class ChaosMonkeySafeLeaderTest extends AbstractFullDistribZkTestBase {
       if (RUN_LENGTH != -1) {
         runLength = RUN_LENGTH;
       } else {
-        int[] runTimes;
-        if (TEST_NIGHTLY) {
-          runTimes = new int[] {5000, 6000, 10000, 15000, 25000, 30000,
-              30000, 45000, 90000, 120000};
-        } else {
-          runTimes = new int[] {5000, 7000, 15000};
-        }
+        int[] runTimes = new int[] {5000, 6000, 10000, 25000, 27000, 30000,
+            30000, 45000, 90000, 120000};
         runLength = runTimes[random().nextInt(runTimes.length - 1)];
       }
       
@@ -184,21 +171,6 @@ public class ChaosMonkeySafeLeaderTest extends AbstractFullDistribZkTestBase {
     numShardsNumReplicas.add(1);
     numShardsNumReplicas.add(1);
     checkForCollection("testcollection",numShardsNumReplicas, null);
-  }
-
-  private void tryDelete() throws Exception {
-    long start = System.nanoTime();
-    long timeout = start + TimeUnit.NANOSECONDS.convert(10, TimeUnit.SECONDS);
-    while (System.nanoTime() < timeout) {
-      try {
-        del("*:*");
-        break;
-      } catch (SolrServerException e) {
-        // cluster may not be up yet
-        e.printStackTrace();
-      }
-      Thread.sleep(100);
-    }
   }
   
   // skip the randoms - they can deadlock...

@@ -144,8 +144,6 @@ var sammy = $.sammy
 
           this.active_core = active_element;
         }
-
-        check_fixed_menu();
       }
     );
   }
@@ -405,9 +403,6 @@ var solr_admin = function( app_config )
               }
             );
 
-          check_fixed_menu();
-          $( window ).resize( check_fixed_menu );
-
           var system_url = config.solr_path + '/admin/info/system?wt=json';
           $.ajax
           (
@@ -598,11 +593,6 @@ var solr_admin = function( app_config )
       sep[ browser.locale ] || sep[ browser.language ] || sep['_']
     );
   };
-
-  check_fixed_menu = function check_fixed_menu()
-  {
-    $( '#wrapper' ).toggleClass( 'scroll', $( window ).height() < $( '#menu-wrapper' ).height() + $( '#header' ).height() + 40 );
-  }
 
 };
 

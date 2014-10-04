@@ -17,7 +17,6 @@ package org.apache.solr.cloud;
  * limitations under the License.
  */
 
-import org.apache.lucene.util.LuceneTestCase.Slow;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.junit.BeforeClass;
@@ -27,7 +26,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-@Slow
 public class TriLevelCompositeIdRoutingTest extends ShardRoutingTest {
 
   int NUM_APPS = 5;
@@ -47,8 +45,8 @@ public class TriLevelCompositeIdRoutingTest extends ShardRoutingTest {
 
   public TriLevelCompositeIdRoutingTest() {
     schemaString = "schema15.xml";      // we need a string id
-    super.sliceCount = TEST_NIGHTLY ? 12 : 2;             // a lot of slices for more ranges and buckets
-    super.shardCount = TEST_NIGHTLY ? 24 : 3;
+    super.sliceCount = 12;             // a lot of slices for more ranges and buckets
+    super.shardCount = 24;
     super.fixShardCount = true;
 
   }

@@ -1,5 +1,6 @@
 package org.apache.solr.core;
 
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.util.BytesRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,9 @@ public class HS
     if (loaded) {
       _init();
     }
+
+    // effectively disable max clauses on boolean query
+    BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
   }
 
   static {

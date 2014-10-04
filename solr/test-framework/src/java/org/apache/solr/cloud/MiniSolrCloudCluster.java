@@ -29,9 +29,12 @@ import org.apache.commons.io.IOUtils;
 import org.apache.solr.client.solrj.embedded.JettySolrRunner;
 import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.ZooDefs;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.io.Files;
 
 public class MiniSolrCloudCluster {
   
@@ -45,15 +48,14 @@ public class MiniSolrCloudCluster {
    * "Mini" SolrCloud cluster to be used for testing
    * @param numServers number of Solr servers to start
    * @param hostContext context path of Solr servers used by Jetty
-   * @param baseDir base directory that the mini cluster should be run from
    * @param solrXml solr.xml file to be uploaded to ZooKeeper
    * @param extraServlets Extra servlets to be started by Jetty
    * @param extraRequestFilters extra filters to be started by Jetty
    */
-  public MiniSolrCloudCluster(int numServers, String hostContext, File baseDir, File solrXml,
+  public MiniSolrCloudCluster(int numServers, String hostContext, File solrXml,
       SortedMap<ServletHolder, String> extraServlets,
       SortedMap<Class, String> extraRequestFilters) throws Exception {
-    testDir = baseDir;
+    testDir = Files.createTempDir();
 
     String zkDir = testDir.getAbsolutePath() + File.separator
       + "zookeeper/server1/data";
@@ -67,7 +69,8 @@ public class MiniSolrCloudCluster {
         AbstractZkTestCase.TIMEOUT, 45000, null);
       zkClient.makePath("/solr", false, true);
       is = new FileInputStream(solrXml);
-      zkClient.create("/solr/solr.xml", IOUtils.toByteArray(is), CreateMode.PERSISTENT, true);
+      zkClient.create("/solr/solr.xml", IOUtils.toByteArray(is),
+        ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT, true);
     } finally {
       IOUtils.closeQuietly(is);
       if (zkClient != null) zkClient.close();

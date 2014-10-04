@@ -23,7 +23,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.store.SimpleFSLockFactory;
-import org.apache.lucene.util.Version;
 import org.apache.solr.SolrTestCaseJ4;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,7 +49,7 @@ public class SolrCoreCheckLockOnStartupTest extends SolrTestCaseJ4 {
 
     Directory directory = newFSDirectory(new File(initCoreDataDir, "index"), new SimpleFSLockFactory());
     //creates a new IndexWriter without releasing the lock yet
-    IndexWriter indexWriter = new IndexWriter(directory, new IndexWriterConfig(Version.LATEST, null));
+    IndexWriter indexWriter = new IndexWriter(directory, new IndexWriterConfig(TEST_VERSION_CURRENT, null));
 
     ignoreException("locked");
     try {
@@ -76,7 +75,7 @@ public class SolrCoreCheckLockOnStartupTest extends SolrTestCaseJ4 {
     log.info("Acquiring lock on {}", indexDir.getAbsolutePath());
     Directory directory = newFSDirectory(indexDir, new NativeFSLockFactory());
     //creates a new IndexWriter without releasing the lock yet
-    IndexWriter indexWriter = new IndexWriter(directory, new IndexWriterConfig(Version.LATEST, null));
+    IndexWriter indexWriter = new IndexWriter(directory, new IndexWriterConfig(TEST_VERSION_CURRENT, null));
 
     ignoreException("locked");
     try {

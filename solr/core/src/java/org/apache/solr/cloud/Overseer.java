@@ -1291,13 +1291,13 @@ public class Overseer implements Closeable {
 
   static DistributedQueue getInQueue(final SolrZkClient zkClient, Stats zkStats)  {
     createOverseerNode(zkClient);
-    return new DistributedQueue(zkClient, "/overseer/queue", zkStats);
+    return new DistributedQueue(zkClient, "/overseer/queue", null, zkStats);
   }
 
   /* Internal queue, not to be used outside of Overseer */
   static DistributedQueue getInternalQueue(final SolrZkClient zkClient, Stats zkStats) {
     createOverseerNode(zkClient);
-    return new DistributedQueue(zkClient, "/overseer/queue-work", zkStats);
+    return new DistributedQueue(zkClient, "/overseer/queue-work", null, zkStats);
   }
 
   /* Internal map for failed tasks, not to be used outside of the Overseer */
@@ -1325,7 +1325,7 @@ public class Overseer implements Closeable {
 
   static DistributedQueue getCollectionQueue(final SolrZkClient zkClient, Stats zkStats)  {
     createOverseerNode(zkClient);
-    return new DistributedQueue(zkClient, "/overseer/collection-queue-work", zkStats);
+    return new DistributedQueue(zkClient, "/overseer/collection-queue-work", null, zkStats);
   }
   
   private static void createOverseerNode(final SolrZkClient zkClient) {

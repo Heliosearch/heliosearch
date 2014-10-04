@@ -72,9 +72,7 @@ public class SortingResponseWriter implements QueryResponseWriter {
   public void write(Writer writer, SolrQueryRequest req, SolrQueryResponse res) throws IOException {
     Exception e1 = res.getException();
     if(e1 != null) {
-      if(!(e1 instanceof IgnoreException)) {
-        e1.printStackTrace(new PrintWriter(writer));
-      }
+      e1.printStackTrace(new PrintWriter(writer));
       return;
     }
     SolrRequestInfo info = SolrRequestInfo.getRequestInfo();
@@ -177,7 +175,8 @@ public class SortingResponseWriter implements QueryResponseWriter {
         while(ex != null) {
           String m = ex.getMessage();
           if(m != null && m.contains("Broken pipe")) {
-            throw new IgnoreException();
+            logger.info("Early client disconnect during export");
+            return;
           }
           ex = ex.getCause();
         }
@@ -195,16 +194,7 @@ public class SortingResponseWriter implements QueryResponseWriter {
     writer.flush();
   }
 
-  public static class IgnoreException extends IOException {
-    public void printStackTrace(PrintWriter pw) {
-      pw.print("Early Client Disconnect");
 
-    }
-
-    public String getMessage() {
-      return "Early Client Disconnect";
-    }
-  }
 
 
   protected void writeDoc(SortDoc sortDoc,

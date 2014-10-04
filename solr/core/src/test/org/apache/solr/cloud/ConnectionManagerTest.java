@@ -17,6 +17,8 @@ package org.apache.solr.cloud;
  * the License.
  */
 
+import java.io.File;
+
 import org.apache.lucene.util.LuceneTestCase.Slow;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.cloud.ConnectionManager;
@@ -47,9 +49,10 @@ public class ConnectionManagerTest extends SolrTestCaseJ4 {
       SolrZkClient zkClient = new SolrZkClient(server.getZkAddress(), TIMEOUT);
       ConnectionManager cm = zkClient.getConnectionManager();
       try {
+        System.err.println("ISEXPIRED:" + cm.isLikelyExpired());
         assertFalse(cm.isLikelyExpired());
-
-        zkClient.getSolrZooKeeper().closeCnxn();
+        
+        zkClient.getSolrZooKeeper().pauseCnxn(TIMEOUT);
         
         long sessionId = zkClient.getSolrZooKeeper().getSessionId();
         server.expire(sessionId);

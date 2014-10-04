@@ -212,10 +212,7 @@ public class LeaderElectionIntegrationTest extends SolrTestCaseJ4 {
     String leader = getLeader();
     int leaderPort = getLeaderPort(leader);
     ZkController zkController = containerMap.get(leaderPort).getZkController();
-
-    zkController.getZkClient().getSolrZooKeeper().closeCnxn();
-    long sessionId = zkClient.getSolrZooKeeper().getSessionId();
-    zkServer.expire(sessionId);
+    zkController.getZkClient().getSolrZooKeeper().pauseCnxn(zkController.getClientTimeout() + 100);
     
     for (int i = 0; i < 60; i++) { // wait till leader is changed
       if (leaderPort != getLeaderPort(getLeader())) {

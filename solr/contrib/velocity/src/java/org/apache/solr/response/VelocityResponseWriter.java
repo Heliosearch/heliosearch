@@ -133,16 +133,13 @@ public class VelocityResponseWriter implements QueryResponseWriter {
     // TODO: Externalize Velocity properties
     String propFile = request.getParams().get("v.properties");
     try {
-      Properties props = new Properties();
-      // Don't create a separate velocity log file by default.
-      props.put(RuntimeConstants.RUNTIME_LOG, "");
-
-      if (propFile == null) {
-        engine.init(props);
-      } else {
+      if (propFile == null)
+        engine.init();
+      else {
         InputStream is = null;
         try {
           is = resourceLoader.getResourceStream(propFile);
+          Properties props = new Properties();
           props.load(new InputStreamReader(is, StandardCharsets.UTF_8));
           engine.init(props);
         }

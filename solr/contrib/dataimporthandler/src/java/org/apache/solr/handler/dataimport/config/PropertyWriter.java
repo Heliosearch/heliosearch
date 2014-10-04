@@ -1,5 +1,6 @@
 package org.apache.solr.handler.dataimport.config;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,17 +23,17 @@ import java.util.Map;
 
 public class PropertyWriter {
   private final String type;
-  private Map<String,String> parameters;
+  private final Map<String,String> parameters;
   
   public PropertyWriter(String type, Map<String,String> parameters) {
     this.type = type;
-    this.parameters = new HashMap<String,String>(parameters);
+    this.parameters = Collections.unmodifiableMap(new HashMap<>(parameters));
   }
 
   public Map<String,String> getParameters() {
     return parameters;
   }
-  
+
   public String getType() {
     return type;
   }  

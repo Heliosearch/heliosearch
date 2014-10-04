@@ -647,18 +647,6 @@ public class TransactionLog {
       }
     }
 
-    // returns best effort current position
-    // for info purposes
-    public long currentPos() {
-      return fis.position();
-    }
-    
-    // returns best effort current size
-    // for info purposes
-    public long currentSize() throws IOException {
-      return channel.size();
-    }
-
   }
 
   public abstract class ReverseReader {

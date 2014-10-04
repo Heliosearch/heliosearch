@@ -31,8 +31,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
@@ -49,7 +49,6 @@ import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.core.RefCount;
-import org.apache.solr.core.ParamSet;
 import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.component.HighlightComponent;
 import org.apache.solr.handler.component.ResponseBuilder;
@@ -69,6 +68,7 @@ import org.apache.solr.search.FieldParams;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.ReturnFields;
+import org.apache.solr.search.SolrCache;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SolrQueryParser;
 import org.apache.solr.search.SyntaxError;
@@ -126,17 +126,6 @@ public class SolrPluginUtils {
    */
   public static void setDefaults(SolrQueryRequest req, SolrParams defaults,
                                  SolrParams appends, SolrParams invariants) {
-      String paramSetNames = req.getParams().get(ParamSet.TYPE);
-      if(paramSetNames !=null){
-        for (String name : StrUtils.splitSmart(paramSetNames,',')) {
-          ParamSet paramSet = req.getCore().getSolrConfig().getParamSets().get(name);
-          if(paramSet!=null){
-            if(paramSet.defaults != null) defaults = SolrParams.wrapDefaults(SolrParams.toSolrParams(paramSet.defaults) , defaults);
-            if(paramSet.invariants != null) invariants = SolrParams.wrapDefaults(invariants, SolrParams.toSolrParams(paramSet.invariants));
-            if(paramSet.appends != null)  appends = SolrParams.wrapAppended(appends, SolrParams.toSolrParams(paramSet.appends));
-          }
-        }
-      }
 
     RequestUtil.processParams(req, defaults, appends, invariants);
 /*      SolrParams p = req.getParams();

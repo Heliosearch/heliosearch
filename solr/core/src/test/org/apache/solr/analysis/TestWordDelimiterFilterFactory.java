@@ -24,7 +24,6 @@ import java.util.Map;
 import org.apache.lucene.analysis.BaseTokenStreamTestCase;
 import org.apache.lucene.analysis.MockTokenizer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.util.Version;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilterFactory;
 import org.apache.lucene.analysis.util.ResourceLoader;
@@ -201,7 +200,7 @@ public class TestWordDelimiterFilterFactory extends SolrTestCaseJ4 {
     String testText = "I borrowed $5,400.00 at 25% interest-rate";
     ResourceLoader loader = new SolrResourceLoader("solr/collection1");
     Map<String,String> args = new HashMap<>();
-    args.put("luceneMatchVersion", Version.LATEST.toString());
+    args.put("luceneMatchVersion", TEST_VERSION_CURRENT.toString());
     args.put("generateWordParts", "1");
     args.put("generateNumberParts", "1");
     args.put("catenateWords", "1");
@@ -227,7 +226,7 @@ public class TestWordDelimiterFilterFactory extends SolrTestCaseJ4 {
     /* custom behavior */
     args = new HashMap<>();
     // use a custom type mapping
-    args.put("luceneMatchVersion", Version.LATEST.toString());
+    args.put("luceneMatchVersion", TEST_VERSION_CURRENT.toString());
     args.put("generateWordParts", "1");
     args.put("generateNumberParts", "1");
     args.put("catenateWords", "1");

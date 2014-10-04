@@ -19,7 +19,7 @@
 
 <config>
 
-  <luceneMatchVersion>${tests.luceneMatchVersion:LATEST}</luceneMatchVersion>
+  <luceneMatchVersion>${tests.luceneMatchVersion:LUCENE_CURRENT}</luceneMatchVersion>
 
   <indexConfig>
     <!-- BEGIN BAD: multiple useCompoundFile -->

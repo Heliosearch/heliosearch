@@ -19,7 +19,6 @@ package org.apache.solr.client.solrj.request;
 
 import junit.framework.Assert;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.solr.SolrJettyTestBase;
 import org.apache.solr.client.solrj.response.SolrPingResponse;
 import org.apache.solr.common.SolrException;
@@ -28,8 +27,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.io.File;
-
 /**
  * Test SolrPing in Solrj
  */
@@ -37,9 +34,7 @@ public class SolrPingTest extends SolrJettyTestBase {
   
   @BeforeClass
   public static void beforeClass() throws Exception {
-    File testHome = createTempDir();
-    FileUtils.copyDirectory(getFile("solrj/solr"), testHome);
-    initCore("solrconfig.xml", "schema.xml", testHome.getAbsolutePath(), "collection1");
+    initCore("solrconfig.xml", "schema.xml", "solrj/solr", "collection1");
   }
   
   @Before

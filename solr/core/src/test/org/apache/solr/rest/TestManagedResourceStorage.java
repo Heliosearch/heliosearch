@@ -16,7 +16,6 @@ package org.apache.solr.rest;
  * limitations under the License.
  */
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.lucene.util.LuceneTestCase.Slow;
-import org.apache.lucene.util.LuceneTestCase.AwaitsFix;
 import org.apache.solr.cloud.AbstractZkTestCase;
 import org.apache.solr.common.cloud.SolrZkClient;
 import org.apache.solr.common.util.NamedList;
@@ -39,7 +37,6 @@ import org.junit.Test;
  * Depends on ZK for testing ZooKeeper backed storage logic.
  */
 @Slow
-@AwaitsFix(bugUrl = "https://issues.apache.org/jira/browse/SOLR-6444")
 public class TestManagedResourceStorage extends AbstractZkTestCase {
 
   /**
@@ -49,8 +46,8 @@ public class TestManagedResourceStorage extends AbstractZkTestCase {
   public void testZkBasedJsonStorage() throws Exception {
     
     // test using ZooKeeper
-    assertTrue("Not using ZooKeeper", h.getCoreContainer().isZooKeeperAware());
-    SolrZkClient zkClient = h.getCoreContainer().getZkController().getZkClient();
+    assertTrue("Not using ZooKeeper", h.getCoreContainer().isZooKeeperAware());    
+    SolrZkClient zkClient = h.getCoreContainer().getZkController().getZkClient();    
     SolrResourceLoader loader = new SolrResourceLoader("./");    
     // Solr unit tests can only write to their working directory due to
     // a custom Java Security Manager installed in the test environment
@@ -60,7 +57,7 @@ public class TestManagedResourceStorage extends AbstractZkTestCase {
       zkStorageIO.configure(loader, initArgs);
       doStorageTests(loader, zkStorageIO);
     } finally {
-      loader.close();
+      zkClient.close();
     }
   }
 
@@ -69,19 +66,15 @@ public class TestManagedResourceStorage extends AbstractZkTestCase {
    * Runs persisted managed resource creation and update tests on JSON storage.
    */
   @Test
-  public void testFileBasedJsonStorage() throws Exception {
-    File instanceDir = createTempDir("json-storage");
-    SolrResourceLoader loader = new SolrResourceLoader(instanceDir.getAbsolutePath());
-    try {
-      NamedList<String> initArgs = new NamedList<>();
-      String managedDir = instanceDir.getAbsolutePath() + File.separator + "managed";
-      initArgs.add(ManagedResourceStorage.STORAGE_DIR_INIT_ARG, managedDir);
-      FileStorageIO fileStorageIO = new FileStorageIO();
-      fileStorageIO.configure(loader, initArgs);
-      doStorageTests(loader, fileStorageIO);
-    } finally {
-      loader.close();
-    }
+  public void testFileBasedJsonStorage() throws Exception {    
+    SolrResourceLoader loader = new SolrResourceLoader("./");    
+    // Solr unit tests can only write to their working directory due to
+    // a custom Java Security Manager installed in the test environment
+    NamedList<String> initArgs = new NamedList<>();
+    initArgs.add(ManagedResourceStorage.STORAGE_DIR_INIT_ARG, "./managed");    
+    FileStorageIO fileStorageIO = new FileStorageIO();
+    fileStorageIO.configure(loader, initArgs);
+    doStorageTests(loader, fileStorageIO);
   }
 
   /**

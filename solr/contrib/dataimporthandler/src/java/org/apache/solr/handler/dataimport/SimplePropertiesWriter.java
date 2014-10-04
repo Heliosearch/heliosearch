@@ -27,7 +27,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessControlException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -38,7 +37,6 @@ import java.util.Properties;
 
 import org.apache.lucene.util.IOUtils;
 import org.apache.solr.core.SolrCore;
-import org.apache.solr.core.SolrResourceLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**
@@ -115,34 +113,22 @@ public class SimplePropertiesWriter extends DIHProperties {
       configDir = params.get(DIRECTORY);
     } else {
       SolrCore core = dataImporter.getCore();
-      if (core == null) {
-        configDir = SolrResourceLoader.locateSolrHome();
-      } else {
-        configDir = core.getResourceLoader().getConfigDir();
-      }
+      configDir = (core == null ? "." : core.getResourceLoader().getConfigDir());
     }
   }
   
   private File getPersistFile() {
-    final File filePath;
-    if (new File(filename).isAbsolute() || configDir == null) {
-      filePath = new File(filename);
-    } else {
-      filePath = new File(new File(configDir), filename);
-    }
-    return filePath;
+    String filePath = configDir;
+    if (configDir != null && !configDir.endsWith(File.separator)) filePath += File.separator;
+    filePath += filename;
+    return new File(filePath);
   }
-
   @Override
   public boolean isWritable() {
     File persistFile = getPersistFile();
-    try {
-      return persistFile.exists() 
-          ? persistFile.canWrite() 
-          : persistFile.getParentFile().canWrite();
-    } catch (AccessControlException e) {
-      return false;
-    }
+    return persistFile.exists() ? persistFile.canWrite() : persistFile
+        .getParentFile().canWrite();
+    
   }
   
   @Override
@@ -202,7 +188,12 @@ public class SimplePropertiesWriter extends DIHProperties {
     Properties newProps = mapToProperties(propObjs);
     try {
       existingProps.putAll(newProps);
-      propOutput = new OutputStreamWriter(new FileOutputStream(getPersistFile()), StandardCharsets.UTF_8);
+      String filePath = configDir;
+      if (configDir != null && !configDir.endsWith(File.separator)) {
+        filePath += File.separator;
+      }
+      filePath += filename;
+      propOutput = new OutputStreamWriter(new FileOutputStream(filePath), StandardCharsets.UTF_8);
       existingProps.store(propOutput, null);
       log.info("Wrote last indexed time to " + filename);
     } catch (Exception e) {
