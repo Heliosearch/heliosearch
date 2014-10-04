@@ -47,6 +47,7 @@ import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.SyntaxError;
+import org.apache.solr.search.join.BlockJoinChildQuery;
 
 /**
  *
@@ -83,10 +84,9 @@ public class ChildDocTransformerFactory extends TransformerFactory {
     String childFilter = params.get( "childFilter" );
     int limit = params.getInt( "limit", 10 );
 
-    Filter parentsFilter = null;
+    Query parentsFilter = null;
     try {
-      Query parentFilterQuery = QParser.getParser( parentFilter, null, req).getQuery();
-      parentsFilter = new FixedBitSetCachingWrapperFilter(new QueryWrapperFilter(parentFilterQuery));
+      parentsFilter = QParser.getParser( parentFilter, null, req).getQuery();
     } catch (SyntaxError syntaxError) {
       throw new SolrException( ErrorCode.BAD_REQUEST, "Failed to create correct parent filter query" );
     }
@@ -108,11 +108,11 @@ class ChildDocTransformer extends TransformerWithContext {
   private final String name;
   private final SchemaField idField;
   private final IndexSchema schema;
-  private Filter parentsFilter;
+  private Query parentsFilter;
   private Query childFilterQuery;
   private int limit;
 
-  public ChildDocTransformer( String name, final Filter parentsFilter, 
+  public ChildDocTransformer( String name, final Query parentsFilter,
                               final SchemaField idField, IndexSchema schema,
                               final Query childFilterQuery, int limit) {
     this.name = name;
@@ -140,7 +140,8 @@ class ChildDocTransformer extends TransformerWithContext {
 
     try {
       Query parentQuery = idFt.getFieldQuery(null, idField, parentIdExt);
-      Query query = new ToChildBlockJoinQuery(parentQuery, parentsFilter, false);
+
+      Query query = new BlockJoinChildQuery(parentQuery, parentsFilter, false);
       DocList children = context.searcher.getDocList(query, childFilterQuery, new Sort(), 0, limit);
       if(children.matches() > 0) {
         DocIterator i = children.iterator();

@@ -37,7 +37,7 @@ import org.apache.solr.search.SolrIndexSearcher;
 import java.io.IOException;
 import java.util.Set;
 
-class BlockJoinChildQuery extends Query {
+public class BlockJoinChildQuery extends Query {
 
   private final Query parentList;
   private final Query parentQuery;
