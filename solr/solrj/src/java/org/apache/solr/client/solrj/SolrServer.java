@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.solr.client.solrj.request.QueryRequest;
 import org.apache.solr.client.solrj.request.SolrPing;
@@ -33,6 +35,7 @@ import org.apache.solr.client.solrj.SolrRequest.METHOD;
 import org.apache.solr.client.solrj.beans.DocumentObjectBinder;
 import org.apache.solr.client.solrj.impl.StreamingBinaryResponseParser;
 import org.apache.solr.common.SolrInputDocument;
+import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 
@@ -348,4 +351,35 @@ public abstract class SolrServer implements Serializable
    * @since solr 4.0
    */
   public abstract void shutdown();
+
+
+  ///
+  /// static utility methods
+  ///
+
+  public static ModifiableSolrParams params(String... params) {
+    ModifiableSolrParams msp = new ModifiableSolrParams();
+    for (int i=0; i<params.length; i+=2) {
+      msp.add(params[i], params[i+1]);
+    }
+    return msp;
+  }
+
+  public static Map map(Object... params) {
+    LinkedHashMap ret = new LinkedHashMap();
+    for (int i=0; i<params.length; i+=2) {
+      Object o = ret.put(params[i], params[i+1]);
+      // TODO: handle multi-valued map?
+    }
+    return ret;
+  }
+
+  public static SolrInputDocument sdoc(Object... fieldsAndValues) {
+    SolrInputDocument sd = new SolrInputDocument();
+    for (int i=0; i<fieldsAndValues.length; i+=2) {
+      sd.addField((String)fieldsAndValues[i], fieldsAndValues[i+1]);
+    }
+    return sd;
+  }
+
 }

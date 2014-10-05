@@ -28,6 +28,25 @@ import org.apache.solr.common.util.NamedList;
  */
 public abstract class ResponseParser
 {
+  public static final ResponseParser STREAM = new ResponseParser() {
+
+    @Override
+    public String getWriterType() {
+      return "stream";
+    }
+
+    @Override
+    public NamedList<Object> processResponse(InputStream body, String encoding) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public NamedList<Object> processResponse(Reader reader) {
+      throw new UnsupportedOperationException();
+    }
+  };
+
+
   public abstract String getWriterType(); // for example: wt=XML, JSON, etc
 
   public abstract NamedList<Object> processResponse(InputStream body, String encoding);
