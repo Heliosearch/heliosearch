@@ -167,9 +167,8 @@ public class CloudSolrStream implements TupleStream {
   }
 
   public Tuple read() throws IOException {
-    TupleWrapper tw = tuples.pollLast();
+    TupleWrapper tw = tuples.pollFirst();
     if(tw != null) {
-      tuples.remove(tw);
       Tuple t = tw.getTuple();
       if(tw.next()) {
         tuples.add(tw);
