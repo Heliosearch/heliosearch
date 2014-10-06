@@ -190,7 +190,16 @@ public class CloudSolrStream implements TupleStream {
     }
 
     public int compareTo(TupleWrapper w) {
-      return comp.compare(tuple, w.tuple);
+      int i = comp.compare(tuple, w.tuple);
+      if(i == 0) {
+        return 1;
+      } else {
+        return i;
+      }
+    }
+
+    public boolean equals(Object o) {
+      return this == o;
     }
 
     public Tuple getTuple() {
