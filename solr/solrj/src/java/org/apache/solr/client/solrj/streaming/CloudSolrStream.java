@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.Random;
-import java.util.TreeSet;
+import java.util.PriorityQueue;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,7 +53,7 @@ public class CloudSolrStream implements TupleStream {
   private String zkHost;
   private String collection;
   private Map params;
-  private TreeSet<TupleWrapper> tuples;
+  private PriorityQueue<TupleWrapper> queue;
   private Comparator<Tuple> comp;
   private List<SolrStream> solrStreams = new ArrayList();
   private int zkConnectTimeout = 10000;
@@ -64,7 +64,7 @@ public class CloudSolrStream implements TupleStream {
     this.zkHost = zkHost;
     this.collection = collection;
     this.params = params;
-    this.tuples = new TreeSet();
+    this.queue = new PriorityQueue();
     this.comp = comp;
   }
 
@@ -150,7 +150,7 @@ public class CloudSolrStream implements TupleStream {
       for(Future<TupleWrapper> f : futures) {
         TupleWrapper w = f.get();
         if(w != null) {
-          tuples.add(w);
+          queue.add(w);
         }
       }
     } catch (Exception e) {
@@ -167,11 +167,11 @@ public class CloudSolrStream implements TupleStream {
   }
 
   public Tuple read() throws IOException {
-    TupleWrapper tw = tuples.pollFirst();
+    TupleWrapper tw = queue.poll();
     if(tw != null) {
       Tuple t = tw.getTuple();
       if(tw.next()) {
-        tuples.add(tw);
+        queue.add(tw);
       }
       return t;
     } else {
