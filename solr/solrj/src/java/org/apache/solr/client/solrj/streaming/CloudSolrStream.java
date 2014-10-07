@@ -48,14 +48,14 @@ import org.apache.zookeeper.KeeperException;
 * Tuples are order from the underlying SolrStream using the Comparator.
 */
 
-public class CloudSolrStream implements TupleStream {
+public class CloudSolrStream extends TupleStream {
 
   private String zkHost;
   private String collection;
   private Map params;
   private TreeSet<TupleWrapper> tuples;
   private Comparator<Tuple> comp;
-  private List<SolrStream> solrStreams = new ArrayList();
+  private List<TupleStream> solrStreams = new ArrayList();
   private int zkConnectTimeout = 10000;
   private int zkClientTimeout = 10000;
   private transient ZkStateReader zkStateReader;
@@ -68,10 +68,25 @@ public class CloudSolrStream implements TupleStream {
     this.comp = comp;
   }
 
+  public CloudSolrStream(String zkHost, String collection, Map params, Comparator<Tuple> comp, int workers, String[] partitionKeys) {
+    super(workers, partitionKeys);
+    this.zkHost = zkHost;
+    this.collection = collection;
+    this.params = params;
+    this.tuples = new TreeSet();
+    this.comp = comp;
+  }
+
+
+
   public void open() throws IOException {
     constructStreams();
     openStreams();
     zkStateReader.close();
+  }
+
+  public List<TupleStream> children() {
+    return solrStreams;
   }
 
   private void constructStreams() throws IOException {
@@ -92,7 +107,7 @@ public class CloudSolrStream implements TupleStream {
         Replica rep = shuffler.get(0);
         ZkCoreNodeProps zkProps = new ZkCoreNodeProps(rep);
         String url = zkProps.getCoreUrl();
-        SolrStream solrStream = new SolrStream(url, params);
+        SolrStream solrStream = new SolrStream(url, params, workers, partitionKeys);
         solrStreams.add(solrStream);
       }
     } catch (Exception e) {
@@ -140,8 +155,8 @@ public class CloudSolrStream implements TupleStream {
   private void openStreams() throws IOException {
     ExecutorService service = Executors.newCachedThreadPool();
     List<Future<TupleWrapper>> futures = new ArrayList();
-    for(SolrStream solrStream : solrStreams) {
-      StreamOpener so = new StreamOpener(solrStream, comp);
+    for(TupleStream solrStream : solrStreams) {
+      StreamOpener so = new StreamOpener((SolrStream)solrStream, comp);
       Future<TupleWrapper> future =  service.submit(so);
       futures.add(future);
     }
@@ -161,7 +176,7 @@ public class CloudSolrStream implements TupleStream {
   }
 
   public void close() throws IOException {
-    for(SolrStream solrStream : solrStreams) {
+    for(TupleStream solrStream : solrStreams) {
       solrStream.close();
     }
   }

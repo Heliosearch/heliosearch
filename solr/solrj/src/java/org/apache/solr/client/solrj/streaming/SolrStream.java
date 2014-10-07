@@ -18,25 +18,45 @@
 package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.List;
 
 /*
   Queries a Solr instance, and maps SolrDocs to Tuples.
   Initial version works with the json format and only SolrDocs are handled.
 */
 
-public class SolrStream implements TupleStream {
+public class SolrStream extends TupleStream {
 
   private String baseUrl;
   private Map params;
+  private int worker;
+  private String[] partitionKeys;
 
   public SolrStream(String baseUrl, Map params) {
     this.baseUrl = baseUrl;
     this.params = params;
   }
 
-  public void open() throws IOException {
+  public SolrStream(String baseUrl, Map params, int workers, String[] partitionKeys) {
+    super(workers, partitionKeys);
+    this.baseUrl = baseUrl;
+    this.params = params;
+  }
 
+  public List<TupleStream> children() {
+    return new ArrayList();
+  }
+
+  public void setWorker(int worker) {
+    this.worker = worker;
+  }
+
+  public void open() throws IOException {
+    if(this.workers != 0) {
+      //Add the parameter for the partitioner
+    }
   }
 
   public void close() throws IOException {

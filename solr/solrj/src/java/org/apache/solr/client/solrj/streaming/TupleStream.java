@@ -19,9 +19,30 @@ package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.List;
 
-public interface TupleStream extends Serializable {
-  public void open() throws IOException;
-  public void close() throws IOException;
-  public Tuple read() throws IOException;
+public abstract class TupleStream implements Serializable {
+
+  protected int workers;
+  protected String[] partitionKeys;
+
+  public TupleStream(int workers, String[] partitionKeys) {
+    this.workers = workers;
+    this.partitionKeys = partitionKeys;
+  }
+
+  public TupleStream() {
+    this(-1, null);
+  }
+
+  public void setWorker(int worker) {
+    for(TupleStream tupleStream : children()) {
+      tupleStream.setWorker(worker);
+    }
+  }
+
+  public abstract List<TupleStream> children();
+  public abstract void open() throws IOException;
+  public abstract void close() throws IOException;
+  public abstract Tuple read() throws IOException;
 }
