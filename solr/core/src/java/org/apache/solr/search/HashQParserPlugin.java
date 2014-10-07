@@ -40,7 +40,13 @@ import org.apache.lucene.util.BytesRef;
 
 import org.apache.solr.common.util.NamedList;
 
+/**
+* syntax fq={!hash workers=11 worker=4 keys=field1,field2}
+* */
+
 public class HashQParserPlugin extends QParserPlugin {
+
+  public static final String NAME = "hash";
 
   public void init(NamedList params) {
 
@@ -69,6 +75,29 @@ public class HashQParserPlugin extends QParserPlugin {
     private String keysParam;
     private int workers;
     private int worker;
+
+    public boolean getCache() {
+      return false;
+    }
+
+    public int getCost() {
+      return Math.max(super.getCost(),100);
+    }
+
+    public int hashCode() {
+      return keysParam.hashCode()+workers+worker;
+    }
+
+    public boolean equals(Object o) {
+      if (o instanceof HashQuery) {
+        HashQuery h = (HashQuery)o;
+        if(keysParam.equals(h.keysParam) && workers == h.workers && worker == h.worker) {
+          return true;
+        }
+      }
+
+      return false;
+    }
 
     public HashQuery(String keysParam, int workers, int worker) {
       this.keysParam = keysParam;
@@ -118,7 +147,7 @@ public class HashQParserPlugin extends QParserPlugin {
     }
 
     public void collect(int doc) throws IOException {
-      if(hashKey.hashCode() % workers == worker) {
+      if((hashKey.hashCode(doc) & 0x7FFFFFFF) % workers == worker) {
         delegate.collect(doc);
       }
     }
