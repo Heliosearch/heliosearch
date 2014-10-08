@@ -53,6 +53,7 @@ public class CloudSolrStream extends TupleStream {
   private String zkHost;
   private String collection;
   private Map params;
+  private Map<String, String> fieldMappings;
   private TreeSet<TupleWrapper> tuples;
   private Comparator<Tuple> comp;
   private List<TupleStream> solrStreams = new ArrayList();
@@ -77,6 +78,10 @@ public class CloudSolrStream extends TupleStream {
     this.params = params;
     this.tuples = new TreeSet();
     this.comp = comp;
+  }
+
+  public void setFieldMappings(Map<String, String> fieldMappings) {
+    this.fieldMappings = fieldMappings;
   }
 
   public void setWorkers(int numWorkers, int workerID) {
@@ -114,6 +119,7 @@ public class CloudSolrStream extends TupleStream {
         String url = zkProps.getCoreUrl();
         SolrStream solrStream = new SolrStream(url, params, partitionKeys);
         solrStream.setWorkers(this.numWorkers, this.workerID);
+        solrStream.setFieldMappings(this.fieldMappings);
         solrStreams.add(solrStream);
       }
     } catch (Exception e) {
