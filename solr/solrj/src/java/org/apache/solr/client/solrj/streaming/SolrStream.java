@@ -38,6 +38,7 @@ public class SolrStream extends TupleStream {
   private Map params;
   private int numWorkers;
   private int workerID;
+  private Map<String, String> fieldMappings;
   private String[] partitionKeys;
   private transient JSONTupleStream jsonTupleStream;
   private transient HttpSolrServer server;
@@ -51,6 +52,10 @@ public class SolrStream extends TupleStream {
     super(partitionKeys);
     this.baseUrl = baseUrl;
     this.params = params;
+  }
+
+  public void setFieldMappings(Map<String, String> fieldMappings) {
+    this.fieldMappings = fieldMappings;
   }
 
   public List<TupleStream> children() {
@@ -117,7 +122,24 @@ public class SolrStream extends TupleStream {
       //Return the EOF tuple.
       return new Tuple(true);
     } else {
+      if(fieldMappings != null) {
+        fields = mapFields(fields, fieldMappings);
+      }
       return new Tuple(fields, false);
     }
+  }
+
+  private Map mapFields(Map fields, Map<String,String> mappings) {
+    Iterator<Map.Entry<String,String>> it = mappings.entrySet().iterator();
+    while(it.hasNext()) {
+      Map.Entry<String,String> entry = it.next();
+      String mapFrom = entry.getKey();
+      String mapTo = entry.getValue();
+      Object o = fields.get(mapFrom);
+      fields.remove(mapFrom);
+      fields.put(mapTo, o);
+    }
+
+    return fields;
   }
 }
