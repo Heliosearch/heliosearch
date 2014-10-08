@@ -1,3 +1,5 @@
+package org.apache.solr.client.solrj.impl;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -15,39 +17,41 @@
  * limitations under the License.
  */
 
-package org.apache.solr.client.solrj;
-
-import java.io.Reader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringWriter;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.solr.client.solrj.ResponseParser;
+import org.apache.solr.common.SolrException;
 import org.apache.solr.common.util.NamedList;
 
 /**
- * 
- *
- * @since solr 1.3
+ * Simply puts the InputStream into an entry in a NamedList named "stream".
  */
-public abstract class ResponseParser
-{
-  public abstract String getWriterType(); // for example: wt=XML, JSON, etc
+public class InputStreamResponseParser extends ResponseParser {
 
-  public abstract NamedList<Object> processResponse(InputStream body, String encoding);
+  private final String writerType;
 
-  public abstract NamedList<Object> processResponse(Reader reader);
-  
-  /**
-   * A well behaved ResponseParser will return it's content-type.
-   * 
-   * @return the content-type this parser expects to parse
-   */
-  public String getContentType() {
-    return null;
+  public InputStreamResponseParser(String writerType) {
+    this.writerType = writerType;
   }
-  
-  /**
-   * @return the version param passed to solr
-   */
-  public String getVersion()
-  {
-    return "2.2";
+
+  @Override
+  public String getWriterType() {
+    return writerType;
   }
+
+  @Override
+  public NamedList<Object> processResponse(Reader reader) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public NamedList<Object> processResponse(InputStream body, String encoding) {
+    throw new UnsupportedOperationException();
+  }
+
 }
+

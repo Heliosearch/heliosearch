@@ -479,7 +479,7 @@ public class HttpSolrServer extends SolrServer {
                 null);
           }
       }
-      if (processor == null || processor == ResponseParser.STREAM) {
+      if (processor == null || processor instanceof InputStreamResponseParser) {
         
         // no processor specified, return raw stream
         NamedList<Object> rsp = new NamedList<>();

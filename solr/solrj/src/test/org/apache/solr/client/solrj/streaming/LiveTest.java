@@ -18,18 +18,19 @@
 package org.apache.solr.client.solrj.streaming;
 
 import java.io.InputStream;
+import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Map;
 
 import junit.framework.TestCase;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.solr.client.solrj.ResponseParser;
 import org.apache.solr.client.solrj.SolrServer;
 import static org.apache.solr.client.solrj.SolrServer.*;
 
 import org.apache.solr.client.solrj.impl.BinaryResponseParser;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
-import org.apache.solr.client.solrj.impl.NoOpResponseParser;
+import org.apache.solr.client.solrj.impl.InputStreamResponseParser;
 import org.apache.solr.client.solrj.request.QueryRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.util.NamedList;
@@ -43,6 +44,7 @@ public class LiveTest extends TestCase {
   public void testLive() throws Exception {
     // doUpdateAndQuery();
     // doRawResponse();
+    // doStreamingResponse();
   }
 
   public void doUpdateAndQuery() throws Exception {
@@ -52,6 +54,7 @@ public class LiveTest extends TestCase {
     server = sserver;
 
     server.add( sdoc("id","doc1", "foo_s","myval") );
+    server.add( sdoc("id","doc2", "foo_s","myval2", "num_d",1.414) );
     server.commit();
 
     QueryResponse rsp = server.query( params("q", "id:doc1") );
@@ -66,8 +69,8 @@ public class LiveTest extends TestCase {
     HttpSolrServer sserver = new HttpSolrServer(addr);  // generic server
     server = sserver;
 
-    QueryRequest query = new QueryRequest( params("q", "id:doc1", "wt","json") );
-    query.setResponseParser(ResponseParser.STREAM);
+    QueryRequest query = new QueryRequest( params("q", "*:*") );
+    query.setResponseParser(new InputStreamResponseParser("json"));
 
     NamedList<Object> genericResponse = server.request(query);
 
@@ -83,5 +86,32 @@ public class LiveTest extends TestCase {
     System.out.println("RESPONSE STREAM: " + output);  // TODO: this is coming out as XML???  Some sort of default?
 
     server.shutdown();
+  }
+
+  public void doStreamingResponse() throws Exception {
+    String addr = "http://127.0.0.1:8983/solr";
+    HttpSolrServer sserver = new HttpSolrServer(addr);  // generic server
+    server = sserver;
+
+    JSONTupleStream tstream = JSONTupleStream.create(server, params("q","*:*"));
+    for (;;) {
+      Map<String,Object> o = tstream.next();
+      if (o == null) break;
+      System.out.println("GOT NEXT TUPLE:" + o);
+    }
+    tstream.close();
+
+    server.shutdown();
+  }
+
+
+  public void testTemporary() throws Exception  {
+    String example="{\"responseHeader\":{\"status\":0,\"QTime\":1,\"params\":{\"q\":\"*:*\",\"wt\":\"json\",\"version\":\"2.2\"}},\"response\":{\"numFound\":2,\"start\":0,\"docs\":[{\"id\":\"doc1\",\"foo_s\":\"myval\",\"_version_\":1481340668029698048},{\"id\":\"doc2\",\"foo_s\":\"myval2\",\"num_d\":1.414,\"_version_\":1481340668094709760}]}}\n";
+    JSONTupleStream tstream = new JSONTupleStream(new StringReader(example));
+    for (;;) {
+      Map<String,Object> o = tstream.next();
+      if (o == null) break;
+      System.out.println("GOT NEXT TUPLE:" + o);
+    }
   }
 }
