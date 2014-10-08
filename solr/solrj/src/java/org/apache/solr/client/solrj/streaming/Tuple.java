@@ -17,7 +17,7 @@
 
 package org.apache.solr.client.solrj.streaming;
 
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
@@ -26,11 +26,16 @@ import java.util.Iterator;
 public class Tuple {
 
   public final boolean EOF;
-  public LinkedHashMap fields = new LinkedHashMap();
+  public Map fields = new HashMap();
   public List<Tuple> children = new ArrayList();
 
   public Tuple(boolean EOF) {
     this.EOF = EOF;
+  }
+
+  public Tuple(Map fields, boolean EOF) {
+    this(EOF);
+    this.fields.putAll(fields);
   }
 
   public List<Tuple> getChildren() {

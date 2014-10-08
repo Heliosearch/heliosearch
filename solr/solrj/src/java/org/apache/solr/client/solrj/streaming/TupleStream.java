@@ -23,21 +23,19 @@ import java.util.List;
 
 public abstract class TupleStream implements Serializable {
 
-  protected int workers;
   protected String[] partitionKeys;
 
-  public TupleStream(int workers, String[] partitionKeys) {
-    this.workers = workers;
+  public TupleStream(String[] partitionKeys) {
     this.partitionKeys = partitionKeys;
   }
 
   public TupleStream() {
-    this(-1, null);
+
   }
 
-  public void setWorker(int worker) {
+  public void setWorkers(int numWorkers, int workerID) {
     for(TupleStream tupleStream : children()) {
-      tupleStream.setWorker(worker);
+      tupleStream.setWorkers(numWorkers, workerID);
     }
   }
 

@@ -59,6 +59,8 @@ public class CloudSolrStream extends TupleStream {
   private int zkConnectTimeout = 10000;
   private int zkClientTimeout = 10000;
   private transient ZkStateReader zkStateReader;
+  private int numWorkers;
+  private int workerID;
 
   public CloudSolrStream(String zkHost, String collection, Map params, Comparator<Tuple> comp) {
     this.zkHost = zkHost;
@@ -68,8 +70,8 @@ public class CloudSolrStream extends TupleStream {
     this.comp = comp;
   }
 
-  public CloudSolrStream(String zkHost, String collection, Map params, Comparator<Tuple> comp, int workers, String[] partitionKeys) {
-    super(workers, partitionKeys);
+  public CloudSolrStream(String zkHost, String collection, Map params, Comparator<Tuple> comp, String[] partitionKeys) {
+    super(partitionKeys);
     this.zkHost = zkHost;
     this.collection = collection;
     this.params = params;
@@ -77,7 +79,10 @@ public class CloudSolrStream extends TupleStream {
     this.comp = comp;
   }
 
-
+  public void setWorkers(int numWorkers, int workerID) {
+    this.numWorkers = numWorkers;
+    this.workerID = workerID;
+  }
 
   public void open() throws IOException {
     constructStreams();
@@ -107,7 +112,8 @@ public class CloudSolrStream extends TupleStream {
         Replica rep = shuffler.get(0);
         ZkCoreNodeProps zkProps = new ZkCoreNodeProps(rep);
         String url = zkProps.getCoreUrl();
-        SolrStream solrStream = new SolrStream(url, params, workers, partitionKeys);
+        SolrStream solrStream = new SolrStream(url, params, partitionKeys);
+        solrStream.setWorkers(this.numWorkers, this.workerID);
         solrStreams.add(solrStream);
       }
     } catch (Exception e) {

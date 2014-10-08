@@ -21,6 +21,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.List;
+import java.util.Iterator;
+
+import org.apache.solr.client.solrj.impl.HttpSolrServer;
+import org.apache.solr.common.params.ModifiableSolrParams;
+import org.apache.solr.common.params.SolrParams;
 
 /*
   Queries a Solr instance, and maps SolrDocs to Tuples.
@@ -31,16 +36,19 @@ public class SolrStream extends TupleStream {
 
   private String baseUrl;
   private Map params;
-  private int worker;
+  private int numWorkers;
+  private int workerID;
   private String[] partitionKeys;
+  private transient JSONTupleStream jsonTupleStream;
+  private transient HttpSolrServer server;
 
   public SolrStream(String baseUrl, Map params) {
     this.baseUrl = baseUrl;
     this.params = params;
   }
 
-  public SolrStream(String baseUrl, Map params, int workers, String[] partitionKeys) {
-    super(workers, partitionKeys);
+  public SolrStream(String baseUrl, Map params, String[] partitionKeys) {
+    super(partitionKeys);
     this.baseUrl = baseUrl;
     this.params = params;
   }
@@ -49,21 +57,67 @@ public class SolrStream extends TupleStream {
     return new ArrayList();
   }
 
-  public void setWorker(int worker) {
-    this.worker = worker;
+  public void setWorkers(int numWorkers, int workerID) {
+    this.numWorkers = numWorkers;
+    this.workerID = workerID;
   }
 
   public void open() throws IOException {
-    if(this.workers != 0) {
-      //Add the parameter for the partitioner
+
+    server = new HttpSolrServer(baseUrl);
+    try {
+      jsonTupleStream = JSONTupleStream.create(server, loadParams(params));
+    } catch (Exception e) {
+      throw new IOException(e);
     }
   }
 
-  public void close() throws IOException {
+  private SolrParams loadParams(Map params) {
+    ModifiableSolrParams solrParams = new ModifiableSolrParams();
+    if(this.numWorkers > 0) {
+      String partitionFilter = getPartitionFilter();
+      solrParams.add("fq", partitionFilter);
+    }
 
+    Iterator<Map.Entry> it = params.entrySet().iterator();
+    while(it.hasNext()) {
+      Map.Entry entry = it.next();
+      solrParams.add((String)entry.getKey(), (String)entry.getValue());
+    }
+
+    return solrParams;
+  }
+
+  private String getPartitionFilter() {
+    StringBuilder buf = new StringBuilder("{!hash workers=");
+    buf.append(this.numWorkers);
+    buf.append(" worker=");
+    buf.append(this.workerID);
+    buf.append(" keys='");
+    boolean comma = false;
+    for(String key : partitionKeys) {
+      if(comma) {
+        buf.append(",");
+      }
+      buf.append(key);
+      comma = true;
+    }
+    buf.append("'}");
+    return buf.toString();
+  }
+
+  public void close() throws IOException {
+    jsonTupleStream.close();
+    server.shutdown();
   }
 
   public Tuple read() throws IOException {
-    return new Tuple(true);
+    Map fields = jsonTupleStream.next();
+    if(fields == null) {
+      //Return the EOF tuple.
+      return new Tuple(true);
+    } else {
+      return new Tuple(fields, false);
+    }
   }
 }
