@@ -63,20 +63,26 @@ public class CloudSolrStream extends TupleStream {
   private int numWorkers;
   private int workerID;
 
-  public CloudSolrStream(String zkHost, String collection, Map params, Comparator<Tuple> comp) {
+  public CloudSolrStream(String zkHost, String collection, Map params) {
     this.zkHost = zkHost;
     this.collection = collection;
     this.params = params;
     this.tuples = new TreeSet();
-    this.comp = comp;
+    String sort = (String)params.get("sort");
+    this.comp = parseComp(sort);
   }
 
-  public CloudSolrStream(String zkHost, String collection, Map params, Comparator<Tuple> comp, String[] partitionKeys) {
+  public CloudSolrStream(String zkHost, String collection, Map params, String[] partitionKeys) {
     super(partitionKeys);
     this.zkHost = zkHost;
     this.collection = collection;
     this.params = params;
     this.tuples = new TreeSet();
+    String sort = (String)params.get("sort");
+    this.comp = parseComp(sort);
+  }
+
+  public void setComp(Comparator<Tuple> comp) {
     this.comp = comp;
   }
 
@@ -97,6 +103,26 @@ public class CloudSolrStream extends TupleStream {
 
   public List<TupleStream> children() {
     return solrStreams;
+  }
+
+  private Comparator<Tuple> parseComp(String sort) {
+    String[] sorts = sort.split(",");
+    Comparator[] comps = new Comparator[sorts.length];
+    for(int i=0; i<sorts.length; i++) {
+      String s = sorts[i];
+      String[] spec = s.split(" ");
+      if(spec[1].trim().equalsIgnoreCase("asc")) {
+        comps[i] = new AscFieldComp(spec[0]);
+      } else {
+        comps[i] = new DescFieldComp(spec[0]);
+      }
+    }
+
+    if(comps.length > 1) {
+      return new MultiComp(comps);
+    } else {
+      return comps[0];
+    }
   }
 
   private void constructStreams() throws IOException {
