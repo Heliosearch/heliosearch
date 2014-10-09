@@ -106,6 +106,7 @@ public class CloudSolrStream extends TupleStream {
       ClusterState clusterState = zkStateReader.getClusterState();
       Collection<Slice> slices = clusterState.getActiveSlices(this.collection);
       long time = System.currentTimeMillis();
+      params.put("distrib","false"); // We are the aggregator.
       for(Slice slice : slices) {
         Collection<Replica> replicas = slice.getReplicas();
         List<Replica> shuffler = new ArrayList();
@@ -239,7 +240,7 @@ public class CloudSolrStream extends TupleStream {
 
     public boolean next() throws IOException {
       this.tuple = stream.read();
-      return tuple.EOF;
+      return !tuple.EOF;
     }
   }
 
