@@ -41,7 +41,7 @@ public class StreamHandler extends RequestHandlerBase {
     int worker = params.getInt("workerID");
     int numWorkers = params.getInt("numWorkers");
     tupleStream.setWorkers(numWorkers, worker);
-    req.getContext().put(TupleStream.class, tupleStream);
+    rsp.add("tuples", tupleStream);
   }
 
   public String getDescription() {

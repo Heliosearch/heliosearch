@@ -24,6 +24,7 @@ import java.util.*;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.util.BytesRef;
+import org.apache.solr.client.solrj.streaming.TupleStream;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.util.Base64;
@@ -37,6 +38,7 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.schema.DateField;
 import org.apache.solr.search.DocList;
 import org.apache.solr.search.ReturnFields;
+import org.apache.solr.client.solrj.streaming.Tuple;
 
 /** Base class for text-oriented response writers.
  *
@@ -188,6 +190,8 @@ public abstract class TextResponseWriter {
       writeArray(name,((Iterable)val).iterator());
     } else if (val instanceof Object[]) {
       writeArray(name,(Object[])val);
+    } else if (val instanceof TupleStream) {
+      writeTupleStream((TupleStream)val);
     } else if (val instanceof Iterator) {
       writeArray(name,(Iterator)val);
     } else if (val instanceof byte[]) {
@@ -201,6 +205,17 @@ public abstract class TextResponseWriter {
       writeStr(name, val.getClass().getName() + ':' + val.toString(), true);
     }
   }
+
+  public void writeTupleStream(TupleStream tupleStream) throws IOException {
+    tupleStream.open();
+    writeStartDocumentList("response", -1, -1, -1, null);
+    for(Tuple tuple = tupleStream.read(); !tuple.EOF; tuple = tupleStream.read()) {
+      writeMap(null, tuple.fields, false, false);
+    }
+    writeEndDocumentList();
+    tupleStream.close();
+  }
+
 
   // names are passed when writing primitives like writeInt to allow many different
   // types of formats, including those where the name may come after the value (like
