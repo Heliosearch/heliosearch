@@ -28,14 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.SortedDocValues;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TermQuery;
-import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.PriorityQueue;
-import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.FacetParams;
 import org.apache.solr.common.util.NamedList;
@@ -60,7 +53,6 @@ import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SyntaxError;
-import org.apache.solr.search.field.FieldUtil;
 import org.apache.solr.search.mutable.MutableValueInt;
 import org.apache.solr.util.DateMathParser;
 import org.noggit.ObjectBuilder;
@@ -117,13 +109,14 @@ class FacetModule {
 abstract class FacetRequest {
   protected Map<String,AggValueSource> facetStats;  // per-bucket statistics
   protected Map<String,FacetRequest> subFacets;     // list of facets
+  protected List<String> excludeFilters;
 
   public FacetRequest() {
     facetStats = new LinkedHashMap<>();
     subFacets = new LinkedHashMap<>();
   }
 
-  public Map<String, AggValueSource> getfacetStats() {
+  public Map<String, AggValueSource> getFacetStats() {
     return facetStats;
   }
 
@@ -192,8 +185,8 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   protected void createAccs(int docCount, int slotCount) throws IOException {
     accMap = new LinkedHashMap<String,SlotAcc>();
     slot = new MutableValueInt();
-    for (Map.Entry<String,AggValueSource> entry : freq.getfacetStats().entrySet()) {
-      SlotAcc acc = entry.getValue().createSlotAcc(slot, fcontext.qcontext, fcontext.req, docCount, slotCount); // TODO - pass fcontext instead?
+    for (Map.Entry<String,AggValueSource> entry : freq.getFacetStats().entrySet()) {
+      SlotAcc acc = entry.getValue().createSlotAcc(fcontext, slot, docCount, slotCount);
       acc.key = entry.getKey();
       accMap.put(acc.key, acc);
 
@@ -220,7 +213,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   }
 
   protected void processStats(NamedList<Object> bucket, DocSet docs, int docCount) throws IOException {
-    if (freq.getfacetStats().size() == 0) return;
+    if (freq.getFacetStats().size() == 0) return;
     createAccs(docCount, 1);
     prepareForCollection();
     collect(docs);
@@ -303,7 +296,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
 
 
   public void fillBucket(SimpleOrderedMap<Object> bucket, Query q) throws IOException {
-    boolean needDocSet = freq.getfacetStats().size() > 0 || freq.getSubFacets().size() > 0;
+    boolean needDocSet = freq.getFacetStats().size() > 0 || freq.getSubFacets().size() > 0;
 
     // TODO: always collect counts or not???
 

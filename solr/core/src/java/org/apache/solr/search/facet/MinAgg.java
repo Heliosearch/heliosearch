@@ -30,7 +30,7 @@ public class MinAgg extends SimpleAggValueSource {
   }
 
   @Override
-  public SlotAcc createSlotAcc(MutableValueInt slot, QueryContext qContext, SolrQueryRequest req, int numDocs, int numSlots) throws IOException {
-    return new MinSlotAcc(slot, getArg(), qContext, numSlots);
+  public SlotAcc createSlotAcc(FacetContext fcontext, MutableValueInt slot, int numDocs, int numSlots) throws IOException {
+    return new MinSlotAcc(slot, getArg(), fcontext.qcontext, numSlots);
   }
 }

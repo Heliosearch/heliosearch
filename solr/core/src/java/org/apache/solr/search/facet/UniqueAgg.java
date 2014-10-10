@@ -29,9 +29,9 @@ public class UniqueAgg extends StrAggValueSource {
   }
 
   @Override
-  public SlotAcc createSlotAcc(MutableValueInt slot, QueryContext qContext, SolrQueryRequest req, int numDocs, int numSlots) throws IOException {
-    return new UniqueSinglevaluedSlotAcc(slot, qContext, getArg(), numSlots);
-    // TODO: handle multiValued
+  public SlotAcc createSlotAcc(FacetContext fcontext, MutableValueInt slot, int numDocs, int numSlots) throws IOException {
+    return new UniqueSinglevaluedSlotAcc(slot, fcontext.qcontext, getArg(), numSlots);
+    // TODO: handle multiValued?
     // return new UniqueMultivaluedSlotAcc(slot, getArg(), qContext, numSlots);
   }
 }
