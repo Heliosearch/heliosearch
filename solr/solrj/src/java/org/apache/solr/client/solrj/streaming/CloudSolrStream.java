@@ -50,13 +50,13 @@ import org.apache.zookeeper.KeeperException;
 
 public class CloudSolrStream extends TupleStream {
 
-  private String zkHost;
-  private String collection;
-  private Map params;
+  protected String zkHost;
+  protected String collection;
+  protected Map params;
   private Map<String, String> fieldMappings;
   private TreeSet<TupleWrapper> tuples;
-  private Comparator<Tuple> comp;
-  private List<TupleStream> solrStreams = new ArrayList();
+  protected Comparator<Tuple> comp;
+  protected List<TupleStream> solrStreams = new ArrayList();
   private int zkConnectTimeout = 10000;
   private int zkClientTimeout = 10000;
   private transient ZkStateReader zkStateReader;
@@ -80,6 +80,11 @@ public class CloudSolrStream extends TupleStream {
     this.tuples = new TreeSet();
     String sort = (String)params.get("sort");
     this.comp = parseComp(sort);
+  }
+
+  //Used by the ParallelStream
+  protected CloudSolrStream() {
+
   }
 
   public void setComp(Comparator<Tuple> comp) {
@@ -233,7 +238,7 @@ public class CloudSolrStream extends TupleStream {
     }
   }
 
-  class TupleWrapper implements Comparable<TupleWrapper> {
+  protected class TupleWrapper implements Comparable<TupleWrapper> {
     private Tuple tuple;
     private TupleStream stream;
     private Comparator comp;
@@ -270,7 +275,7 @@ public class CloudSolrStream extends TupleStream {
     }
   }
 
-  class StreamOpener implements Callable<TupleWrapper> {
+  protected class StreamOpener implements Callable<TupleWrapper> {
 
     private SolrStream stream;
     private Comparator<Tuple> comp;
