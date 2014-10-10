@@ -17,9 +17,10 @@
 
 package org.apache.solr.client.solrj.streaming;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
-public class DescFieldComp implements Comparator<Tuple> {
+public class DescFieldComp implements Comparator<Tuple>, Serializable {
 
   private String field;
 

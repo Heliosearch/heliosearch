@@ -86,7 +86,7 @@ public class SolrStream extends TupleStream {
     Iterator<Map.Entry> it = params.entrySet().iterator();
     while(it.hasNext()) {
       Map.Entry entry = it.next();
-      solrParams.add((String)entry.getKey(), (String)entry.getValue());
+      solrParams.add((String)entry.getKey(), entry.getValue().toString());
     }
 
     return solrParams;

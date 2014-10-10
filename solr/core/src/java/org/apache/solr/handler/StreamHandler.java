@@ -19,6 +19,7 @@ package org.apache.solr.handler;
 
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
+import java.net.URLDecoder;
 
 import org.apache.solr.client.solrj.streaming.TupleStream;
 import org.apache.solr.request.SolrQueryRequest;
@@ -32,12 +33,16 @@ public class StreamHandler extends RequestHandlerBase {
   public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
     SolrParams params = req.getParams();
     String encodedStream = params.get("stream");
-
+    encodedStream = URLDecoder.decode(encodedStream, "UTF-8");
+    System.out.println("Stream length:"+encodedStream.length());
     BASE64Decoder decoder = new BASE64Decoder();
     byte[] bytes = decoder.decodeBuffer(encodedStream);
     ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes);
     ObjectInputStream objectInputStream = new ObjectInputStream(byteStream);
+    System.out.println("Reading object");
     TupleStream tupleStream = (TupleStream)objectInputStream.readObject();
+    System.out.println("Read object");
+
     int worker = params.getInt("workerID");
     int numWorkers = params.getInt("numWorkers");
     tupleStream.setWorkers(numWorkers, worker);

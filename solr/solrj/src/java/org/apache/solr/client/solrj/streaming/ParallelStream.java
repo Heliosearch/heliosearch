@@ -19,6 +19,7 @@ package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -27,19 +28,20 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.io.ByteArrayOutputStream;
 import java.util.Random;
+import java.util.TreeSet;
+
 import org.apache.solr.common.cloud.ClusterState;
 import org.apache.solr.common.cloud.Replica;
 import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.ZkCoreNodeProps;
 import org.apache.solr.common.cloud.ZkStateReader;
-import sun.misc.BASE64Decoder;
 import sun.misc.BASE64Encoder;
+
 
 public class ParallelStream extends CloudSolrStream {
 
   private TupleStream tupleStream;
   private int workers;
-  private transient ZkStateReader zkStateReader;
   private String encoded;
 
   public ParallelStream(String zkHost,
@@ -58,6 +60,10 @@ public class ParallelStream extends CloudSolrStream {
     byte[] bytes = bout.toByteArray();
     BASE64Encoder encoder = new BASE64Encoder();
     this.encoded = encoder.encode(bytes);
+    System.out.println("encoded string:"+this.encoded.length());
+    this.encoded = URLEncoder.encode(this.encoded, "UTF-8");
+    this.tuples = new TreeSet();
+
   }
 
   public List<TupleStream> children() {
@@ -79,7 +85,7 @@ public class ParallelStream extends CloudSolrStream {
 
         params.put("distrib","false"); // We are the aggregator.
         params.put("numWorkers", workers);
-        params.put("workID", workerNum);
+        params.put("workerID", workerNum);
         params.put("stream", this.encoded);
         params.put("qt","/stream");
 

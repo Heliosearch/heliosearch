@@ -209,8 +209,13 @@ public abstract class TextResponseWriter {
   public void writeTupleStream(TupleStream tupleStream) throws IOException {
     tupleStream.open();
     writeStartDocumentList("response", -1, -1, -1, null);
+    boolean isFirst = true;
     for(Tuple tuple = tupleStream.read(); !tuple.EOF; tuple = tupleStream.read()) {
-      writeMap(null, tuple.fields, false, false);
+      if(!isFirst) {
+        writer.write(",");
+      }
+      writeMap(null, tuple.fields, false, true);
+      isFirst =false;
     }
     writeEndDocumentList();
     tupleStream.close();

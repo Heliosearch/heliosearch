@@ -17,9 +17,10 @@
 
 package org.apache.solr.client.solrj.streaming;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
-public class MultiComp implements Comparator<Tuple> {
+public class MultiComp implements Comparator<Tuple>, Serializable {
 
   private Comparator<Tuple>[] comps;
 

@@ -54,12 +54,12 @@ public class CloudSolrStream extends TupleStream {
   protected String collection;
   protected Map params;
   private Map<String, String> fieldMappings;
-  private TreeSet<TupleWrapper> tuples;
+  protected TreeSet<TupleWrapper> tuples;
   protected Comparator<Tuple> comp;
   protected List<TupleStream> solrStreams = new ArrayList();
   private int zkConnectTimeout = 10000;
   private int zkClientTimeout = 10000;
-  private transient ZkStateReader zkStateReader;
+  protected transient ZkStateReader zkStateReader;
   private int numWorkers;
   private int workerID;
 
