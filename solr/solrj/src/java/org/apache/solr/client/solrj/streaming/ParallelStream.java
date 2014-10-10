@@ -32,7 +32,8 @@ import org.apache.solr.common.cloud.Replica;
 import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.ZkCoreNodeProps;
 import org.apache.solr.common.cloud.ZkStateReader;
-import sun.misc.UUEncoder;
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
 
 public class ParallelStream extends CloudSolrStream {
 
@@ -55,8 +56,8 @@ public class ParallelStream extends CloudSolrStream {
     ObjectOutputStream out = new ObjectOutputStream(bout);
     out.writeObject(tupleStream);
     byte[] bytes = bout.toByteArray();
-    UUEncoder uu = new UUEncoder();
-    this.encoded = uu.encode(bytes);
+    BASE64Encoder encoder = new BASE64Encoder();
+    this.encoded = encoder.encode(bytes);
   }
 
   public List<TupleStream> children() {

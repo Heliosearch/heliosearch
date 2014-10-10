@@ -24,17 +24,17 @@ import org.apache.solr.client.solrj.streaming.TupleStream;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.common.params.SolrParams;
-import sun.misc.UUDecoder;
+import sun.misc.BASE64Decoder;
 
 
 public class StreamHandler extends RequestHandlerBase {
 
   public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
     SolrParams params = req.getParams();
-    String uuStream = params.get("stream");
+    String encodedStream = params.get("stream");
 
-    UUDecoder uuDecoder = new UUDecoder();
-    byte[] bytes = uuDecoder.decodeBuffer(uuStream);
+    BASE64Decoder decoder = new BASE64Decoder();
+    byte[] bytes = decoder.decodeBuffer(encodedStream);
     ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes);
     ObjectInputStream objectInputStream = new ObjectInputStream(byteStream);
     TupleStream tupleStream = (TupleStream)objectInputStream.readObject();
