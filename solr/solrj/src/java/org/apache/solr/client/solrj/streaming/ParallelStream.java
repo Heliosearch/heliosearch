@@ -93,6 +93,7 @@ public class ParallelStream extends CloudSolrStream {
         String url = zkProps.getCoreUrl();
         SolrStream solrStream = new SolrStream(url, params);
         solrStreams.add(solrStream);
+        ++workerNum;
       }
     } catch (Exception e) {
       throw new IOException(e);
