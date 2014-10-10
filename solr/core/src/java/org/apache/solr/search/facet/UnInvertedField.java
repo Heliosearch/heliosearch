@@ -800,6 +800,8 @@ public class UnInvertedField extends DocTermOrds {
     DocSet docs = processor.fcontext.base;
     int startTermIndex = processor.startTermIndex;
     int endTermIndex = processor.endTermIndex;
+    int nTerms = processor.nTerms;
+
     int uniqueTerms = 0;
 
     for (TopTerm tt : bigTerms.values()) {
@@ -807,7 +809,7 @@ public class UnInvertedField extends DocTermOrds {
         // handle the biggest terms
         try ( DocSet intersection = searcher.getDocSet(new TermQuery(new Term(field, tt.term)), docs); )
         {
-          int collected = processor.collect(tt.termNum, intersection);
+          int collected = processor.collect(tt.termNum - startTermIndex, intersection);
           if (collected > 0) {
             uniqueTerms++;
           }
@@ -864,7 +866,10 @@ public class UnInvertedField extends DocTermOrds {
             }
             if (delta == 0) break;
             tnum += delta - TNUM_OFFSET;
-            processor.collect(tnum, segDoc);
+            int arrIdx = tnum - startTermIndex;
+            if (arrIdx < 0) continue;
+            if (arrIdx >= nTerms) break;
+            processor.collect(arrIdx, segDoc);
           }
         } else {
           int tnum = 0;
@@ -874,7 +879,10 @@ public class UnInvertedField extends DocTermOrds {
             if ((code & 0x80)==0) {
               if (delta==0) break;
               tnum += delta - TNUM_OFFSET;
-              processor.collect(tnum, segDoc);
+              int arrIdx = tnum - startTermIndex;
+              if (arrIdx < 0) continue;
+              if (arrIdx >= nTerms) break;
+              processor.collect(arrIdx, segDoc);
               delta = 0;
             }
             code >>>= 8;

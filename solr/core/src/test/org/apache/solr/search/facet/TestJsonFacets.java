@@ -210,7 +210,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     String val_b = m("${val_b}");
     String super_s = m("${super_s}");
 
-    assertU(add(doc("id", "1", cat_s, "A", where_s, "NY", num_d, "4", num_i, "2",   super_s,"zorro",      val_b, "true")));
+    assertU(add(doc("id", "1", cat_s, "A", where_s, "NY", num_d, "4", num_i, "2",   super_s,"zodiac",     val_b, "true")));
     assertU(add(doc("id", "2", cat_s, "B", where_s, "NJ", num_d, "-9", num_i, "-5", super_s,"superman",   val_b, "false")));
     assertU(add(doc("id", "3")));
     assertU(commit());
@@ -302,15 +302,13 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             "'cat':{ /*'stats':{ 'count':5},*/ 'buckets':[{ 'val':'B', 'count':3, 'nj':{ 'count':2}}, { 'val':'A', 'count':2, 'nj':{ 'count':1}}]} }"
     );
 
-    /**
     // test prefix
     assertJQ(req(p, "q", "*:*"
-            , "json.facet", "{f1:{terms:'${cat_s}'}}"
+            , "json.facet", "{f1:{terms:{field:${super_s}, prefix:s, mincount:0 }}}"  // even with mincount=0, we should only see buckets with the prefix
         )
-        , "facets=={ 'count':1, " +
-            "'f1':{ 'buckets':[{ 'val':'A', 'count':1}]} } "
+        , "facets=={ 'count':6, " +
+            "'f1':{ 'buckets':[{val:spiderman, count:1}, {val:superman, count:1}]} } "
     );
-    **/
 
     // basic range facet
     assertJQ(req(p, "q", "*:*"
