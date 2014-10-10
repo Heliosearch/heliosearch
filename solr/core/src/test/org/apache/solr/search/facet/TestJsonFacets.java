@@ -193,10 +193,10 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
   @Test
   public void testStatsTemplated() throws Exception {
     // single valued strings
-    doStatsTemplated( params("cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b") );
+    doStatsTemplated( params("facet","true", "rows","0",  "cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b") );
 
     // multi-valued strings
-    doStatsTemplated( params("cat_s","cat_ss", "where_s","where_ss", "num_d","num_d", "num_i","num_i", "super_s","super_ss", "val_b","val_b") );
+    doStatsTemplated( params("facet","true", "rows","0",  "cat_s","cat_ss", "where_s","where_ss", "num_d","num_d", "num_i","num_i", "super_s","super_ss", "val_b","val_b") );
   }
 
 
@@ -221,24 +221,21 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     assertU(commit());
 
     // straight query facets
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{catA:{query:{q:'${cat_s}:A'}},  catA2:{query:{query:'${cat_s}:A'}},  catA3:{query:'${cat_s}:A'}    }"
         )
         , "facets=={ 'count':6, 'catA':{ 'count':2}, 'catA2':{ 'count':2}, 'catA3':{ 'count':2}}"
     );
 
     // nested query facets
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{ catB:{query:{q:'${cat_s}:B', facet:{nj:{query:'${where_s}:NJ'}, ny:{query:'${where_s}:NY'}} }}}"
         )
         , "facets=={ 'count':6, 'catB':{'count':3, 'nj':{'count':2}, 'ny':{'count':1}}}"
     );
 
     // nested query facets with stats
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{ catB:{query:{q:'${cat_s}:B', facet:{nj:{query:{q:'${where_s}:NJ'}}, ny:{query:'${where_s}:NY'}} }}}"
         )
         , "facets=={ 'count':6, 'catB':{'count':3, 'nj':{'count':2}, 'ny':{'count':1}}}"
@@ -246,8 +243,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
 
 
     // field/terms facet
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{c1:{field:'${cat_s}'}, c2:{field:{field:'${cat_s}'}}, c3:{terms:{field:'${cat_s}'}}  }"
         )
         , "facets=={ 'count':6, " +
@@ -257,8 +253,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // test mincount
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:3}}}"
         )
         , "facets=={ 'count':6, " +
@@ -266,8 +261,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // test default mincount of 1
-    assertJQ(req(p, "q", "id:1", "rows", "0",
-            "facet","true"
+    assertJQ(req(p, "q", "id:1"
             , "json.facet", "{f1:{terms:'${cat_s}'}}"
         )
         , "facets=={ 'count':1, " +
@@ -275,8 +269,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // test  mincount of 0
-    assertJQ(req(p, "q", "id:1", "rows", "0",
-            "facet","true"
+    assertJQ(req(p, "q", "id:1"
             , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:0}}}"
         )
         , "facets=={ 'count':1, " +
@@ -284,8 +277,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // test  mincount of 0 with stats
-    assertJQ(req(p, "q", "id:1", "rows", "0",
-            "facet","true"
+    assertJQ(req(p, "q", "id:1"
             , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:0, allBuckets:true, facet:{n1:'sum(${num_d})'}  }}}"
         )
         , "facets=={ 'count':1, " +
@@ -293,8 +285,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // test sorting by stat
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{f1:{terms:{field:'${cat_s}', sort:'n1 desc', facet:{n1:'sum(${num_d})'}  }}" +
                 " , f2:{terms:{field:'${cat_s}', sort:'n1 asc', facet:{n1:'sum(${num_d})'}  }} }"
         )
@@ -304,18 +295,25 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // terms facet with nested query facet
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{cat:{terms:{field:'${cat_s}', facet:{nj:{query:'${where_s}:NJ'}}    }   }} }"
         )
         , "facets=={ 'count':6, " +
             "'cat':{ /*'stats':{ 'count':5},*/ 'buckets':[{ 'val':'B', 'count':3, 'nj':{ 'count':2}}, { 'val':'A', 'count':2, 'nj':{ 'count':1}}]} }"
     );
 
+    /**
+    // test prefix
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{f1:{terms:'${cat_s}'}}"
+        )
+        , "facets=={ 'count':1, " +
+            "'f1':{ 'buckets':[{ 'val':'A', 'count':1}]} } "
+    );
+    **/
 
     // basic range facet
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5}}}"
         )
         , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1}, {val:0.0,count:2}, {val:5.0,count:0} ] } }"
@@ -323,16 +321,14 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
 
 
     // range facet with sub facets and stats
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
         )
         , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0,x:0.0,ny:{count:0}} ] } }"
     );
 
     // stats at top level
-    assertJQ(req(p, "q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "*:*"
             , "json.facet", "{ sum1:'sum(${num_d})', sumsq1:'sumsq(${num_d})', avg1:'avg(${num_d})', min1:'min(${num_d})', max1:'max(${num_d})', numwhere:'unique(${where_s})' }"
         )
         , "facets=={ 'count':6, " +
@@ -341,8 +337,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
 
     // stats at top level, no matches
     // todo: should we just leave stats with no matches out by default?
-    assertJQ(req(p, "q", "id:DOESNOTEXIST", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req(p, "q", "id:DOESNOTEXIST"
             , "json.facet", "{ sum1:'sum(${num_d})', sumsq1:'sumsq(${num_d})', avg1:'avg(${num_d})', min1:'min(${num_d})', max1:'max(${num_d})', numwhere:'unique(${where_s})' }"
         )
         , "facets=={count:0, " +
