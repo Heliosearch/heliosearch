@@ -39,7 +39,6 @@ public class SolrStream extends TupleStream {
   private int numWorkers;
   private int workerID;
   private Map<String, String> fieldMappings;
-  private String[] partitionKeys;
   private transient JSONTupleStream jsonTupleStream;
   private transient HttpSolrServer server;
 
@@ -130,6 +129,7 @@ public class SolrStream extends TupleStream {
   }
 
   private Map mapFields(Map fields, Map<String,String> mappings) {
+
     Iterator<Map.Entry<String,String>> it = mappings.entrySet().iterator();
     while(it.hasNext()) {
       Map.Entry<String,String> entry = it.next();
