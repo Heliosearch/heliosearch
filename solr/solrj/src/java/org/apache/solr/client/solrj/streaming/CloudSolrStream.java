@@ -130,7 +130,7 @@ public class CloudSolrStream extends TupleStream {
     }
   }
 
-  private void constructStreams() throws IOException {
+  protected void constructStreams() throws IOException {
 
     try {
       zkStateReader = connect();

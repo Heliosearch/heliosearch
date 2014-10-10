@@ -65,7 +65,7 @@ public class ParallelStream extends CloudSolrStream {
     return l;
   }
 
-  private void constructStreams() throws IOException {
+  protected void constructStreams() throws IOException {
 
     try {
       zkStateReader = connect();
