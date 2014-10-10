@@ -902,6 +902,18 @@
      </lst>
   </requestHandler>
 
+
+  <!--
+     Distributed Stream processing.
+  -->
+
+  <requestHandler name="/stream" class="solr.StreamHandler">
+    <lst name="invariants">
+      <str name="wt">json</str>
+      <str name="distrib">false</str>
+    </lst>
+  </requestHandler>
+
   <!--
     The export request handler is used to export full sorted result sets.
     Do not change these defaults.
@@ -1143,6 +1155,9 @@
   <requestHandler name="/analysis/document" 
                   class="solr.DocumentAnalysisRequestHandler" 
                   startup="lazy" />
+
+
+
 
   <!-- Admin Handlers
 

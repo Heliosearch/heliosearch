@@ -45,7 +45,7 @@ public class ParallelStream extends CloudSolrStream {
                         String collection,
                         TupleStream tupleStream,
                         int workers,
-                        Comparator comp) throws IOException {
+                        Comparator<Tuple> comp) throws IOException {
     this.zkHost = zkHost;
     this.collection = collection;
     this.workers = workers;
@@ -80,6 +80,7 @@ public class ParallelStream extends CloudSolrStream {
         params.put("numWorkers", workers);
         params.put("workID", workerNum);
         params.put("stream", this.encoded);
+        params.put("qt","/stream");
 
         Collection<Replica> replicas = slice.getReplicas();
         List<Replica> shuffler = new ArrayList();
