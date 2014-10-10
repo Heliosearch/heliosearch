@@ -25,17 +25,15 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.PriorityQueue;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
@@ -239,6 +237,11 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   }
 
 
+  protected int collect(int slotNum, DocSet docs) throws IOException {
+    slot.value = slotNum;
+    return collect(docs);
+  }
+
   protected int collect(DocSet docs) throws IOException {
     int count = 0;
     SolrIndexSearcher searcher = fcontext.searcher;
@@ -271,9 +274,14 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
     return count;
   }
 
-  void collect(int doc) throws IOException {
+  void collect(int tnum, int segDoc) throws IOException {
+    slot.value = tnum;
+    collect(segDoc);
+  }
+
+  void collect(int segDoc) throws IOException {
     for (SlotAcc acc : accs) {
-      acc.collect(doc);
+      acc.collect(segDoc);
     }
   }
 
@@ -368,281 +376,6 @@ class FacetQueryProcessor extends FacetProcessor<FacetQuery> {
 
 }
 
-
-class FacetFieldProcessor extends FacetProcessor<FacetField> {
-  SlotAcc sortAcc;
-
-  FacetFieldProcessor(FacetContext fcontext, FacetField freq) {
-    super(fcontext, freq);
-  }
-
-  @Override
-  public void process() throws IOException {
-    response = getFieldCacheCounts();
-  }
-
-  @Override
-  public Object getResponse() {
-    return response;
-  }
-
-  private void setSortAcc(int numSlots) {
-    String sortKey = freq.sortVariable;
-    sortAcc = accMap.get(sortKey);
-
-    if (sortAcc == null) {
-      if ("count".equals(sortKey)) {
-        if (countAcc == null) {
-          countAcc = new CountSlotAcc(slot, fcontext.qcontext, numSlots);
-          countAcc.key = "count";  // if we want it to appear
-          accMap.put("count", countAcc);
-        }
-        sortAcc = countAcc;
-      } else if ("index".equals(sortKey)) {
-        sortAcc = new SortSlotAcc(slot);
-        // This sorting accumulator just goes by the slot number, so does not need to be collected
-        // and hence does not need to find it's way into the accMap or accs array.
-      }
-    }
-  }
-
-  public SimpleOrderedMap<Object> getFieldCacheCounts() throws IOException {
-    try {
-      return _getFieldCacheCounts();
-    } finally {
-      // clear();
-    }
-  }
-
-  private static class Slot {
-    int slot;
-  }
-
-
-  public SimpleOrderedMap<Object> _getFieldCacheCounts() throws IOException {
-    SchemaField sf = fcontext.searcher.getSchema().getField(freq.field);
-    String prefix = freq.prefix;
-    boolean missing = freq.missing;
-
-
-    SolrIndexSearcher searcher = fcontext.searcher;
-    DocSet docs = fcontext.base;
-    QueryContext qcontext = fcontext.qcontext;
-
-    FieldType ft = sf.getType();
-    SortedDocValues si = FieldUtil.getSortedDocValues(qcontext, sf, null);
-
-    // TODO: native code acceleration
-
-    SimpleOrderedMap<Object> res = new SimpleOrderedMap<>();
-
-    final BytesRef prefixRef;
-    if (prefix == null) {
-      prefixRef = null;
-    } else if (prefix.length()==0) {
-      prefix = null;
-      prefixRef = null;
-    } else {
-      prefixRef = new BytesRef(prefix);
-    }
-
-    int startTermIndex, endTermIndex;
-    if (prefix!=null) {
-      startTermIndex = si.lookupTerm(prefixRef);
-      if (startTermIndex<0) startTermIndex=-startTermIndex-1;
-      prefixRef.append(UnicodeUtil.BIG_TERM);
-      endTermIndex = si.lookupTerm(prefixRef);
-      assert endTermIndex < 0;
-      endTermIndex = -endTermIndex-1;
-    } else {
-      startTermIndex = missing ? -1 : 0;
-      endTermIndex=si.getValueCount();
-    }
-
-
-    final int nTerms=endTermIndex-startTermIndex;
-    int nDocs = docs.size();
-
-    createAccs(nDocs, nTerms);
-    setSortAcc(nTerms);
-    prepareForCollection();
-
-
-    final MutableValueInt slot = this.slot;
-
-    // TODO: do stats include "missing"???
-
-    // count collection array only needs to be as big as the number of terms we are
-    // going to collect counts for.
-    final int[] counts = new int[nTerms];
-
-    DocIterator iter = docs.iterator();
-
-
-    final List<AtomicReaderContext> leaves = searcher.getIndexReader().leaves();
-    final Iterator<AtomicReaderContext> ctxIt = leaves.iterator();
-    AtomicReaderContext ctx = null;
-    int segBase = 0;
-    int segMax;
-    int adjustedMax = 0;
-    for (DocIterator docsIt = docs.iterator(); docsIt.hasNext(); ) {
-      final int doc = docsIt.nextDoc();
-      if (doc >= adjustedMax) {
-        do {
-          ctx = ctxIt.next();
-          if (ctx == null) {
-            // should be impossible
-            throw new RuntimeException("INTERNAL FACET ERROR");
-          }
-          segBase = ctx.docBase;
-          segMax = ctx.reader().maxDoc();
-          adjustedMax = segBase + segMax;
-        } while (doc >= adjustedMax);
-        assert doc >= ctx.docBase;
-        setNextReader(ctx);
-      }
-
-      int term = si.getOrd(iter.nextDoc());
-      int arrIdx = term-startTermIndex;
-      if (arrIdx>=0 && arrIdx<nTerms) {
-        slot.value = arrIdx;
-        collect(doc - segBase);  // per-seg collectors
-        counts[arrIdx]++;
-      }
-    }
-
-
-    // TODO: missing should perhaps be mutually exclusive with facet.prefix???
-
-    int off=(int)freq.offset;
-    int lim=freq.limit>=0 ? (int)freq.limit : Integer.MAX_VALUE;
-
-    int maxsize = freq.limit>0 ? (int)freq.offset+(int)freq.limit : Integer.MAX_VALUE-1;
-    maxsize = Math.min(maxsize, nTerms);
-
-    final int sortMul = freq.sortDirection.getMultiplier();
-
-    PriorityQueue<Slot> queue = new PriorityQueue<Slot>(maxsize) {
-      final SlotAcc acc = sortAcc;
-      @Override
-      protected boolean lessThan(Slot a, Slot b) {
-        int cmp = acc.compare(a.slot, b.slot) * sortMul;
-        return cmp == 0 ? b.slot < a.slot : cmp < 0;
-      }
-    };
-
-    Slot bottom = null;
-    for (int i=(startTermIndex==-1)?1:0; i<nTerms; i++) {
-       if (countAcc != null && freq.mincount > 0) {
-         // TODO: track counts separately?
-         int slotDocCount = ((Number)countAcc.getValue(i)).intValue();
-         if (slotDocCount < freq.mincount) {
-           continue;
-         }
-       }
-
-      if (bottom != null) {
-        if (sortAcc.compare(bottom.slot, i) * sortMul < 0) {
-          bottom.slot = i;
-          bottom = queue.updateTop();
-        }
-      } else {
-        // queue not full
-        Slot s = new Slot();
-        s.slot = i;
-        queue.add(s);
-        if (queue.size() >= maxsize) {
-          bottom = queue.top();
-        }
-      }
-    }
-
-
-    // if we are deep paging, we don't have to order the highest "offset" counts.
-    int collectCount = Math.max(0, queue.size() - off);
-    assert collectCount <= lim;
-    int[] sortedSlots = new int[collectCount];
-    for (int i=collectCount-1; i>=0; i--) {
-      sortedSlots[i] = queue.pop().slot;
-    }
-
-    if (freq.allBuckets) {
-      SimpleOrderedMap<Object> allBuckets = new SimpleOrderedMap<>();
-      for (SlotAcc acc : accs) {
-        acc.setValues(allBuckets, -1);
-      }
-      res.add("allBuckets", allBuckets);
-    }
-
-    ArrayList bucketList = new ArrayList(collectCount);
-    res.add("buckets", bucketList);
-
-    FacetContext subContext = null;
-    if (freq.getSubFacets().size() > 0) {
-      subContext = fcontext.sub();
-    }
-
-    for (int slotNum : sortedSlots) {
-      SimpleOrderedMap<Object> bucket = new SimpleOrderedMap<>();
-
-      // get the ord of the slot...
-      int ord = startTermIndex + slotNum;
-
-      BytesRef br;
-      Object val;
-      if (startTermIndex == -1 && slotNum == 0) {
-        // this is the "missing" bucket
-        val = null;
-        br = new BytesRef();
-      } else {
-        br = si.lookupOrd(ord);
-        val = ft.toObject(sf, br);
-      }
-
-      bucket.add("val", val);
-      // add stats for this bucket
-      addStats(bucket, slotNum);
-
-      // handle sub-facets for this bucket
-      if (subContext != null) {
-        subContext.base = fcontext.searcher.getDocSet( new TermQuery(new Term(sf.getName(), br.clone())) );
-        try {
-          fillBucketSubs(bucket, subContext);
-        } finally {
-          subContext.base.decref();
-          subContext.base = null;
-        }
-      }
-
-      bucketList.add(bucket);
-    }
-
-
-
-    return res;
-  }
-
-  // TODO: multi-valued
-  /***
-   public SimpleOrderedMap<Object> getUninvertedCounts(DocSet baseDocs, String field, int offset, int limit, int mincount, boolean missing, String prefix, boolean unique) throws IOException {
-    try {
-      return _getUninvertedCounts(baseDocs, field, offset, limit, mincount, missing, prefix, unique);
-    } finally {
-      // clear();
-    }
-  }
-
-  public SimpleOrderedMap<Object> _getUninvertedCounts(DocSet baseDocs, String field, int offset, int limit, int mincount, boolean missing, String prefix, boolean unique) throws IOException {
-    UnInvertedField uif = UnInvertedField.getUnInvertedField(field, simpleFacets.searcher);
-    return uif.getCounts(this, baseDocs, offset, limit, mincount, missing, prefix, unique);
-  }
-  ***/
-
-
-
-
-
-}
 
 
 
@@ -1321,6 +1054,7 @@ class FacetFieldParser extends FacetParser<FacetField> {
       facet.mincount = getLong(m, "mincount", facet.mincount);
       facet.missing = getBoolean(m, "missing", facet.missing);
       facet.allBuckets = getBoolean(m, "allBuckets", facet.allBuckets);
+      facet.method = FacetField.FacetMethod.fromString( getString(m, "method", null) );
 
       // facet.sort may depend on a facet stat...
       // should we be parsing / validating this here, or in the execution environment?
@@ -1332,6 +1066,7 @@ class FacetFieldParser extends FacetParser<FacetField> {
 
     return facet;
   }
+
 
   // Sort specification is currently
   // sort : 'mystat desc'
@@ -1429,43 +1164,6 @@ class FacetRangeParser extends FacetParser<FacetRange> {
     return facet;
   }
 
-}
-
-
-
-
-class FacetField extends FacetRequest {
-  String field;
-  long offset;
-  long limit;
-  long mincount;
-  boolean missing;
-  String prefix;
-  String sortVariable;
-  SortDirection sortDirection;
-  boolean allBuckets;   // show cumulative stats across all buckets (this can be different than non-bucketed stats across all docs because of multi-valued docs)
-
-  // TODO: put this somewhere more generic?
-  public static enum SortDirection {
-    asc(-1) ,
-    desc(1);
-
-    private final int multiplier;
-    private SortDirection(int multiplier) {
-      this.multiplier = multiplier;
-    }
-
-    // asc==-1, desc==1
-    public int getMultiplier() {
-      return multiplier;
-    }
-  }
-
-
-  @Override
-  public FacetProcessor createFacetProcessor(FacetContext fcontext) {
-    return new FacetFieldProcessor(fcontext, this);
-  }
 }
 
 

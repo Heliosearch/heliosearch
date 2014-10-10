@@ -573,6 +573,7 @@ public class UnInvertedField extends DocTermOrds {
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  // TODO: remove after JSON facets are ready...
   public SimpleOrderedMap<Object> getCounts(final SimpleFacetStats facetStats, DocSet baseDocs, int offset, int limit, int mincount, boolean missing, String prefix, boolean unique) throws IOException {
     use.incrementAndGet();
 
@@ -792,9 +793,98 @@ public class UnInvertedField extends DocTermOrds {
   }
 
 
+  // called from FieldFacetProcessor
+  public void collectDocs(FacetFieldProcessorUIF processor) throws IOException {
+    use.incrementAndGet();
+
+    DocSet docs = processor.fcontext.base;
+    int startTermIndex = processor.startTermIndex;
+    int endTermIndex = processor.endTermIndex;
+    int uniqueTerms = 0;
+
+    for (TopTerm tt : bigTerms.values()) {
+      if (tt.termNum >= startTermIndex && tt.termNum < endTermIndex) {
+        // handle the biggest terms
+        try ( DocSet intersection = searcher.getDocSet(new TermQuery(new Term(field, tt.term)), docs); )
+        {
+          int collected = processor.collect(tt.termNum, intersection);
+          if (collected > 0) {
+            uniqueTerms++;
+          }
+        }
+      }
+    }
+
+    if (termInstances > 0) {
+
+      final List<AtomicReaderContext> leaves = searcher.getIndexReader().leaves();
+      final Iterator<AtomicReaderContext> ctxIt = leaves.iterator();
+      AtomicReaderContext ctx = null;
+      int segBase = 0;
+      int segMax;
+      int adjustedMax = 0;
 
 
+      // TODO: handle facet.prefix here!!!
 
+      DocIterator iter = docs.iterator();
+      while (iter.hasNext()) {
+        int doc = iter.nextDoc();
+
+        if (doc >= adjustedMax) {
+          do {
+            ctx = ctxIt.next();
+            if (ctx == null) {
+              // should be impossible
+              throw new RuntimeException("INTERNAL FACET ERROR");
+            }
+            segBase = ctx.docBase;
+            segMax = ctx.reader().maxDoc();
+            adjustedMax = segBase + segMax;
+          } while (doc >= adjustedMax);
+          assert doc >= ctx.docBase;
+          processor.setNextReader(ctx);
+        }
+        int segDoc = doc - segBase;
+
+
+        int code = index[doc];
+
+        if ((code & 0xff)==1) {
+          int pos = code>>>8;
+          int whichArray = (doc >>> 16) & 0xff;
+          byte[] arr = tnums[whichArray];
+          int tnum = 0;
+          for(;;) {
+            int delta = 0;
+            for(;;) {
+              byte b = arr[pos++];
+              delta = (delta << 7) | (b & 0x7f);
+              if ((b & 0x80) == 0) break;
+            }
+            if (delta == 0) break;
+            tnum += delta - TNUM_OFFSET;
+            processor.collect(tnum, segDoc);
+          }
+        } else {
+          int tnum = 0;
+          int delta = 0;
+          for (;;) {
+            delta = (delta << 7) | (code & 0x7f);
+            if ((code & 0x80)==0) {
+              if (delta==0) break;
+              tnum += delta - TNUM_OFFSET;
+              processor.collect(tnum, segDoc);
+              delta = 0;
+            }
+            code >>>= 8;
+          }
+        }
+      }
+    }
+
+
+  }
 
 
 
