@@ -17,33 +17,22 @@
 
 package org.apache.solr.client.solrj.streaming;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-public abstract class TupleStream implements Serializable {
+public class StreamContext {
 
-  protected String[] partitionKeys;
+  private Map entries = new HashMap();
+  public int workerID;
+  public int numWorkers;
+  public ConcurrentHashMap zkCache;
 
-  public TupleStream(String[] partitionKeys) {
-    this.partitionKeys = partitionKeys;
+  public Object get(Object key) {
+    return entries.get(key);
   }
 
-  public TupleStream() {
-
-  }
-
-  public abstract void setStreamContext(StreamContext context);
-
-  public abstract List<TupleStream> children();
-
-  public abstract void open() throws IOException;
-
-  public abstract void close() throws IOException;
-
-  public abstract Tuple read() throws IOException;
-
-  public int getCost() {
-    return 0;
+  public void put(Object key, Object value) {
+    this.entries.put(key, value);
   }
 }

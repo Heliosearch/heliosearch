@@ -20,32 +20,59 @@ package org.apache.solr.handler;
 import java.io.ByteArrayInputStream;
 import java.io.ObjectInputStream;
 import java.net.URLDecoder;
+import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.solr.client.solrj.streaming.TupleStream;
+import org.apache.solr.client.solrj.streaming.StreamContext;
+import org.apache.solr.common.cloud.ZkStateReader;
+import org.apache.solr.core.CloseHook;
+import org.apache.solr.core.SolrCore;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.util.plugin.SolrCoreAware;
 import sun.misc.BASE64Decoder;
 
 
-public class StreamHandler extends RequestHandlerBase {
+public class StreamHandler extends RequestHandlerBase implements SolrCoreAware {
+
+  private ConcurrentHashMap<String, ZkStateReader> zkCache = new ConcurrentHashMap();
+
+  public void inform(SolrCore core) {
+
+    core.addCloseHook( new CloseHook() {
+      @Override
+      public void preClose(SolrCore core) {
+        //To change body of implemented methods use File | Settings | File Templates.
+      }
+
+      @Override
+      public void postClose(SolrCore core) {
+        Iterator<ZkStateReader> it =  zkCache.values().iterator();
+        while(it.hasNext()) {
+          it.next().close();
+        }
+      }
+    });
+  }
 
   public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
     SolrParams params = req.getParams();
     String encodedStream = params.get("stream");
     encodedStream = URLDecoder.decode(encodedStream, "UTF-8");
-    System.out.println("Stream length:"+encodedStream.length());
     BASE64Decoder decoder = new BASE64Decoder();
     byte[] bytes = decoder.decodeBuffer(encodedStream);
     ByteArrayInputStream byteStream = new ByteArrayInputStream(bytes);
     ObjectInputStream objectInputStream = new ObjectInputStream(byteStream);
-    System.out.println("Reading object");
     TupleStream tupleStream = (TupleStream)objectInputStream.readObject();
-    System.out.println("Read object");
 
     int worker = params.getInt("workerID");
     int numWorkers = params.getInt("numWorkers");
-    tupleStream.setWorkers(numWorkers, worker);
+    StreamContext context = new StreamContext();
+    context.workerID = worker;
+    context.numWorkers = numWorkers;
+    tupleStream.setStreamContext(context);
     rsp.add("tuples", tupleStream);
   }
 

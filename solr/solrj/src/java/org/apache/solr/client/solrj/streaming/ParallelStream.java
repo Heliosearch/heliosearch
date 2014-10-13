@@ -60,7 +60,6 @@ public class ParallelStream extends CloudSolrStream {
     byte[] bytes = bout.toByteArray();
     BASE64Encoder encoder = new BASE64Encoder();
     this.encoded = encoder.encode(bytes);
-    System.out.println("encoded string:"+this.encoded.length());
     this.encoded = URLEncoder.encode(this.encoded, "UTF-8");
     this.tuples = new TreeSet();
 

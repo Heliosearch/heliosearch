@@ -61,9 +61,9 @@ public class SolrStream extends TupleStream {
     return new ArrayList();
   }
 
-  public void setWorkers(int numWorkers, int workerID) {
-    this.numWorkers = numWorkers;
-    this.workerID = workerID;
+  public void setStreamContext(StreamContext context) {
+    this.numWorkers = context.numWorkers;
+    this.workerID = context.workerID;
   }
 
   public void open() throws IOException {
