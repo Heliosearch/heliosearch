@@ -34,8 +34,6 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     initCore("solrconfig-tlog.xml","schema_latest.xml");
   }
 
-  // nocommit - just scratch space for debugging failing cases...
-  @Test
   public void testStats() throws Exception {
     assertU(add(doc("id", "1", "cat_s", "A", "where_s", "NY", "num_d", "4", "num_i", "2", "val_b", "true")));
     assertU(add(doc("id", "2", "cat_s", "B", "where_s", "NJ", "num_d", "-9", "num_i", "-5", "val_b", "false")));
@@ -55,6 +53,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
                               ", cat2:{terms:{field:'cat_s', method:stream, sort:'index asc' }}" + // default sort
                               ", cat3:{terms:{field:'cat_s', method:stream, mincount:3 }}" + // mincount
                               ", cat4:{terms:{field:'cat_s', method:stream, prefix:B }}" + // prefix
+                              ", cat5:{terms:{field:'cat_s', method:stream, offset:1 }}" + // offset
                 " }"
         )
         , "facets=={count:6 " +
@@ -62,6 +61,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             ", cat2:{buckets:[{val:A, count:2},{val:B, count:3}]}" +
             ", cat3:{buckets:[{val:B, count:3}]}" +
             ", cat4:{buckets:[{val:B, count:3}]}" +
+            ", cat5:{buckets:[{val:B, count:3}]}" +
             " }"
     );
 
@@ -74,6 +74,36 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
         , "facets=={count:6 " +
         ", cat :{buckets:[{val:A, count:2, where:{buckets:[{val:NJ,count:1},{val:NY,count:1}]}   },{val:B, count:3, where:{buckets:[{val:NJ,count:2},{val:NY,count:1}]}    }]}"
         + "}"
+    );
+
+    // test nested streaming under streaming
+    assertJQ(req("q", "*:*", "rows", "0",
+            "facet","true"
+            , "json.facet", "{   cat:{terms:{field:'cat_s', method:stream, facet:{where:{terms:{field:where_s,method:stream}}}   }}}"
+        )
+        , "facets=={count:6 " +
+            ", cat :{buckets:[{val:A, count:2, where:{buckets:[{val:NJ,count:1},{val:NY,count:1}]}   },{val:B, count:3, where:{buckets:[{val:NJ,count:2},{val:NY,count:1}]}    }]}"
+            + "}"
+    );
+
+    // test nested streaming with stats under streaming
+    assertJQ(req("q", "*:*", "rows", "0",
+            "facet","true"
+            , "json.facet", "{   cat:{terms:{field:'cat_s', method:stream, facet:{  where:{terms:{field:where_s,method:stream, facet:{x:'max(num_d)'}     }}}   }}}"
+        )
+        , "facets=={count:6 " +
+            ", cat :{buckets:[{val:A, count:2, where:{buckets:[{val:NJ,count:1,x:2.0},{val:NY,count:1,x:4.0}]}   },{val:B, count:3, where:{buckets:[{val:NJ,count:2,x:11.0},{val:NY,count:1,x:-5.0}]}    }]}"
+            + "}"
+    );
+
+    // test nested streaming with stats under streaming with stats
+    assertJQ(req("q", "*:*", "rows", "0",
+            "facet","true"
+            , "json.facet", "{   cat:{terms:{field:'cat_s', method:stream, facet:{ y:'min(num_d)',  where:{terms:{field:where_s,method:stream, facet:{x:'max(num_d)'}     }}}   }}}"
+        )
+        , "facets=={count:6 " +
+            ", cat :{buckets:[{val:A, count:2, y:2.0, where:{buckets:[{val:NJ,count:1,x:2.0},{val:NY,count:1,x:4.0}]}   },{val:B, count:3, y:-9.0, where:{buckets:[{val:NJ,count:2,x:11.0},{val:NY,count:1,x:-5.0}]}    }]}"
+            + "}"
     );
 
 

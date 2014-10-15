@@ -17,6 +17,7 @@ package org.apache.solr.search.facet;
  * limitations under the License.
  */
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -298,7 +299,7 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
           fillBucketSubs(bucket, subContext);
         } finally {
           subContext.base.decref();
-          // subContext.base = null;  // do not modify context after creation... there may be defered execution (i.e. streaming)
+          // subContext.base = null;  // do not modify context after creation... there may be deferred execution (i.e. streaming)
         }
       }
 
@@ -434,7 +435,11 @@ class FacetFieldProcessorUIF extends FacetFieldProcessorFC {
 
 
 
-class FacetFieldProcessorStream extends FacetFieldProcessor {
+class FacetFieldProcessorStream extends FacetFieldProcessor implements Closeable {
+  long bucketsToSkip;
+  long bucketsReturned;
+
+  boolean closed;
   boolean countOnly;
   boolean hasSubFacets;  // true if there are subfacets
   int minDfFilterCache;
@@ -454,7 +459,21 @@ class FacetFieldProcessorStream extends FacetFieldProcessor {
   }
 
   @Override
+  public void close() throws IOException {
+    if (!closed) {
+      closed = true;
+      fcontext.base.decref();
+    }
+  }
+
+
+  @Override
   public void process() throws IOException {
+    // We need to keep the fcontext open after processing is done (since we will be streaming in the response writer).
+    // But if the connection is broken, we want to clean up.
+    fcontext.base.incref();
+    fcontext.qcontext.addCloseHook(this);
+
     setup();
     response = new SimpleOrderedMap<>();
     response.add( "buckets", new Iterator() {
@@ -475,12 +494,23 @@ class FacetFieldProcessorStream extends FacetFieldProcessor {
           val = nextBucket();
         }
         retrieveNext = true;
+        if (val == null) {
+          // Last value, so clean up.  In the case that we are doing streaming facets within streaming facets,
+          // the number of close hooks could grow very large, so we want to remove ourselves.
+          boolean removed = fcontext.qcontext.removeCloseHook(FacetFieldProcessorStream.this);
+          assert removed;
+          try {
+            close();
+          } catch (IOException e) {
+            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Error during facet streaming close", e);
+          }
+        }
         return val;
       }
 
       @Override
       public void remove() {
-
+        throw new UnsupportedOperationException();
       }
     });
   }
@@ -491,6 +521,9 @@ class FacetFieldProcessorStream extends FacetFieldProcessor {
 
     countOnly = freq.facetStats.size() == 0 || freq.facetStats.values().iterator().next() instanceof CountAgg;
     hasSubFacets = freq.subFacets.size() > 0;
+    bucketsToSkip = freq.offset;
+
+
 
     createAccs(-1, 1);
     prepareForCollection();
@@ -587,24 +620,22 @@ class FacetFieldProcessorStream extends FacetFieldProcessor {
             deState.minSetSizeCached = minDfFilterCache;
           }
 
-          if (hasSubFacets) {
-            termSet = fcontext.searcher.getDocSet(deState);
-          }
-
-          resetStats();
-
-          // if only counting...
-          if (countOnly) {
-            if (termSet != null) {
-              c = docs.intersectionSize(termSet);
+            if (hasSubFacets || !countOnly) {
+              DocSet termsAll = fcontext.searcher.getDocSet(deState);
+              termSet = docs.intersection(termsAll);
+              termsAll.decref();
+              c = termSet.size();
             } else {
               c = fcontext.searcher.numDocs(docs, deState);
             }
-          } else {
-            c = collect(termSet);
-          }
+            docsEnum = deState.docsEnum;
 
-          docsEnum = deState.docsEnum;
+            resetStats();
+
+            if (!countOnly) {
+              collect(termSet);
+            }
+
         } else {
           // We don't need the docset here (meaning no sub-facets).
           // if countOnly, then we are calculating some other stats...
@@ -670,6 +701,17 @@ class FacetFieldProcessorStream extends FacetFieldProcessor {
         if (c < mincount) {
           term = termsEnum.next();
           continue;
+        }
+
+        // handle offset and limit
+        if (bucketsToSkip > 0) {
+          bucketsToSkip--;
+          term = termsEnum.next();
+          continue;
+        }
+
+        if (freq.limit >= 0 && ++bucketsReturned > freq.limit) {
+          return null;
         }
 
         // set count in case other stats depend on it
