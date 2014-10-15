@@ -48,12 +48,37 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     assertU(commit());
 
 
-    // terms facet with nested field facet
+    // test streaming
     assertJQ(req("q", "*:*", "rows", "0",
             "facet","true"  // currently still needed
-            , "json.facet", "{cat:{terms:{field:'cat_s', facet:{nj:{query:'where_s:NJ'}}    }   }} }"
+            , "json.facet", "{   cat:{terms:{field:'cat_s', method:stream }}" +
+                              ", cat2:{terms:{field:'cat_s', method:stream, sort:'index asc' }}" + // default sort
+                              ", cat3:{terms:{field:'cat_s', method:stream, mincount:3 }}" + // mincount
+                              ", cat4:{terms:{field:'cat_s', method:stream, prefix:B }}" + // prefix
+                " }"
         )
-        , "facets=="
+        , "facets=={count:6 " +
+            ", cat :{buckets:[{val:A, count:2},{val:B, count:3}]}" +
+            ", cat2:{buckets:[{val:A, count:2},{val:B, count:3}]}" +
+            ", cat3:{buckets:[{val:B, count:3}]}" +
+            ", cat4:{buckets:[{val:B, count:3}]}" +
+            " }"
+    );
+
+
+    // test nested streaming under non-streaming
+    assertJQ(req("q", "*:*", "rows", "0",
+        "facet","true"
+        , "json.facet", "{   cat:{terms:{field:'cat_s', sort:'index asc', facet:{where:{terms:{field:where_s,method:stream}}}   }}}"
+        )
+        , "facets=={count:6 " +
+        ", cat :{buckets:[{val:A, count:2, where:{buckets:[{val:NJ,count:1},{val:NY,count:1}]}   },{val:B, count:3, where:{buckets:[{val:NJ,count:2},{val:NY,count:1}]}    }]}"
+        + "}"
+    );
+
+
+    assertJQ(req("q", "*:*", "fq","cat_s:A")
+        , "response/numFound==2"
     );
   }
 
@@ -157,8 +182,8 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
                 " , f2:{terms:{field:'${cat_s}', sort:'n1 asc', facet:{n1:'sum(${num_d})'}  }} }"
         )
         , "facets=={ 'count':6, " +
-            "  f1:{ /*stats:{ n1:3.0},*/ 'buckets':[{ val:'A', n1:6.0 }, { val:'B', n1:-3.0}]}" +
-            ", f2:{ /*stats:{ n1:3.0},*/ 'buckets':[{ val:'B', n1:-3.0}, { val:'A', n1:6.0 }]} }"
+            "  f1:{ /*stats:{ n1:3.0},*/ 'buckets':[{ val:'A', count:2, n1:6.0 }, { val:'B', count:3, n1:-3.0}]}" +
+            ", f2:{ /*stats:{ n1:3.0},*/ 'buckets':[{ val:'B', count:3, n1:-3.0}, { val:'A', count:2, n1:6.0 }]} }"
     );
 
     // terms facet with nested query facet

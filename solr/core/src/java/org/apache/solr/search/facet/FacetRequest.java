@@ -139,7 +139,7 @@ abstract class FacetRequest {
 class FacetContext {
   // Context info for actually executing a local facet command
   QueryContext qcontext;
-  SolrQueryRequest req;  // TODO: or do params?
+  SolrQueryRequest req;  // TODO: replace with params?
   SolrIndexSearcher searcher;
   DocSet base;
   FacetContext parent;
@@ -164,7 +164,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
 
   LinkedHashMap<String,SlotAcc> accMap;
   protected SlotAcc[] accs;
-  protected SlotAcc countAcc;
+  protected CountSlotAcc countAcc;
   protected MutableValueInt slot;
 
   FacetProcessor(FacetContext fcontext, FacetRequestT freq) {
@@ -185,14 +185,12 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   protected void createAccs(int docCount, int slotCount) throws IOException {
     accMap = new LinkedHashMap<String,SlotAcc>();
     slot = new MutableValueInt();
+    countAcc = new CountSlotAcc(slot, fcontext.qcontext, slotCount);
+    countAcc.key = "count";
     for (Map.Entry<String,AggValueSource> entry : freq.getFacetStats().entrySet()) {
       SlotAcc acc = entry.getValue().createSlotAcc(fcontext, slot, docCount, slotCount);
       acc.key = entry.getKey();
       accMap.put(acc.key, acc);
-
-      if (acc instanceof CountSlotAcc) {
-        countAcc = acc;
-      }
     }
   }
 
@@ -200,23 +198,28 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   protected void prepareForCollection() {
     accs = new SlotAcc[accMap.size()];
     int i=0;
-    if (countAcc != null) {
-      // put countAcc first in case others depend on it...
-      accs[i++] = countAcc;
-    }
     for (SlotAcc acc : accMap.values()) {
-      if (acc == countAcc) {
-        continue;
-      }
       accs[i++] = acc;
     }
   }
 
+  protected void resetStats() {
+    countAcc.reset();
+    for (SlotAcc acc : accs) {
+      acc.reset();
+    }
+  }
+
   protected void processStats(NamedList<Object> bucket, DocSet docs, int docCount) throws IOException {
-    if (freq.getFacetStats().size() == 0) return;
+    if (freq.getFacetStats().size() == 0) {
+      bucket.add("count", docCount);
+      return;
+    }
     createAccs(docCount, 1);
     prepareForCollection();
-    collect(docs);
+    int collected = collect(docs);
+    countAcc.incrementCount(slot.value, collected);
+    assert collected == docCount;
     addStats(bucket, 0);
   }
 
@@ -279,6 +282,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   }
 
   void setNextReader(AtomicReaderContext ctx) throws IOException {
+    // countAcc.setNextReader is a no-op
     for (SlotAcc acc : accs) {
       acc.setNextReader(ctx);
     }
@@ -286,6 +290,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
 
   void addStats(NamedList<Object> target, int slotNum) {
     slot.value = slotNum;
+    target.add("count", countAcc.getCount(slotNum));
     for (Acc acc : accs) {
       acc.setValues(target);
     }
@@ -320,7 +325,6 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
     }
 
     try {
-      bucket.add("count", count);
       processStats(bucket, result, (int)count);
       processSubs(bucket, result);
     } finally {
@@ -334,7 +338,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
 
 
 
-  private void processSubs(NamedList<Object> bucket, DocSet result) throws IOException {
+  protected void processSubs(NamedList<Object> bucket, DocSet result) throws IOException {
     // TODO: process exclusions, etc
 
     FacetContext subContext = fcontext.sub();
@@ -451,14 +455,6 @@ class FacetRangeProcessor extends FacetProcessor<FacetRange> {
     T start = calc.getValue(freq.start.toString());
     T end = calc.getValue(freq.end.toString());
     EnumSet<FacetParams.FacetRangeInclude> include = freq.include;
-
-    /***
-    if (end.compareTo(start) < 0) {
-      throw new SolrException
-          (SolrException.ErrorCode.BAD_REQUEST,
-              "range facet 'end' comes before 'start': "+end+" < "+start);
-    }
-    ***/
 
     String gap = freq.gap.toString();
 
@@ -1048,7 +1044,8 @@ class FacetFieldParser extends FacetParser<FacetField> {
       facet.missing = getBoolean(m, "missing", facet.missing);
       facet.prefix = getString(m, "prefix", facet.prefix);
       facet.allBuckets = getBoolean(m, "allBuckets", facet.allBuckets);
-      facet.method = FacetField.FacetMethod.fromString( getString(m, "method", null) );
+      facet.method = FacetField.FacetMethod.fromString(getString(m, "method", null));
+      facet.cacheDf = (int)getLong(m, "cacheDf", facet.cacheDf);
 
       // facet.sort may depend on a facet stat...
       // should we be parsing / validating this here, or in the execution environment?

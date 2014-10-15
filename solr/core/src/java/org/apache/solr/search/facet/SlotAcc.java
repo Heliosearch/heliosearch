@@ -55,6 +55,8 @@ public abstract class SlotAcc extends Acc {
       bucket.add(key, getValue(slotNum));
     }
   }
+
+  public abstract void reset();
 }
 
 
@@ -88,16 +90,17 @@ abstract class FuncSlotAcc extends SlotAcc {
 
 abstract class DoubleFuncSlotAcc extends FuncSlotAcc {
   double[] result;  // TODO: use DoubleArray
+  double initialValue;
 
   public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
-    super(slot, values, queryContext, numSlots);
-    result = new double[numSlots];
+    this(slot, values, queryContext, numSlots, 0);
   }
   public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots, double initialValue) {
     super(slot, values, queryContext, numSlots);
+    this.initialValue = initialValue;
     result = new double[numSlots];
-    for (int i=0; i<result.length; i++) {
-      result[i] = initialValue;
+    if (initialValue != 0) {
+      reset();
     }
   }
 
@@ -111,14 +114,26 @@ abstract class DoubleFuncSlotAcc extends FuncSlotAcc {
   public Double getValue() {
     return result[slot.value];
   }
+
+  @Override
+  public void reset() {
+    for (int i=0; i<result.length; i++) {
+      result[i] = initialValue;
+    }
+  }
 }
 
 abstract class IntSlotAcc extends SlotAcc {
   int[] result;  // use LongArray32
+  int initialValue;
 
-  public IntSlotAcc(MutableValueInt slot, int numSlots) {
+  public IntSlotAcc(MutableValueInt slot, int numSlots, int initialValue) {
     super(slot);
+    this.initialValue = initialValue;
     result = new int[numSlots];
+    if (initialValue != 0) {
+      reset();
+    }
   }
 
   @Override
@@ -129,6 +144,13 @@ abstract class IntSlotAcc extends SlotAcc {
   @Override
   public Integer getValue() {
     return result[slot.value];
+  }
+
+  @Override
+  public void reset() {
+    for (int i=0; i<result.length; i++) {
+      result[i] = initialValue;
+    }
   }
 }
 
@@ -241,6 +263,16 @@ class AvgSlotAcc extends DoubleFuncSlotAcc {
     counts = new int[numSlots];
   }
 
+  @Override
+  public void reset() {
+    super.reset();
+    tot = 0;
+    count = 0;
+    for (int i=0; i<counts.length; i++) {
+      counts[i] = 0;
+    }
+  }
+
   public void collect(int doc) {
     double val = values.doubleVal(doc);  // todo: worth trying to share this value across multiple stats that need it?
     int slotNum = slot.value;  // todo: more efficient to pass it in?
@@ -281,7 +313,7 @@ class CountSlotAcc extends IntSlotAcc {
   int total = 0;
 
   public CountSlotAcc(MutableValueInt slot, QueryContext qContext, int numSlots) {
-    super(slot, numSlots);
+    super(slot, numSlots, 0);
   }
 
   public void collect(int doc) {       // TODO: count arrays can use fewer bytes based on the number of docs in the base set (that's the upper bound for single valued) - look at ttf?
@@ -292,6 +324,22 @@ class CountSlotAcc extends IntSlotAcc {
 
   public Comparable getGlobalValue() {
     return total;
+  }
+
+  public void incrementCount(int slot, int count) {
+    total += count;
+    result[slot] += count;
+  }
+
+  public int getCount(int slot) {
+    if (slot == -1) return total;
+    return result[slot];
+  }
+
+  @Override
+  public void reset() {
+    total = 0;
+    super.reset();
   }
 }
 
@@ -321,6 +369,11 @@ class SortSlotAcc extends SlotAcc {
   }
 
   @Override
+  public void reset() {
+    // no-op
+  }
+
+  @Override
   public Comparable getValue() {
     return slot.value;
   }
@@ -338,6 +391,16 @@ abstract class UniqueSlotAcc extends SlotAcc {
   public UniqueSlotAcc(MutableValueInt slot, QueryContext qContext, String field, int numSlots) throws IOException {
     super(slot);
     arr = new FixedBitSet[numSlots];
+  }
+
+  @Override
+  public void reset() {
+    counts = null;
+    for (FixedBitSet bits : arr) {
+      if (bits == null) continue;
+      bits.clear(0, bits.length());
+    }
+    ords.clear( ords.cardinality() );
   }
 
   @Override

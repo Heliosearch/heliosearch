@@ -23,18 +23,30 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.DocsEnum;
+import org.apache.lucene.index.Fields;
+import org.apache.lucene.index.MultiDocsEnum;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.PriorityQueue;
+import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
+import org.apache.solr.search.DocSet;
+import org.apache.solr.search.HashDocSet;
+import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.SortedIntDocSetNative;
 import org.apache.solr.search.field.FieldUtil;
 import org.apache.solr.search.mutable.MutableValueInt;
 
@@ -49,6 +61,7 @@ public class FacetField extends FacetRequest {
   SortDirection sortDirection;
   FacetMethod method;
   boolean allBuckets;   // show cumulative stats across all buckets (this can be different than non-bucketed stats across all docs because of multi-valued docs)
+  int cacheDf;  // 0 means "default", -1 means "never cache"
 
   // TODO: put this somewhere more generic?
   public static enum SortDirection {
@@ -69,7 +82,8 @@ public class FacetField extends FacetRequest {
   public static enum FacetMethod {
     ENUM,
     STREAM,
-    FIELDCACHE
+    FIELDCACHE,
+    SMART,
     ;
 
     public static FacetMethod fromString(String method) {
@@ -78,6 +92,10 @@ public class FacetField extends FacetRequest {
         return ENUM;
       } else if ("fc".equals(method) || "fieldcache".equals(method)) {
         return FIELDCACHE;
+      } else if ("smart".equals(method)) {
+        return SMART;
+      } else if ("stream".equals(method)) {
+        return STREAM;
       }
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Unknown FacetField method " + method);
     }
@@ -88,7 +106,13 @@ public class FacetField extends FacetRequest {
   public FacetProcessor createFacetProcessor(FacetContext fcontext) {
     SchemaField sf = fcontext.searcher.getSchema().getField(field);
     FieldType ft = sf.getType();
-    boolean multiToken = sf.multiValued() || sf.getType().multiValuedFieldCache();
+    boolean multiToken = sf.multiValued() || ft.multiValuedFieldCache();
+
+    if (method == FacetMethod.ENUM && sf.indexed()) {
+      throw new UnsupportedOperationException();
+    } else if (method == FacetMethod.STREAM && sf.indexed()) {
+      return new FacetFieldProcessorStream(fcontext, this, sf);
+    }
 
     if (multiToken) {
       return new FacetFieldProcessorUIF(fcontext, this, sf);
@@ -121,11 +145,6 @@ abstract class FacetFieldProcessor extends FacetProcessor<FacetField> {
 
     if (sortAcc == null) {
       if ("count".equals(sortKey)) {
-        if (countAcc == null) {
-          countAcc = new CountSlotAcc(slot, fcontext.qcontext, numSlots);
-          countAcc.key = "count";  // if we want it to appear
-          accMap.put("count", countAcc);
-        }
         sortAcc = countAcc;
       } else if ("index".equals(sortKey)) {
         sortAcc = new SortSlotAcc(slot);
@@ -138,7 +157,6 @@ abstract class FacetFieldProcessor extends FacetProcessor<FacetField> {
   static class Slot {
     int slot;
   }
-
 }
 
 
@@ -209,12 +227,8 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
 
     Slot bottom = null;
     for (int i = (startTermIndex == -1) ? 1 : 0; i < nTerms; i++) {
-      if (countAcc != null && freq.mincount > 0) {
-        // TODO: track counts separately?
-        int slotDocCount = ((Number) countAcc.getValue(i)).intValue();
-        if (slotDocCount < freq.mincount) {
-          continue;
-        }
+      if (freq.mincount > 0 && countAcc.getCount(i) < freq.mincount) {
+        continue;
       }
 
       if (bottom != null) {
@@ -245,6 +259,7 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
     if (freq.allBuckets) {
       SimpleOrderedMap<Object> allBuckets = new SimpleOrderedMap<>();
       for (SlotAcc acc : accs) {
+        countAcc.setValues(allBuckets, -1);
         acc.setValues(allBuckets, -1);
       }
       res.add("allBuckets", allBuckets);
@@ -253,10 +268,6 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
     ArrayList bucketList = new ArrayList(collectCount);
     res.add("buckets", bucketList);
 
-    FacetContext subContext = null;
-    if (freq.getSubFacets().size() > 0) {
-      subContext = fcontext.sub();
-    }
 
     for (int slotNum : sortedSlots) {
       SimpleOrderedMap<Object> bucket = new SimpleOrderedMap<>();
@@ -280,13 +291,14 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
       addStats(bucket, slotNum);
 
       // handle sub-facets for this bucket
-      if (subContext != null) {
+      if (freq.getSubFacets().size() > 0) {
+        FacetContext subContext = fcontext.sub();
         subContext.base = fcontext.searcher.getDocSet(new TermQuery(new Term(sf.getName(), br.clone())));
         try {
           fillBucketSubs(bucket, subContext);
         } finally {
           subContext.base.decref();
-          subContext.base = null;
+          // subContext.base = null;  // do not modify context after creation... there may be defered execution (i.e. streaming)
         }
       }
 
@@ -366,6 +378,7 @@ class FacetFieldProcessorFC extends FacetFieldProcessorFCBase {
       int arrIdx = term - startTermIndex;
       if (arrIdx>=0 && arrIdx<nTerms) {
         slot.value = arrIdx;
+        countAcc.incrementCount(arrIdx, 1);
         collect(doc - segBase);  // per-seg collectors
         // counts[arrIdx]++;
       }
@@ -417,4 +430,280 @@ class FacetFieldProcessorUIF extends FacetFieldProcessorFC {
   protected void collectDocs() throws IOException {
     uif.collectDocs(this);
   }
+}
+
+
+
+class FacetFieldProcessorStream extends FacetFieldProcessor {
+  boolean countOnly;
+  boolean hasSubFacets;  // true if there are subfacets
+  int minDfFilterCache;
+  DocSet docs;
+  DocSet fastForRandomSet;
+  TermsEnum termsEnum = null;
+  SolrIndexSearcher.DocsEnumState deState = null;
+  DocsEnum docsEnum;
+  BytesRef startTermBytes;
+  BytesRef term;
+  AtomicReaderContext[] leaves;
+
+
+
+  FacetFieldProcessorStream(FacetContext fcontext, FacetField freq, SchemaField sf) {
+    super(fcontext, freq, sf);
+  }
+
+  @Override
+  public void process() throws IOException {
+    setup();
+    response = new SimpleOrderedMap<>();
+    response.add( "buckets", new Iterator() {
+      boolean retrieveNext = true;
+      Object val;
+      @Override
+      public boolean hasNext() {
+        if (retrieveNext) {
+          val = nextBucket();
+        }
+        retrieveNext = false;
+        return val != null;
+      }
+
+      @Override
+      public Object next() {
+        if (retrieveNext) {
+          val = nextBucket();
+        }
+        retrieveNext = true;
+        return val;
+      }
+
+      @Override
+      public void remove() {
+
+      }
+    });
+  }
+
+
+
+  public void setup() throws IOException {
+
+    countOnly = freq.facetStats.size() == 0 || freq.facetStats.values().iterator().next() instanceof CountAgg;
+    hasSubFacets = freq.subFacets.size() > 0;
+
+    createAccs(-1, 1);
+    prepareForCollection();
+
+    // Minimum term docFreq in order to use the filterCache for that term.
+    int defaultMinDf = Math.max(fcontext.searcher.maxDoc() >> 4, 3);  // (minimum of 3 is for test coverage purposes)
+    int minDfFilterCache = freq.cacheDf == 0 ? defaultMinDf : freq.cacheDf;
+    if (minDfFilterCache == -1) minDfFilterCache = Integer.MAX_VALUE;  // -1 means never cache
+
+    docs = fcontext.base;
+    fastForRandomSet = null;
+
+    if (freq.prefix != null) {
+      String indexedPrefix = sf.getType().toInternal(freq.prefix);
+      startTermBytes = new BytesRef(indexedPrefix);
+    }
+
+    Fields fields = fcontext.searcher.getAtomicReader().fields();
+    Terms terms = fields == null ? null : fields.terms(sf.getName());
+
+
+    termsEnum = null;
+    deState = null;
+    term = null;
+
+
+    if (terms != null) {
+
+      termsEnum = terms.iterator(null);
+
+      // TODO: OPT: if seek(ord) is supported for this termsEnum, then we could use it for
+      // facet.offset when sorting by index order.
+
+      if (startTermBytes != null) {
+        if (termsEnum.seekCeil(startTermBytes) == TermsEnum.SeekStatus.END) {
+          termsEnum = null;
+        } else {
+          term = termsEnum.term();
+        }
+      } else {
+        // position termsEnum on first term
+        term = termsEnum.next();
+      }
+    }
+
+    List<AtomicReaderContext> leafList = fcontext.searcher.getTopReaderContext().leaves();
+    leaves = leafList.toArray( new AtomicReaderContext[ leafList.size() ]);
+
+
+  }
+
+
+  public SimpleOrderedMap<Object> nextBucket() {
+    try {
+      return _nextBucket();
+    } catch (Exception e) {
+      throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Error during facet streaming", e);
+    }
+  }
+
+  public SimpleOrderedMap<Object> _nextBucket() throws IOException {
+    int mincount = (int)freq.mincount;
+    DocSet termSet = null;
+
+    try {
+      while (term != null) {
+
+        if (startTermBytes != null && !StringHelper.startsWith(term, startTermBytes)) {
+          break;
+        }
+
+        int df = termsEnum.docFreq();
+        if (df < mincount) {
+          term = termsEnum.next();
+          continue;
+        }
+
+        if (termSet != null) {
+          termSet.decref();
+          termSet = null;
+        }
+
+        int c = 0;
+
+        if (hasSubFacets || df >= minDfFilterCache) {
+          // use the filter cache
+
+          if (deState == null) {
+            deState = new SolrIndexSearcher.DocsEnumState();
+            deState.fieldName = sf.getName();
+            deState.liveDocs = fcontext.searcher.getAtomicReader().getLiveDocs();
+            deState.termsEnum = termsEnum;
+            deState.docsEnum = docsEnum;
+            deState.minSetSizeCached = minDfFilterCache;
+          }
+
+          if (hasSubFacets) {
+            termSet = fcontext.searcher.getDocSet(deState);
+          }
+
+          resetStats();
+
+          // if only counting...
+          if (countOnly) {
+            if (termSet != null) {
+              c = docs.intersectionSize(termSet);
+            } else {
+              c = fcontext.searcher.numDocs(docs, deState);
+            }
+          } else {
+            c = collect(termSet);
+          }
+
+          docsEnum = deState.docsEnum;
+        } else {
+          // We don't need the docset here (meaning no sub-facets).
+          // if countOnly, then we are calculating some other stats...
+          resetStats();
+
+          // lazy convert to fastForRandomSet
+          if (fastForRandomSet == null) {
+            fastForRandomSet = docs;
+            if (docs instanceof SortedIntDocSetNative) {
+              SortedIntDocSetNative sset = (SortedIntDocSetNative) docs;
+              fastForRandomSet = new HashDocSet(sset.getIntArrayPointer(), 0, sset.size(), HashDocSet.DEFAULT_INVERSE_LOAD_FACTOR);
+            }
+          }
+          // iterate over TermDocs to calculate the intersection
+
+          docsEnum = termsEnum.docs(null, docsEnum, DocsEnum.FLAG_NONE);
+
+          if (docsEnum instanceof MultiDocsEnum) {
+            MultiDocsEnum.EnumWithSlice[] subs = ((MultiDocsEnum) docsEnum).getSubs();
+            int numSubs = ((MultiDocsEnum) docsEnum).getNumSubs();
+            for (int subindex = 0; subindex < numSubs; subindex++) {
+              MultiDocsEnum.EnumWithSlice sub = subs[subindex];
+              if (sub.docsEnum == null) continue;
+              int base = sub.slice.start;
+              int docid;
+
+              if (countOnly) {
+                while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                  if (fastForRandomSet.exists(docid + base)) c++;
+                }
+              } else {
+                setNextReader(leaves[sub.slice.readerIndex]);
+                while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                  if (fastForRandomSet.exists(docid + base)) {
+                    c++;
+                    collect(docid);
+                  }
+                }
+              }
+
+            }
+          } else {
+            int docid;
+            if (countOnly) {
+              while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                if (fastForRandomSet.exists(docid)) c++;
+              }
+            } else {
+              setNextReader(leaves[0]);
+              while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
+                if (fastForRandomSet.exists(docid)) {
+                  c++;
+                  collect(docid);
+                }
+              }
+            }
+          }
+
+        }
+
+
+
+        if (c < mincount) {
+          term = termsEnum.next();
+          continue;
+        }
+
+        // set count in case other stats depend on it
+        countAcc.incrementCount(0, c);
+
+        // OK, we have a good bucket to return... first get bucket value before moving to next term
+        Object bucketVal = sf.getType().toObject(sf, term);
+        term = termsEnum.next();
+
+        SimpleOrderedMap<Object> bucket = new SimpleOrderedMap<>();
+        bucket.add("val", bucketVal);
+        addStats(bucket, 0);
+        if (hasSubFacets) {
+          processSubs(bucket, termSet);
+        }
+
+        // TODO... termSet needs to stick around for streaming sub-facets?
+
+        return bucket;
+
+      }
+
+    } finally {
+      if (termSet != null) {
+        termSet.decref();
+        termSet = null;
+      }
+    }
+
+
+    // end of the iteration
+    return null;
+  }
+
+
+
 }

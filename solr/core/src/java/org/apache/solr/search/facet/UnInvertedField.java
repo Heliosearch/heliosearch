@@ -794,6 +794,7 @@ public class UnInvertedField extends DocTermOrds {
 
 
   // called from FieldFacetProcessor
+  // TODO: do a callback version that can be specialized!
   public void collectDocs(FacetFieldProcessorUIF processor) throws IOException {
     use.incrementAndGet();
 
@@ -810,6 +811,7 @@ public class UnInvertedField extends DocTermOrds {
         try ( DocSet intersection = searcher.getDocSet(new TermQuery(new Term(field, tt.term)), docs); )
         {
           int collected = processor.collect(tt.termNum - startTermIndex, intersection);
+          processor.countAcc.incrementCount(tt.termNum, collected);
           if (collected > 0) {
             uniqueTerms++;
           }
@@ -869,6 +871,7 @@ public class UnInvertedField extends DocTermOrds {
             int arrIdx = tnum - startTermIndex;
             if (arrIdx < 0) continue;
             if (arrIdx >= nTerms) break;
+            processor.countAcc.incrementCount(arrIdx, 1);
             processor.collect(arrIdx, segDoc);
           }
         } else {
@@ -882,6 +885,7 @@ public class UnInvertedField extends DocTermOrds {
               int arrIdx = tnum - startTermIndex;
               if (arrIdx < 0) continue;
               if (arrIdx >= nTerms) break;
+              processor.countAcc.incrementCount(arrIdx, 1);
               processor.collect(arrIdx, segDoc);
               delta = 0;
             }
