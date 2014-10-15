@@ -36,7 +36,7 @@ public class QueryContext implements Closeable {
   private IdentityHashMap map;
   private final SolrIndexSearcher searcher;
   private final IndexSearcher indexSearcher;
-  private List<Closeable> closeHooks;
+  private IdentityHashMap<Closeable,String> closeHooks;
   private Map<String,TopValues> topValues;
 
   // migrated from ValueSource
@@ -74,19 +74,23 @@ public class QueryContext implements Closeable {
 
   public void addCloseHook(Closeable closeable) {
     if (closeHooks == null) {
-      closeHooks = new ArrayList<>();
+      closeHooks = new IdentityHashMap<Closeable, String>();
       // for now, defer closing until the end of the request
       SolrRequestInfo.getRequestInfo().addCloseHook(this);
     }
 
-    closeHooks.add(closeable);
+    closeHooks.put(closeable, "");
+  }
+
+  public boolean removeCloseHook(Closeable closeable) {
+    return closeHooks.remove(closeable) != null;
   }
 
   /** Don't call close explicitly!  This will be automatically closed at the end of the request */
   @Override
   public void close() throws IOException {
     if (closeHooks != null) {
-      for (Closeable hook : closeHooks) {
+      for (Closeable hook : closeHooks.keySet()) {
         try {
           hook.close();
         } catch (Exception e) {
