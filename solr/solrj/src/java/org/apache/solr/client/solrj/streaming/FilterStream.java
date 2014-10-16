@@ -22,7 +22,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 
-public class IntersectStream extends TupleStream {
+public class FilterStream extends TupleStream {
 
   private TupleStream streamA;
   private TupleStream streamB;
@@ -36,7 +36,7 @@ public class IntersectStream extends TupleStream {
   * StreamB must be unique for the fields being compared.
   **/
 
-  public IntersectStream(TupleStream streamA, TupleStream streamB, Comparator<Tuple> comp) {
+  public FilterStream(TupleStream streamA, TupleStream streamB, Comparator<Tuple> comp) {
     this.streamA = streamA;
     this.streamB = streamB;
     this.comp = comp;
