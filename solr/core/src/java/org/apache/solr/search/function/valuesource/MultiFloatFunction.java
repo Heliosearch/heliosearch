@@ -45,6 +45,10 @@ public abstract class MultiFloatFunction extends ValueSource {
 
   abstract protected float func(int doc, FuncValues[] valsArr);
 
+  protected boolean exists(int doc, FuncValues[] valsArr) {
+    return MultiFunction.allExists(doc, valsArr);
+  }
+
   @Override
   public String description() {
     StringBuilder sb = new StringBuilder();
@@ -76,20 +80,13 @@ public abstract class MultiFloatFunction extends ValueSource {
       }
 
       @Override
+      public boolean exists(int doc) {
+        return MultiFloatFunction.this.exists(doc, valsArr);
+      }
+
+      @Override
       public String toString(int doc) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(name()).append('(');
-        boolean firstTime = true;
-        for (FuncValues vals : valsArr) {
-          if (firstTime) {
-            firstTime = false;
-          } else {
-            sb.append(',');
-          }
-          sb.append(vals.toString(doc));
-        }
-        sb.append(')');
-        return sb.toString();
+        return MultiFunction.toString(name(), valsArr, doc);
       }
     };
   }

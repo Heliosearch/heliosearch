@@ -60,7 +60,10 @@ public abstract class DualFloatFunction extends ValueSource {
       public float floatVal(int doc) {
         return func(doc, aVals, bVals);
       }
-
+      @Override
+      public boolean exists(int doc) {
+        return aVals.exists(doc) && bVals.exists(doc);
+      }
       @Override
       public String toString(int doc) {
         return name() + '(' + aVals.toString(doc) + ',' + bVals.toString(doc) + ')';

@@ -42,6 +42,25 @@ public abstract class MultiFunction extends ValueSource {
     return description(name(), sources);
   }
 
+
+  public static boolean allExists(int doc, FuncValues... values) {
+    for (FuncValues v : values) {
+      if ( ! v.exists(doc) ) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static boolean anyExists(int doc, FuncValues... values) {
+    for (FuncValues v : values) {
+      if ( v.exists(doc) ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public static String description(String name, List<ValueSource> sources) {
     StringBuilder sb = new StringBuilder();
     sb.append(name).append('(');

@@ -55,7 +55,10 @@ public class LinearFloatFunction extends ValueSource {
       public float floatVal(int doc) {
         return vals.floatVal(doc) * slope + intercept;
       }
-
+      @Override
+      public boolean exists(int doc) {
+        return vals.exists(doc);
+      }
       @Override
       public String toString(int doc) {
         return slope + "*float(" + vals.toString(doc) + ")+" + intercept;

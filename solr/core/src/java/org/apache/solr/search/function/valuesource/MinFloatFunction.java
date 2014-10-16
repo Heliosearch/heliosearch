@@ -35,11 +35,14 @@ public class MinFloatFunction extends MultiFloatFunction {
 
   @Override
   protected float func(int doc, FuncValues[] valsArr) {
-    if (valsArr.length == 0) return 0.0f;
+    boolean matches = false;
     float val = Float.POSITIVE_INFINITY;
     for (FuncValues vals : valsArr) {
-      val = Math.min(vals.floatVal(doc), val);
+      if (vals.exists(doc)) {
+        val = Math.min(vals.floatVal(doc), val);
+        matches = true;
+      }
     }
-    return val;
+    return matches ? val : 0.0f;
   }
 }

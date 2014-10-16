@@ -35,11 +35,15 @@ public class MaxFloatFunction extends MultiFloatFunction {
 
   @Override
   protected float func(int doc, FuncValues[] valsArr) {
-    if (valsArr.length == 0) return 0.0f;
+    boolean matches = false;
     float val = Float.NEGATIVE_INFINITY;
     for (FuncValues vals : valsArr) {
-      val = Math.max(vals.floatVal(doc), val);
+      if (vals.exists(doc)) {
+        val = Math.max(vals.floatVal(doc), val);
+        matches = true;
+      }
     }
-    return val;
+    return matches ? val : 0.0f;
   }
+
 }
