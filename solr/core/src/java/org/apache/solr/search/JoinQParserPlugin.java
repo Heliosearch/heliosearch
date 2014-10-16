@@ -227,7 +227,7 @@ class JoinQuery extends Query {
         resultSet = getDocSet();
         long end = debug ? System.currentTimeMillis() : 0;
 
-        if (debug) {
+        if (debug) { // TODO: the debug process itself causes the query to be re-executed and this info is added multiple times!
           SimpleOrderedMap<Object> dbg = new SimpleOrderedMap<Object>();
           dbg.add("time", (end-start));
           dbg.add("fromSetSize", fromSetSize);  // the input

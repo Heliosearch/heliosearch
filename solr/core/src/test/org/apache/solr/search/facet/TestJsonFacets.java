@@ -18,11 +18,14 @@ package org.apache.solr.search.facet;
  */
 
 import org.apache.lucene.util.LuceneTestCase;
+import org.apache.solr.JSONTestUtil;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.request.macro.MacroExpander;
+import org.apache.solr.util.TestUtils;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -31,7 +34,13 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
 
   @BeforeClass
   public static void beforeTests() throws Exception {
+    JSONTestUtil.failRepeatedKeys = true;
     initCore("solrconfig-tlog.xml","schema_latest.xml");
+  }
+
+  @AfterClass
+  public static void afterTests() throws Exception {
+    JSONTestUtil.failRepeatedKeys = false;
   }
 
   public void testStats() throws Exception {
@@ -169,9 +178,9 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             , "json.facet", "{c1:{field:'${cat_s}'}, c2:{field:{field:'${cat_s}'}}, c3:{terms:{field:'${cat_s}'}}  }"
         )
         , "facets=={ 'count':6, " +
-            "'c1':{ /*'stats':{ 'count':5},*/ 'buckets':[{ 'val':'B', 'count':3}, { 'val':'A', 'count':2}]}, " +
-            "'c2':{ /*'stats':{ 'count':5},*/ 'buckets':[{ 'val':'B', 'count':3}, { 'val':'A', 'count':2}]}, " +
-            "'c3':{ /*'stats':{ 'count':5},*/ 'buckets':[{ 'val':'B', 'count':3}, { 'val':'A', 'count':2}]}} "
+            "'c1':{ 'buckets':[{ 'val':'B', 'count':3}, { 'val':'A', 'count':2}]}, " +
+            "'c2':{  'buckets':[{ 'val':'B', 'count':3}, { 'val':'A', 'count':2}]}, " +
+            "'c3':{  'buckets':[{ 'val':'B', 'count':3}, { 'val':'A', 'count':2}]}} "
     );
 
     // test mincount
@@ -179,7 +188,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:3}}}"
         )
         , "facets=={ 'count':6, " +
-            "'f1':{ /*'stats':{ 'count':5},*/ 'buckets':[{ 'val':'B', 'count':3}]} } "
+            "'f1':{  'buckets':[{ 'val':'B', 'count':3}]} } "
     );
 
     // test default mincount of 1
@@ -187,7 +196,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             , "json.facet", "{f1:{terms:'${cat_s}'}}"
         )
         , "facets=={ 'count':1, " +
-            "'f1':{ /*'stats':{ 'count':1},*/ 'buckets':[{ 'val':'A', 'count':1}]} } "
+            "'f1':{  'buckets':[{ 'val':'A', 'count':1}]} } "
     );
 
     // test  mincount of 0
@@ -195,7 +204,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:0}}}"
         )
         , "facets=={ 'count':1, " +
-            "'f1':{ /*'stats':{ 'count':1},*/ 'buckets':[{ 'val':'A', 'count':1}, { 'val':'B', 'count':0}]} } "
+            "'f1':{  'buckets':[{ 'val':'A', 'count':1}, { 'val':'B', 'count':0}]} } "
     );
 
     // test  mincount of 0 with stats
@@ -212,8 +221,8 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
                 " , f2:{terms:{field:'${cat_s}', sort:'n1 asc', facet:{n1:'sum(${num_d})'}  }} }"
         )
         , "facets=={ 'count':6, " +
-            "  f1:{ /*stats:{ n1:3.0},*/ 'buckets':[{ val:'A', count:2, n1:6.0 }, { val:'B', count:3, n1:-3.0}]}" +
-            ", f2:{ /*stats:{ n1:3.0},*/ 'buckets':[{ val:'B', count:3, n1:-3.0}, { val:'A', count:2, n1:6.0 }]} }"
+            "  f1:{  'buckets':[{ val:'A', count:2, n1:6.0 }, { val:'B', count:3, n1:-3.0}]}" +
+            ", f2:{  'buckets':[{ val:'B', count:3, n1:-3.0}, { val:'A', count:2, n1:6.0 }]} }"
     );
 
     // terms facet with nested query facet
@@ -221,7 +230,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             , "json.facet", "{cat:{terms:{field:'${cat_s}', facet:{nj:{query:'${where_s}:NJ'}}    }   }} }"
         )
         , "facets=={ 'count':6, " +
-            "'cat':{ /*'stats':{ 'count':5},*/ 'buckets':[{ 'val':'B', 'count':3, 'nj':{ 'count':2}}, { 'val':'A', 'count':2, 'nj':{ 'count':1}}]} }"
+            "'cat':{ 'buckets':[{ 'val':'B', 'count':3, 'nj':{ 'count':2}}, { 'val':'A', 'count':2, 'nj':{ 'count':1}}]} }"
     );
 
     // test prefix
