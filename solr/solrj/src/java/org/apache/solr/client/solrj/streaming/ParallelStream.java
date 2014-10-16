@@ -26,15 +26,16 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Map;
 import java.io.ByteArrayOutputStream;
 import java.util.Random;
 import java.util.TreeSet;
+import java.util.Iterator;
 
 import org.apache.solr.common.cloud.ClusterState;
 import org.apache.solr.common.cloud.Replica;
 import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.ZkCoreNodeProps;
-import org.apache.solr.common.cloud.ZkStateReader;
 import sun.misc.BASE64Encoder;
 
 
@@ -62,13 +63,28 @@ public class ParallelStream extends CloudSolrStream {
     this.encoded = encoder.encode(bytes);
     this.encoded = URLEncoder.encode(this.encoded, "UTF-8");
     this.tuples = new TreeSet();
-
   }
 
   public List<TupleStream> children() {
     List l = new ArrayList();
     l.add(tupleStream);
     return l;
+  }
+
+  public Map<String, Object> mergeAggregates(AggregateStream[] mergers) {
+    Map<String, Object> ags = new HashMap();
+    for(AggregateStream merger : mergers) {
+      String outKey = merger.getOutKey();
+      Iterator it = eofTuples.values().iterator();
+      List values = new ArrayList();
+      while(it.hasNext()) {
+        Map m = (Map)it.next();
+        values.add(m.get(outKey));
+      }
+
+      merger.mergeAggregates(values,ags);
+    }
+    return ags;
   }
 
   protected void constructStreams() throws IOException {

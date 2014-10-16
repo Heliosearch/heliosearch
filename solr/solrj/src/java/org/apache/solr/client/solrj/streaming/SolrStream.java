@@ -20,6 +20,7 @@ package org.apache.solr.client.solrj.streaming;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Iterator;
 
@@ -59,6 +60,10 @@ public class SolrStream extends TupleStream {
 
   public List<TupleStream> children() {
     return new ArrayList();
+  }
+
+  public String getBaseUrl() {
+    return baseUrl;
   }
 
   public void setStreamContext(StreamContext context) {
@@ -119,12 +124,14 @@ public class SolrStream extends TupleStream {
     Map fields = jsonTupleStream.next();
     if(fields == null) {
       //Return the EOF tuple.
-      return new Tuple(true);
+      Map m = new HashMap();
+      m.put("EOF", true);
+      return new Tuple(m);
     } else {
       if(fieldMappings != null) {
         fields = mapFields(fields, fieldMappings);
       }
-      return new Tuple(fields, false);
+      return new Tuple(fields);
     }
   }
 

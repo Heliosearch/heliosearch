@@ -17,32 +17,10 @@
 
 package org.apache.solr.client.solrj.streaming;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Iterator;
+import java.util.List;
 
-public class Tuple {
-
-  public boolean EOF;
-  public Map fields = new HashMap();
-
-  public Tuple(Map fields) {
-    if(fields.containsKey("EOF")) {
-      EOF = true;
-    }
-
-    this.fields.putAll(fields);
-  }
-
-  public Object get(Object key) {
-    return this.fields.get(key);
-  }
-
-  public void set(Object key, Object value) {
-    this.fields.put(key, value);
-  }
-
-  public Iterator<Map.Entry> getFields() {
-    return fields.entrySet().iterator();
-  }
+public interface AggregateStream {
+  public void mergeAggregates(List values, Map<String, Object> mergedAggregates);
+  public String getOutKey();
 }

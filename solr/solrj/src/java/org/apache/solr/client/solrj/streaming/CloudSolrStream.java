@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -49,7 +51,6 @@ import org.apache.zookeeper.KeeperException;
 */
 
 public class CloudSolrStream extends TupleStream {
-
   protected String zkHost;
   protected String collection;
   protected Map params;
@@ -62,6 +63,8 @@ public class CloudSolrStream extends TupleStream {
   protected transient ZkStateReader zkStateReader;
   private int numWorkers;
   private int workerID;
+  protected transient ConcurrentHashMap<String, ZkStateReader> zkCache;
+  protected Map<String, Tuple> eofTuples = new HashMap();
 
   public CloudSolrStream(String zkHost, String collection, Map params) {
     this.zkHost = zkHost;
@@ -95,9 +98,10 @@ public class CloudSolrStream extends TupleStream {
     this.fieldMappings = fieldMappings;
   }
 
-  public void setWorkers(int numWorkers, int workerID) {
-    this.numWorkers = numWorkers;
-    this.workerID = workerID;
+  public void setStreamContext(StreamContext context) {
+    this.numWorkers = context.numWorkers;
+    this.workerID = context.workerID;
+    this.zkCache = context.zkCache;
   }
 
   public void open() throws IOException {
@@ -133,11 +137,13 @@ public class CloudSolrStream extends TupleStream {
   protected void constructStreams() throws IOException {
 
     try {
+
       zkStateReader = connect();
       ClusterState clusterState = zkStateReader.getClusterState();
       Collection<Slice> slices = clusterState.getActiveSlices(this.collection);
       long time = System.currentTimeMillis();
       params.put("distrib","false"); // We are the aggregator.
+
       for(Slice slice : slices) {
         Collection<Replica> replicas = slice.getReplicas();
         List<Replica> shuffler = new ArrayList();
@@ -150,7 +156,10 @@ public class CloudSolrStream extends TupleStream {
         ZkCoreNodeProps zkProps = new ZkCoreNodeProps(rep);
         String url = zkProps.getCoreUrl();
         SolrStream solrStream = new SolrStream(url, params, partitionKeys);
-        solrStream.setWorkers(this.numWorkers, this.workerID);
+        StreamContext context = new StreamContext();
+        context.numWorkers = this.numWorkers;
+        context.workerID = this.workerID;
+        solrStream.setStreamContext(context);
         solrStream.setFieldMappings(this.fieldMappings);
         solrStreams.add(solrStream);
       }
@@ -160,6 +169,14 @@ public class CloudSolrStream extends TupleStream {
   }
 
   public ZkStateReader connect() {
+
+    if(zkCache != null) {
+      ZkStateReader reader = zkCache.get(zkHost);
+      if(reader != null) {
+        return reader;
+      }
+    }
+
     ZkStateReader zkStateReader = null;
     synchronized (this) {
 
@@ -190,6 +207,10 @@ public class CloudSolrStream extends TupleStream {
         // do not wrap because clients may be relying on the underlying exception being thrown
         throw e;
       }
+    }
+
+    if(zkCache != null) {
+      zkCache.put(zkHost, zkStateReader);
     }
 
     return zkStateReader;
@@ -234,16 +255,19 @@ public class CloudSolrStream extends TupleStream {
       }
       return t;
     } else {
-      return new Tuple(true);
+      Map m = new HashMap();
+      m.put("EOF", true);
+
+      return new Tuple(m);
     }
   }
 
   protected class TupleWrapper implements Comparable<TupleWrapper> {
     private Tuple tuple;
-    private TupleStream stream;
+    private SolrStream stream;
     private Comparator comp;
 
-    public TupleWrapper(TupleStream stream, Comparator comp) {
+    public TupleWrapper(SolrStream stream, Comparator comp) {
       this.stream = stream;
       this.comp = comp;
     }
@@ -271,6 +295,11 @@ public class CloudSolrStream extends TupleStream {
 
     public boolean next() throws IOException {
       this.tuple = stream.read();
+
+      if(tuple.EOF) {
+        eofTuples.put(stream.getBaseUrl(), tuple);
+      }
+
       return !tuple.EOF;
     }
   }

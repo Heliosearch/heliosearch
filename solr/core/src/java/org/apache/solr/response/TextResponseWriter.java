@@ -210,12 +210,16 @@ public abstract class TextResponseWriter {
     tupleStream.open();
     writeStartDocumentList("response", -1, -1, -1, null);
     boolean isFirst = true;
-    for(Tuple tuple = tupleStream.read(); !tuple.EOF; tuple = tupleStream.read()) {
+    while(true) {
+      Tuple tuple = tupleStream.read();
       if(!isFirst) {
         writer.write(",");
       }
       writeMap(null, tuple.fields, false, true);
-      isFirst =false;
+      isFirst = false;
+      if(tuple.EOF) {
+        break;
+      }
     }
     writeEndDocumentList();
     tupleStream.close();

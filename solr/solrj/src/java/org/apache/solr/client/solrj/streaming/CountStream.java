@@ -18,79 +18,70 @@
 package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.ArrayList;
 
-public class FilterStream extends TupleStream {
+public class CountStream extends TupleStream implements AggregateStream {
 
-  private TupleStream streamA;
-  private TupleStream streamB;
-  private Comparator<Tuple> comp;
-  private Tuple a = null;
-  private Tuple b = null;
+  private TupleStream tupleStream;
+  private long lcount;
+  private String outKey;
 
-  /*
-  * Filters streamA by streamB based on a Comparator.
-  * Both streams must be sorted by the fields being compared.
-  * StreamB must be unique for the fields being compared.
-  **/
+  public CountStream(TupleStream tupleStream, String outKey) {
+    this.tupleStream = tupleStream;
+    this.outKey = outKey;
+  }
 
-  public FilterStream(TupleStream streamA, TupleStream streamB, Comparator<Tuple> comp) {
-    this.streamA = streamA;
-    this.streamB = streamB;
-    this.comp = comp;
+  public String getOutKey() {
+    return this.outKey;
+  }
+
+  public double doubleValue() {
+    return (double)lcount;
+  }
+
+  public long longValue() {
+    return lcount;
+  }
+
+  public void mergeAggregates(List values, Map<String, Object> finalAggregates) {
+    for(int i=0; i<values.size();i++) {
+      Long l = (Long)values.get(i);
+      lcount += l.longValue();
+    }
+
+    finalAggregates.put(outKey, lcount);
   }
 
   public void setStreamContext(StreamContext context) {
-    this.streamA.setStreamContext(context);
-    this.streamB.setStreamContext(context);
+    this.tupleStream.setStreamContext(context);
   }
 
   public List<TupleStream> children() {
     List<TupleStream> l =  new ArrayList();
-    l.add(streamA);
-    l.add(streamB);
+    l.add(tupleStream);
     return l;
   }
 
   public void open() throws IOException {
-    streamA.open();
-    streamB.open();
+    tupleStream.open();
   }
 
   public void close() throws IOException {
-    streamA.close();
-    streamB.close();
+    tupleStream.close();
   }
 
   public Tuple read() throws IOException {
-    a = streamA.read();
-
-    if(b == null) {
-      b = streamB.read();
+    Tuple tuple = tupleStream.read();
+    if(tuple.EOF) {
+      tuple.set(outKey,lcount);
+      return tuple;
     }
 
-    while(true) {
-      if(a.EOF) {
-        return a;
-      }
+     ++lcount;
 
-      if(b.EOF) {
-        return b;
-      }
-
-      int i = comp.compare(a, b);
-      if(i == 0) {
-        return a;
-      } else if(i < 0) {
-        // a < b so advance a
-        a = streamA.read();
-      } else {
-        // a > b so advance b
-        b = streamB.read();
-      }
-    }
+    return tuple;
   }
 
   public int getCost() {
