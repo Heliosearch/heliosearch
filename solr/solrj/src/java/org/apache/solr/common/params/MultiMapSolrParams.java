@@ -68,25 +68,25 @@ public class MultiMapSolrParams extends SolrParams {
   public String toString() {
     StringBuilder sb = new StringBuilder(128);
     try {
-      boolean first=true;
-
-      for (Map.Entry<String,String[]> entry : map.entrySet()) {
-        String key = entry.getKey();
-        String[] valarr = entry.getValue();
-
-        for (String val : valarr) {
-          if (!first) sb.append('&');
-          first=false;
-          sb.append(key);
-          sb.append('=');
-          StrUtils.partialURLEncodeVal(sb, val==null ? "" : val);
-        }
-      }
+      appendHttpParams(sb, -1);
+      return sb.toString();
     }
-    catch (IOException e) {throw new RuntimeException(e);}  // can't happen
-
-    return sb.toString();
+    catch (IOException e) {throw new RuntimeException();}  // can't happen
   }
 
+  @Override
+  public void appendHttpParams(Appendable out, int maxParamSize) throws IOException {
+    boolean first=true;
 
+    for (Map.Entry<String,String[]> entry : map.entrySet()) {
+      String key = entry.getKey();
+      String[] valarr = entry.getValue();
+
+      for (String val : valarr) {
+        if (!first) out.append('&');
+        first=false;
+        appendHttpParam(out, key, val, maxParamSize);
+      }
+    }
+  }
 }

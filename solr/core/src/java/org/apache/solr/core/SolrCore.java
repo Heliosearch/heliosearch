@@ -1953,9 +1953,10 @@ public final class SolrCore implements SolrInfoMBean, Closeable {
 
 
     handler.handleRequest(req,rsp);
-    postDecorateResponse(handler, req, rsp);
+    boolean doLog = postDecorateResponse(handler, req, rsp);
 
-    if (log.isInfoEnabled() && rsp.getToLog().size() > 0) {
+    if (doLog) {
+      // we do this here instead of in post decorate for back compat - just in case some log formatters include method name
       log.info(rsp.getToLogAsString(logid));
     }
   }
@@ -1964,26 +1965,10 @@ public final class SolrCore implements SolrInfoMBean, Closeable {
     // setup response header
     final NamedList<Object> responseHeader = new SimpleOrderedMap<>();
     rsp.add("responseHeader", responseHeader);
-
-    // toLog is a local ref to the same NamedList used by the response
-    NamedList<Object> toLog = rsp.getToLog();
-
-    // for back compat, we set these now just in case other code
-    // are expecting them during handleRequest
-    toLog.add("webapp", req.getContext().get("webapp"));
-    toLog.add("path", req.getContext().get("path"));
-
-    final SolrParams params = req.getParams();
-    final String lpList = params.get(CommonParams.LOG_PARAMS_LIST);
-    if (lpList == null) {
-      toLog.add("params", "{" + req.getParamString() + "}");
-    } else if (lpList.length() > 0) {
-      toLog.add("params", "{" + params.toFilteredSolrParams(Arrays.asList(lpList.split(","))).toString() + "}");
-    }
   }
 
   /** Put status, QTime, and possibly request handler and params, in the response header */
-  public static void postDecorateResponse
+  public static boolean postDecorateResponse
       (SolrRequestHandler handler, SolrQueryRequest req, SolrQueryResponse rsp) {
     // TODO should check that responseHeader has not been replaced by handler
     NamedList<Object> responseHeader = rsp.getResponseHeader();
@@ -1998,11 +1983,6 @@ public final class SolrCore implements SolrInfoMBean, Closeable {
     }
     responseHeader.add("status",status);
     responseHeader.add("QTime",qtime);
-
-    if (rsp.getToLog().size() > 0) {
-      rsp.getToLog().add("status",status);
-      rsp.getToLog().add("QTime",qtime);
-    }
 
     SolrParams params = req.getParams();
     if( null != handler && params.getBool(CommonParams.HEADER_ECHO_HANDLER, false) ) {
@@ -2023,6 +2003,40 @@ public final class SolrCore implements SolrInfoMBean, Closeable {
         responseHeader.add("params", req.getParams().toNamedList());
       }
     }
+
+
+    if (!log.isInfoEnabled()) {
+      return false;
+    }
+
+    int logLimit = req.getParams().getInt("logLimit", 500);
+
+    if (logLimit == 0) {
+      return false;
+    }
+
+    // toLog is a local ref to the same NamedList used by the response
+    NamedList<Object> toLog = new SimpleOrderedMap<>();
+    toLog.add("webapp", req.getContext().get("webapp"));
+    toLog.add("path", req.getContext().get("path"));
+
+    final String lpList = params.get(CommonParams.LOG_PARAMS_LIST);
+    if (lpList == null) {
+      StringBuilder sb = new StringBuilder(128);
+      try {
+        sb.append('{');
+        req.getOriginalParams().appendHttpParams(sb, logLimit);
+        sb.append('}');
+        toLog.add("params", sb);  // append the StringBuilder since it is a CharSequence and can directly be used by other StringBuilders w/o making a copy.
+      } catch (IOException e) {throw new RuntimeException();} // impossible
+
+    } else if (lpList.length() > 0) {
+      toLog.add("params", "{" + params.toFilteredSolrParams(Arrays.asList(lpList.split(","))).toString() + "}");
+    }
+
+    // insert our log items at the front
+    rsp.getToLog().insertAll(0, toLog);
+    return true;
   }
 
   final public static void log(Throwable e) {

@@ -673,4 +673,9 @@ public class NamedList<T> implements Cloneable, Serializable, Iterable<Map.Entry
     NamedList<?> nl = (NamedList<?>) obj;
     return this.nvPairs.equals(nl.nvPairs);
   }
+
+  public void insertAll(int index, NamedList lst) {
+    this.nvPairs.addAll(index<<1, lst.nvPairs);
+  }
+
 }

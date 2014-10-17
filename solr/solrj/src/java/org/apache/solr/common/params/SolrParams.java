@@ -17,6 +17,7 @@
 
 package org.apache.solr.common.params;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -329,5 +330,26 @@ public abstract class SolrParams implements Serializable {
       }
     }
     return result;
+  }
+
+  /** Appends the params to the output HTTP style (e.g. a=1&b=2 ) with enough escaping to be non-ambiguous.
+   * maxParamSize can limit the size of any parametet output (pass -1 for no limit).
+   */
+  public void appendHttpParams(Appendable out, int maxParamSize) throws IOException {
+    out.append( this.toString() );
+  }
+
+  protected static void appendHttpParam(Appendable out, String key, String val, int maxParamSize) throws IOException {
+    out.append(key);
+    out.append('=');
+    if (val == null) return;
+    String toWrite = val;
+    if (maxParamSize >= 1 && val.length() > maxParamSize) {
+      toWrite = val.substring(0, maxParamSize);
+    }
+    StrUtils.partialURLEncodeVal(out, toWrite);
+    if (toWrite != val) {
+      out.append("[..." + (val.length() - toWrite.length()) + "+more+chars]");
+    }
   }
 }
