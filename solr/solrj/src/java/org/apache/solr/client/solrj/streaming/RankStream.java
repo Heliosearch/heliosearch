@@ -18,6 +18,7 @@
 package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -98,7 +99,7 @@ public class RankStream extends TupleStream {
     return 0;
   }
 
-  class ReverseComp implements Comparator<Tuple> {
+  class ReverseComp implements Comparator<Tuple>, Serializable {
 
     private Comparator<Tuple> comp;
 
