@@ -147,6 +147,7 @@ public class ExportQParserPlugin extends QParserPlugin {
     }
 
     private ScoreDoc[] getScoreDocs(int howMany) {
+      howMany = Math.min(totalHits, howMany);
       ScoreDoc[] docs = new ScoreDoc[howMany];
       for(int i=0; i<docs.length; i++) {
         docs[i] = new ScoreDoc(i,0);

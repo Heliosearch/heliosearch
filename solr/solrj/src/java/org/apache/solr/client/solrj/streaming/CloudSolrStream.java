@@ -140,6 +140,8 @@ public class CloudSolrStream extends TupleStream {
 
       zkStateReader = connect();
       ClusterState clusterState = zkStateReader.getClusterState();
+      //System.out.println("Connected to zk an got cluster state.");
+
       Collection<Slice> slices = clusterState.getActiveSlices(this.collection);
       long time = System.currentTimeMillis();
       params.put("distrib","false"); // We are the aggregator.

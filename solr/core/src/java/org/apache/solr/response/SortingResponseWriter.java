@@ -117,7 +117,7 @@ public class SortingResponseWriter implements QueryResponseWriter {
     }
 
     FieldWriter[] fieldWriters = getFieldWriters(fields, req.getSearcher());
-    writer.write("{\"numFound\":"+totalHits+", \"docs\":[");
+    writer.write("{\"responseHeader\": {\"status\": 0}, \"response\":{\"numFound\":"+totalHits+", \"docs\":[");
 
     //Write the data.
     List<AtomicReaderContext> leaves = req.getSearcher().getTopReaderContext().leaves();
@@ -129,9 +129,9 @@ public class SortingResponseWriter implements QueryResponseWriter {
 
     long total = 0;
 
+    boolean commaNeeded = false;
     while(count < totalHits) {
       //long begin = System.nanoTime();
-      boolean commaNeeded = false;
       queue.reset();
       SortDoc top = queue.top();
       for(int i=0; i<leaves.size(); i++) {
@@ -190,7 +190,7 @@ public class SortingResponseWriter implements QueryResponseWriter {
     }
 
     //System.out.println("Sort Time 2:"+Long.toString(total/1000000));
-    writer.write("]}");
+    writer.write("]}}");
     writer.flush();
   }
 
