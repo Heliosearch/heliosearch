@@ -54,9 +54,10 @@ import org.apache.solr.search.mutable.MutableValueInt;
 public class FacetField extends FacetRequest {
   String field;
   long offset;
-  long limit;
-  long mincount;
+  long limit = 10;
+  long mincount = 1;
   boolean missing;
+  boolean numBuckets;
   String prefix;
   String sortVariable;
   SortDirection sortDirection;
@@ -209,6 +210,8 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
   protected SimpleOrderedMap<Object> findTopSlots() throws IOException {
     SimpleOrderedMap<Object> res = new SimpleOrderedMap<>();
 
+    int numBuckets = 0;
+
     int off = (int) freq.offset;
     int lim = freq.limit >= 0 ? (int) freq.limit : Integer.MAX_VALUE;
 
@@ -228,9 +231,11 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
 
     Slot bottom = null;
     for (int i = (startTermIndex == -1) ? 1 : 0; i < nTerms; i++) {
-      if (freq.mincount > 0 && countAcc.getCount(i) < freq.mincount) {
+      if (countAcc.getCount(i) < freq.mincount) {
         continue;
       }
+
+      numBuckets++;
 
       if (bottom != null) {
         if (sortAcc.compare(bottom.slot, i) * sortMul < 0) {
@@ -248,6 +253,9 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
       }
     }
 
+    if (freq.numBuckets) {
+      res.add("numBuckets", numBuckets);
+    }
 
     // if we are deep paging, we don't have to order the highest "offset" counts.
     int collectCount = Math.max(0, queue.size() - off);

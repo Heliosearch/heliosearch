@@ -54,6 +54,23 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     assertU(add(doc("id", "6", "cat_s", "B", "where_s", "NY", "num_d", "-5", "num_i", "-5")));
     assertU(commit());
 
+    /**
+    // test numBuckets
+    assertJQ(req("q", "*:*", "rows","0", "facet","true"
+            , "json.facet", "{f1:{terms:{field:cat_s, numBuckets:true, limit:1}}}" // TODO: limit:0 produced an error
+        )
+        , "facets==X"
+    );
+
+    // test missing w/o prefix (having a prefix changes the buckets!)
+    assertJQ(req("q", "*:*", "rows","0", "facet","true"
+            , "json.facet", "{f1:{terms:{field:sparse_s, missing:true }}}"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1X':{ 'buckets':[{val:one, count:1}, {val:two, count:1}]} } "
+    );
+    **/
+
 
     // test streaming
     assertJQ(req("q", "*:*", "rows", "0",
@@ -124,10 +141,10 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
   @Test
   public void testStatsTemplated() throws Exception {
     // single valued strings
-    doStatsTemplated( params("facet","true", "rows","0",  "cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b") );
+    doStatsTemplated( params("facet","true", "rows","0",  "cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b", "sparse_s","sparse_s") );
 
     // multi-valued strings
-    doStatsTemplated( params("facet","true", "rows","0",  "cat_s","cat_ss", "where_s","where_ss", "num_d","num_d", "num_i","num_i", "super_s","super_ss", "val_b","val_b") );
+    doStatsTemplated( params("facet","true", "rows","0",  "cat_s","cat_ss", "where_s","where_ss", "num_d","num_d", "num_i","num_i", "super_s","super_ss", "val_b","val_b", "sparse_s","sparse_ss") );
   }
 
 
@@ -140,15 +157,16 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     String num_i = m("${num_i}");
     String val_b = m("${val_b}");
     String super_s = m("${super_s}");
+    String sparse_s = m("${sparse_s}");
 
-    assertU(add(doc("id", "1", cat_s, "A", where_s, "NY", num_d, "4", num_i, "2",   super_s,"zodiac",     val_b, "true")));
-    assertU(add(doc("id", "2", cat_s, "B", where_s, "NJ", num_d, "-9", num_i, "-5", super_s,"superman",   val_b, "false")));
+    assertU(add(doc("id", "1", cat_s, "A", where_s, "NY", num_d, "4", num_i, "2",   super_s,"zodiac",   val_b, "true",  sparse_s,"one")));
+    assertU(add(doc("id", "2", cat_s, "B", where_s, "NJ", num_d, "-9", num_i, "-5", super_s,"superman", val_b, "false"                )));
     assertU(add(doc("id", "3")));
     assertU(commit());
-    assertU(add(doc("id", "4", cat_s, "A", where_s, "NJ", num_d, "2", num_i, "3",   super_s,"spiderman")));
-    assertU(add(doc("id", "5", cat_s, "B", where_s, "NJ", num_d, "11", num_i, "7",  super_s,"batman")));
+    assertU(add(doc("id", "4", cat_s, "A", where_s, "NJ", num_d, "2", num_i, "3",   super_s,"spiderman"                               )));
+    assertU(add(doc("id", "5", cat_s, "B", where_s, "NJ", num_d, "11", num_i, "7",  super_s,"batman"                   ,sparse_s,"two")));
     assertU(commit());
-    assertU(add(doc("id", "6", cat_s, "B", where_s, "NY", num_d, "-5", num_i, "-5", super_s,"hulk")));
+    assertU(add(doc("id", "6", cat_s, "B", where_s, "NY", num_d, "-5", num_i, "-5", super_s,"hulk"                                    )));
     assertU(commit());
 
     // straight query facets
@@ -241,6 +259,51 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             "'f1':{ 'buckets':[{val:spiderman, count:1}, {val:superman, count:1}]} } "
     );
 
+    /**** TODO: missing bucket
+    // test missing w/o prefix (having a prefix changes the buckets!)
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{f1:{terms:{field:${sparse_s}, missing:true }}}"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1X':{ 'buckets':[{val:one, count:1}, {val:two, count:1}]} } "
+    );
+
+    // test missing w/o prefix, with stats
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{f1:{terms:{field:${sparse_s},  facet:{x:'sum(num_d)'}   }}}"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1':{ 'buckets':[{val:one, count:1, x:4.0}, {val:two, count:1, x:11.0}]} } "
+    );
+    ****/
+
+
+    // test numBuckets
+    assertJQ(req(p, "q", "*:*", "rows","0", "facet","true"
+            , "json.facet", "{f1:{terms:{field:${cat_s}, numBuckets:true, limit:1}}}" // TODO: limit:0 produced an error
+        )
+        , "facets=={ 'count':6, " +
+            "'f1':{ numBuckets:2, buckets:[{val:B, count:3}]} } "
+    );
+
+    // prefix should lower numBuckets
+    assertJQ(req(p, "q", "*:*", "rows","0", "facet","true"
+            , "json.facet", "{f1:{terms:{field:${cat_s}, numBuckets:true, prefix:B}}}"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
+    );
+
+    // mincount should lower numBuckets
+    assertJQ(req(p, "q", "*:*", "rows","0", "facet","true"
+            , "json.facet", "{f1:{terms:{field:${cat_s}, numBuckets:true, mincount:3}}}"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
+    );
+
+
+
     // basic range facet
     assertJQ(req(p, "q", "*:*"
             , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5}}}"
@@ -277,7 +340,6 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     // TODO:
     // missing bucket
     // numdocs('query') stat (don't make a bucket... just a count)
-    // merge multiple params
     // make missing configurable in min, max, etc
     // exclusions
     // zeroes

@@ -621,12 +621,6 @@ class FacetFieldParser extends FacetParser<FacetField> {
   }
 
   public FacetField parse(Object arg) throws SyntaxError {
-    // set defaults
-    facet.offset = 0;
-    facet.limit = 10;
-    facet.mincount = 1;
-    facet.missing = false;
-
 
     if (arg instanceof String) {
       // just the field name...
@@ -640,6 +634,7 @@ class FacetFieldParser extends FacetParser<FacetField> {
       facet.limit = getLong(m, "limit", facet.limit);
       facet.mincount = getLong(m, "mincount", facet.mincount);
       facet.missing = getBoolean(m, "missing", facet.missing);
+      facet.numBuckets = getBoolean(m, "numBuckets", facet.numBuckets);
       facet.prefix = getString(m, "prefix", facet.prefix);
       facet.allBuckets = getBoolean(m, "allBuckets", facet.allBuckets);
       facet.method = FacetField.FacetMethod.fromString(getString(m, "method", null));

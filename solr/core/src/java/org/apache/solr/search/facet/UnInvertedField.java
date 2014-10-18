@@ -811,7 +811,7 @@ public class UnInvertedField extends DocTermOrds {
         try ( DocSet intersection = searcher.getDocSet(new TermQuery(new Term(field, tt.term)), docs); )
         {
           int collected = processor.collect(tt.termNum - startTermIndex, intersection);
-          processor.countAcc.incrementCount(tt.termNum, collected);
+          processor.countAcc.incrementCount(tt.termNum - startTermIndex, collected);
           if (collected > 0) {
             uniqueTerms++;
           }
