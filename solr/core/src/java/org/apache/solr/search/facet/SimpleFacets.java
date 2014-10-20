@@ -953,6 +953,14 @@ public class SimpleFacets {
     return count;
   }
 
+  public static DocSet getFieldMissing(SolrIndexSearcher searcher, DocSet docs, String fieldName) throws IOException {
+    SchemaField sf = searcher.getSchema().getField(fieldName);
+    DocSet hasVal = searcher.getDocSet(sf.getType().getRangeQuery(null, sf, null, null, false, false));
+    DocSet answer = docs.andNot(hasVal);
+    hasVal.decref();
+    return answer;
+  }
+
 
 //  private static native void getFieldCacheCounts(long baseArr, int baseSize, int baseFormat, long ordArr, int ordSize, int ordFormat, int startIndex, int endIndex, int offset, int limit);
   private static native void fillCounts(long baseArr, int baseFormat, long baseSize,

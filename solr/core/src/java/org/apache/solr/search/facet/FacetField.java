@@ -197,8 +197,11 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
 
     findStartAndEndOrds();
 
-    createAccs(nDocs, nTerms);
-    setSortAcc(nTerms);
+    // if we need an extra slot for the "missing" bucket, and it wasn't able to be tacked onto the beginning,
+    // then lets add room for it at the end.
+    int maxSlots = (freq.missing && startTermIndex != -1) ? nTerms + 1 : nTerms;
+    createAccs(nDocs, maxSlots);
+    setSortAcc(maxSlots);
     prepareForCollection();
 
     collectDocs();
@@ -284,16 +287,8 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
       // get the ord of the slot...
       int ord = startTermIndex + slotNum;
 
-      BytesRef br;
-      Object val;
-      if (startTermIndex == -1 && slotNum == 0) {
-        // this is the "missing" bucket
-        val = null;
-        br = new BytesRef();
-      } else {
-        br = lookupOrd(ord);
-        val = sf.getType().toObject(sf, br);
-      }
+      BytesRef br = lookupOrd(ord);
+      Object val = sf.getType().toObject(sf, br);
 
       bucket.add("val", val);
       // add stats for this bucket
@@ -312,6 +307,48 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
       }
 
       bucketList.add(bucket);
+    }
+
+    if (freq.missing) {
+      SimpleOrderedMap<Object> missingBucket = new SimpleOrderedMap<>();
+      DocSet missingDocSet = null;
+      try {
+        if (startTermIndex == -1) {
+          addStats(missingBucket, 0);
+        } else {
+          missingDocSet = SimpleFacets.getFieldMissing(fcontext.searcher, fcontext.base, freq.field);
+          slot.value = nTerms;  // an extra slot was added to the end for this missing bucket
+          countAcc.incrementCount(nTerms, missingDocSet.size());
+          collect(missingDocSet);
+          addStats(missingBucket, nTerms);
+
+          /**  approach of creating new accumulators
+          createAccs(missingDocSet.size(), 1);
+          prepareForCollection();
+          slot.value = 0;
+          countAcc.incrementCount(0, missingDocSet.size());
+          collect(missingDocSet);
+          addStats(missingBucket, 0);
+          **/
+        }
+
+        if (freq.getSubFacets().size() > 0) {
+          FacetContext subContext = fcontext.sub();
+          // TODO: we can do better than this!
+          if (missingDocSet == null) {
+            missingDocSet = SimpleFacets.getFieldMissing(fcontext.searcher, fcontext.base, freq.field);
+          }
+          subContext.base = missingDocSet;
+          fillBucketSubs(missingBucket, subContext);
+        }
+
+        res.add("missing", missingBucket);
+      } finally {
+        if (missingDocSet != null) {
+          missingDocSet.decref();
+          missingDocSet = null;
+        }
+      }
     }
 
     return res;
@@ -344,9 +381,12 @@ class FacetFieldProcessorFC extends FacetFieldProcessorFCBase {
       assert endTermIndex < 0;
       endTermIndex = -endTermIndex - 1;
     } else {
-      startTermIndex = freq.missing ? -1 : 0;
+      startTermIndex = 0;
       endTermIndex = sortedDocValues.getValueCount();
     }
+
+    // optimize collecting the "missing" bucket when startTermindex is 0 (since the "missing" ord is -1)
+    startTermIndex = startTermIndex==0 && freq.missing ? -1 : startTermIndex;
 
     nTerms = endTermIndex - startTermIndex;
   }
@@ -389,7 +429,6 @@ class FacetFieldProcessorFC extends FacetFieldProcessorFCBase {
         slot.value = arrIdx;
         countAcc.incrementCount(arrIdx, 1);
         collect(doc - segBase);  // per-seg collectors
-        // counts[arrIdx]++;
       }
     }
   }
