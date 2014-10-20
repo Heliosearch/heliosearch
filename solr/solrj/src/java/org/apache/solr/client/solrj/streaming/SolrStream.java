@@ -48,12 +48,6 @@ public class SolrStream extends TupleStream {
     this.params = params;
   }
 
-  public SolrStream(String baseUrl, Map params, String[] partitionKeys) {
-    super(partitionKeys);
-    this.baseUrl = baseUrl;
-    this.params = params;
-  }
-
   public void setFieldMappings(Map<String, String> fieldMappings) {
     this.fieldMappings = fieldMappings;
   }
@@ -102,16 +96,7 @@ public class SolrStream extends TupleStream {
     buf.append(this.numWorkers);
     buf.append(" worker=");
     buf.append(this.workerID);
-    buf.append(" keys='");
-    boolean comma = false;
-    for(String key : partitionKeys) {
-      if(comma) {
-        buf.append(",");
-      }
-      buf.append(key);
-      comma = true;
-    }
-    buf.append("'}");
+    buf.append("}");
     return buf.toString();
   }
 

@@ -64,7 +64,7 @@ public class UniqueStream extends TupleStream {
       while(true) {
         int i = comp.compare(currentTuple, tuple);
         if(i == 0) {
-          //We have duplicate tuple sor read the next tuple from the stream.
+          //We have duplicate tuple so read the next tuple from the stream.
           tuple = tupleStream.read();
           if(tuple.EOF) {
             return tuple;

@@ -79,7 +79,7 @@ public class CountStream extends TupleStream implements AggregateStream {
       return tuple;
     }
 
-     ++lcount;
+    ++lcount;
 
     return tuple;
   }

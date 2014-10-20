@@ -23,12 +23,6 @@ import java.util.List;
 
 public abstract class TupleStream implements Serializable {
 
-  protected String[] partitionKeys;
-
-  public TupleStream(String[] partitionKeys) {
-    this.partitionKeys = partitionKeys;
-  }
-
   public TupleStream() {
 
   }

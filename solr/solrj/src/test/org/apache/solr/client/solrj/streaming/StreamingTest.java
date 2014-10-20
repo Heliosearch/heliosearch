@@ -19,46 +19,20 @@ package org.apache.solr.client.solrj.streaming;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.concurrent.TimeoutException;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
+import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.LuceneTestCase.Slow;
-import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.request.AbstractUpdateRequest;
-import org.apache.solr.client.solrj.request.QueryRequest;
-import org.apache.solr.client.solrj.request.UpdateRequest;
-import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.cloud.AbstractFullDistribZkTestBase;
 import org.apache.solr.cloud.AbstractZkTestCase;
-import org.apache.solr.common.SolrDocumentList;
-import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.common.cloud.ClusterState;
-import org.apache.solr.common.cloud.DocCollection;
-import org.apache.solr.common.cloud.DocRouter;
-import org.apache.solr.common.cloud.Replica;
-import org.apache.solr.common.cloud.Slice;
-import org.apache.solr.common.cloud.ZkStateReader;
-import org.apache.solr.common.params.CommonParams;
-import org.apache.solr.common.params.ModifiableSolrParams;
-import org.apache.solr.common.params.ShardParams;
-import org.apache.solr.common.util.NamedList;
-import org.apache.solr.client.solrj.impl.*;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -70,9 +44,14 @@ import java.util.ArrayList;
  **/
 
 @Slow
+@LuceneTestCase.SuppressCodecs({"Lucene3x", "Lucene40","Lucene41","Lucene42","Lucene45"})
 public class StreamingTest extends AbstractFullDistribZkTestBase {
 
   private static final String SOLR_HOME = getFile("solrj" + File.separator + "solr").getAbsolutePath();
+
+  static {
+    schemaString = "schema-streaming.xml";
+  }
 
   @BeforeClass
   public static void beforeSuperClass() {
@@ -85,8 +64,9 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
   }
 
   protected String getCloudSolrConfig() {
-    return "solrconfig.xml";
+    return "solrconfig-streaming.xml";
   }
+
 
   @Override
   public String getSolrHome() {
@@ -120,6 +100,178 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     shardCount = 3;
   }
 
+  private void testUniqueStream() throws Exception {
+
+    //Test CloudSolrStream and UniqueStream
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+
+    String zkHost = zkServer.getZkAddress();
+
+    Map params = mapParams("q","*:*","fl","id,a_s,a_i,a_f","sort", "a_f asc,a_i asc");
+    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
+    UniqueStream ustream = new UniqueStream(stream, new AscFieldComp("a_f"));
+    CountStream cstream = new CountStream(ustream, "count");
+    List<Tuple> tuples = getTuples(cstream);
+    Long count = cstream.longValue();
+    assert(count == 4);
+    assertOrder(tuples, 0,1,3,4);
+
+    del("*:*");
+    commit();
+
+  }
+
+  private void testRankStream() throws Exception {
+
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+
+    Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
+    RankStream rstream = new RankStream(stream, 3, new DescFieldComp("a_i"));
+    List<Tuple> tuples = getTuples(rstream);
+
+
+    assert(tuples.size() == 3);
+    assertOrder(tuples, 4,3,2);
+
+    del("*:*");
+    commit();
+  }
+
+
+  private void testSumStream() throws Exception {
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    //Test CloudSolrStream and SumStream over an int field
+    String zkHost = zkServer.getZkAddress();
+
+    Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
+    SumStream sstream = new SumStream(stream, "a_i", "count", false);
+    List<Tuple> tuples = getTuples(sstream);
+
+    long sum = sstream.longValue();
+    assert(sum == 10);
+    assertOrder(tuples, 0,1,2,3,4);
+
+    del("*:*");
+    commit();
+
+  }
+
+  private void testCountStream() throws Exception {
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    //Test CloudSolrStream and SumStream over an int field
+    String zkHost = zkServer.getZkAddress();
+
+    Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
+    CountStream cstream = new CountStream(stream, "count");
+    List<Tuple> tuples = getTuples(cstream);
+
+    long count = cstream.longValue();
+    assert(count == 5);
+    assertOrder(tuples, 0,1,2,3,4);
+
+    del("*:*");
+    commit();
+
+  }
+
+
+  private void testFilterStream() throws Exception {
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    //Test CloudSolrStream and SumStream over an int field
+    String zkHost = zkServer.getZkAddress();
+
+    Map paramsA = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_s asc");
+    CloudSolrStream streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    Map paramsB = mapParams("q","id:(0 2)","fl","a_s","sort", "a_s asc");
+    CloudSolrStream streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+
+
+    FilterStream fstream = new FilterStream(streamA, streamB, new AscFieldComp("a_s"));
+    List<Tuple> tuples = getTuples(fstream);
+
+    assert(tuples.size() == 2);
+    assertOrder(tuples, 0,2);
+
+    del("*:*");
+    commit();
+  }
+
+  private void testParallelStream() throws Exception {
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+
+    Map paramsA = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_s asc", "partitionKeys","a_s");
+    CloudSolrStream streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    Map paramsB = mapParams("q","id:(0 2)","fl","a_s","sort", "a_s asc", "partitionKeys","a_s");
+    CloudSolrStream streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+
+    FilterStream fstream = new FilterStream(streamA, streamB, new AscFieldComp("a_s"));
+    ParallelStream pstream = new ParallelStream(zkHost,"collection1", fstream, 2, new AscFieldComp("a_s"));
+    List<Tuple> tuples = getTuples(pstream);
+
+    assert(tuples.size() == 2);
+    assertOrder(tuples, 0,2);
+
+    del("*:*");
+    commit();
+  }
+
+
+
   @Override
   public void doTest() throws Exception {
     assertNotNull(cloudClient);
@@ -133,72 +285,69 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
     commit();
 
-    SolrInputDocument doc1 = new SolrInputDocument();
-    doc1.addField(id, "0");
-    doc1.addField("a_s", "hello0");
-    doc1.addField("a_i", "0");
-    SolrInputDocument doc2 = new SolrInputDocument();
-    doc2.addField(id, "2");
-    doc2.addField("a_s", "hello2");
-    doc2.addField("a_i", "2");
-    SolrInputDocument doc3 = new SolrInputDocument();
-    doc3.addField(id, "3");
-    doc3.addField("a_s", "hello3");
-    doc3.addField("a_i", "3");
-    SolrInputDocument doc4 = new SolrInputDocument();
-    doc4.addField(id, "4");
-    doc4.addField("a_s", "hello4");
-    doc4.addField("a_i", "4");
-    SolrInputDocument doc5 = new SolrInputDocument();
-    doc5.addField(id, "1");
-    doc5.addField("a_s", "hello1");
-    doc5.addField("a_i", "1");
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
 
-    UpdateRequest request = new UpdateRequest();
-    request.add(doc1);
-    request.add(doc2);
-    request.add(doc3);
-    request.add(doc4);
-    request.add(doc5);
-
-    request.setAction(AbstractUpdateRequest.ACTION.COMMIT, false, false);
-    cloudClient.request(request);
-    ZkStateReader zkStateReader = cloudClient.getZkStateReader();
     commit();
 
     String zkHost = zkServer.getZkAddress();
+    Map params = null;
 
-    //First test
-    Map params = new HashMap();
+    //Basic CloudSolrStream Test
 
-    params.put("q","*:*");
-    params.put("fl", "id,a_s,a_i");
-    params.put("sort","a_i desc");
-
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i desc");
     CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
-    CountStream cstream = new CountStream(stream, "count");
-    cstream.open();
-    List<Tuple> tuples = new ArrayList();
-    for(Tuple t = cstream.read(); !t.EOF; t = cstream.read()) {
-      tuples.add(t);
-    }
-    cstream.close();
-    long count = cstream.longValue();
+    List<Tuple> tuples = getTuples(stream);
 
-    assert(count == tuples.size());
-    assertOrder(tuples, 4,3,2,1,0);
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 4, 3, 2, 1, 0);
 
     del("*:*");
     commit();
+
+    testUniqueStream();
+    testSumStream();
+    testCountStream();
+    testRankStream();
+    testFilterStream();
+    testParallelStream();
   }
 
-  public boolean assertOrder(List<Tuple> tuples, int... ids) throws Exception {
+  protected Map mapParams(String... vals) {
+    Map params = new HashMap();
+    String k = null;
+    for(String val : vals) {
+      if(k == null) {
+        k = val;
+      } else {
+        params.put(k, val);
+        k = null;
+      }
+    }
+
+    return params;
+  }
+
+  protected List<Tuple> getTuples(TupleStream tupleStream) throws IOException {
+    tupleStream.open();
+    List<Tuple> tuples = new ArrayList();
+    for(Tuple t = tupleStream.read(); !t.EOF; t = tupleStream.read()) {
+      tuples.add(t);
+    }
+    tupleStream.close();
+    return tuples;
+  }
+
+  protected boolean assertOrder(List<Tuple> tuples, int... ids) throws Exception {
     int i = 0;
     for(int val : ids) {
       Tuple t = tuples.get(i);
       Long tip = (Long)t.get("id");
       if(tip.intValue() != val) {
-        throw new Exception("Found value:"+t+" expecting:"+val);
+        throw new Exception("Found value:"+tip.intValue()+" expecting:"+val);
       }
       ++i;
     }

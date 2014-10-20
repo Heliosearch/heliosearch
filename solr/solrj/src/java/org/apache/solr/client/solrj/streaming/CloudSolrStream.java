@@ -75,16 +75,6 @@ public class CloudSolrStream extends TupleStream {
     this.comp = parseComp(sort);
   }
 
-  public CloudSolrStream(String zkHost, String collection, Map params, String[] partitionKeys) {
-    super(partitionKeys);
-    this.zkHost = zkHost;
-    this.collection = collection;
-    this.params = params;
-    this.tuples = new TreeSet();
-    String sort = (String)params.get("sort");
-    this.comp = parseComp(sort);
-  }
-
   //Used by the ParallelStream
   protected CloudSolrStream() {
 
@@ -157,7 +147,7 @@ public class CloudSolrStream extends TupleStream {
         Replica rep = shuffler.get(0);
         ZkCoreNodeProps zkProps = new ZkCoreNodeProps(rep);
         String url = zkProps.getCoreUrl();
-        SolrStream solrStream = new SolrStream(url, params, partitionKeys);
+        SolrStream solrStream = new SolrStream(url, params);
         StreamContext context = new StreamContext();
         context.numWorkers = this.numWorkers;
         context.workerID = this.workerID;
