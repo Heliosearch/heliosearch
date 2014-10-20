@@ -226,6 +226,23 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
             ", f2:{  'buckets':[{ val:'B', count:3, n1:-3.0}, { val:'A', count:2, n1:6.0 }]} }"
     );
 
+    // test sorting by count/index order
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{f1:{terms:{field:'${cat_s}', sort:'count desc' }  }" +
+                "           , f2:{terms:{field:'${cat_s}', sort:'count asc'  }  }" +
+                "           , f3:{terms:{field:'${cat_s}', sort:'index asc'  }  }" +
+                "           , f4:{terms:{field:'${cat_s}', sort:'index desc' }  }" +
+                "}"
+        )
+        , "facets=={ count:6 " +
+            " ,f1:{buckets:[ {val:B,count:3}, {val:A,count:2} ] }" +
+            " ,f2:{buckets:[ {val:A,count:2}, {val:B,count:3} ] }" +
+            " ,f3:{buckets:[ {val:A,count:2}, {val:B,count:3} ] }" +
+            " ,f4:{buckets:[ {val:B,count:3}, {val:A,count:2} ] }" +
+            "}"
+    );
+
+
     // terms facet with nested query facet
     assertJQ(req(p, "q", "*:*"
             , "json.facet", "{cat:{terms:{field:'${cat_s}', facet:{nj:{query:'${where_s}:NJ'}}    }   }} }"
