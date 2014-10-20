@@ -169,6 +169,17 @@ public class QueryEqualityTest extends SolrTestCaseJ4 {
     }
   }
 
+
+
+  public void testHashQuery() throws Exception {
+    SolrQueryRequest req = req("q", "*:*", "partitionKeys","a");
+    try {
+      assertQueryEquals("hash", req, "{!hash worker=1 workers=2}");
+    } finally {
+      req.close();
+    }
+  }
+
   public void testQuerySwitch() throws Exception {
     SolrQueryRequest req = req("myXXX", "XXX", 
                                "myField", "foo_s",

@@ -85,13 +85,13 @@ public class HashQParserPlugin extends QParserPlugin {
     }
 
     public int hashCode() {
-      return keysParam.hashCode()+workers+worker;
+      return keysParam.hashCode()+workers+worker+(int)getBoost();
     }
 
     public boolean equals(Object o) {
       if (o instanceof HashQuery) {
         HashQuery h = (HashQuery)o;
-        if(keysParam.equals(h.keysParam) && workers == h.workers && worker == h.worker) {
+        if(keysParam.equals(h.keysParam) && workers == h.workers && worker == h.worker && getBoost() == h.getBoost()) {
           return true;
         }
       }
