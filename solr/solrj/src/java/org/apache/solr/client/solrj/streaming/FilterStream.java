@@ -24,6 +24,8 @@ import java.util.ArrayList;
 
 public class FilterStream extends TupleStream {
 
+  private static final long serialVersionUID = 1;
+
   private TupleStream streamA;
   private TupleStream streamB;
   private Comparator<Tuple> comp;

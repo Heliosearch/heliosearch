@@ -24,6 +24,8 @@ import java.util.ArrayList;
 
 public class UniqueStream extends TupleStream {
 
+  private static final long serialVersionUID = 1;
+
   private TupleStream tupleStream;
   private Comparator<Tuple> comp;
   private Tuple currentTuple = null;

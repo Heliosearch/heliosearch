@@ -32,6 +32,8 @@ import java.util.Comparator;
 
 public class RankStream extends TupleStream {
 
+  private static final long serialVersionUID = 1;
+
   private TupleStream tupleStream;
   private PriorityQueue<Tuple> top;
   private Comparator<Tuple> comp;

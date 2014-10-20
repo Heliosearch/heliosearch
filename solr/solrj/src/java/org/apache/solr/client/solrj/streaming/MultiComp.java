@@ -22,6 +22,8 @@ import java.util.Comparator;
 
 public class MultiComp implements Comparator<Tuple>, Serializable {
 
+  private static final long serialVersionUID = 1;
+
   private Comparator<Tuple>[] comps;
 
   public MultiComp(Comparator<Tuple>[] comps) {

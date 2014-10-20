@@ -22,6 +22,8 @@ import java.util.Comparator;
 
 public class AscFieldComp implements Comparator<Tuple>, Serializable {
 
+  private static final long serialVersionUID = 1;
+
   private String field;
 
   public AscFieldComp(String field) {

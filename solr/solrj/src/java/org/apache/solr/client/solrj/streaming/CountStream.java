@@ -24,6 +24,8 @@ import java.util.ArrayList;
 
 public class CountStream extends TupleStream implements AggregateStream {
 
+  private static final long serialVersionUID = 1;
+
   private TupleStream tupleStream;
   private long lcount;
   private String outKey;

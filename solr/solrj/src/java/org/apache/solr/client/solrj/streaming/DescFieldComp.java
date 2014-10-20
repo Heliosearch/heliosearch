@@ -22,6 +22,8 @@ import java.util.Comparator;
 
 public class DescFieldComp implements Comparator<Tuple>, Serializable {
 
+  private static final long serialVersionUID = 1;
+
   private String field;
 
   public DescFieldComp(String field) {

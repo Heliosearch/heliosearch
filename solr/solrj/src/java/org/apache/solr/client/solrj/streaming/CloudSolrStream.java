@@ -51,6 +51,9 @@ import org.apache.zookeeper.KeeperException;
 */
 
 public class CloudSolrStream extends TupleStream {
+
+  private static final long serialVersionUID = 1;
+
   protected String zkHost;
   protected String collection;
   protected Map params;

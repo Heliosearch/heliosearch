@@ -35,6 +35,8 @@ import org.apache.solr.common.params.SolrParams;
 
 public class SolrStream extends TupleStream {
 
+  private static final long serialVersionUID = 1;
+
   private String baseUrl;
   private Map params;
   private int numWorkers;
