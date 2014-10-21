@@ -84,6 +84,7 @@ public class MergeStream extends TupleStream {
     }
 
     int c = comp.compare(a,b);
+
     if(c < 0) {
       streamB.pushBack(b);
       return a;

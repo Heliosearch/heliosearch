@@ -26,7 +26,7 @@ public class MultiComp implements Comparator<Tuple>, Serializable {
 
   private Comparator<Tuple>[] comps;
 
-  public MultiComp(Comparator<Tuple>[] comps) {
+  public MultiComp(Comparator<Tuple>... comps) {
     this.comps = comps;
   }
 

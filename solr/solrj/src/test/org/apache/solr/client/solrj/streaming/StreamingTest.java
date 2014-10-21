@@ -336,6 +336,32 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     assert(tuples.size() == 5);
     assertOrder(tuples, 4,3,2,1,0);
 
+    //Test compound sort
+
+    paramsA = mapParams("q","id:(2 4 1)","fl","id,a_s,a_i,a_f","sort", "a_f asc,a_i asc");
+    streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    paramsB = mapParams("q","id:(0 3)","fl","id,a_s,a_i,a_f","sort", "a_f asc,a_i asc");
+    streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+
+    mstream = new MergeStream(streamA, streamB, new MultiComp(new AscFieldComp("a_f"),new AscFieldComp("a_i")));
+    tuples = getTuples(mstream);
+
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 0,2,1,3,4);
+
+    paramsA = mapParams("q","id:(2 4 1)","fl","id,a_s,a_i,a_f","sort", "a_f asc,a_i desc");
+    streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    paramsB = mapParams("q","id:(0 3)","fl","id,a_s,a_i,a_f","sort", "a_f asc,a_i desc");
+    streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+
+    mstream = new MergeStream(streamA, streamB, new MultiComp(new AscFieldComp("a_f"),new DescFieldComp("a_i")));
+    tuples = getTuples(mstream);
+
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 2,0,1,3,4);
+
     del("*:*");
     commit();
   }
@@ -365,7 +391,7 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     String zkHost = zkServer.getZkAddress();
     Map params = null;
 
-    //Basic CloudSolrStream Test
+    //Basic CloudSolrStream Test with Ascending Sort
 
     params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i desc");
     CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
@@ -373,6 +399,34 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
     assert(tuples.size() == 5);
     assertOrder(tuples, 4, 3, 2, 1, 0);
+
+    //With Descending Sort
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    tuples = getTuples(stream);
+
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 0,1,2,3,4);
+
+
+    //Test compound sort
+    params = mapParams("q","*:*","fl","id,a_s,a_i,a_f","sort", "a_f asc,a_i desc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    tuples = getTuples(stream);
+
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 2,0,1,3,4);
+
+
+    params = mapParams("q","*:*","fl","id,a_s,a_i,a_f","sort", "a_f asc,a_i asc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    tuples = getTuples(stream);
+
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 0,2,1,3,4);
+
+
+
 
     del("*:*");
     commit();
