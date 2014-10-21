@@ -19,7 +19,6 @@ package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,6 +29,8 @@ import java.util.PriorityQueue;
  **/
 
 public class GroupByStream extends TupleStream {
+
+  private static final long serialVersionUID = 1;
 
   private TupleStream tupleStream;
   private Comparator<Tuple> interGroupComp;
