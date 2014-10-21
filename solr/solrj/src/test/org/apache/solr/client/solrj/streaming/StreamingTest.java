@@ -210,6 +210,33 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
   }
 
+  private void testGroupByStream() throws Exception {
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello0", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello0", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    //Test CloudSolrStream and SumStream over an int field
+    String zkHost = zkServer.getZkAddress();
+
+    Map paramsA = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_s asc");
+    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", paramsA);
+    GroupByStream gstream = new GroupByStream(stream, new AscFieldComp("a_s"), new DescFieldComp("a_i"), 5);
+
+    List<Tuple> tuples = getTuples(gstream);
+
+    assert(tuples.size() == 3);
+    assertOrder(tuples, 2,3,4);
+    assertGroupOrder(tuples.get(0), 1, 0);
+
+    del("*:*");
+    commit();
+  }
+
 
   private void testFilterStream() throws Exception {
 
@@ -313,6 +340,7 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     testCountStream();
     testRankStream();
     testFilterStream();
+    testGroupByStream();
     testParallelStream();
   }
 
@@ -351,7 +379,21 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
       }
       ++i;
     }
-    return false;
+    return true;
+  }
+
+  protected boolean assertGroupOrder(Tuple tuple, int... ids) throws Exception {
+    Tuple[] group = (Tuple[])tuple.get("tuples");
+    int i=0;
+    for(int val : ids) {
+      Tuple t = group[i];
+      Long tip = (Long)t.get("id");
+      if(tip.intValue() != val) {
+        throw new Exception("Found value:"+tip.intValue()+" expecting:"+val);
+      }
+      ++i;
+    }
+    return true;
   }
 
   @Override
