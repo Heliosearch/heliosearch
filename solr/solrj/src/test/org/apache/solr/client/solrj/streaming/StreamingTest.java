@@ -298,6 +298,48 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
   }
 
 
+  private void testMergeStream() throws Exception {
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+
+    //Test ascending
+    Map paramsA = mapParams("q","id:(4 1)","fl","id,a_s,a_i","sort", "a_i asc");
+    CloudSolrStream streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    Map paramsB = mapParams("q","id:(0 2 3)","fl","id,a_s,a_i","sort", "a_i asc");
+    CloudSolrStream streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+
+    MergeStream mstream = new MergeStream(streamA, streamB, new AscFieldComp("a_i"));
+    List<Tuple> tuples = getTuples(mstream);
+
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 0,1,2,3,4);
+
+    //Test descending
+    paramsA = mapParams("q","id:(4 1)","fl","id,a_s,a_i","sort", "a_i desc");
+    streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    paramsB = mapParams("q","id:(0 2 3)","fl","id,a_s,a_i","sort", "a_i desc");
+    streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+
+    mstream = new MergeStream(streamA, streamB, new DescFieldComp("a_i"));
+    tuples = getTuples(mstream);
+
+    assert(tuples.size() == 5);
+    assertOrder(tuples, 4,3,2,1,0);
+
+    del("*:*");
+    commit();
+  }
+
 
   @Override
   public void doTest() throws Exception {
@@ -341,6 +383,7 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     testRankStream();
     testFilterStream();
     testGroupByStream();
+    testMergeStream();
     testParallelStream();
   }
 
