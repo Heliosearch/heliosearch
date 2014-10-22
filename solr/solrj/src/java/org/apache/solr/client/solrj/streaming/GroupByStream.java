@@ -111,11 +111,14 @@ public class GroupByStream extends TupleStream {
     //First Tuple is the group head.
     Tuple groupHead = members[0];
     if(members.length > 1) {
-      Tuple[] tuples = new Tuple[members.length-1];
-      System.arraycopy(members,1,tuples,0,members.length-1);
-      groupHead.set("tuples", tuples);
+      List groupList = new ArrayList();
+      for(int i=1; i<members.length; i++) {
+        groupList.add(members[i].fields);
+      }
+
+      groupHead.set("tuples", groupList);
     } else {
-      groupHead.set("tuples", new Tuple[0]);
+      groupHead.set("tuples", new ArrayList());
     }
     return groupHead;
   }

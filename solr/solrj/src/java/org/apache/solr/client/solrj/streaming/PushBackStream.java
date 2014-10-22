@@ -30,9 +30,8 @@ public class PushBackStream extends TupleStream {
   private Tuple tuple;
 
   /*
-  * Intersects streamA by streamB based on a Comparator.
-  * Both streams must be sorted by the fields being compared.
-  * StreamB must be unique for the fields being compared.
+  * A TupleStream that allows a Tuple to be pushed back into Stream after it's been read.
+  *
   **/
 
   public PushBackStream(TupleStream stream) {
