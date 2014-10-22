@@ -18,6 +18,7 @@ package org.apache.solr.search.facet;
  */
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.solr.common.SolrException;
 import org.apache.solr.handler.component.ResponseBuilder;
@@ -28,11 +29,9 @@ import org.noggit.ObjectBuilder;
 
 public class FacetModule {
   public static FacetRequest getFacetRequest(SolrQueryRequest req) {
-    // String[] jsonFacets = req.getParams().getParams("json.facet");
-    // TODO: allow multiple
+    String[] jsonFacets = req.getParams().getParams("json.facet");
 
-    String jsonFacet = req.getParams().get("json.facet"); // TODO... allow just "facet" also?
-    if (jsonFacet == null) {
+    if (jsonFacets == null) {
       return null;
     }
 
@@ -42,17 +41,25 @@ public class FacetModule {
       return null;
     }
 
-    Object facetArgs = null;
-    try {
-      facetArgs = ObjectBuilder.fromJSON(jsonFacet);
-    } catch (IOException e) {
-      // should be impossible
-     // TODO: log
+    Map<String,Object> all = null;
+    for (String jsonFacet : jsonFacets) {
+      Map<String,Object> facetArgs = null;
+      try {
+        facetArgs = (Map<String,Object>)ObjectBuilder.fromJSON(jsonFacet);
+      } catch (IOException e) {
+        // impossible
+      }
+
+      if (all == null) {
+        all = facetArgs;
+      } else {
+        all.putAll( facetArgs );
+      }
     }
 
     FacetParser parser = new FacetTopParser(req);
     try {
-      FacetRequest facetReq = parser.parse(facetArgs);
+      FacetRequest facetReq = parser.parse(all);
       return facetReq;
     } catch (SyntaxError syntaxError) {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, syntaxError);

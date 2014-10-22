@@ -54,6 +54,14 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     assertU(add(doc("id", "6", "cat_s", "B", "where_s", "NY", "num_d", "-5", "num_i", "-5")));
     assertU(commit());
 
+    // test multiple json.facet commands
+    assertJQ(req("q", "*:*", "rows", "0"
+            , "json.facet", "{x:'sum(num_d)'}"
+            , "json.facet", "{y:'min(num_d)'}"
+        )
+        , "facets=={count:6 , x:3.0, y:-9.0 }"
+    );
+
 
     // test streaming
     assertJQ(req("q", "*:*", "rows", "0"
