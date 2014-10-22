@@ -47,54 +47,6 @@ import org.apache.solr.search.mutable.MutableValueInt;
 import org.noggit.ObjectBuilder;
 
 
-class FacetModule {
-  public static FacetRequest getFacetRequest(SolrQueryRequest req) {
-    // String[] jsonFacets = req.getParams().getParams("json.facet");
-    // TODO: allow multiple
-
-    String jsonFacet = req.getParams().get("json.facet"); // TODO... allow just "facet" also?
-    if (jsonFacet == null) {
-      return null;
-    }
-
-    Object facetArgs = null;
-    try {
-      facetArgs = ObjectBuilder.fromJSON(jsonFacet);
-    } catch (IOException e) {
-      // should be impossible
-     // TODO: log
-    }
-
-    FacetParser parser = new FacetTopParser(req);
-    try {
-      FacetRequest facetReq = parser.parse(facetArgs);
-      return facetReq;
-    } catch (SyntaxError syntaxError) {
-      throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, syntaxError);
-    }
-  }
-
-
-  public static boolean doFacets(ResponseBuilder rb) throws IOException {
-    FacetRequest freq = getFacetRequest(rb.req);
-    if (freq == null) return false;
-
-    FacetContext fcontext = new FacetContext();
-    fcontext.base = rb.getResults().docSet;
-    fcontext.req = rb.req;
-    fcontext.searcher = rb.req.getSearcher();
-    fcontext.qcontext = QueryContext.newContext(fcontext.searcher);
-
-
-    FacetProcessor fproc = freq.createFacetProcessor(fcontext);
-    fproc.process();
-    rb.rsp.add("facets", fproc.getResponse());
-    return true;
-  }
-
-}
-
-
 abstract class FacetRequest {
   protected Map<String,AggValueSource> facetStats;  // per-bucket statistics
   protected Map<String,FacetRequest> subFacets;     // list of facets

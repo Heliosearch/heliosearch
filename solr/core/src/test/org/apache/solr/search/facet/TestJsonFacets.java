@@ -56,8 +56,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
 
 
     // test streaming
-    assertJQ(req("q", "*:*", "rows", "0",
-            "facet","true"  // currently still needed
+    assertJQ(req("q", "*:*", "rows", "0"
             , "json.facet", "{   cat:{terms:{field:'cat_s', method:stream }}" +
                               ", cat2:{terms:{field:'cat_s', method:stream, sort:'index asc' }}" + // default sort
                               ", cat3:{terms:{field:'cat_s', method:stream, mincount:3 }}" + // mincount
@@ -76,8 +75,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
 
 
     // test nested streaming under non-streaming
-    assertJQ(req("q", "*:*", "rows", "0",
-        "facet","true"
+    assertJQ(req("q", "*:*", "rows", "0"
         , "json.facet", "{   cat:{terms:{field:'cat_s', sort:'index asc', facet:{where:{terms:{field:where_s,method:stream}}}   }}}"
         )
         , "facets=={count:6 " +
@@ -86,8 +84,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // test nested streaming under streaming
-    assertJQ(req("q", "*:*", "rows", "0",
-            "facet","true"
+    assertJQ(req("q", "*:*", "rows", "0"
             , "json.facet", "{   cat:{terms:{field:'cat_s', method:stream, facet:{where:{terms:{field:where_s,method:stream}}}   }}}"
         )
         , "facets=={count:6 " +
@@ -96,8 +93,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     );
 
     // test nested streaming with stats under streaming
-    assertJQ(req("q", "*:*", "rows", "0",
-            "facet","true"
+    assertJQ(req("q", "*:*", "rows", "0"
             , "json.facet", "{   cat:{terms:{field:'cat_s', method:stream, facet:{  where:{terms:{field:where_s,method:stream, facet:{x:'max(num_d)'}     }}}   }}}"
         )
         , "facets=={count:6 " +
@@ -124,7 +120,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
   @Test
   public void testStatsTemplated() throws Exception {
     // single valued strings
-    doStatsTemplated( params("facet","true", "rows","0", "noexist","noexist_s",  "cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b", "sparse_s","sparse_s") );
+    doStatsTemplated( params(                "rows","0", "noexist","noexist_s",  "cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b", "sparse_s","sparse_s") );
 
     // multi-valued strings
     doStatsTemplated( params("facet","true", "rows","0", "noexist","noexist_ss", "cat_s","cat_ss", "where_s","where_ss", "num_d","num_d", "num_i","num_i", "super_s","super_ss", "val_b","val_b", "sparse_s","sparse_ss") );
@@ -389,6 +385,7 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     // TODO:
     // missing bucket
     // numdocs('query') stat (don't make a bucket... just a count)
+    // missing(field)
     // make missing configurable in min, max, etc
     // exclusions
     // zeroes

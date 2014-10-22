@@ -46,6 +46,7 @@ import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.SyntaxError;
+import org.apache.solr.search.facet.FacetModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.solr.search.facet.SimpleFacets;
@@ -77,7 +78,11 @@ public class FacetComponent extends SearchComponent {
     if (rb.req.getParams().getBool(FacetParams.FACET, false)) {
       rb.setNeedDocSet(true);
       rb.doFacets = true;
+    } else if (rb.req.getParams().get("json.facet") != null) {
+      // do faceting if there are any json.facet commands, unless facet is explicitly set to false
+      rb.setNeedDocSet( rb.req.getParams().getBool(FacetParams.FACET, true) );
     }
+
   }
   
   /**
@@ -85,6 +90,7 @@ public class FacetComponent extends SearchComponent {
    */
   @Override
   public void process(ResponseBuilder rb) throws IOException {
+    FacetModule.doFacets(rb);
       if (rb.doFacets) {
         SolrParams params = rb.req.getParams();
         SimpleFacets f = new SimpleFacets(rb.req,

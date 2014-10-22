@@ -362,9 +362,11 @@ public class SimpleFacets {
     SimpleOrderedMap<Object> facets = new SimpleOrderedMap<>();         // version >= 2
 
     try {
+      /***  now called from FacetModule
       if (rb != null && FacetModule.doFacets(rb)) {
         return;
       }
+      ***/
 
       NamedList<Object> facet_queries = new SimpleOrderedMap<>();
       getFacetQueryCounts(facets, facet_queries);
