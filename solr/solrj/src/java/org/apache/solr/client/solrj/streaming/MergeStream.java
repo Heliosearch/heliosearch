@@ -22,6 +22,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.ArrayList;
 
+/**
+* Unions streamA with streamB based on a Comparator.
+* Both streams must be sorted by the fields being compared.
+**/
+
+
 public class MergeStream extends TupleStream {
 
   private static final long serialVersionUID = 1;
@@ -29,13 +35,6 @@ public class MergeStream extends TupleStream {
   private PushBackStream streamA;
   private PushBackStream streamB;
   private Comparator<Tuple> comp;
-
-
-  /*
-  * Unions streamA with streamB based on a Comparator.
-  * Both streams must be sorted by the fields being compared.
-  * StreamB must be unique for the fields being compared.
-  **/
 
   public MergeStream(TupleStream streamA, TupleStream streamB, Comparator<Tuple> comp) {
     this.streamA = new PushBackStream(streamA);

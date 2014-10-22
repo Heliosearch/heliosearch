@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Iterator;
 
-public class Tuple {
+public class Tuple implements Cloneable {
 
   public boolean EOF;
   public Map fields = new HashMap();
@@ -44,5 +44,12 @@ public class Tuple {
 
   public Iterator<Map.Entry> getFields() {
     return fields.entrySet().iterator();
+  }
+
+  public Tuple clone() {
+    HashMap m = new HashMap();
+    m.putAll(fields);
+    Tuple clone = new Tuple(m);
+    return clone;
   }
 }
