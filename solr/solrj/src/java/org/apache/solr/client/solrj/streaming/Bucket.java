@@ -17,10 +17,24 @@
 
 package org.apache.solr.client.solrj.streaming;
 
-import java.util.List;
-import java.util.Map;
+public class Bucket {
+  private String bucketValue;
 
-public interface AggregateStream {
-  public Map<String, List<Map<String, Double>>> merge(Map<String, List<Map<String, Double>>> metrics);
-  public String getOutKey();
+  public Bucket() {
+
+  }
+
+  public Bucket(String backetValue) {
+    this.bucketValue = bucketValue;
+  }
+
+  public String getBucketValue(Tuple tuple) {
+    return bucketValue;
+
+  }
+
+
+
+
+
 }

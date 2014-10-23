@@ -71,18 +71,21 @@ public class ParallelStream extends CloudSolrStream {
     return l;
   }
 
-  public Map<String, Object> mergeAggregates(AggregateStream[] mergers) {
-    Map<String, Object> ags = new HashMap();
-    for(AggregateStream merger : mergers) {
+  public Map<String, Map<HashKey, Metric[]>> merge(BucketStream[] bucketStreams) {
+    Map<String, Map<HashKey, Metric[]>> ags = new HashMap();
+    for(BucketStream merger : bucketStreams) {
       String outKey = merger.getOutKey();
-      Iterator it = eofTuples.values().iterator();
-      List values = new ArrayList();
+      Iterator<Tuple> it = eofTuples.values().iterator();
+      List<Map<String, Map<String, Double>>> values = new ArrayList();
+
       while(it.hasNext()) {
-        Map m = (Map)it.next();
-        values.add(m.get(outKey));
+        Tuple t = (Tuple)it.next();
+        Map<String, Map<String, Double>> agg = (Map<String, Map<String, Double>>)t.get(outKey);
+        values.add(agg);
       }
 
-      merger.mergeAggregates(values,ags);
+      Map<HashKey, Metric[]> merged = merger.merge(values);
+      ags.put(outKey, merged);
     }
     return ags;
   }

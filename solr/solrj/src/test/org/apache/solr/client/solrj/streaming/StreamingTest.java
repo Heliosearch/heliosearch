@@ -297,6 +297,21 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     commit();
   }
 
+  private void testHashJoinStream() throws Exception {
+
+  }
+
+  private void testMergeJoinStream() throws Exception {
+
+  }
+
+  private void testParallelHashJoinStream() {
+
+  }
+
+  private void testParallelMergeJoinStream() {
+
+  }
 
   private void testParallelGroupByStream() throws Exception {
 
@@ -451,9 +466,6 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     assert(tuples.size() == 5);
     assertOrder(tuples, 0,2,1,3,4);
 
-
-
-
     del("*:*");
     commit();
 
@@ -463,9 +475,12 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     testRankStream();
     testFilterStream();
     testGroupByStream();
+    testHashJoinStream();
     testMergeStream();
     testParallelStream();
     testParallelGroupByStream();
+    testParallelHashJoinStream();
+    testParallelMergeJoinStream();
   }
 
   protected Map mapParams(String... vals) {

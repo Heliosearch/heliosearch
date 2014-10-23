@@ -79,37 +79,6 @@ public class HashJoinStream extends TupleStream {
     streamA.open();
   }
 
-  private class HashKey {
-    private Object[] parts;
-
-    public HashKey(Tuple t, String[] keys) {
-      this.parts = new Object[keys.length];
-      for(int i=0; i<keys.length; i++) {
-        parts[i] = t.get(keys[i]);
-      }
-    }
-
-    public int hashCode() {
-      int h = 0;
-      for(Object o : parts) {
-        h+=o.hashCode();
-      }
-
-      return h;
-    }
-
-    public boolean equals(Object o) {
-      HashKey h = (HashKey)o;
-      for(int i=0; i<parts.length; i++) {
-        if(!parts[i].equals(h.parts)) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-  }
-
   public void close() throws IOException {
     streamA.close();
   }

@@ -141,6 +141,10 @@ public class MergeJoinStream extends TupleStream {
           }
         }
 
+        //This will advance both streams.
+        listA.clear();
+        listB.clear();
+
         return joinTuples.removeFirst();
       } else if(c < 0) {
         //This will advance streamA

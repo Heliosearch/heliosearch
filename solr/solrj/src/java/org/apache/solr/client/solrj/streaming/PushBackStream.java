@@ -30,7 +30,7 @@ public class PushBackStream extends TupleStream {
   private Tuple tuple;
 
   /*
-  * A TupleStream that allows a Tuple to be pushed back into Stream after it's been read.
+  * A TupleStream that allows a single Tuple to be pushed back into Stream after it's been read.
   *
   **/
 
