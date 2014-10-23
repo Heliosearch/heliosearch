@@ -304,7 +304,7 @@ public class SolrRequestParsers
               // we already have a charsetDecoder, so we can directly decode without buffering:
               final String key = decodeChars(keyBytes, keyPos, charsetDecoder),
                   value = decodeChars(valueBytes, valuePos, charsetDecoder);
-              MultiMapSolrParams.addParam(key, value, map);
+              MultiMapSolrParams.addParam(key.trim(), value, map);
             }
           } else if (valueStream.size() > 0) {
             throw new SolrException(ErrorCode.BAD_REQUEST, "application/x-www-form-urlencoded invalid: missing key");
@@ -377,7 +377,7 @@ public class SolrRequestParsers
       it.remove();
       final Long valuePos = (Long) it.next();
       it.remove();
-      MultiMapSolrParams.addParam(decodeChars(keyBytes, keyPos.longValue(), charsetDecoder),
+      MultiMapSolrParams.addParam(decodeChars(keyBytes, keyPos.longValue(), charsetDecoder).trim(),
           decodeChars(valueBytes, valuePos.longValue(), charsetDecoder), map);
     }
   }
@@ -548,7 +548,7 @@ public class SolrRequestParsers
           // If its a form field, put it in our parameter map
           if (item.isFormField()) {
             MultiMapSolrParams.addParam( 
-              item.getFieldName(), 
+              item.getFieldName().trim(),
               item.getString(), params.getMap() );
           }
           // Add the stream
