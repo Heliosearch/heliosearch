@@ -678,7 +678,7 @@ class FacetRangeParser extends FacetParser<FacetRange> {
 
     facet.others = EnumSet.noneOf(FacetParams.FacetRangeOther.class);
 
-    o = m.get("others");
+    o = m.get("other");
     if (o != null) {
       List<String> lst = null;
 

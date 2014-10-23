@@ -364,6 +364,12 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
         , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1}, {val:0.0,count:2}, {val:5.0,count:0} ] } }"
     );
 
+    // basic range facet with "include" params
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5, include:upper}}}"
+        )
+        , "facets=={count:6, f:{buckets:[ {val:-5.0,count:0}, {val:0.0,count:2}, {val:5.0,count:0} ] } }"
+    );
 
     // range facet with sub facets and stats
     assertJQ(req(p, "q", "*:*"
@@ -371,6 +377,18 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
         )
         , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0,x:0.0,ny:{count:0}} ] } }"
     );
+
+    // range facet with sub facets and stats, with "other:all"
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5, other:all,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
+        )
+        , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0,x:0.0,ny:{count:0}} ]" +
+        ",before: {count:1,x:-5.0,ny:{count:0}}" +
+        ",after:  {count:1,x:7.0, ny:{count:0}}" +
+        ",between:{count:3,x:0.0, ny:{count:2}}" +
+        " } }"
+    );
+
 
     // stats at top level
     assertJQ(req(p, "q", "*:*"
