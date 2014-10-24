@@ -593,7 +593,9 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
         String fromCollection = req.getParams().get(DISTRIB_FROM_COLLECTION); // is it because of a routing rule?
         if (fromCollection == null)  {
           log.error("Request says it is coming from leader, but we are the leader: " + req.getParamString());
-          throw new SolrException(ErrorCode.SERVICE_UNAVAILABLE, "Request says it is coming from leader, but we are the leader");
+          SolrException solrExc = new SolrException(ErrorCode.SERVICE_UNAVAILABLE, "Request says it is coming from leader, but we are the leader");
+          solrExc.setMetadata("cause", "LeaderChanged");
+          throw solrExc;
         }
       }
     }
@@ -803,57 +805,114 @@ public class DistributedUpdateProcessor extends UpdateRequestProcessor {
           DistribPhase.parseParam(error.req.uReq.getParams().get(DISTRIB_UPDATE_PARAM));       
       if (phase != DistribPhase.FROMLEADER)
         continue; // don't have non-leaders try to recovery other nodes
-      
-      final String replicaUrl = error.req.node.getUrl();      
+
+      // commits are special -- they can run on any node irrespective of whether it is a leader or not
+      // we don't want to run recovery on a node which missed a commit command
+      if (error.req.uReq.getParams().get(COMMIT_END_POINT) != null)
+        continue;
+
+      final String replicaUrl = error.req.node.getUrl();
+
+      // if the remote replica failed the request because of leader change (SOLR-6511), then fail the request
+      String cause = (error.e instanceof SolrException) ? ((SolrException)error.e).getMetadata("cause") : null;
+      if ("LeaderChanged".equals(cause)) {
+        // let's just fail this request and let the client retry? or just call processAdd again?
+        log.error("On "+cloudDesc.getCoreNodeName()+", replica "+replicaUrl+
+            " now thinks it is the leader! Failing the request to let the client retry! "+error.e);
+        rsp.setException(error.e);
+        break;
+      }
 
       int maxTries = 1;       
       boolean sendRecoveryCommand = true;
       String collection = null;
       String shardId = null;
-      
+
       if (error.req.node instanceof StdNode) {
         StdNode stdNode = (StdNode)error.req.node;
         collection = stdNode.getCollection();
         shardId = stdNode.getShardId();
+
+        // before we go setting other replicas to down, make sure we're still the leader!
+        String leaderCoreNodeName = null;
         try {
-          // if false, then the node is probably not "live" anymore
-          sendRecoveryCommand = 
-              zkController.ensureReplicaInLeaderInitiatedRecovery(collection, 
-                                                                  shardId, 
-                                                                  replicaUrl, 
-                                                                  stdNode.getNodeProps(), 
-                                                                  false);
-          
-          // we want to try more than once, ~10 minutes
-          if (sendRecoveryCommand) {
-            maxTries = 120;
-          } // else the node is no longer "live" so no need to send any recovery command
-          
-        } catch (Exception e) {
-          log.error("Leader failed to set replica "+
-              error.req.node.getUrl()+" state to DOWN due to: "+e, e);
+          leaderCoreNodeName = zkController.getZkStateReader().getLeaderRetry(collection, shardId).getName();
+        } catch (Exception exc) {
+          log.error("Failed to determine if " + cloudDesc.getCoreNodeName() + " is still the leader for " + collection +
+              " " + shardId + " before putting " + replicaUrl + " into leader-initiated recovery due to: " + exc);
+        }
+
+        List<ZkCoreNodeProps> myReplicas = zkController.getZkStateReader().getReplicaProps(collection,
+            cloudDesc.getShardId(), cloudDesc.getCoreNodeName());
+        boolean foundErrorNodeInReplicaList = false;
+        if (myReplicas != null) {
+          for (ZkCoreNodeProps replicaProp : myReplicas) {
+            if (((Replica) replicaProp.getNodeProps()).getName().equals(((Replica)stdNode.getNodeProps().getNodeProps()).getName()))  {
+              foundErrorNodeInReplicaList = true;
+              break;
+            }
+          }
+        }
+
+        if (cloudDesc.getCoreNodeName().equals(leaderCoreNodeName) && foundErrorNodeInReplicaList) {
+          try {
+            // if false, then the node is probably not "live" anymore
+            sendRecoveryCommand =
+                zkController.ensureReplicaInLeaderInitiatedRecovery(collection,
+                    shardId,
+                    replicaUrl,
+                    stdNode.getNodeProps(),
+                    false);
+
+            // we want to try more than once, ~10 minutes
+            if (sendRecoveryCommand) {
+              maxTries = 120;
+            } // else the node is no longer "live" so no need to send any recovery command
+          } catch (Exception exc) {
+            Throwable setLirZnodeFailedCause = SolrException.getRootCause(exc);
+            log.error("Leader failed to set replica " +
+                error.req.node.getUrl() + " state to DOWN due to: " + setLirZnodeFailedCause, setLirZnodeFailedCause);
+            if (setLirZnodeFailedCause instanceof KeeperException.SessionExpiredException ||
+                setLirZnodeFailedCause instanceof KeeperException.ConnectionLossException) {
+              // our session is expired, which means our state is suspect, so don't go
+              // putting other replicas in recovery (see SOLR-6511)
+              sendRecoveryCommand = false;
+            } // else will go ahead and try to send the recovery command once after this error
+          }
+        } else {
+          // not the leader anymore maybe or the error'd node is not my replica?
+          sendRecoveryCommand = false;
+          if (!foundErrorNodeInReplicaList) {
+            log.warn("Core "+cloudDesc.getCoreNodeName()+" belonging to "+collection+" "+
+                shardId+", does not have error'd node " + stdNode.getNodeProps().getCoreUrl() + " as a replica. " +
+                "No request recovery command will be sent!");
+          } else  {
+            log.warn("Core "+cloudDesc.getCoreNodeName()+" is no longer the leader for "+collection+" "+
+                shardId+", no request recovery command will be sent!");
+          }
         }
       } // else not a StdNode, recovery command still gets sent once
             
       if (!sendRecoveryCommand)
         continue; // the replica is already in recovery handling or is not live   
-      
-      Throwable rootCause = SolrException.getRootCause(error.e);      
-      log.error("Setting up to try to start recovery on replica "+replicaUrl+" after: "+rootCause);
-      
+
+      Throwable rootCause = SolrException.getRootCause(error.e);
+      log.error("Setting up to try to start recovery on replica " + replicaUrl + " after: " + rootCause);
+
       // try to send the recovery command to the downed replica in a background thread
-      CoreContainer coreContainer = req.getCore().getCoreDescriptor().getCoreContainer();      
-      LeaderInitiatedRecoveryThread lirThread = 
+      CoreContainer coreContainer = req.getCore().getCoreDescriptor().getCoreContainer();
+      LeaderInitiatedRecoveryThread lirThread =
           new LeaderInitiatedRecoveryThread(zkController,
-                                            coreContainer,
-                                            collection,
-                                            shardId,
-                                            error.req.node.getNodeProps(),
-                                            maxTries);
+              coreContainer,
+              collection,
+              shardId,
+              error.req.node.getNodeProps(),
+              maxTries,
+              cloudDesc.getCoreNodeName()); // core node name of current leader
       ExecutorService executor = coreContainer.getUpdateShardHandler().getUpdateExecutor();
-      executor.execute(lirThread);      
+      executor.execute(lirThread);
     }
-    
+
     if (replicationTracker != null) {
       rsp.getResponseHeader().add(UpdateRequest.REPFACT, replicationTracker.getAchievedRf());
       rsp.getResponseHeader().add(UpdateRequest.MIN_REPFACT, replicationTracker.minRf);

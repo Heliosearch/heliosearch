@@ -131,6 +131,10 @@ final class DefaultIndexingChain extends DocConsumer {
         PerField perField = fieldHash[i];
         while (perField != null) {
           if (perField.docValuesWriter != null) {
+            if (perField.fieldInfo.hasDocValues() == false) {
+              // BUG
+              throw new AssertionError("segment=" + state.segmentInfo + ": field=\"" + perField.fieldInfo.name + "\" has no docValues but wrote them");
+            }
             if (dvConsumer == null) {
               // lazy init
               DocValuesFormat fmt = state.segmentInfo.getCodec().docValuesFormat();
@@ -140,6 +144,9 @@ final class DefaultIndexingChain extends DocConsumer {
             perField.docValuesWriter.finish(docCount);
             perField.docValuesWriter.flush(state, dvConsumer);
             perField.docValuesWriter = null;
+          } else if (perField.fieldInfo.hasDocValues()) {
+            // BUG
+            throw new AssertionError("segment=" + state.segmentInfo + ": field=\"" + perField.fieldInfo.name + "\" has docValues but did not write them");
           }
           perField = perField.next;
         }
@@ -156,6 +163,16 @@ final class DefaultIndexingChain extends DocConsumer {
       } else {
         IOUtils.closeWhileHandlingException(dvConsumer);
       }
+    }
+
+    if (state.fieldInfos.hasDocValues() == false) {
+      if (dvConsumer != null) {
+        // BUG
+        throw new AssertionError("segment=" + state.segmentInfo + ": fieldInfos has no docValues but wrote them");
+      }
+    } else if (dvConsumer == null) {
+      // BUG
+      throw new AssertionError("segment=" + state.segmentInfo + ": fieldInfos has docValues but did not wrote them");
     }
   }
 
@@ -403,12 +420,12 @@ final class DefaultIndexingChain extends DocConsumer {
 
     boolean hasDocValues = fp.fieldInfo.hasDocValues();
 
-    // This will throw an exc if the caller tried to
-    // change the DV type for the field:
-    fp.fieldInfo.setDocValuesType(dvType);
     if (hasDocValues == false) {
+      // This will throw an exc if the caller tried to
+      // change the DV type for the field:
       fieldInfos.globalFieldNumbers.setDocValuesType(fp.fieldInfo.number, fp.fieldInfo.name, dvType);
     }
+    fp.fieldInfo.setDocValuesType(dvType);
 
     int docID = docState.docID;
 
