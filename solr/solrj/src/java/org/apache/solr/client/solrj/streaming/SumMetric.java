@@ -23,6 +23,8 @@ import java.util.HashMap;
 
 public class SumMetric implements Metric, Serializable {
 
+  private static final long serialVersionUID = 1;
+
   public static final String SUM = "sum";
 
   private String column;

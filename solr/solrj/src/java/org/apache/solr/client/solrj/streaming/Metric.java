@@ -17,9 +17,10 @@
 
 package org.apache.solr.client.solrj.streaming;
 
+import java.io.Serializable;
 import java.util.Map;
 
-public interface Metric {
+public interface Metric extends Serializable {
   public String getName();
   public void update(Tuple tuple);
   public Metric newInstance();

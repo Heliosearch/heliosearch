@@ -17,7 +17,12 @@
 
 package org.apache.solr.client.solrj.streaming;
 
-public class HashKey {
+import java.io.Serializable;
+
+public class HashKey implements Serializable {
+
+  private static final long serialVersionUID = 1;
+
   private Object[] parts;
 
 

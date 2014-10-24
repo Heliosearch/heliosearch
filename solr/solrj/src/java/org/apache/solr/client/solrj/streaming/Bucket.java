@@ -17,7 +17,12 @@
 
 package org.apache.solr.client.solrj.streaming;
 
-public class Bucket {
+import java.io.Serializable;
+
+public class Bucket implements Serializable {
+
+  private static final long serialVersionUID = 1;
+
   private String bucketValue;
 
   public Bucket() {

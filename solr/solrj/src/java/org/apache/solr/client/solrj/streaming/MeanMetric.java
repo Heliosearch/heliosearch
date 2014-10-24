@@ -23,6 +23,8 @@ import java.util.HashMap;
 
 public class MeanMetric implements Metric, Serializable {
 
+  private static final long serialVersionUID = 1;
+
   public static final String SUM = "sum";
   public static final String COUNT = "count";
   public static final String MEAN = "mean";
