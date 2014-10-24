@@ -21,29 +21,25 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.HashMap;
 
-public class MeanMetric implements Metric, Serializable {
+public class SumMetric implements Metric, Serializable {
 
   public static final String SUM = "sum";
-  public static final String COUNT = "count";
-  public static final String MEAN = "mean";
 
   private String column;
   private boolean isDouble;
   private double doubleSum;
   private long longSum;
-  private long count;
 
-  public MeanMetric(String column, boolean isDouble) {
+  public SumMetric(String column, boolean isDouble) {
     this.column = column;
     this.isDouble = isDouble;
   }
 
   public String getName() {
-    return "mean:"+column;
+    return "sum:"+column;
   }
 
   public void update(Tuple tuple) {
-    ++count;
     if(isDouble) {
       Double d = (Double)tuple.get(column);
       doubleSum += d.doubleValue();
@@ -54,22 +50,16 @@ public class MeanMetric implements Metric, Serializable {
   }
 
   public Metric newInstance() {
-    return new MeanMetric(column, isDouble);
+    return new SumMetric(column, isDouble);
   }
 
   public Map<String, Double> metricValues() {
     Map m = new HashMap();
-    double dcount = (double)count;
-    m.put(COUNT, dcount);
     if(isDouble) {
-      double ave = doubleSum/dcount;
-      m.put(MEAN,ave);
       m.put(SUM,doubleSum);
 
     } else {
-      double ave = longSum/dcount;
       doubleSum = (double)longSum;
-      m.put(MEAN,ave);
       m.put(SUM,doubleSum);
     }
 
@@ -77,8 +67,6 @@ public class MeanMetric implements Metric, Serializable {
   }
 
   public void update(Map<String, Double> metricValues) {
-    double dcount = metricValues.get(COUNT);
-    count += (long)dcount;
     if(isDouble) {
       double dsum = metricValues.get(SUM);
       doubleSum+=dsum;

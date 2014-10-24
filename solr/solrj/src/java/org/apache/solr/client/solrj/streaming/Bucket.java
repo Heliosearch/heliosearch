@@ -24,7 +24,7 @@ public class Bucket {
 
   }
 
-  public Bucket(String backetValue) {
+  public Bucket(String bucketValue) {
     this.bucketValue = bucketValue;
   }
 

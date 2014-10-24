@@ -28,7 +28,6 @@ import java.util.LinkedList;
  *
  **/
 
-
 public class HashJoinStream extends TupleStream {
 
   private static final long serialVersionUID = 1;
@@ -88,6 +87,7 @@ public class HashJoinStream extends TupleStream {
   public Tuple read() throws IOException {
     while(true) {
       Tuple tuple = streamA.read();
+
       if(tuple.EOF) {
         return tuple;
       }
@@ -103,6 +103,7 @@ public class HashJoinStream extends TupleStream {
         return t;
       } else {
         HashKey hashKey = new HashKey(tuple, keys);
+
         if(hashMap.containsKey(hashKey)) {
           List<Tuple> joinWith = hashMap.get(hashKey);
           for(Tuple jt : joinWith) {

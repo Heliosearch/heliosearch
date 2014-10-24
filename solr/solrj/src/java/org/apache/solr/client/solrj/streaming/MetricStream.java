@@ -32,7 +32,7 @@ BucketStream bucketStream = new BucketStream(stream,buckets,metrics,"my-metrics"
 bucketStream.get(
 */
 
-public abstract class BucketStream extends TupleStream {
+public class MetricStream extends TupleStream {
 
   private static final long serialVersionUID = 1;
 
@@ -45,7 +45,7 @@ public abstract class BucketStream extends TupleStream {
   private Map<HashKey, Metric[]> bucketMap;
   private static final HashKey metricsKey = new HashKey("metrics");
 
-  public BucketStream(TupleStream tupleStream,
+  public MetricStream(TupleStream tupleStream,
                       Bucket[] buckets,
                       Metric[] metrics,
                       String outKey) {
@@ -56,7 +56,7 @@ public abstract class BucketStream extends TupleStream {
     this.bucketMap = new HashMap();
   }
 
-  public BucketStream(TupleStream tupleStream,
+  public MetricStream(TupleStream tupleStream,
                       Metric[] metrics,
                       String outKey) {
     this.tupleStream = tupleStream;
@@ -136,7 +136,7 @@ public abstract class BucketStream extends TupleStream {
         List<Map<String, Double>> finished = new ArrayList();
 
         for(Metric m : values) {
-          Map<String, Double> finalMetric = m.metricValue();
+          Map<String, Double> finalMetric = m.metricValues();
           finished.add(finalMetric);
         }
         metricValues.put(key.toString(), finished);
@@ -163,8 +163,11 @@ public abstract class BucketStream extends TupleStream {
       }
     } else {
       bucketMetrics = new Metric[metrics.length];
-      for(Metric bucketMetric : bucketMetrics) {
+
+      for(int i=0; i<metrics.length; i++) {
+        Metric bucketMetric = metrics[i].newInstance();
         bucketMetric.update(tuple);
+        bucketMetrics[i]  = bucketMetric;
       }
       bucketMap.put(hashKey, bucketMetrics);
     }

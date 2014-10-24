@@ -17,10 +17,36 @@
 
 package org.apache.solr.client.solrj.streaming;
 
-import java.util.List;
+import java.io.Serializable;
 import java.util.Map;
+import java.util.HashMap;
 
-public interface AggregateStream {
-  public Map<String, List<Map<String, Double>>> merge(Map<String, List<Map<String, Double>>> metrics);
-  public String getOutKey();
+public class CountMetric implements Metric, Serializable {
+
+  public static final String COUNT = "count";
+  private long count;
+
+  public String getName() {
+    return "count";
+  }
+
+  public void update(Tuple tuple) {
+   ++count;
+  }
+
+  public Metric newInstance() {
+    return new CountMetric();
+  }
+
+  public Map<String, Double> metricValues() {
+    Map m = new HashMap();
+    double d  = (double)count;
+    m.put(COUNT, d);
+    return m;
+  }
+
+  public void update(Map<String, Double> metricValues) {
+    double dcount = metricValues.get(COUNT);
+    count+=(long)dcount;
+  }
 }

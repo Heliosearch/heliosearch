@@ -74,7 +74,7 @@ public class MergeJoinStream extends TupleStream {
   public Tuple read() throws IOException {
 
     if(joinTuples.size() > 0) {
-      return joinTuples.removeLast();
+      return joinTuples.removeFirst();
     }
 
     OUTER:

@@ -23,6 +23,6 @@ public interface Metric {
   public String getName();
   public void update(Tuple tuple);
   public Metric newInstance();
-  public Map<String, Double> metricValue();
-  public void update(Map<String, Double> metricValue);
+  public Map<String, Double> metricValues();
+  public void update(Map<String, Double> metricValues);
 }

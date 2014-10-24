@@ -21,70 +21,64 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.HashMap;
 
-public class MeanMetric implements Metric, Serializable {
+public class MinMetric implements Metric, Serializable {
 
-  public static final String SUM = "sum";
-  public static final String COUNT = "count";
-  public static final String MEAN = "mean";
-
-  private String column;
+  public static final String MIN = "min";
+  private long longMin = Long.MAX_VALUE;
+  private double doubleMin = Double.MAX_VALUE;
   private boolean isDouble;
-  private double doubleSum;
-  private long longSum;
-  private long count;
+  private String column;
 
-  public MeanMetric(String column, boolean isDouble) {
+  public MinMetric(String column, boolean isDouble) {
     this.column = column;
     this.isDouble = isDouble;
   }
 
   public String getName() {
-    return "mean:"+column;
+    return "min:"+column;
   }
 
   public void update(Tuple tuple) {
-    ++count;
     if(isDouble) {
-      Double d = (Double)tuple.get(column);
-      doubleSum += d.doubleValue();
+      double d = (double)tuple.get(column);
+      if(d < doubleMin) {
+        doubleMin = d;
+      }
     } else {
-      Long l = (Long)tuple.get(column);
-      longSum += l.doubleValue();
+      long l = (long)tuple.get(column);
+      if(l < longMin) {
+        longMin = l;
+      }
     }
   }
 
   public Metric newInstance() {
-    return new MeanMetric(column, isDouble);
+    return new MinMetric(column, isDouble);
   }
 
   public Map<String, Double> metricValues() {
     Map m = new HashMap();
-    double dcount = (double)count;
-    m.put(COUNT, dcount);
     if(isDouble) {
-      double ave = doubleSum/dcount;
-      m.put(MEAN,ave);
-      m.put(SUM,doubleSum);
-
+      m.put(MIN,doubleMin);
     } else {
-      double ave = longSum/dcount;
-      doubleSum = (double)longSum;
-      m.put(MEAN,ave);
-      m.put(SUM,doubleSum);
+      doubleMin = (double)longMin;
+      m.put(MIN,doubleMin);
     }
-
     return m;
   }
 
   public void update(Map<String, Double> metricValues) {
-    double dcount = metricValues.get(COUNT);
-    count += (long)dcount;
     if(isDouble) {
-      double dsum = metricValues.get(SUM);
-      doubleSum+=dsum;
+      double dmin = metricValues.get(MIN);
+      if(dmin < doubleMin) {
+        doubleMin = dmin;
+      }
     } else {
-      double dsum = metricValues.get(SUM);
-      longSum+=(long)dsum;
+      double dmin = metricValues.get(MIN);
+      long lmin = (long) dmin;
+      if(lmin < longMin) {
+        longMin = lmin;
+      }
     }
   }
 }
