@@ -337,6 +337,121 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
   }
 
+  private void testParallelMergeJoinStream() throws Exception {
+
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0", "join_i", "1000");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "6", "a_s", "hello1", "a_i", "1", "a_f", "0", "join_i", "2000");
+    indexr(id, "7", "a_s", "hello7", "a_i", "1", "a_f", "0");
+
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+
+    //Test one-to-one
+    Map paramsA = mapParams("q","id:(0 1 3 4) ","fl","id,a_s,a_f", "sort", "a_f desc", "partitionKeys","a_f");
+    CloudSolrStream streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    Map fieldMappings = new HashMap();
+    fieldMappings.put("id","streamB.id");
+
+    Map paramsB = mapParams("q","id:(2)","fl","id,a_s,a_f,join_i", "sort", "a_f desc", "partitionKeys","a_f");
+    CloudSolrStream streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+    streamB.setFieldMappings(fieldMappings);
+
+    String[] keys = {"a_f"};
+
+    MergeJoinStream mstream = new MergeJoinStream(streamA, streamB, new DescFieldComp("a_f"));
+    ParallelStream fstream = new ParallelStream(zkHost,"collection1", mstream, 2, new DescFieldComp("a_f"));
+
+    List<Tuple> tuples = getTuples(fstream);
+
+    assert(tuples.size() == 1);
+    assertOrder(tuples, 0);
+    assertLong(tuples.get(0), "join_i", 1000);
+
+
+    //Test one-to-many
+
+    paramsA = mapParams("q","id:(0 1 3 4) ","fl","id,a_s,a_f", "sort", "a_f desc", "partitionKeys","a_f");
+    streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    fieldMappings = new HashMap();
+    fieldMappings.put("id","streamB.id");
+
+    paramsB = mapParams("q","id:(2 6)","fl","id,a_s,a_f,join_i", "sort", "a_f desc", "partitionKeys","a_f");
+    streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+    streamB.setFieldMappings(fieldMappings);
+
+
+    mstream = new MergeJoinStream(streamA, streamB, new DescFieldComp("a_f"));
+    fstream = new ParallelStream(zkHost,"collection1", mstream, 2, new DescFieldComp("a_f"));
+
+    tuples = getTuples(fstream);
+
+    assert(tuples.size() == 2);
+    assertOrder(tuples, 0,0);
+    assertLong(tuples.get(0), "join_i", 1000);
+    assertLong(tuples.get(1), "join_i", 2000);
+
+    //Test many-to-one
+
+    paramsA = mapParams("q","id:(0 2 1 3 4) ","fl","id,a_s,a_f", "sort", "a_f desc", "partitionKeys","a_f");
+    streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    fieldMappings = new HashMap();
+    fieldMappings.put("id","streamB.id");
+
+    paramsB = mapParams("q","id:(6)","fl","id,a_s,a_f,join_i", "sort", "a_f desc", "partitionKeys","a_f");
+    streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+    streamB.setFieldMappings(fieldMappings);
+
+
+    mstream = new MergeJoinStream(streamA, streamB, new DescFieldComp("a_f"));
+    fstream = new ParallelStream(zkHost,"collection1", mstream, 2, new DescFieldComp("a_f"));
+
+    tuples = getTuples(fstream);
+
+    assert(tuples.size() == 2);
+    assertOrder(tuples, 2,0);
+    assertLong(tuples.get(0), "join_i", 2000);
+    assertLong(tuples.get(1), "join_i", 2000);
+
+    //Test many-to-many
+
+    paramsA = mapParams("q","id:(0 7 1 3 4) ","fl","id,a_s,a_f", "sort", "a_f desc", "partitionKeys","a_f");
+    streamA = new CloudSolrStream(zkHost, "collection1", paramsA);
+
+    fieldMappings = new HashMap();
+    fieldMappings.put("id","streamB.id");
+
+    paramsB = mapParams("q","id:(6 2)","fl","id,a_s,a_f,join_i", "sort", "a_f desc", "partitionKeys","a_f");
+    streamB = new CloudSolrStream(zkHost, "collection1", paramsB);
+    streamB.setFieldMappings(fieldMappings);
+
+
+    mstream = new MergeJoinStream(streamA, streamB, new DescFieldComp("a_f"));
+    fstream = new ParallelStream(zkHost,"collection1", mstream, 2, new DescFieldComp("a_f"));
+
+    tuples = getTuples(fstream);
+
+    assert(tuples.size() == 4);
+    assertOrder(tuples, 7,7,0,0);
+    assertLong(tuples.get(0), "join_i", 1000);
+    assertLong(tuples.get(1), "join_i", 2000);
+    assertLong(tuples.get(2), "join_i", 1000);
+    assertLong(tuples.get(3), "join_i", 2000);
+
+    del("*:*");
+    commit();
+
+  }
+
+
+
   private void testRankStream() throws Exception {
 
 
@@ -363,6 +478,135 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     commit();
   }
 
+  private void testRollupStream() throws Exception {
+    indexr(id, "0", "a_s", "hello0", "a_i", "100", "a_f", "0");
+    indexr(id, "2", "a_s", "hello0", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello3", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "6", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "7", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+
+    Bucket[] buckets = {new Bucket("a_s")};
+    Metric[] metrics = {new SumMetric("a_i", false),
+        new MeanMetric("a_i", false),
+        new CountMetric(),
+        new MinMetric("a_i", false),
+        new MaxMetric("a_i", false)};
+
+    Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_s asc");
+    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
+    RollupStream rstream = new RollupStream(stream, buckets, metrics);
+    rstream.open();
+    Tuple tuple = rstream.read();
+    String b = (String)tuple.get("buckets");
+    List<Double> values = (List<Double>)tuple.get("metricValues");
+    assert(b.equals("hello0"));
+    assert(values.get(0) == 102.0d);
+    assert(values.get(1) == 51.0d);
+    assert(values.get(2) == 2.0d);
+    assert(values.get(3) == 2.0d);
+    assert(values.get(4) == 100.0d);
+
+    tuple = rstream.read();
+    b = (String)tuple.get("buckets");
+    values = (List<Double>)tuple.get("metricValues");
+    assert(b.equals("hello1"));
+    assert(values.get(0) == 3.0d);
+    assert(values.get(1) == 1.0d);
+    assert(values.get(2) == 3.0d);
+    assert(values.get(3) == 1.0d);
+    assert(values.get(4) == 1.0d);
+
+
+    tuple = rstream.read();
+    b = (String)tuple.get("buckets");
+    values = (List<Double>)tuple.get("metricValues");
+    assert(b.equals("hello3"));
+    assert(values.get(0) == 7.0d);
+    assert(values.get(1) == 3.5d);
+    assert(values.get(2) == 2.0d);
+    assert(values.get(3) == 3.0d);
+    assert(values.get(4) == 4.0d);
+
+    tuple = rstream.read();
+    assert(tuple.EOF);
+
+    rstream.close();
+    del("*:*");
+    commit();
+  }
+
+  private void testParallelRollupStream() throws Exception {
+    indexr(id, "0", "a_s", "hello0", "a_i", "100", "a_f", "0");
+    indexr(id, "2", "a_s", "hello0", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello3", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "6", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "7", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+
+    Bucket[] buckets = {new Bucket("a_s")};
+    Metric[] metrics = {new SumMetric("a_i", false),
+        new MeanMetric("a_i", false),
+        new CountMetric(),
+        new MinMetric("a_i", false),
+        new MaxMetric("a_i", false)};
+
+    Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_s asc","partitionKeys","a_s");
+    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
+    RollupStream rostream = new RollupStream(stream, buckets, metrics);
+    ParallelStream rstream = new ParallelStream(zkHost,"collection1", rostream, 2, new AscFieldComp("buckets"));
+
+    rstream.open();
+    Tuple tuple = rstream.read();
+    String b = (String)tuple.get("buckets");
+    List<Double> values = (List<Double>)tuple.get("metricValues");
+    assert(b.equals("hello0"));
+    assert(values.get(0) == 102.0d);
+    assert(values.get(1) == 51.0d);
+    assert(values.get(2) == 2.0d);
+    assert(values.get(3) == 2.0d);
+    assert(values.get(4) == 100.0d);
+
+    tuple = rstream.read();
+    b = (String)tuple.get("buckets");
+    values = (List<Double>)tuple.get("metricValues");
+    assert(b.equals("hello1"));
+    assert(values.get(0) == 3.0d);
+    assert(values.get(1) == 1.0d);
+    assert(values.get(2) == 3.0d);
+    assert(values.get(3) == 1.0d);
+    assert(values.get(4) == 1.0d);
+
+
+    tuple = rstream.read();
+    b = (String)tuple.get("buckets");
+    values = (List<Double>)tuple.get("metricValues");
+    assert(b.equals("hello3"));
+    assert(values.get(0) == 7.0d);
+    assert(values.get(1) == 3.5d);
+    assert(values.get(2) == 2.0d);
+    assert(values.get(3) == 3.0d);
+    assert(values.get(4) == 4.0d);
+
+    tuple = rstream.read();
+    assert(tuple.EOF);
+
+    rstream.close();
+    del("*:*");
+    commit();
+  }
+
+
 
   private void testMetricStream() throws Exception {
 
@@ -371,6 +615,8 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
     indexr(id, "4", "a_s", "hello3", "a_i", "4", "a_f", "4");
     indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "6", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "7", "a_s", "hello1", "a_i", "1", "a_f", "1");
 
     commit();
 
@@ -385,55 +631,86 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
     Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
     CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
-    MetricStream mstream = new MetricStream(stream, buckets, metrics, "metric1");
+    MetricStream mstream = new MetricStream(stream, buckets, metrics, "metric1", new DescBucketComp(0),5);
     getTuples(mstream);
 
-    Map<HashKey, Metric[]> bucketMap = mstream.getBucketMap();
+    BucketMetrics[] bucketMetrics = mstream.getBucketMetrics();
+    assert(bucketMetrics.length == 3);
 
-    Metric[] bucketMetrics = bucketMap.get(new HashKey("hello0"));
-    assertMetric(bucketMetrics[0], SumMetric.SUM, 102.0d);
-    assertMetric(bucketMetrics[1], MeanMetric.COUNT, 2.0d);
-    assertMetric(bucketMetrics[1], MeanMetric.MEAN, 51.0d);
-    assertMetric(bucketMetrics[2], CountMetric.COUNT, 2.0d);
-    assertMetric(bucketMetrics[3], MinMetric.MIN, 2.0d);
-    assertMetric(bucketMetrics[4], MaxMetric.MAX, 100.0d);
+    //Bucket should be is descending order based on Metric 0, which is the SumMetric.
 
+    assert(bucketMetrics[0].getKey().toString().equals("hello0"));
+    assert(bucketMetrics[1].getKey().toString().equals("hello3"));
+    assert(bucketMetrics[2].getKey().toString().equals("hello1"));
 
-    bucketMetrics = bucketMap.get(new HashKey("hello3"));
-    assertMetric(bucketMetrics[0], SumMetric.SUM, 7.0d);
-    assertMetric(bucketMetrics[1], MeanMetric.COUNT, 2.0d);
-    assertMetric(bucketMetrics[1], MeanMetric.MEAN, 3.5d);
-    assertMetric(bucketMetrics[2], CountMetric.COUNT, 2.0d);
+    assertMetric(bucketMetrics[0].getMetrics()[0], 102.0d); //Test the first Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[1], 51.0d); //Test the second Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[2], 2.0d); //Test the third Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[3], 2.0d); //Test the fourth Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[4], 100.0d); //Test the fifth Metric of the first BucketMetrics
 
 
+    assertMetric(bucketMetrics[1].getMetrics()[0], 7.0d);
+    assertMetric(bucketMetrics[2].getMetrics()[0], 3.0d);
+
+
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    mstream = new MetricStream(stream, buckets, metrics, "metric1", new AscBucketComp(0),5);
+    getTuples(mstream);
+
+    bucketMetrics = mstream.getBucketMetrics();
+
+    assertMetric(bucketMetrics[0].getMetrics()[0], 3.0d); //Test the first Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[1], 1.0d); //Test the second Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[2], 3.0d); //Test the third Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[3], 1.0d); //Test the fourth Metric of the first BucketMetrics
+    assertMetric(bucketMetrics[0].getMetrics()[4], 1.0d); //Test the fifth Metric of the first BucketMetrics
+
+    assertMetric(bucketMetrics[1].getMetrics()[0], 7.0d);
+    assertMetric(bucketMetrics[2].getMetrics()[0], 102.0d);
+
+    indexr(id, "8", "a_s", "hello4", "a_i", "1000", "a_f", "1"); //Add a fourth record.
+    commit();
+
+    //Test desc comp with more buckets then priority queue can hold.
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    mstream = new MetricStream(stream, buckets, metrics, "metric1", new DescBucketComp(0),3);
+    getTuples(mstream);
+
+    bucketMetrics = mstream.getBucketMetrics();
+    assert(bucketMetrics.length == 3);
+    assert(bucketMetrics[0].getKey().toString().equals("hello4"));
+    assert(bucketMetrics[1].getKey().toString().equals("hello0"));
+    assert(bucketMetrics[2].getKey().toString().equals("hello3"));
+
+    //Test asc comp with more buckets then priority queue can hold.
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    mstream = new MetricStream(stream, buckets, metrics, "metric1", new AscBucketComp(0),3);
+    getTuples(mstream);
+
+    bucketMetrics = mstream.getBucketMetrics();
+    assert(bucketMetrics.length == 3);
+    assert(bucketMetrics[0].getKey().toString().equals("hello1"));
+    assert(bucketMetrics[1].getKey().toString().equals("hello3"));
+    assert(bucketMetrics[2].getKey().toString().equals("hello0"));
+
+
+    //Test with no buckets
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    mstream = new MetricStream(stream, metrics, "metric1");
+    getTuples(mstream);
+
+    bucketMetrics = mstream.getBucketMetrics();
+    assert(bucketMetrics.length == 1);
+    assert(bucketMetrics[0].getKey().toString().equals("metrics"));
+    assertMetric(bucketMetrics[0].getMetrics()[0], 1112.0d); //Test the first Metric of the first BucketMetrics
 
     del("*:*");
     commit();
-  }
-
-  private void testCountStream() throws Exception {
-
-    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
-    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
-    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
-    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
-    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
-
-    commit();
-
-    //Test CloudSolrStream and SumStream over an int field
-    String zkHost = zkServer.getZkAddress();
-
-    Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
-    CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
-    List<Tuple> tuples = getTuples(stream);
-
-    assert(tuples.size() == 5);
-    assertOrder(tuples, 0,1,2,3,4);
-
-    del("*:*");
-    commit();
-
   }
 
   private void testGroupByStream() throws Exception {
@@ -526,10 +803,6 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
 
   private void testParallelHashJoinStream() {
-
-  }
-
-  private void testParallelMergeJoinStream() {
 
   }
 
@@ -691,6 +964,7 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
     testUniqueStream();
     testMetricStream();
+    testRollupStream();
     testRankStream();
     testFilterStream();
     testGroupByStream();
@@ -698,6 +972,7 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     testMergeJoinStream();
     testMergeStream();
     testParallelStream();
+    testParallelRollupStream();
     testParallelGroupByStream();
     testParallelHashJoinStream();
     testParallelMergeJoinStream();
@@ -764,10 +1039,9 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     return true;
   }
 
-  public boolean assertMetric(Metric metric, String key, double value) throws Exception {
+  public boolean assertMetric(Metric metric, double value) throws Exception {
     System.out.println("Metric Type##################################:"+metric.getClass());
-    Map<String, Double> metricValues  = metric.metricValues();
-    Double d = metricValues.get(key);
+    Double d = metric.getValue();
     if(d.doubleValue() != value) {
       throw new Exception("Unexpected Metric "+d+"!="+value);
     }

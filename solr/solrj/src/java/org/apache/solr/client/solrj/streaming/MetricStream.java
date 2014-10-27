@@ -18,11 +18,13 @@
 package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.PriorityQueue;
 
 /*
 String[] buckets = {"a","b"};
@@ -37,22 +39,29 @@ public class MetricStream extends TupleStream {
   private static final long serialVersionUID = 1;
 
   private TupleStream tupleStream;
-  private long lcount;
-  private double dcount;
   private Bucket[] buckets;
   private Metric[] metrics;
   private String outKey;
   private Map<HashKey, Metric[]> bucketMap;
+  private BucketMetrics[] bucketMetrics;
   private static final HashKey metricsKey = new HashKey("metrics");
+  private int topN;
+  private Comparator<BucketMetrics> comp;
+  private Comparator<BucketMetrics> rcomp;
 
   public MetricStream(TupleStream tupleStream,
                       Bucket[] buckets,
                       Metric[] metrics,
-                      String outKey) {
+                      String outKey,
+                      Comparator<BucketMetrics> comp,
+                      int topN) {
     this.tupleStream = tupleStream;
     this.buckets = buckets;
     this.metrics = metrics;
     this.outKey = outKey;
+    this.topN = topN;
+    this.rcomp = new ReverseOrdComp(comp);
+    this.comp = comp;
     this.bucketMap = new HashMap();
   }
 
@@ -69,40 +78,83 @@ public class MetricStream extends TupleStream {
     return this.outKey;
   }
 
-  public Map<HashKey, Metric[]> getBucketMap() {
-    return bucketMap;
+  public BucketMetrics[] getBucketMetrics(){
+    return bucketMetrics;
   }
 
-  Map<HashKey, Metric[]> merge(List<Map<String, Map<String, Double>>> bucketMaps) {
+  public void setBucketMetrics(BucketMetrics[] bucketMetrics) {
+    this.bucketMetrics = bucketMetrics;
+  }
 
+  public void setBucketMap(Map<HashKey, Metric[]> bucketMap) {
+    this.bucketMap = bucketMap;
+  }
+
+  BucketMetrics[] merge(List<Map> all) {
     Map<HashKey, Metric[]> bucketAccumulator = new HashMap();
 
-    for(Map<String, Map<String, Double>> bucketMap : bucketMaps) {
-      Iterator it = bucketMap.entrySet().iterator();
-      //Iterate the buckets
-      while(it.hasNext()) {
-        Map.Entry entry = (Map.Entry)it.next();
-        String bucketKey = (String)entry.getKey();
-        HashKey hashKey = new HashKey(bucketKey);
-        List<Map<String, Double>> metricValues = (List<Map<String, Double>>)entry.getValue();
-
+    for(Map top : all) {
+      List<String> ks = (List<String>)top.get("buckets");
+      List ms = (List)top.get("metrics");
+      for(int i=0; i<ks.size(); i++) {
+        String key = ks.get(i);
+        HashKey hashKey = new HashKey(key);
+        Map<String, Map<String, Double>> metricValues = (Map<String, Map<String, Double>>)ms.get(i);
         if(bucketAccumulator.containsKey(hashKey)) {
-          Metric[] mergeMetrics = bucketAccumulator.get(bucketKey);
-          for(int i=0; i<mergeMetrics.length; i++) {
-            mergeMetrics[i].update(metricValues.get(i));
+          Metric[] mergeMetrics = bucketAccumulator.get(hashKey);
+          for(int m=0; m<mergeMetrics.length; m++) {
+            String metricName = mergeMetrics[m].getName();
+            mergeMetrics[m].update(metricValues.get(metricName));
           }
         } else {
           Metric[] mergedMetrics = new Metric[metrics.length];
-          for(int i=0; i<metrics.length; i++) {
-            mergedMetrics[i] = metrics[i].newInstance();
-            mergedMetrics[i].update(metricValues.get(i));
-          }
+          for(int m=0; m<metrics.length; m++) {
+            mergedMetrics[m] = metrics[m].newInstance();
+            mergedMetrics[m].update(metricValues.get(i));
+           }
           bucketAccumulator.put(hashKey, mergedMetrics);
         }
       }
     }
 
-    return bucketAccumulator;
+    Iterator<Map.Entry<HashKey,Metric[]>> it = bucketAccumulator.entrySet().iterator();
+
+    PriorityQueue<BucketMetrics> priorityQueue = new PriorityQueue(topN, rcomp);
+
+    while(it.hasNext()) {
+      Map.Entry<HashKey, Metric[]> entry = it.next();
+      BucketMetrics bms = new BucketMetrics(entry.getKey(), entry.getValue());
+      if(priorityQueue.size() > topN) {
+        priorityQueue.add(bms);
+      } else {
+        BucketMetrics peek = priorityQueue.peek();
+        if(comp.compare(bms, peek) < 0) {
+          priorityQueue.poll();
+          priorityQueue.add(bms);
+        }
+      }
+    }
+
+    int s = priorityQueue.size();
+    BucketMetrics[] bucketMetrics = new BucketMetrics[s];
+
+    for(int i=bucketMetrics.length-1; i>=0; i--) {
+      BucketMetrics b = priorityQueue.poll();
+      this.bucketMetrics[i]= b;
+    }
+    return bucketMetrics;
+  }
+
+  private class ReverseOrdComp implements Comparator<BucketMetrics> {
+    private Comparator<BucketMetrics> comp;
+
+    public ReverseOrdComp(Comparator<BucketMetrics> comp) {
+      this.comp = comp;
+    }
+
+    public int compare(BucketMetrics e1, BucketMetrics e2) {
+     return comp.compare(e1,e2)*-1;
+    }
   }
 
   public void setStreamContext(StreamContext context) {
@@ -127,21 +179,71 @@ public class MetricStream extends TupleStream {
 
     Tuple tuple = tupleStream.read();
     if(tuple.EOF) {
-      Map<String,List<Map<String, Double>>> metricValues = new HashMap();
       Iterator<Map.Entry<HashKey,Metric[]>> it = bucketMap.entrySet().iterator();
+
+      if(comp == null) {
+        //Handle No bucket constructor
+        Map.Entry<HashKey, Metric[]> noBucket = it.next();
+        BucketMetrics bms = new BucketMetrics(noBucket.getKey(), noBucket.getValue());
+        this.bucketMetrics = new BucketMetrics[1];
+        this.bucketMetrics[0] = bms;
+        List<Map<String, Double>> outMetrics = new ArrayList();
+        List<String> outKeys = new ArrayList();
+        for(Metric metric : bms.getMetrics()) {
+          Map<String, Double> outMetricValues = metric.metricValues();
+          String outKey = metric.getName();
+          outMetrics.add(outMetricValues);
+          outKeys.add(outKey);
+        }
+        Map outMap = new HashMap();
+        outMap.put("buckets",outKeys);
+        outMap.put("metrics",outMetrics);
+        tuple.set(this.outKey, outMap);
+        return tuple;
+      }
+
+      PriorityQueue<BucketMetrics> priorityQueue = new PriorityQueue(topN, rcomp);
+
       while(it.hasNext()) {
         Map.Entry<HashKey, Metric[]> entry = it.next();
-        HashKey key = entry.getKey();
-        Metric[] values = entry.getValue();
-        List<Map<String, Double>> finished = new ArrayList();
+        BucketMetrics bms = new BucketMetrics(entry.getKey(), entry.getValue());
+        if(priorityQueue.size() < topN) {
+          priorityQueue.add(bms);
+        } else {
+          BucketMetrics peek = priorityQueue.peek();
 
-        for(Metric m : values) {
-          Map<String, Double> finalMetric = m.metricValues();
-          finished.add(finalMetric);
+          if(comp.compare(bms, peek) < 0) {
+            priorityQueue.poll();
+            priorityQueue.add(bms);
+          }
+
         }
-        metricValues.put(key.toString(), finished);
       }
-      tuple.set(this.outKey, metricValues);
+
+      int s = priorityQueue.size();
+      this.bucketMetrics = new BucketMetrics[s];
+
+      for(int i=bucketMetrics.length-1; i>=0; i--) {
+        BucketMetrics b = priorityQueue.poll();
+        this.bucketMetrics[i]= b;
+      }
+
+      List<Map<String, Double>> outMetrics = new ArrayList();
+      List<String> outKeys = new ArrayList();
+
+      for(BucketMetrics bms : this.bucketMetrics) {
+        for(Metric metric : bms.getMetrics()) {
+          Map<String, Double> outMetricValues = metric.metricValues();
+          String outKey = metric.getName();
+          outMetrics.add(outMetricValues);
+          outKeys.add(outKey);
+        }
+      }
+
+      Map outMap = new HashMap();
+      outMap.put("buckets",outKeys);
+      outMap.put("metrics",outMetrics);
+      tuple.set(this.outKey, outMap);
       return tuple;
     }
 
@@ -151,7 +253,7 @@ public class MetricStream extends TupleStream {
       for(int i=0; i<buckets.length; i++) {
         bucketValues[i] = buckets[i].getBucketValue(tuple);
       }
-      hashKey = new HashKey(tuple, bucketValues);
+      hashKey = new HashKey(bucketValues);
     } else {
       hashKey = metricsKey;
     }

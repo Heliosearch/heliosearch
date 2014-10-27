@@ -38,6 +38,14 @@ public class MinMetric implements Metric, Serializable {
     return "min:"+column;
   }
 
+  public double getValue() {
+    if(isDouble) {
+      return doubleMin;
+    } else {
+      return longMin;
+    }
+  }
+
   public void update(Tuple tuple) {
     if(isDouble) {
       double d = (double)tuple.get(column);

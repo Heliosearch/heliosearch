@@ -1,3 +1,5 @@
+package org.apache.solr.client.solrj.streaming;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -15,44 +17,25 @@
  * limitations under the License.
  */
 
-package org.apache.solr.client.solrj.streaming;
+import java.util.Comparator;
 
-import java.io.Serializable;
-import java.util.Map;
-import java.util.HashMap;
+public class DescBucketComp implements Comparator<BucketMetrics> {
 
-public class CountMetric implements Metric, Serializable {
+  private int ord;
 
-  private static final long serialVersionUID = 1;
-
-  public static final String COUNT = "count";
-  private long count;
-
-  public String getName() {
-    return "count";
+  public DescBucketComp(int ord) {
+    this.ord = ord;
   }
 
-  public void update(Tuple tuple) {
-   ++count;
-  }
-
-  public double getValue() {
-    return count;
-  }
-
-  public Metric newInstance() {
-    return new CountMetric();
-  }
-
-  public Map<String, Double> metricValues() {
-    Map m = new HashMap();
-    double d  = (double)count;
-    m.put(COUNT, d);
-    return m;
-  }
-
-  public void update(Map<String, Double> metricValues) {
-    double dcount = metricValues.get(COUNT);
-    count+=(long)dcount;
+  public int compare(BucketMetrics b1, BucketMetrics b2) {
+    double d1 = b1.getMetrics()[ord].getValue();
+    double d2 = b2.getMetrics()[ord].getValue();
+    if(d1 > d2) {
+      return -1;
+    } else if(d1 < d2) {
+      return 1;
+    } else {
+      return 0;
+    }
   }
 }

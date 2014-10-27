@@ -1,3 +1,5 @@
+package org.apache.solr.client.solrj.streaming;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -15,44 +17,27 @@
  * limitations under the License.
  */
 
-package org.apache.solr.client.solrj.streaming;
-
 import java.io.Serializable;
-import java.util.Map;
-import java.util.HashMap;
 
-public class CountMetric implements Metric, Serializable {
+public class BucketMetrics implements Serializable {
 
   private static final long serialVersionUID = 1;
 
-  public static final String COUNT = "count";
-  private long count;
+  private HashKey key;
+  private Metric[] metrics;
 
-  public String getName() {
-    return "count";
+  public BucketMetrics(HashKey key, Metric[] metrics) {
+    this.key = key;
+    this.metrics = metrics;
   }
 
-  public void update(Tuple tuple) {
-   ++count;
+  public Metric[] getMetrics() {
+    return metrics;
   }
 
-  public double getValue() {
-    return count;
+  public HashKey getKey() {
+    return key;
   }
 
-  public Metric newInstance() {
-    return new CountMetric();
-  }
 
-  public Map<String, Double> metricValues() {
-    Map m = new HashMap();
-    double d  = (double)count;
-    m.put(COUNT, d);
-    return m;
-  }
-
-  public void update(Map<String, Double> metricValues) {
-    double dcount = metricValues.get(COUNT);
-    count+=(long)dcount;
-  }
 }

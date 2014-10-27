@@ -33,8 +33,13 @@ public class HashKey implements Serializable {
   public HashKey(Tuple t, String[] keys) {
     this.parts = new Object[keys.length];
     for(int i=0; i<keys.length; i++) {
+      System.out.println("#################################################:"+keys[i]+":"+t.get(keys[i]));
       parts[i] = t.get(keys[i]);
     }
+  }
+
+  public HashKey(String[] parts) {
+    this.parts = parts;
   }
 
   public Object getParts() {

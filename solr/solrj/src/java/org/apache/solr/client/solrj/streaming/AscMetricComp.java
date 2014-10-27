@@ -1,3 +1,5 @@
+package org.apache.solr.client.solrj.streaming;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -15,44 +17,23 @@
  * limitations under the License.
  */
 
-package org.apache.solr.client.solrj.streaming;
-
 import java.io.Serializable;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.Comparator;
+import java.util.List;
 
-public class CountMetric implements Metric, Serializable {
+public class AscMetricComp implements Comparator<Tuple>, Serializable {
 
   private static final long serialVersionUID = 1;
 
-  public static final String COUNT = "count";
-  private long count;
+  private int ord;
 
-  public String getName() {
-    return "count";
+  public AscMetricComp(int ord) {
+    this.ord = ord;
   }
 
-  public void update(Tuple tuple) {
-   ++count;
-  }
-
-  public double getValue() {
-    return count;
-  }
-
-  public Metric newInstance() {
-    return new CountMetric();
-  }
-
-  public Map<String, Double> metricValues() {
-    Map m = new HashMap();
-    double d  = (double)count;
-    m.put(COUNT, d);
-    return m;
-  }
-
-  public void update(Map<String, Double> metricValues) {
-    double dcount = metricValues.get(COUNT);
-    count+=(long)dcount;
+  public int compare(Tuple t1, Tuple t2) {
+    List<Double> values1 = (List<Double>)t1.get("metricValues");
+    List<Double> values2 = (List<Double>)t2.get("metricValues");
+    return values1.get(ord).compareTo(values2.get(ord));
   }
 }

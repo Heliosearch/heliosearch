@@ -59,6 +59,18 @@ public class MeanMetric implements Metric, Serializable {
     return new MeanMetric(column, isDouble);
   }
 
+  public double getValue() {
+    double dcount = (double)count;
+    if(isDouble) {
+      double ave = doubleSum/dcount;
+      return ave;
+
+    } else {
+      double ave = longSum/dcount;
+      return ave;
+    }
+  }
+
   public Map<String, Double> metricValues() {
     Map m = new HashMap();
     double dcount = (double)count;

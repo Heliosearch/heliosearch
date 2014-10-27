@@ -23,23 +23,17 @@ public class Bucket implements Serializable {
 
   private static final long serialVersionUID = 1;
 
-  private String bucketValue;
+  private String bucketKey;
 
   public Bucket() {
 
   }
 
-  public Bucket(String bucketValue) {
-    this.bucketValue = bucketValue;
+  public Bucket(String bucketKey) {
+    this.bucketKey = bucketKey;
   }
 
   public String getBucketValue(Tuple tuple) {
-    return bucketValue;
-
+    return tuple.get(bucketKey).toString();
   }
-
-
-
-
-
 }

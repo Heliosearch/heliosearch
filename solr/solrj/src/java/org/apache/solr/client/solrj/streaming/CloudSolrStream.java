@@ -242,6 +242,10 @@ public class CloudSolrStream extends TupleStream {
   }
 
   public Tuple read() throws IOException {
+    return _read();
+  }
+
+  protected Tuple _read() throws IOException {
     TupleWrapper tw = tuples.pollFirst();
     if(tw != null) {
       Tuple t = tw.getTuple();

@@ -38,6 +38,14 @@ public class MaxMetric implements Metric, Serializable {
     return "mix:"+column;
   }
 
+  public double getValue() {
+    if(isDouble) {
+      return doubleMax;
+    } else {
+      return longMax;
+    }
+  }
+
   public void update(Tuple tuple) {
     if(isDouble) {
       double d = (double)tuple.get(column);

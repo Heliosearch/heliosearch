@@ -45,6 +45,7 @@ public class ParallelStream extends CloudSolrStream {
   private int workers;
   private String encoded;
 
+
   public ParallelStream(String zkHost,
                         String collection,
                         TupleStream tupleStream,
@@ -71,23 +72,48 @@ public class ParallelStream extends CloudSolrStream {
     return l;
   }
 
-  public Map<String, Map<HashKey, Metric[]>> merge(MetricStream[] metricStreams) {
-    Map<String, Map<HashKey, Metric[]>> ags = new HashMap();
-    for(MetricStream merger : metricStreams) {
-      String outKey = merger.getOutKey();
+  public void merge(List<MetricStream> metricStreams) {
+    for(MetricStream metricStream : metricStreams) {
+      String outKey = metricStream.getOutKey();
       Iterator<Tuple> it = eofTuples.values().iterator();
-      List<Map<String, Map<String, Double>>> values = new ArrayList();
+      List values = new ArrayList();
 
       while(it.hasNext()) {
-        Tuple t = (Tuple)it.next();
-        Map<String, Map<String, Double>> agg = (Map<String, Map<String, Double>>)t.get(outKey);
-        values.add(agg);
+        Tuple t = it.next();
+        Map top = (Map)t.get(outKey);
+        values.add(top);
       }
 
-      Map<HashKey, Metric[]> merged = merger.merge(values);
-      ags.put(outKey, merged);
+      BucketMetrics[] bucketMetrics = metricStream.merge(values);
+      metricStream.setBucketMetrics(bucketMetrics);
     }
-    return ags;
+  }
+
+  public Tuple read() throws IOException {
+    Tuple tuple = _read();
+
+    if(tuple.EOF) {
+      List<MetricStream> metricStreams = new ArrayList();
+      getMetricStreams(this, metricStreams);
+      this.merge(metricStreams);
+      Map m = new HashMap();
+      m.put("EOF", true);
+      return new Tuple(m);
+    }
+
+    return tuple;
+  }
+
+  private void getMetricStreams(TupleStream tupleStream,
+                                List<MetricStream> metricStreams) {
+    if(tupleStream instanceof MetricStream) {
+      metricStreams.add((MetricStream)tupleStream);
+    }
+
+    List<TupleStream> children = tupleStream.children();
+    for(TupleStream ts : children) {
+      getMetricStreams(ts, metricStreams);
+    }
   }
 
   protected void constructStreams() throws IOException {

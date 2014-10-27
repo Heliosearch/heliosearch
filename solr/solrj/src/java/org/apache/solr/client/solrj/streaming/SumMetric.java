@@ -68,6 +68,14 @@ public class SumMetric implements Metric, Serializable {
     return m;
   }
 
+  public double getValue() {
+    if(isDouble) {
+      return doubleSum;
+    } else {
+      return (double)longSum;
+    }
+  }
+
   public void update(Map<String, Double> metricValues) {
     if(isDouble) {
       double dsum = metricValues.get(SUM);

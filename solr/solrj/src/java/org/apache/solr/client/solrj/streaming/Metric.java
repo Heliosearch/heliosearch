@@ -22,6 +22,7 @@ import java.util.Map;
 
 public interface Metric extends Serializable {
   public String getName();
+  public double getValue();
   public void update(Tuple tuple);
   public Metric newInstance();
   public Map<String, Double> metricValues();
