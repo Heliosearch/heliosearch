@@ -477,4 +477,6 @@ public class ResponseBuilder
       results.docSet.decref();
     }
   }
+
+  public Map componentInfo = new HashMap();
 }

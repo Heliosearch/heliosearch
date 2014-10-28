@@ -45,6 +45,7 @@ import org.apache.solr.handler.component.AnalyticsComponent;
 import org.apache.solr.handler.component.DebugComponent;
 import org.apache.solr.handler.component.ExpandComponent;
 import org.apache.solr.handler.component.FacetComponent;
+import org.apache.solr.handler.component.HSFacetComponent;
 import org.apache.solr.handler.component.HighlightComponent;
 import org.apache.solr.handler.component.MoreLikeThisComponent;
 import org.apache.solr.handler.component.QueryComponent;
@@ -1248,6 +1249,7 @@ public final class SolrCore implements SolrInfoMBean, Closeable {
     addIfNotPresent(components,HighlightComponent.COMPONENT_NAME,HighlightComponent.class);
     addIfNotPresent(components,QueryComponent.COMPONENT_NAME,QueryComponent.class);
     addIfNotPresent(components,FacetComponent.COMPONENT_NAME,FacetComponent.class);
+    addIfNotPresent(components, HSFacetComponent.COMPONENT_NAME, HSFacetComponent.class);
     addIfNotPresent(components,MoreLikeThisComponent.COMPONENT_NAME,MoreLikeThisComponent.class);
     addIfNotPresent(components,StatsComponent.COMPONENT_NAME,StatsComponent.class);
     addIfNotPresent(components,DebugComponent.COMPONENT_NAME,DebugComponent.class);
