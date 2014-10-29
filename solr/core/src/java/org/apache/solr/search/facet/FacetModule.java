@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.apache.solr.common.SolrException;
+import org.apache.solr.common.params.FacetParams;
+import org.apache.solr.common.params.ShardParams;
+import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.QueryContext;
@@ -28,18 +31,45 @@ import org.apache.solr.search.SyntaxError;
 import org.noggit.ObjectBuilder;
 
 public class FacetModule {
-  public static FacetRequest getFacetRequest(SolrQueryRequest req) {
-    String[] jsonFacets = req.getParams().getParams("json.facet");
 
-    if (jsonFacets == null) {
-      return null;
+ public static void process(ResponseBuilder rb) throws IOException {
+   // if this is null, faceting is not enabled
+   Object componentState = rb.componentInfo.get(FacetComponentState.class);
+   if (componentState == null) return;
+
+   FacetComponentState facetState = (FacetComponentState)componentState;
+
+    FacetContext fcontext = new FacetContext();
+    fcontext.base = rb.getResults().docSet;
+    fcontext.req = rb.req;
+    fcontext.searcher = rb.req.getSearcher();
+    fcontext.qcontext = QueryContext.newContext(fcontext.searcher);
+
+
+    FacetProcessor fproc = facetState.facetRequest.createFacetProcessor(fcontext);
+    fproc.process();
+    rb.rsp.add("facets", fproc.getResponse());
+  }
+
+
+  public static void prepare(ResponseBuilder rb) throws IOException {
+    SolrParams params = rb.req.getParams();
+
+    String[] jsonFacets = rb.req.getParams().getParams("json.facet");
+    if (jsonFacets == null) return;
+
+    boolean isShard = params.getBool(ShardParams.IS_SHARD, false);
+    if (isShard) {
+      String jfacet = params.get("jfacet");
+      if (jfacet == null) {
+        // if this is a shard request, but there is no jfacet state, then don't do anything.
+        return;
+      }
     }
 
-    // check if facets are specifically disabled
-    boolean facetsEnabled = req.getParams().getBool("facet", true);
-    if (!facetsEnabled) {
-      return null;
-    }
+    // At this point, we know we need to do something.  Create and save the state.
+    rb.setNeedDocSet( true );
+
 
     Map<String,Object> all = null;
     for (String jsonFacet : jsonFacets) {
@@ -57,31 +87,30 @@ public class FacetModule {
       }
     }
 
-    FacetParser parser = new FacetTopParser(req);
+    // Parse the facet in the prepare phase?
+    FacetParser parser = new FacetTopParser(rb.req);
+    FacetRequest facetRequest = null;
     try {
-      FacetRequest facetReq = parser.parse(all);
-      return facetReq;
+      facetRequest = parser.parse(all);
     } catch (SyntaxError syntaxError) {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, syntaxError);
     }
+
+    FacetComponentState fcState = new FacetComponentState();
+    fcState.rb = rb;
+    fcState.isShard = isShard;
+    fcState.facetCommands = all;
+    fcState.facetRequest = facetRequest;
+
+    rb.componentInfo.put(FacetComponentState.class, fcState);
   }
 
+}
 
-  public static boolean doFacets(ResponseBuilder rb) throws IOException {
-    FacetRequest freq = getFacetRequest(rb.req);
-    if (freq == null) return false;
-
-    FacetContext fcontext = new FacetContext();
-    fcontext.base = rb.getResults().docSet;
-    fcontext.req = rb.req;
-    fcontext.searcher = rb.req.getSearcher();
-    fcontext.qcontext = QueryContext.newContext(fcontext.searcher);
-
-
-    FacetProcessor fproc = freq.createFacetProcessor(fcontext);
-    fproc.process();
-    rb.rsp.add("facets", fproc.getResponse());
-    return true;
-  }
-
+// TODO: make public
+class FacetComponentState {
+  ResponseBuilder rb;
+  Map<String,Object> facetCommands;
+  FacetRequest facetRequest;
+  boolean isShard;
 }
