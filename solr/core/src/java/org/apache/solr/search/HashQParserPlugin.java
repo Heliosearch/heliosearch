@@ -150,22 +150,9 @@ public class HashQParserPlugin extends QParserPlugin {
     public Weight createWeight(IndexSearcher searcher) throws IOException {
 
       String[] keys = keysParam.split(",");
-      HashKey[] hashKeys = new HashKey[keys.length];
       SolrIndexSearcher solrIndexSearcher = (SolrIndexSearcher)searcher;
-      IndexSchema schema = solrIndexSearcher.getSchema();
-      for(int i=0; i<keys.length; i++) {
-        String key = keys[i];
-        FieldType ft = schema.getField(key).getType();
-        HashKey h = null;
-        if(ft instanceof StrField) {
-          h = new BytesHash(key);
-        } else {
-          h = new NumericHash(key);
-        }
-        hashKeys[i] = h;
-      }
-      HashKey k = (hashKeys.length > 1) ? new CompositeHash(hashKeys) : hashKeys[0];
       IndexReaderContext context = solrIndexSearcher.getTopReaderContext();
+
       List<AtomicReaderContext> leaves =  context.leaves();
 
       ArrayBlockingQueue queue = new ArrayBlockingQueue(leaves.size());
@@ -174,7 +161,7 @@ public class HashQParserPlugin extends QParserPlugin {
       for(AtomicReaderContext leaf : leaves) {
         try {
           semaphore.acquire();
-          SegmentPartitioner segmentPartitioner = new SegmentPartitioner(leaf,worker,workers, k, queue,semaphore);
+          SegmentPartitioner segmentPartitioner = new SegmentPartitioner(leaf,worker,workers, keys, solrIndexSearcher, queue,semaphore);
           threadPool.execute(segmentPartitioner);
         } catch(Exception e) {
           throw new IOException(e);
@@ -219,14 +206,30 @@ public class HashQParserPlugin extends QParserPlugin {
       public SegmentPartitioner(AtomicReaderContext context,
                                 int worker,
                                 int workers,
-                                HashKey k,
+                                String[] keys,
+                                SolrIndexSearcher solrIndexSearcher,
                                 ArrayBlockingQueue queue, Semaphore sem) {
         this.context = context;
         this.worker = worker;
         this.workers = workers;
-        this.k = k;
         this.queue = queue;
         this.sem = sem;
+
+        HashKey[] hashKeys = new HashKey[keys.length];
+        IndexSchema schema = solrIndexSearcher.getSchema();
+        for(int i=0; i<keys.length; i++) {
+          String key = keys[i];
+          FieldType ft = schema.getField(key).getType();
+          HashKey h = null;
+          if(ft instanceof StrField) {
+            h = new BytesHash(key);
+          } else {
+            h = new NumericHash(key);
+          }
+          hashKeys[i] = h;
+        }
+
+        k = (hashKeys.length > 1) ? new CompositeHash(hashKeys) : hashKeys[0];
       }
 
       public void run() {

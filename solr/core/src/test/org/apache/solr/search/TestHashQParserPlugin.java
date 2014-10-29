@@ -76,10 +76,13 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
         set.add(val);
         String[] doc = {"id", val, "a_s", val, "a_i", val, "a_l", val};
         assertU(adoc(doc));
+        if(i % 10 == 0)
+        assertU(commit());
+
       }
     }
-
     assertU(commit());
+
 
     //Test with 3 worker and String hash ID.
 
