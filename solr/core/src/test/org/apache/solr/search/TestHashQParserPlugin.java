@@ -50,6 +50,17 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
     assertU(commit());
   }
 
+
+  public int getCost(Random random) {
+    int i = random.nextInt(2);
+    if(i == 0) {
+      return 200;
+    } else {
+      return 1;
+    }
+  }
+
+
   @Test
   public void testHashPartition() throws Exception {
 
@@ -74,7 +85,7 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
 
     ModifiableSolrParams params = new ModifiableSolrParams();
     params.add("q", "*:*");
-    params.add("fq", "{!hash worker=0 workers=3}");
+    params.add("fq", "{!hash worker=0 workers=3 cost="+getCost(random)+"}");
     params.add("partitionKeys", "a_s");
     params.add("rows","50");
     HashSet set1 = new HashSet();
@@ -92,7 +103,7 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
 
     params = new ModifiableSolrParams();
     params.add("q", "*:*");
-    params.add("fq", "{!hash worker=1 workers=3}");
+    params.add("fq", "{!hash worker=1 workers=3 cost="+getCost(random)+"}");
     params.add("partitionKeys", "a_s");
     params.add("rows","50");
     HashSet set2 = new HashSet();
@@ -111,7 +122,7 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
 
     params = new ModifiableSolrParams();
     params.add("q", "*:*");
-    params.add("fq", "{!hash worker=2 workers=3}");
+    params.add("fq", "{!hash worker=2 workers=3 cost="+getCost(random)+"}");
     params.add("partitionKeys", "a_s");
     params.add("rows","50");
     HashSet set3 = new HashSet();
@@ -141,7 +152,7 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
 
     params = new ModifiableSolrParams();
     params.add("q", "*:*");
-    params.add("fq", "{!hash worker=0 workers=2}");
+    params.add("fq", "{!hash worker=0 workers=2 cost="+getCost(random)+"}");
     params.add("partitionKeys", "a_i");
     params.add("rows","50");
     set1 = new HashSet();
@@ -159,7 +170,7 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
 
     params = new ModifiableSolrParams();
     params.add("q", "*:*");
-    params.add("fq", "{!hash worker=1 workers=2}");
+    params.add("fq", "{!hash worker=1 workers=2 cost="+getCost(random)+"}");
     params.add("partitionKeys", "a_i");
     params.add("rows","50");
     set2 = new HashSet();
@@ -186,7 +197,7 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
 
     params = new ModifiableSolrParams();
     params.add("q", "*:*");
-    params.add("fq", "{!hash worker=0 workers=2}");
+    params.add("fq", "{!hash worker=0 workers=2 cost="+getCost(random)+"}");
     params.add("partitionKeys", "a_s,a_i,a_l");
     params.add("rows","50");
     set1 = new HashSet();
@@ -204,7 +215,7 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
 
     params = new ModifiableSolrParams();
     params.add("q", "*:*");
-    params.add("fq", "{!hash worker=1 workers=2}");
+    params.add("fq", "{!hash worker=1 workers=2 cost="+getCost(random)+"}");
     params.add("partitionKeys", "a_s,a_i,a_l");
     params.add("rows","50");
     set2 = new HashSet();
@@ -236,13 +247,4 @@ public class TestHashQParserPlugin extends SolrTestCaseJ4 {
       }
     }
   }
-
-
-
-
-
-
-
-
-
 }

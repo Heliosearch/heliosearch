@@ -20,18 +20,37 @@ package org.apache.solr.search;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.Future;
+
 
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.IndexReaderContext;
+import org.apache.lucene.util.FixedBitSet;
+import org.apache.lucene.util.Bits;
+import org.apache.lucene.search.BitsFilteredDocIdSet;
 import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.core.CloseHook;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.StrField;
 import org.apache.solr.schema.TrieField;
+import org.apache.solr.core.SolrCore;
+
+
 
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Scorer;
+import org.apache.lucene.search.Weight;
+import org.apache.lucene.search.DocIdSet;
+import org.apache.lucene.search.Filter;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.NumericDocValues;
@@ -39,6 +58,7 @@ import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.util.BytesRef;
 
 import org.apache.solr.common.util.NamedList;
+import org.apache.solr.util.plugin.SolrCoreAware;
 
 /**
 * syntax fq={!hash workers=11 worker=4 keys=field1,field2}
@@ -47,12 +67,34 @@ import org.apache.solr.common.util.NamedList;
 public class HashQParserPlugin extends QParserPlugin {
 
   public static final String NAME = "hash";
+  private static Semaphore semaphore = new Semaphore(8,true);
+  private static ExecutorService threadPool = Executors.newCachedThreadPool();
+  private static boolean init = true;
+
+  private static synchronized void closeHook(SolrCore core) {
+    if(init) {
+      init = false;
+      core.addCloseHook(new CloseHook() {
+        @Override
+        public void preClose(SolrCore core) {
+          threadPool.shutdown();
+          //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public void postClose(SolrCore core) {
+          //To change body of implemented methods use File | Settings | File Templates.
+        }
+      });
+    }
+  }
 
   public void init(NamedList params) {
 
   }
 
   public QParser createParser(String query, SolrParams localParams, SolrParams params, SolrQueryRequest request) {
+    closeHook(request.getSearcher().getCore());
     return new HashQParser(query, localParams, params, request);
   }
 
@@ -77,11 +119,11 @@ public class HashQParserPlugin extends QParserPlugin {
     private int worker;
 
     public boolean getCache() {
-      return false;
-    }
-
-    public int getCost() {
-      return Math.max(super.getCost(),100);
+      if(getCost() > 99) {
+        return false;
+      } else {
+        return super.getCache();
+      }
     }
 
     public int hashCode() {
@@ -103,6 +145,108 @@ public class HashQParserPlugin extends QParserPlugin {
       this.keysParam = keysParam;
       this.workers = workers;
       this.worker = worker;
+    }
+
+    public Weight createWeight(IndexSearcher searcher) throws IOException {
+
+      String[] keys = keysParam.split(",");
+      HashKey[] hashKeys = new HashKey[keys.length];
+      SolrIndexSearcher solrIndexSearcher = (SolrIndexSearcher)searcher;
+      IndexSchema schema = solrIndexSearcher.getSchema();
+      for(int i=0; i<keys.length; i++) {
+        String key = keys[i];
+        FieldType ft = schema.getField(key).getType();
+        HashKey h = null;
+        if(ft instanceof StrField) {
+          h = new BytesHash(key);
+        } else {
+          h = new NumericHash(key);
+        }
+        hashKeys[i] = h;
+      }
+      HashKey k = (hashKeys.length > 1) ? new CompositeHash(hashKeys) : hashKeys[0];
+      IndexReaderContext context = solrIndexSearcher.getTopReaderContext();
+      List<AtomicReaderContext> leaves =  context.leaves();
+
+      ArrayBlockingQueue queue = new ArrayBlockingQueue(leaves.size());
+
+
+      for(AtomicReaderContext leaf : leaves) {
+        try {
+          semaphore.acquire();
+          SegmentPartitioner segmentPartitioner = new SegmentPartitioner(leaf,worker,workers, k, queue,semaphore);
+          threadPool.execute(segmentPartitioner);
+        } catch(Exception e) {
+          throw new IOException(e);
+        }
+      }
+
+      FixedBitSet[] fixedBitSets = new FixedBitSet[leaves.size()];
+      for(int i=0; i<leaves.size(); i++) {
+        try {
+          SegmentPartitioner segmentPartitioner = (SegmentPartitioner)queue.take();
+          fixedBitSets[segmentPartitioner.context.ord] = segmentPartitioner.docs;
+        }catch(Exception e) {
+          throw new IOException(e);
+        }
+      }
+
+      ConstantScoreQuery constantScoreQuery = new ConstantScoreQuery(new BitsFilter(fixedBitSets));
+      return constantScoreQuery.createWeight(searcher);
+    }
+
+    public class BitsFilter extends Filter {
+      private FixedBitSet[] bitSets;
+      public BitsFilter(FixedBitSet[] bitSets) {
+        this.bitSets = bitSets;
+      }
+
+      public DocIdSet getDocIdSet(AtomicReaderContext context, Bits bits) {
+        return BitsFilteredDocIdSet.wrap(bitSets[context.ord], bits);
+      }
+    }
+
+
+    class SegmentPartitioner implements Runnable {
+
+      public AtomicReaderContext context;
+      private int worker;
+      private int workers;
+      private HashKey k;
+      private Semaphore sem;
+      private ArrayBlockingQueue queue;
+      public FixedBitSet docs;
+      public SegmentPartitioner(AtomicReaderContext context,
+                                int worker,
+                                int workers,
+                                HashKey k,
+                                ArrayBlockingQueue queue, Semaphore sem) {
+        this.context = context;
+        this.worker = worker;
+        this.workers = workers;
+        this.k = k;
+        this.queue = queue;
+        this.sem = sem;
+      }
+
+      public void run() {
+        AtomicReader reader = context.reader();
+        try {
+          k.setNextReader(context);
+          this.docs = new FixedBitSet(reader.maxDoc());
+          int maxDoc = reader.maxDoc();
+          for(int i=0; i<maxDoc; i++) {
+            if((k.hashCode(i) & 0x7FFFFFFF) % workers == worker) {
+              docs.set(i);
+            }
+          }
+        }catch(Exception e) {
+         throw new RuntimeException(e);
+        } finally {
+          sem.release();
+          queue.add(this);
+        }
+      }
     }
 
     public DelegatingCollector getFilterCollector(IndexSearcher indexSearcher) {
