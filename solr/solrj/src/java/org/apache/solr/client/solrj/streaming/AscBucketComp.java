@@ -17,9 +17,10 @@ package org.apache.solr.client.solrj.streaming;
  * limitations under the License.
  */
 
+import java.io.Serializable;
 import java.util.Comparator;
 
-public class AscBucketComp implements Comparator<BucketMetrics> {
+public class AscBucketComp implements Comparator<BucketMetrics>, Serializable {
 
   private int ord;
 

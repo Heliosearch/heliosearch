@@ -18,6 +18,7 @@
 package org.apache.solr.client.solrj.streaming;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -86,31 +87,27 @@ public class MetricStream extends TupleStream {
     this.bucketMetrics = bucketMetrics;
   }
 
-  public void setBucketMap(Map<HashKey, Metric[]> bucketMap) {
-    this.bucketMap = bucketMap;
-  }
-
   BucketMetrics[] merge(List<Map> all) {
     Map<HashKey, Metric[]> bucketAccumulator = new HashMap();
 
     for(Map top : all) {
       List<String> ks = (List<String>)top.get("buckets");
-      List ms = (List)top.get("metrics");
+      List<List<Map<String,Double>>> ms = (List<List<Map<String,Double>>>)top.get("metrics");
       for(int i=0; i<ks.size(); i++) {
         String key = ks.get(i);
+        List<Map<String,Double>> bucketMs = ms.get(i);
+
         HashKey hashKey = new HashKey(key);
-        Map<String, Map<String, Double>> metricValues = (Map<String, Map<String, Double>>)ms.get(i);
         if(bucketAccumulator.containsKey(hashKey)) {
           Metric[] mergeMetrics = bucketAccumulator.get(hashKey);
           for(int m=0; m<mergeMetrics.length; m++) {
-            String metricName = mergeMetrics[m].getName();
-            mergeMetrics[m].update(metricValues.get(metricName));
+            mergeMetrics[m].update(bucketMs.get(m));
           }
         } else {
           Metric[] mergedMetrics = new Metric[metrics.length];
           for(int m=0; m<metrics.length; m++) {
             mergedMetrics[m] = metrics[m].newInstance();
-            mergedMetrics[m].update(metricValues.get(i));
+            mergedMetrics[m].update(bucketMs.get(m));
            }
           bucketAccumulator.put(hashKey, mergedMetrics);
         }
@@ -124,7 +121,7 @@ public class MetricStream extends TupleStream {
     while(it.hasNext()) {
       Map.Entry<HashKey, Metric[]> entry = it.next();
       BucketMetrics bms = new BucketMetrics(entry.getKey(), entry.getValue());
-      if(priorityQueue.size() > topN) {
+      if(priorityQueue.size() < topN) {
         priorityQueue.add(bms);
       } else {
         BucketMetrics peek = priorityQueue.peek();
@@ -140,12 +137,12 @@ public class MetricStream extends TupleStream {
 
     for(int i=bucketMetrics.length-1; i>=0; i--) {
       BucketMetrics b = priorityQueue.poll();
-      this.bucketMetrics[i]= b;
+      bucketMetrics[i]= b;
     }
     return bucketMetrics;
   }
 
-  private class ReverseOrdComp implements Comparator<BucketMetrics> {
+  private class ReverseOrdComp implements Comparator<BucketMetrics>, Serializable {
     private Comparator<BucketMetrics> comp;
 
     public ReverseOrdComp(Comparator<BucketMetrics> comp) {
@@ -228,20 +225,21 @@ public class MetricStream extends TupleStream {
         this.bucketMetrics[i]= b;
       }
 
-      List<Map<String, Double>> outMetrics = new ArrayList();
-      List<String> outKeys = new ArrayList();
+      List<List<Map<String, Double>>> outMetrics = new ArrayList();
+      List<String> outBuckets = new ArrayList();
 
       for(BucketMetrics bms : this.bucketMetrics) {
+        List outBucketMetrics = new ArrayList();
         for(Metric metric : bms.getMetrics()) {
           Map<String, Double> outMetricValues = metric.metricValues();
-          String outKey = metric.getName();
-          outMetrics.add(outMetricValues);
-          outKeys.add(outKey);
+          outBucketMetrics.add(outMetricValues);
         }
+        outBuckets.add(bms.getKey().toString());
+        outMetrics.add(outBucketMetrics);
       }
 
       Map outMap = new HashMap();
-      outMap.put("buckets",outKeys);
+      outMap.put("buckets",outBuckets);
       outMap.put("metrics",outMetrics);
       tuple.set(this.outKey, outMap);
       return tuple;
