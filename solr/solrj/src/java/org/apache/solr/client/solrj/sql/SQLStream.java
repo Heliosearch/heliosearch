@@ -21,7 +21,9 @@ import org.apache.solr.client.solrj.streaming.StreamContext;
 import org.apache.solr.client.solrj.streaming.TupleStream;
 import org.apache.solr.client.solrj.streaming.Tuple;
 
-import com.foundationdb.sql.parser.*;
+import com.foundationdb.sql.parser.SQLParser;
+import com.foundationdb.sql.parser.StatementNode;
+import com.foundationdb.sql.parser.Visitor;
 
 import java.io.Serializable;
 import java.util.Properties;
@@ -38,7 +40,7 @@ public class SQLStream extends TupleStream implements Serializable {
   private Properties props;
   private TupleStream tupleStream;
 
-  public SQLStream(String sql, Properties props) {
+  public SQLStream(String sql, Properties props) throws Exception {
     this.tupleStream = parse(sql, props);
   }
 
@@ -62,7 +64,11 @@ public class SQLStream extends TupleStream implements Serializable {
     tupleStream.setStreamContext(context);
   }
 
-  private TupleStream parse(String sql, Properties props) {
-    return null;
+  private TupleStream parse(String sql, Properties props) throws Exception {
+    SQLVisitor visitor = new SQLVisitor(props);
+    SQLParser parser = new SQLParser();
+    StatementNode statementNode = parser.parseStatement(sql);
+    statementNode.accept(visitor);
+    return visitor.getTupleStream();
   }
 }
