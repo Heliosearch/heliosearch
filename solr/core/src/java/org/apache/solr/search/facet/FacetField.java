@@ -169,6 +169,8 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
   int endTermIndex;
   int nTerms;
   int nDocs;
+  int maxSlots;
+  int allBucketsSlot;
 
 
   public FacetFieldProcessorFCBase(FacetContext fcontext, FacetField freq, SchemaField sf) {
@@ -199,7 +201,14 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
 
     // if we need an extra slot for the "missing" bucket, and it wasn't able to be tacked onto the beginning,
     // then lets add room for it at the end.
-    int maxSlots = (freq.missing && startTermIndex != -1) ? nTerms + 1 : nTerms;
+    maxSlots = (freq.missing && startTermIndex != -1) ? nTerms + 1 : nTerms;
+
+    if (freq.allBuckets) {
+      allBucketsSlot = maxSlots;
+      maxSlots++;
+    } else {
+      allBucketsSlot = -1;
+    }
     createAccs(nDocs, maxSlots);
     setSortAcc(maxSlots);
     prepareForCollection();
@@ -271,8 +280,8 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
     if (freq.allBuckets) {
       SimpleOrderedMap<Object> allBuckets = new SimpleOrderedMap<>();
       for (SlotAcc acc : accs) {
-        countAcc.setValues(allBuckets, -1);
-        acc.setValues(allBuckets, -1);
+        countAcc.setValues(allBuckets, allBucketsSlot);
+        acc.setValues(allBuckets, allBucketsSlot);
       }
       res.add("allBuckets", allBuckets);
     }
@@ -411,10 +420,6 @@ class FacetFieldProcessorFC extends FacetFieldProcessorFCBase {
       if (doc >= adjustedMax) {
         do {
           ctx = ctxIt.next();
-          if (ctx == null) {
-            // should be impossible
-            throw new RuntimeException("INTERNAL FACET ERROR");
-          }
           segBase = ctx.docBase;
           segMax = ctx.reader().maxDoc();
           adjustedMax = segBase + segMax;
@@ -429,6 +434,11 @@ class FacetFieldProcessorFC extends FacetFieldProcessorFCBase {
         slot.value = arrIdx;
         countAcc.incrementCount(arrIdx, 1);
         collect(doc - segBase);  // per-seg collectors
+        if (allBucketsSlot >= 0 && term >= 0) {
+          slot.value = allBucketsSlot;
+          countAcc.incrementCount(allBucketsSlot, 1);
+          collect(doc - segBase);  // per-seg collectors
+        }
       }
     }
   }

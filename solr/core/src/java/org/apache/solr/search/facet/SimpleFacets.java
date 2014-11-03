@@ -26,7 +26,6 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
-import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.search.Filter;
 import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
@@ -138,7 +137,6 @@ public class SimpleFacets {
 
   public Map<String, List<Subfacet>> subFacets;
   public List<Query> subQueries;  // queries for the current path within the subfacets...
-  public SimpleFacetStats facetStats;
   protected SimpleFacets parent;
 
 
@@ -183,10 +181,6 @@ public class SimpleFacets {
       this.docs.decref();
       this.docs = null;
     }
-    if (this.facetStats != null) {
-      facetStats.close();
-      facetStats = null;
-    }
   }
 
   public static class Subfacet {
@@ -229,15 +223,8 @@ public class SimpleFacets {
     // parse stats for this facet
     String[] stats = params.getFieldParams(key, "facet.stat");
     List<Subfacet> subs = subFacets.get(key);
-    if (stats != null || subs != null || parent != null) {  // we check for parent != null since we always use the new bucket format for sub-facets
-      facetStats = new SimpleFacetStats(this);
-      facetStats.setStats(stats);
-      facetStats.setSubFacets(subs);
-    } else {
-      facetStats = null;
-    }
 
-    version = facetStats != null || parent != null ? 2 : 1;  // default facet version is 2 if there are stats or subs
+    version = 1;  // default facet version is 2 if there are stats or subs
     params.getFieldInt(key, "facet.version", version);
   }
 
@@ -441,11 +428,8 @@ public class SimpleFacets {
         res.add(key, getGroupedFacetQueryCount(query));
       } else {
 
-        if (facetStats == null) {
-          res.add(key, searcher.numDocs(query, docs));
-        } else {
-          res.add(key, facetStats.getQueryFacet(docs, query) );
-        }
+        res.add(key, searcher.numDocs(query, docs));
+
       }
 
     } catch (SyntaxError syntaxError) {
@@ -513,15 +497,6 @@ public class SimpleFacets {
 
     SchemaField sf = searcher.getSchema().getField(field);
     FieldType ft = sf.getType();
-
-    if (facetStats != null) {
-      facetStats.setSort(sort);
-      if (!(sf.multiValued() || ft.multiValuedFieldCache())) {
-        return facetStats.getFieldCacheCounts(docs, field, offset, limit, mincount, missing, prefix);
-      } else {
-        return facetStats.getUninvertedCounts(docs, field, offset, limit, mincount, missing, prefix, false);
-      }
-    }
 
     NamedList<Integer> counts;
 
@@ -1598,13 +1573,10 @@ public class SimpleFacets {
     List<SimpleOrderedMap<Object>> buckets = null;
     NamedList<Integer> counts = null;
 
-    if (facetStats != null) {
-      buckets = new ArrayList<>();
-      res.add("buckets", buckets);
-    } else {
-      counts = new NamedList<>();
-      res.add("counts", counts);
-    }
+
+    counts = new NamedList<>();
+    res.add("counts", counts);
+
 
 
     final T start = calc.getValue(required.getFieldParam(f,FacetParams.FACET_RANGE_START));
@@ -1660,15 +1632,11 @@ public class SimpleFacets {
       final String lowS = calc.formatValue(low);
       final String highS = calc.formatValue(high);
 
-      if (buckets == null) {
         final int count = rangeCount(sf, lowS, highS,
                                      includeLower,includeUpper);
         if (count >= minCount) {
           counts.add(lowS, count);
         }
-      } else {
-        buckets.add( rangeStats(lowS, facetStats, minCount, sf, lowS, highS, includeLower, includeUpper) );
-      }
 
       low = high;
     }
@@ -1699,7 +1667,7 @@ public class SimpleFacets {
         if (all || others.contains(FacetRangeOther.BEFORE)) {
           // include upper bound if "outer" or if first gap doesn't already include it
           res.add(FacetRangeOther.BEFORE.toString(),
-                  rangeObj(null, facetStats, 0, sf, null, startS,
+                  rangeObj(null, 0, sf, null, startS,
                       false,
                       (include.contains(FacetRangeInclude.OUTER) ||
                           (!(include.contains(FacetRangeInclude.LOWER) ||
@@ -1709,7 +1677,7 @@ public class SimpleFacets {
         if (all || others.contains(FacetRangeOther.AFTER)) {
           // include lower bound if "outer" or if last gap doesn't already include it
           res.add(FacetRangeOther.AFTER.toString(),
-              rangeObj(null, facetStats, 0, sf, endS, null,
+              rangeObj(null, 0, sf, endS, null,
                   (include.contains(FacetRangeInclude.OUTER) ||
                       (!(include.contains(FacetRangeInclude.UPPER) ||
                           include.contains(FacetRangeInclude.EDGE)))),
@@ -1717,7 +1685,7 @@ public class SimpleFacets {
         }
         if (all || others.contains(FacetRangeOther.BETWEEN)) {
          res.add(FacetRangeOther.BETWEEN.toString(),
-             rangeObj(null, facetStats, 0, sf, startS, endS,
+             rangeObj(null, 0, sf, startS, endS,
                  (include.contains(FacetRangeInclude.LOWER) ||
                      include.contains(FacetRangeInclude.EDGE)),
                  (include.contains(FacetRangeInclude.UPPER) ||
@@ -1730,19 +1698,9 @@ public class SimpleFacets {
   }
 
   // returns an Integer or SimpleOrderedMap
-  protected Object rangeObj(Object label, SimpleFacetStats stats, int mincount, SchemaField sf, String low, String high, boolean iLow, boolean iHigh) throws IOException {
-    if (stats == null) {
+  protected Object rangeObj(Object label, int mincount, SchemaField sf, String low, String high, boolean iLow, boolean iHigh) throws IOException {
       return rangeCount(sf, low, high, iLow, iHigh);
-    } else {
-      return rangeStats(label, stats, mincount, sf, low, high, iLow, iHigh);
-    }
   }
-
-  protected SimpleOrderedMap<Object> rangeStats(Object label, SimpleFacetStats stats, int mincount,SchemaField sf, String low, String high, boolean iLow, boolean iHigh) throws IOException {
-    Query rangeQ = sf.getType().getRangeQuery(null, sf, low, high, iLow, iHigh);
-    SimpleOrderedMap<Object> bucket = stats.getRangeBucket(docs, rangeQ, label, sf, low, high, iLow, iHigh);
-    return bucket;
-   }
 
   /**
    * Macro for getting the numDocs of range over docs

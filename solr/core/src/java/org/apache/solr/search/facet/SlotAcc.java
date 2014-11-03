@@ -19,6 +19,8 @@ package org.apache.solr.search.facet;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
+import org.apache.lucene.search.Collector;
+import org.apache.lucene.search.Scorer;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.search.SolrIndexSearcher;
@@ -27,7 +29,45 @@ import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
 import org.apache.solr.search.mutable.MutableValueInt;
 
+import java.io.Closeable;
 import java.io.IOException;
+
+
+abstract class Acc extends Collector implements Closeable {
+  String key;  // TODO
+
+  public void finish() {
+  }
+
+  public abstract Comparable getValue();
+
+  public void setValues(NamedList<Object> bucket) {
+    if (key == null) return;
+    bucket.add(key, getValue());
+  }
+
+  @Override
+  public void setScorer(Scorer scorer) throws IOException {
+  }
+
+  @Override
+  public void collect(int doc) throws IOException {
+  }
+
+  @Override
+  public void setNextReader(AtomicReaderContext readerContext) throws IOException {
+  }
+
+  @Override
+  public boolean acceptsDocsOutOfOrder() {
+    return false;
+  }
+
+  @Override
+  public void close() throws IOException {
+  }
+}
+
 
 public abstract class SlotAcc extends Acc {
   protected final MutableValueInt slot;
@@ -43,15 +83,9 @@ public abstract class SlotAcc extends Acc {
     return getValue();
   }
 
-  public abstract Comparable getGlobalValue();
-
   public void setValues(NamedList<Object> bucket, int slotNum) {
     if (key == null) return;
-    if (slotNum == -1) {
-      bucket.add(key, getGlobalValue());
-    } else {
-      bucket.add(key, getValue(slotNum));
-    }
+    bucket.add(key, getValue(slotNum));
   }
 
   public abstract void reset();
@@ -354,11 +388,6 @@ class SortSlotAcc extends SlotAcc {
   public Comparable getValue(int slotNum) {
     slot.value = slotNum;
     return getValue();
-  }
-
-  @Override
-  public Comparable getGlobalValue() {
-    return 0;
   }
 
   public void setValues(NamedList<Object> bucket, int slotNum) {
