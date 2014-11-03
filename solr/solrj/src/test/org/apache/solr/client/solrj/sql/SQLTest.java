@@ -131,9 +131,9 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
 
     //Basic SQLStream test.
 
-    String sql = "select a_s from collection1 order by a_i desc";
+    String sql = "select id, a_s, a_i from collection1 order by a_i desc";
     Properties props = new Properties();
-    props.put("collection1.baseUrl", "zhKost");
+    props.put("collection1.baseUrl", zkHost);
 
     SQLStream sqlStream = new SQLStream(sql, props);
     List<Tuple> tuples = getTuples(sqlStream);
@@ -205,7 +205,6 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
   }
 
   public boolean assertMetric(Metric metric, double value) throws Exception {
-    System.out.println("Metric Type##################################:"+metric.getClass());
     Double d = metric.getValue();
     if(d.doubleValue() != value) {
       throw new Exception("Unexpected Metric "+d+"!="+value);

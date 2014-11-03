@@ -48,6 +48,8 @@ class SQLVisitor implements Visitor, Serializable {
   private List<SortDef>  sorts = new ArrayList();
   private List<String> fields = new ArrayList();
   private boolean asc;
+  private int state = -1;
+  private int ORDER_BY = 1;
 
 
   public SQLVisitor(Properties props) {
@@ -68,11 +70,14 @@ class SQLVisitor implements Visitor, Serializable {
     } else if(visitable instanceof OrderByColumn) {
       OrderByColumn orderByColumn = (OrderByColumn)visitable;
       asc = orderByColumn.isAscending();
+      this.state = ORDER_BY;
     } else if(visitable instanceof ColumnReference) {
       ColumnReference cref = (ColumnReference)visitable;
       String ocol = cref.getColumnName();
-      SortDef sortDef = new SortDef(asc,ocol);
-      sorts.add(sortDef);
+      if(state == ORDER_BY) {
+        SortDef sortDef = new SortDef(asc,ocol);
+        sorts.add(sortDef);
+      }
     }
 
     return visitable;
@@ -92,7 +97,31 @@ class SQLVisitor implements Visitor, Serializable {
 
   public TupleStream getTupleStream() {
    TableDef tableDef = tables.get(0);
+
     Map map = new HashMap();
+    StringBuilder fieldBuf =  new StringBuilder();
+    boolean comma = false;
+    for(String field : fields) {
+      if(comma) {
+        fieldBuf.append(",");
+      }
+
+      fieldBuf.append(field);
+      comma = true;
+    }
+
+    map.put("fl", fieldBuf.toString());
+
+    StringBuilder sortBuf = new StringBuilder();
+    comma = false;
+    for(SortDef sortDef : sorts) {
+      if(comma) {
+        sortBuf.append(",");
+      }
+      sortBuf.append(sortDef.toString());
+      comma = true;
+    }
+    map.put("sort",sortBuf.toString());
 
     if(tableDef.isCloud()) {
       map.put("q","*:*");
@@ -104,27 +133,7 @@ class SQLVisitor implements Visitor, Serializable {
       tupleStream = new SolrStream(tableDef.getBaseUrl(), map);
     }
 
-    StringBuilder fieldBuf =  new StringBuilder();
-    boolean comma = false;
-    for(String field : fields) {
-      if(comma) {
-        fieldBuf.append(",");
-      }
 
-      fieldBuf.append(field);
-    }
-
-    map.put("fl", fieldBuf.toString());
-
-    StringBuilder sortBuf = new StringBuilder();
-    comma = false;
-    for(SortDef sortDef : sorts) {
-      if(comma) {
-        fieldBuf.append(",");
-      }
-      sortBuf.append(sortDef.toString());
-    }
-    map.put("sort",sortBuf.toString());
     return this.tupleStream;
   }
 
