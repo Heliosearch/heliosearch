@@ -60,5 +60,9 @@ public abstract class AggValueSource extends ValueSource {
     throw new UnsupportedOperationException("NOT IMPLEMENTED " + name + " " + this);
   }
 
+  public FacetMerger createFacetMerger(Object prototype) {
+    throw new UnsupportedOperationException();// TODO
+  }
+
 }
 

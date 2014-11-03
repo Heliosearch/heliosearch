@@ -121,35 +121,35 @@ public class AccInfo {
   AggValueSource agg;
 
   // provide as much context as possible here to enable optimization by selecting different accumulators
-  public SlotAcc createSlotAcc(MutableValueInt slot, QueryContext qContext, SolrQueryRequest req, SolrIndexSearcher searcher, int numDocs, int numSlots) throws IOException {
+  public SlotAcc createSlotAcc(MutableValueInt slot, FacetContext fcontext, SolrQueryRequest req, SolrIndexSearcher searcher, int numDocs, int numSlots) throws IOException {
     SlotAcc acc = null;
 
     // this is temporary - longer term, the AggValueSource should be responsible for this...
     if (agg instanceof StrAggValueSource) {
       String arg = ((StrAggValueSource) agg).getArg();
       if ("count".equals(agg.name())) {
-        acc = new CountSlotAcc(slot, qContext, numSlots);
+        acc = new CountSlotAcc(slot, fcontext, numSlots);
       } else if ("unique".equals(agg.name())) {
         String fname = arg;
         SchemaField sf = searcher.getSchema().getField(fname);
         if (sf.multiValued() || sf.getType().multiValuedFieldCache()) {
-          acc = new UniqueMultivaluedSlotAcc(slot, qContext, arg, numSlots);
+          acc = new UniqueMultivaluedSlotAcc(slot, fcontext, arg, numSlots);
         } else {
-          acc = new UniqueSinglevaluedSlotAcc(slot, qContext, arg, numSlots);
+          acc = new UniqueSinglevaluedSlotAcc(slot, fcontext, arg, numSlots);
         }
       }
     } else if (agg instanceof SimpleAggValueSource) {
       SimpleAggValueSource simple = (SimpleAggValueSource)agg;
       if ("sum".equals(simple.name())) {
-        acc = new SumSlotAcc(slot, simple.getArg(), qContext, numSlots);
+        acc = new SumSlotAcc(slot, simple.getArg(), fcontext, numSlots);
       } else if ("avg".equals(simple.name())) {
-        acc = new AvgSlotAcc(slot, simple.getArg(), qContext, numSlots);
+        acc = new AvgSlotAcc(slot, simple.getArg(), fcontext, numSlots);
       } else if ("min".equals(simple.name())) {
-        acc = new MinSlotAcc(slot, simple.getArg(), qContext, numSlots);
+        acc = new MinSlotAcc(slot, simple.getArg(), fcontext, numSlots);
       } else if ("max".equals(simple.name())) {
-        acc = new MaxSlotAcc(slot, simple.getArg(), qContext, numSlots);
+        acc = new MaxSlotAcc(slot, simple.getArg(), fcontext, numSlots);
       } else if ("sumsq".equals(simple.name())) {
-        acc = new SumsqSlotAcc(slot, simple.getArg(), qContext, numSlots);
+        acc = new SumsqSlotAcc(slot, simple.getArg(), fcontext, numSlots);
       }
 
     }

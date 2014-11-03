@@ -47,7 +47,7 @@ import org.apache.solr.search.mutable.MutableValueInt;
 import org.noggit.ObjectBuilder;
 
 
-abstract class FacetRequest {
+public abstract class FacetRequest {
   protected Map<String,AggValueSource> facetStats;  // per-bucket statistics
   protected Map<String,FacetRequest> subFacets;     // list of facets
   protected List<String> excludeFilters;
@@ -74,19 +74,32 @@ abstract class FacetRequest {
   }
 
   public abstract FacetProcessor createFacetProcessor(FacetContext fcontext);
+
+  public FacetMerger createFacetMerger(Object prototype) {
+    // TODO: make abstract
+    throw new UnsupportedOperationException();
+  }
 }
 
 
 class FacetContext {
   // Context info for actually executing a local facet command
+  public static final int IS_SHARD=0x01;
+
   QueryContext qcontext;
   SolrQueryRequest req;  // TODO: replace with params?
   SolrIndexSearcher searcher;
   DocSet base;
   FacetContext parent;
+  int flags;
+
+  public boolean isShard() {
+    return (flags & IS_SHARD) != 0;
+  }
 
   public FacetContext sub() {
     FacetContext ctx = new FacetContext();
+    ctx.flags = flags;
     ctx.qcontext = qcontext;
     ctx.req = req;
     ctx.searcher = searcher;
@@ -126,7 +139,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   protected void createAccs(int docCount, int slotCount) throws IOException {
     accMap = new LinkedHashMap<String,SlotAcc>();
     slot = new MutableValueInt();
-    countAcc = new CountSlotAcc(slot, fcontext.qcontext, slotCount);
+    countAcc = new CountSlotAcc(slot, fcontext, slotCount);
     countAcc.key = "count";
     for (Map.Entry<String,AggValueSource> entry : freq.getFacetStats().entrySet()) {
       SlotAcc acc = entry.getValue().createSlotAcc(fcontext, slot, docCount, slotCount);
@@ -232,7 +245,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   void addStats(NamedList<Object> target, int slotNum) {
     slot.value = slotNum;
     target.add("count", countAcc.getCount(slotNum));
-    for (Acc acc : accs) {
+    for (SlotAcc acc : accs) {
       acc.setValues(target);
     }
   }

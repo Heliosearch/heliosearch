@@ -31,6 +31,6 @@ public class MaxAgg extends SimpleAggValueSource {
 
   @Override
   public SlotAcc createSlotAcc(FacetContext fcontext, MutableValueInt slot, int numDocs, int numSlots) throws IOException {
-    return new MaxSlotAcc(slot, getArg(), fcontext.qcontext, numSlots);
+    return new MaxSlotAcc(slot, getArg(), fcontext, numSlots);
   }
 }

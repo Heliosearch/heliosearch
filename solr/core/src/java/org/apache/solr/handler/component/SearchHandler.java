@@ -37,6 +37,7 @@ import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.RequestHandlerBase;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.search.facet.FacetModule;
 import org.apache.solr.util.RTimer;
 import org.apache.solr.util.SolrPluginUtils;
 import org.apache.solr.util.plugin.PluginInfoInitialized;
@@ -70,7 +71,7 @@ public class SearchHandler extends RequestHandlerBase implements SolrCoreAware ,
     ArrayList<String> names = new ArrayList<>(6);
     names.add( QueryComponent.COMPONENT_NAME );
     names.add( FacetComponent.COMPONENT_NAME );
-    names.add( HSFacetComponent.COMPONENT_NAME );
+    names.add( FacetModule.COMPONENT_NAME );
     names.add( MoreLikeThisComponent.COMPONENT_NAME );
     names.add( HighlightComponent.COMPONENT_NAME );
     names.add( StatsComponent.COMPONENT_NAME );

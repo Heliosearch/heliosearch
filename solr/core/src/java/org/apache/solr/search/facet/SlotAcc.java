@@ -19,10 +19,8 @@ package org.apache.solr.search.facet;
 
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.SortedDocValues;
-import org.apache.lucene.search.FieldCache;
 import org.apache.lucene.util.FixedBitSet;
 import org.apache.solr.common.util.NamedList;
-import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.field.FieldUtil;
 import org.apache.solr.search.function.FuncValues;
@@ -65,18 +63,18 @@ public abstract class SlotAcc extends Acc {
 // This would enhance reuse and also prevent multiple lookups of same value across diff stats
 abstract class FuncSlotAcc extends SlotAcc {
   ValueSource valueSource;
-  QueryContext queryContext;
+  FacetContext fcontext;
   FuncValues values;
 
-  public FuncSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
+  public FuncSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
     super(slot);
     this.valueSource = values;
-    this.queryContext = queryContext;
+    this.fcontext = fcontext;
   }
 
   @Override
   public void setNextReader(AtomicReaderContext readerContext) throws IOException {
-    values = valueSource.getValues(queryContext, readerContext);
+    values = valueSource.getValues(fcontext.qcontext, readerContext);
     super.setNextReader(readerContext);
   }
 }
@@ -92,11 +90,11 @@ abstract class DoubleFuncSlotAcc extends FuncSlotAcc {
   double[] result;  // TODO: use DoubleArray
   double initialValue;
 
-  public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
-    this(slot, values, queryContext, numSlots, 0);
+  public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
+    this(slot, values, fcontext, numSlots, 0);
   }
-  public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots, double initialValue) {
-    super(slot, values, queryContext, numSlots);
+  public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots, double initialValue) {
+    super(slot, values, fcontext, numSlots);
     this.initialValue = initialValue;
     result = new double[numSlots];
     if (initialValue != 0) {
@@ -161,8 +159,8 @@ abstract class IntSlotAcc extends SlotAcc {
 class SumSlotAcc extends DoubleFuncSlotAcc {
   double total = 0;
 
-  public SumSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
-    super(slot, values, queryContext, numSlots);
+  public SumSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
+    super(slot, values, fcontext, numSlots);
   }
 
   public void collect(int doc) {
@@ -180,8 +178,8 @@ class SumSlotAcc extends DoubleFuncSlotAcc {
 class SumsqSlotAcc extends DoubleFuncSlotAcc {
   double total = 0;
 
-  public SumsqSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
-    super(slot, values, queryContext, numSlots);
+  public SumsqSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
+    super(slot, values, fcontext, numSlots);
   }
 
   public void collect(int doc) {
@@ -203,8 +201,8 @@ class SumsqSlotAcc extends DoubleFuncSlotAcc {
 class MinSlotAcc extends DoubleFuncSlotAcc {
   double min = 0;
 
-  public MinSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
-    super(slot, values, queryContext, numSlots, Double.NaN);
+  public MinSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
+    super(slot, values, fcontext, numSlots, Double.NaN);
   }
 
   public void collect(int doc) {
@@ -229,8 +227,8 @@ class MinSlotAcc extends DoubleFuncSlotAcc {
 class MaxSlotAcc extends DoubleFuncSlotAcc {
   double max = 0;
 
-  public MaxSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
-    super(slot, values, queryContext, numSlots, Double.NaN);
+  public MaxSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
+    super(slot, values, fcontext, numSlots, Double.NaN);
   }
 
   public void collect(int doc) {
@@ -258,8 +256,8 @@ class AvgSlotAcc extends DoubleFuncSlotAcc {
   int count = 0;
   int[] counts;
 
-  public AvgSlotAcc(MutableValueInt slot, ValueSource values, QueryContext queryContext, int numSlots) {
-    super(slot, values, queryContext, numSlots);
+  public AvgSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
+    super(slot, values, fcontext, numSlots);
     counts = new int[numSlots];
   }
 
@@ -312,7 +310,7 @@ class AvgSlotAcc extends DoubleFuncSlotAcc {
 class CountSlotAcc extends IntSlotAcc {
   int total = 0;
 
-  public CountSlotAcc(MutableValueInt slot, QueryContext qContext, int numSlots) {
+  public CountSlotAcc(MutableValueInt slot, FacetContext fcontext, int numSlots) {
     super(slot, numSlots, 0);
   }
 
@@ -388,7 +386,7 @@ abstract class UniqueSlotAcc extends SlotAcc {
   int nTerms;
 
 
-  public UniqueSlotAcc(MutableValueInt slot, QueryContext qContext, String field, int numSlots) throws IOException {
+  public UniqueSlotAcc(MutableValueInt slot, FacetContext fcontext, String field, int numSlots) throws IOException {
     super(slot);
     arr = new FixedBitSet[numSlots];
   }
@@ -445,10 +443,10 @@ abstract class UniqueSlotAcc extends SlotAcc {
 class UniqueSinglevaluedSlotAcc extends UniqueSlotAcc {
   SortedDocValues si;
 
-  public UniqueSinglevaluedSlotAcc(MutableValueInt slot, QueryContext qContext, String field, int numSlots) throws IOException {
-    super(slot, qContext, field, numSlots);
-    SolrIndexSearcher searcher = qContext.searcher();
-    si = FieldUtil.getSortedDocValues(qContext, searcher.getSchema().getField(field), null);
+  public UniqueSinglevaluedSlotAcc(MutableValueInt slot, FacetContext fcontext, String field, int numSlots) throws IOException {
+    super(slot, fcontext, field, numSlots);
+    SolrIndexSearcher searcher = fcontext.qcontext.searcher();
+    si = FieldUtil.getSortedDocValues(fcontext.qcontext, searcher.getSchema().getField(field), null);
     nTerms = si.getValueCount();
     ords = new FixedBitSet(nTerms);
   }
@@ -475,9 +473,9 @@ class UniqueMultivaluedSlotAcc extends UniqueSlotAcc implements UnInvertedField.
   private UnInvertedField uif;
   private UnInvertedField.DocToTerm docToTerm;
 
-  public UniqueMultivaluedSlotAcc(MutableValueInt slot, QueryContext qContext, String field, int numSlots) throws IOException {
-    super(slot, qContext, field, numSlots);
-    SolrIndexSearcher searcher = qContext.searcher();
+  public UniqueMultivaluedSlotAcc(MutableValueInt slot, FacetContext fcontext, String field, int numSlots) throws IOException {
+    super(slot, fcontext, field, numSlots);
+    SolrIndexSearcher searcher = fcontext.qcontext.searcher();
     uif = UnInvertedField.getUnInvertedField(field, searcher);
     docToTerm = uif.new DocToTerm();
     nTerms = uif.numTerms();

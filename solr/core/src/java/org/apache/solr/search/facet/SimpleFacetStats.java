@@ -69,7 +69,7 @@ public class SimpleFacetStats implements Closeable {
   int sortMul;
   MutableValueInt slot = new MutableValueInt();
   QueryContext queryContext;
-
+  FacetContext fcontext;
 
 
   public void setStat(String stat) {
@@ -121,8 +121,12 @@ public class SimpleFacetStats implements Closeable {
     clear();
 
     queryContext = QueryContext.newContext(simpleFacets.searcher);
+    fcontext = new FacetContext();
+    fcontext.qcontext = queryContext;
+    fcontext.searcher = queryContext.searcher();
+
     for (AccInfo info : accInfos.values()) {
-      SlotAcc acc = info.createSlotAcc(slot, queryContext, simpleFacets.req, simpleFacets.searcher, numDocs, numSlots);
+      SlotAcc acc = info.createSlotAcc(slot, fcontext, simpleFacets.req, simpleFacets.searcher, numDocs, numSlots);
       accs.put(info.key, acc);
       if (acc instanceof CountSlotAcc) {
         countAcc = acc;
@@ -151,7 +155,7 @@ public class SimpleFacetStats implements Closeable {
       if (sortAcc == null) {
         if ("count".equals(stat)) {
           if (countAcc == null) {
-            countAcc = new CountSlotAcc(slot, queryContext, numSlots);
+            countAcc = new CountSlotAcc(slot, fcontext, numSlots);
             countAcc.key = "count";  // if we want it to appear
             accs.put("count", countAcc);
           }

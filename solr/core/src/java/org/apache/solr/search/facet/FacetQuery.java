@@ -30,6 +30,11 @@ public class FacetQuery extends FacetRequest {
   public FacetProcessor createFacetProcessor(FacetContext fcontext) {
     return new FacetQueryProcessor(fcontext, this);
   }
+
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetQueryMerger(this);
+  }
 }
 
 
