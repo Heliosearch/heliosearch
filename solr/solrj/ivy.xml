@@ -35,6 +35,8 @@
     <dependency org="org.codehaus.woodstox" name="wstx-asl" rev="${/org.codehaus.woodstox/wstx-asl}" conf="compile"/>
     <dependency org="org.noggit" name="noggit" rev="${/org.noggit/noggit}" conf="compile"/>
     <dependency org="org.slf4j" name="slf4j-api" rev="${/org.slf4j/slf4j-api}" conf="compile"/>
+    <dependency org="com.foundationdb" name="fdb-sql-parser" rev="${/com.foundationdb/fdb-sql-parser}" conf="compile"/>
+
 
     <dependency org="org.slf4j" name="jcl-over-slf4j" rev="${/org.slf4j/jcl-over-slf4j}" conf="test"/>
     <dependency org="org.slf4j" name="slf4j-log4j12" rev="${/org.slf4j/slf4j-log4j12}" conf="test"/>
