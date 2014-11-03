@@ -17,11 +17,23 @@
 
 package org.apache.solr.client.solrj.sql;
 
+import com.foundationdb.sql.StandardException;
+import com.foundationdb.sql.parser.ColumnReference;
+import com.foundationdb.sql.parser.FromBaseTable;
+import com.foundationdb.sql.parser.OrderByColumn;
+import com.foundationdb.sql.parser.ResultColumn;
+import com.foundationdb.sql.parser.TableName;
 import com.foundationdb.sql.parser.Visitable;
+import org.apache.solr.client.solrj.streaming.CloudSolrStream;
+import org.apache.solr.client.solrj.streaming.SolrStream;
 import org.apache.solr.client.solrj.streaming.TupleStream;
 import com.foundationdb.sql.parser.Visitor;
 import java.io.Serializable;
 import java.util.Properties;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * The SQLVisitor visits with the abstract syntax tree created by the Foundationdb SQLParser. As it visits the nodes
@@ -32,12 +44,37 @@ class SQLVisitor implements Visitor, Serializable {
 
   private Properties props;
   private TupleStream tupleStream;
+  private List<TableDef> tables = new ArrayList();
+  private List<SortDef>  sorts = new ArrayList();
+  private List<String> fields = new ArrayList();
+  private boolean asc;
+
 
   public SQLVisitor(Properties props) {
     this.props = props;
   }
 
-  public Visitable visit(Visitable visitable) {
+  public Visitable visit(Visitable visitable) throws StandardException{
+
+    if(visitable instanceof FromBaseTable) {
+      FromBaseTable baseTable = (FromBaseTable)visitable;
+      TableName tableName = baseTable.getTableName();
+      String table = tableName.getTableName();
+      tables.add(new TableDef(table, props));
+    } else if(visitable instanceof ResultColumn) {
+      ResultColumn col = (ResultColumn)visitable;
+      String cname = col.getName();
+      fields.add(cname);
+    } else if(visitable instanceof OrderByColumn) {
+      OrderByColumn orderByColumn = (OrderByColumn)visitable;
+      asc = orderByColumn.isAscending();
+    } else if(visitable instanceof ColumnReference) {
+      ColumnReference cref = (ColumnReference)visitable;
+      String ocol = cref.getColumnName();
+      SortDef sortDef = new SortDef(asc,ocol);
+      sorts.add(sortDef);
+    }
+
     return visitable;
   }
 
@@ -54,6 +91,88 @@ class SQLVisitor implements Visitor, Serializable {
   }
 
   public TupleStream getTupleStream() {
+   TableDef tableDef = tables.get(0);
+    Map map = new HashMap();
+
+    if(tableDef.isCloud()) {
+      map.put("q","*:*");
+      map.put("qt", tableDef.getHandler());
+      tupleStream = new CloudSolrStream(tableDef.getBaseUrl(), tableDef.getTableName(), map);
+    } else {
+      map.put("q","*:*");
+      map.put("qt", tableDef.getHandler());
+      tupleStream = new SolrStream(tableDef.getBaseUrl(), map);
+    }
+
+    StringBuilder fieldBuf =  new StringBuilder();
+    boolean comma = false;
+    for(String field : fields) {
+      if(comma) {
+        fieldBuf.append(",");
+      }
+
+      fieldBuf.append(field);
+    }
+
+    map.put("fl", fieldBuf.toString());
+
+    StringBuilder sortBuf = new StringBuilder();
+    comma = false;
+    for(SortDef sortDef : sorts) {
+      if(comma) {
+        fieldBuf.append(",");
+      }
+      sortBuf.append(sortDef.toString());
+    }
+    map.put("sort",sortBuf.toString());
     return this.tupleStream;
+  }
+
+
+  private class TableDef {
+    private String baseUrl;
+    private String handler;
+    private String tableName;
+
+    public TableDef(String tableName, Properties props) {
+      baseUrl = props.getProperty(tableName+".baseUrl", "http://locathost:8983/solr/"+tableName); //Default to local collection
+      handler = props.getProperty(tableName+".handler", "/select");
+      this.tableName = tableName;
+    }
+
+    public boolean isCloud() {
+      return !(baseUrl.indexOf("http") == 0);
+    }
+
+    public String getBaseUrl() {
+      return baseUrl;
+    }
+
+    public String getTableName() {
+      return tableName;
+    }
+
+    public String getHandler() {
+      return handler;
+    }
+  }
+
+  private class SortDef {
+    private String dir;
+    private String field;
+
+    public SortDef(boolean asc, String field) {
+      if(asc) {
+        this.dir = "asc";
+      } else {
+        this.dir = "desc";
+      }
+
+      this.field = field;
+    }
+
+    public String toString() {
+      return field+" "+dir;
+    }
   }
 }
