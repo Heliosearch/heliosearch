@@ -19,13 +19,7 @@ package org.apache.solr.search.facet;
 
 import java.io.IOException;
 
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.search.QueryContext;
-import org.apache.solr.search.SolrIndexSearcher;
-import org.apache.solr.search.function.FuncValues;
 import org.apache.solr.search.function.ValueSource;
-import org.apache.solr.search.mutable.MutableValueInt;
 
 public class SumAgg extends SimpleAggValueSource {
 
@@ -35,8 +29,8 @@ public class SumAgg extends SimpleAggValueSource {
   }
 
   @Override
-  public SlotAcc createSlotAcc(FacetContext fcontext, MutableValueInt slot, int numDocs, int numSlots) throws IOException {
-    return new SumSlotAcc(slot, getArg(), fcontext, numSlots);
+  public SlotAcc createSlotAcc(FacetContext fcontext, int numDocs, int numSlots) throws IOException {
+    return new SumSlotAcc(getArg(), fcontext, numSlots);
   }
 }
 

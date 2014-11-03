@@ -587,7 +587,7 @@ public class UnInvertedField extends DocTermOrds {
         // handle the biggest terms
         try ( DocSet intersection = searcher.getDocSet(new TermQuery(new Term(field, tt.term)), docs); )
         {
-          int collected = processor.collect(tt.termNum - startTermIndex, intersection);
+          int collected = processor.collect(intersection, tt.termNum - startTermIndex);
           processor.countAcc.incrementCount(tt.termNum - startTermIndex, collected);
           if (collected > 0) {
             uniqueTerms++;
@@ -649,10 +649,10 @@ public class UnInvertedField extends DocTermOrds {
             if (arrIdx < 0) continue;
             if (arrIdx >= nTerms) break;
             processor.countAcc.incrementCount(arrIdx, 1);
-            processor.collect(arrIdx, segDoc);
+            processor.collect(segDoc, arrIdx);
             if (processor.allBucketsSlot >= 0) {
               processor.countAcc.incrementCount(processor.allBucketsSlot, 1);
-              processor.collect(processor.allBucketsSlot, segDoc);
+              processor.collect(segDoc, processor.allBucketsSlot);
             }
           }
         } else {
@@ -667,10 +667,10 @@ public class UnInvertedField extends DocTermOrds {
               if (arrIdx < 0) continue;
               if (arrIdx >= nTerms) break;
               processor.countAcc.incrementCount(arrIdx, 1);
-              processor.collect(arrIdx, segDoc);
+              processor.collect(segDoc, arrIdx);
               if (processor.allBucketsSlot >= 0) {
                 processor.countAcc.incrementCount(processor.allBucketsSlot, 1);
-                processor.collect(processor.allBucketsSlot, segDoc);
+                processor.collect(segDoc, processor.allBucketsSlot);
               }
 
               delta = 0;

@@ -19,18 +19,14 @@ package org.apache.solr.search.facet;
 
 import java.io.IOException;
 
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.search.QueryContext;
-import org.apache.solr.search.mutable.MutableValueInt;
-
 public class UniqueAgg extends StrAggValueSource {
   public UniqueAgg(String field) {
     super("unique", field);
   }
 
   @Override
-  public SlotAcc createSlotAcc(FacetContext fcontext, MutableValueInt slot, int numDocs, int numSlots) throws IOException {
-    return new UniqueSinglevaluedSlotAcc(slot, fcontext, getArg(), numSlots);
+  public SlotAcc createSlotAcc(FacetContext fcontext, int numDocs, int numSlots) throws IOException {
+    return new UniqueSinglevaluedSlotAcc(fcontext, getArg(), numSlots);
     // TODO: handle multiValued?
     // return new UniqueMultivaluedSlotAcc(slot, getArg(), qContext, numSlots);
   }

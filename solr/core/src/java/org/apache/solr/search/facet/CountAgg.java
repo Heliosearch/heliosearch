@@ -19,17 +19,13 @@ package org.apache.solr.search.facet;
 
 import java.io.IOException;
 
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.search.QueryContext;
-import org.apache.solr.search.mutable.MutableValueInt;
-
 public class CountAgg extends SimpleAggValueSource {
   public CountAgg() {
     super("count", null);
   }
 
   @Override
-  public SlotAcc createSlotAcc(FacetContext fcontext, MutableValueInt slot, int numDocs, int numSlots) throws IOException {
-    return new CountSlotAcc(slot,  fcontext, numSlots);
+  public SlotAcc createSlotAcc(FacetContext fcontext, int numDocs, int numSlots) throws IOException {
+    return new CountSlotAcc(fcontext, numSlots);
   }
 }

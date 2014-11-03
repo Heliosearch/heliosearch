@@ -33,55 +33,22 @@ import java.io.Closeable;
 import java.io.IOException;
 
 
-abstract class Acc extends Collector implements Closeable {
-  String key;  // TODO
+public abstract class SlotAcc implements Closeable {
+  String key; // todo...
+  protected final FacetContext fcontext;
 
-  public void finish() {
+  public SlotAcc(FacetContext fcontext) {
+    this.fcontext = fcontext;
   }
 
-  public abstract Comparable getValue();
-
-  public void setValues(NamedList<Object> bucket) {
-    if (key == null) return;
-    bucket.add(key, getValue());
-  }
-
-  @Override
-  public void setScorer(Scorer scorer) throws IOException {
-  }
-
-  @Override
-  public void collect(int doc) throws IOException {
-  }
-
-  @Override
   public void setNextReader(AtomicReaderContext readerContext) throws IOException {
   }
 
-  @Override
-  public boolean acceptsDocsOutOfOrder() {
-    return false;
-  }
-
-  @Override
-  public void close() throws IOException {
-  }
-}
-
-
-public abstract class SlotAcc extends Acc {
-  protected final MutableValueInt slot;
-
-  public SlotAcc(MutableValueInt slot) {
-    this.slot = slot;
-  }
+  public abstract void collect(int doc, int slot) throws IOException;
 
   public abstract int compare(int slotA, int slotB);
 
-  public Comparable getValue(int slotNum) {
-    slot.value = slotNum;
-    return getValue();
-  }
+  public abstract Comparable getValue(int slotNum);
 
   public void setValues(NamedList<Object> bucket, int slotNum) {
     if (key == null) return;
@@ -89,27 +56,27 @@ public abstract class SlotAcc extends Acc {
   }
 
   public abstract void reset();
-}
 
+  @Override
+  public void close() throws IOException {
+  }
+}
 
 
 // TODO: we should really have a decoupled value provider...
 // This would enhance reuse and also prevent multiple lookups of same value across diff stats
 abstract class FuncSlotAcc extends SlotAcc {
-  ValueSource valueSource;
-  FacetContext fcontext;
-  FuncValues values;
+  protected final ValueSource valueSource;
+  protected FuncValues values;
 
-  public FuncSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
-    super(slot);
+  public FuncSlotAcc(ValueSource values, FacetContext fcontext, int numSlots) {
+    super(fcontext);
     this.valueSource = values;
-    this.fcontext = fcontext;
   }
 
   @Override
   public void setNextReader(AtomicReaderContext readerContext) throws IOException {
     values = valueSource.getValues(fcontext.qcontext, readerContext);
-    super.setNextReader(readerContext);
   }
 }
 
@@ -124,11 +91,12 @@ abstract class DoubleFuncSlotAcc extends FuncSlotAcc {
   double[] result;  // TODO: use DoubleArray
   double initialValue;
 
-  public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
-    this(slot, values, fcontext, numSlots, 0);
+  public DoubleFuncSlotAcc(ValueSource values, FacetContext fcontext, int numSlots) {
+    this(values, fcontext, numSlots, 0);
   }
-  public DoubleFuncSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots, double initialValue) {
-    super(slot, values, fcontext, numSlots);
+
+  public DoubleFuncSlotAcc(ValueSource values, FacetContext fcontext, int numSlots, double initialValue) {
+    super(values, fcontext, numSlots);
     this.initialValue = initialValue;
     result = new double[numSlots];
     if (initialValue != 0) {
@@ -143,8 +111,8 @@ abstract class DoubleFuncSlotAcc extends FuncSlotAcc {
 
 
   @Override
-  public Double getValue() {
-    return result[slot.value];
+  public Double getValue(int slot) {
+    return result[slot];
   }
 
   @Override
@@ -159,8 +127,8 @@ abstract class IntSlotAcc extends SlotAcc {
   int[] result;  // use LongArray32
   int initialValue;
 
-  public IntSlotAcc(MutableValueInt slot, int numSlots, int initialValue) {
-    super(slot);
+  public IntSlotAcc(FacetContext fcontext, int numSlots, int initialValue) {
+    super(fcontext);
     this.initialValue = initialValue;
     result = new int[numSlots];
     if (initialValue != 0) {
@@ -174,8 +142,8 @@ abstract class IntSlotAcc extends SlotAcc {
   }
 
   @Override
-  public Integer getValue() {
-    return result[slot.value];
+  public Integer getValue(int slot) {
+    return result[slot];
   }
 
   @Override
@@ -188,138 +156,93 @@ abstract class IntSlotAcc extends SlotAcc {
 
 
 
-
-
 class SumSlotAcc extends DoubleFuncSlotAcc {
-  double total = 0;
-
-  public SumSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
-    super(slot, values, fcontext, numSlots);
+  public SumSlotAcc(ValueSource values, FacetContext fcontext, int numSlots) {
+    super(values, fcontext, numSlots);
   }
 
-  public void collect(int doc) {
+  public void collect(int doc, int slotNum) {
     double val = values.doubleVal(doc);  // todo: worth trying to share this value across multiple stats that need it?
-    int slotNum = slot.value;  // todo: more efficient to pass it in?
-    total += val;
     result[slotNum] += val;
-  }
-
-  public Comparable getGlobalValue() {
-    return total;
   }
 }
 
 class SumsqSlotAcc extends DoubleFuncSlotAcc {
-  double total = 0;
-
-  public SumsqSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
-    super(slot, values, fcontext, numSlots);
+  public SumsqSlotAcc(ValueSource values, FacetContext fcontext, int numSlots) {
+    super(values, fcontext, numSlots);
   }
 
-  public void collect(int doc) {
+  @Override
+  public void collect(int doc, int slotNum) {
     double val = values.doubleVal(doc);
-    int slotNum = slot.value;
-
     val = val * val;
-    total += val;
     result[slotNum] += val;
-  }
-
-  public Comparable getGlobalValue() {
-    return total;
   }
 }
 
 
 
 class MinSlotAcc extends DoubleFuncSlotAcc {
-  double min = 0;
-
-  public MinSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
-    super(slot, values, fcontext, numSlots, Double.NaN);
+  public MinSlotAcc(ValueSource values, FacetContext fcontext, int numSlots) {
+    super(values, fcontext, numSlots, Double.NaN);
   }
 
-  public void collect(int doc) {
+  @Override
+  public void collect(int doc, int slotNum) {
     double val = values.doubleVal(doc);
     if (val == 0 && !values.exists(doc)) return;  // depend on fact that non existing values return 0 for func query
 
-    int slotNum = slot.value;
     double currMin = result[slotNum];
     if (!(val >= currMin)) {  // val>=currMin will be false for staring value: val>=NaN
       result[slotNum] = val;
     }
-    if (!(val >= min)) {
-      min = val;
-    }
-  }
-
-  public Comparable getGlobalValue() {
-    return min;
   }
 }
 
 class MaxSlotAcc extends DoubleFuncSlotAcc {
-  double max = 0;
-
-  public MaxSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
-    super(slot, values, fcontext, numSlots, Double.NaN);
+  public MaxSlotAcc(ValueSource values, FacetContext fcontext, int numSlots) {
+    super(values, fcontext, numSlots, Double.NaN);
   }
 
-  public void collect(int doc) {
+  @Override
+  public void collect(int doc, int slotNum) {
     double val = values.doubleVal(doc);
     if (val == 0 && !values.exists(doc)) return;  // depend on fact that non existing values return 0 for func query
 
-    int slotNum = slot.value;
     double currMax = result[slotNum];
     if (!(val <= currMax)) {  // reversed order to handle NaN
       result[slotNum] = val;
     }
-    if (!(val <= max)) {
-      max = val;
-    }
   }
 
-  public Comparable getGlobalValue() {
-    return max;
-  }
 }
 
 
 class AvgSlotAcc extends DoubleFuncSlotAcc {
-  double tot = 0;
-  int count = 0;
   int[] counts;
 
-  public AvgSlotAcc(MutableValueInt slot, ValueSource values, FacetContext fcontext, int numSlots) {
-    super(slot, values, fcontext, numSlots);
+  public AvgSlotAcc(ValueSource values, FacetContext fcontext, int numSlots) {
+    super(values, fcontext, numSlots);
     counts = new int[numSlots];
   }
 
   @Override
   public void reset() {
     super.reset();
-    tot = 0;
-    count = 0;
     for (int i=0; i<counts.length; i++) {
       counts[i] = 0;
     }
   }
 
-  public void collect(int doc) {
+  @Override
+  public void collect(int doc, int slotNum) {
     double val = values.doubleVal(doc);  // todo: worth trying to share this value across multiple stats that need it?
-    int slotNum = slot.value;  // todo: more efficient to pass it in?
-    tot += val;
     result[slotNum] += val;
-    count += 1;
     counts[slotNum] += 1;
   }
 
   private double avg(double tot, int count) {
     return count==0 ? 0 : tot/count;  // returns 0 instead of NaN.. todo - make configurable? if NaN, we need to handle comparisons though...
-  }
-
-  public Comparable getGlobalValue() {
-    return avg(tot, count);
   }
 
   private double avg(int slot) {
@@ -331,10 +254,9 @@ class AvgSlotAcc extends DoubleFuncSlotAcc {
     return Double.compare(avg(slotA), avg(slotB));
   }
 
-
   @Override
-  public Double getValue() {
-    return avg(slot.value);
+  public Double getValue(int slot) {
+    return avg(slot);
   }
 
 }
@@ -342,81 +264,64 @@ class AvgSlotAcc extends DoubleFuncSlotAcc {
 
 
 class CountSlotAcc extends IntSlotAcc {
-  int total = 0;
-
-  public CountSlotAcc(MutableValueInt slot, FacetContext fcontext, int numSlots) {
-    super(slot, numSlots, 0);
+  public CountSlotAcc(FacetContext fcontext, int numSlots) {
+    super(fcontext, numSlots, 0);
   }
 
-  public void collect(int doc) {       // TODO: count arrays can use fewer bytes based on the number of docs in the base set (that's the upper bound for single valued) - look at ttf?
-    total++;
-    int slotNum = slot.value;
+  @Override
+  public void collect(int doc, int slotNum) {       // TODO: count arrays can use fewer bytes based on the number of docs in the base set (that's the upper bound for single valued) - look at ttf?
     result[slotNum] = result[slotNum] + 1;
   }
 
-  public Comparable getGlobalValue() {
-    return total;
-  }
-
   public void incrementCount(int slot, int count) {
-    total += count;
     result[slot] += count;
   }
 
   public int getCount(int slot) {
-    if (slot == -1) return total;
     return result[slot];
   }
 
   @Override
   public void reset() {
-    total = 0;
     super.reset();
   }
 }
 
 
 class SortSlotAcc extends SlotAcc {
-  public SortSlotAcc(MutableValueInt slot) {
-    super(slot);
+  public SortSlotAcc(FacetContext fcontext) {
+    super(fcontext);
+  }
+
+  @Override
+  public void collect(int doc, int slot) throws IOException {
+    // no-op
   }
 
   public int compare(int slotA, int slotB) {
     return slotA - slotB;
   }
 
+  @Override
   public Comparable getValue(int slotNum) {
-    slot.value = slotNum;
-    return getValue();
-  }
-
-  public void setValues(NamedList<Object> bucket, int slotNum) {
-    if (key == null) return;
-    bucket.add(key, getValue(slotNum));
+    return slotNum;
   }
 
   @Override
   public void reset() {
     // no-op
   }
-
-  @Override
-  public Comparable getValue() {
-    return slot.value;
-  }
 }
 
 
 abstract class UniqueSlotAcc extends SlotAcc {
-  FixedBitSet ords;
   FixedBitSet[] arr;
   int currentDocBase;
-  int[] counts;
+  int[] counts;  // populated with the cardinality once
   int nTerms;
 
-
-  public UniqueSlotAcc(MutableValueInt slot, FacetContext fcontext, String field, int numSlots) throws IOException {
-    super(slot);
+  public UniqueSlotAcc(FacetContext fcontext, String field, int numSlots) throws IOException {
+    super(fcontext);
     arr = new FixedBitSet[numSlots];
   }
 
@@ -427,7 +332,6 @@ abstract class UniqueSlotAcc extends SlotAcc {
       if (bits == null) continue;
       bits.clear(0, bits.length());
     }
-    ords.clear( ords.cardinality() );
   }
 
   @Override
@@ -436,12 +340,12 @@ abstract class UniqueSlotAcc extends SlotAcc {
   }
 
   @Override
-  public Comparable getValue() {
+  public Comparable getValue(int slot) {
     if (counts != null) {  // will only be pre-populated if this was used for sorting.
-      return counts[slot.value];
+      return counts[slot];
     }
 
-    FixedBitSet bs = arr[slot.value];
+    FixedBitSet bs = arr[slot];
     return bs==null ? 0 : bs.cardinality();
   }
 
@@ -463,77 +367,63 @@ abstract class UniqueSlotAcc extends SlotAcc {
     return counts[slotA] - counts[slotB];
   }
 
-  public Comparable getGlobalValue() {
-    return ords.cardinality();
-  }
 }
 
 
 class UniqueSinglevaluedSlotAcc extends UniqueSlotAcc {
   SortedDocValues si;
 
-  public UniqueSinglevaluedSlotAcc(MutableValueInt slot, FacetContext fcontext, String field, int numSlots) throws IOException {
-    super(slot, fcontext, field, numSlots);
+  public UniqueSinglevaluedSlotAcc(FacetContext fcontext, String field, int numSlots) throws IOException {
+    super(fcontext, field, numSlots);
     SolrIndexSearcher searcher = fcontext.qcontext.searcher();
     si = FieldUtil.getSortedDocValues(fcontext.qcontext, searcher.getSchema().getField(field), null);
     nTerms = si.getValueCount();
-    ords = new FixedBitSet(nTerms);
   }
 
-  public void collect(int doc) {
+  @Override
+  public void collect(int doc, int slotNum) {
     int ord = si.getOrd(doc + currentDocBase);
     if (ord < 0) return;  // -1 means missing
-    ords.set(ord);
-
-    int slotNum = slot.value;
-    if (slotNum < 0) return;
 
     FixedBitSet bits = arr[slotNum];
     if (bits == null) {
       bits = new FixedBitSet(nTerms);
       arr[slotNum] = bits;
     }
-
     bits.set(ord);
   }
 }
+
 
 class UniqueMultivaluedSlotAcc extends UniqueSlotAcc implements UnInvertedField.Callback {
   private UnInvertedField uif;
   private UnInvertedField.DocToTerm docToTerm;
 
-  public UniqueMultivaluedSlotAcc(MutableValueInt slot, FacetContext fcontext, String field, int numSlots) throws IOException {
-    super(slot, fcontext, field, numSlots);
+  public UniqueMultivaluedSlotAcc(FacetContext fcontext, String field, int numSlots) throws IOException {
+    super(fcontext, field, numSlots);
     SolrIndexSearcher searcher = fcontext.qcontext.searcher();
     uif = UnInvertedField.getUnInvertedField(field, searcher);
     docToTerm = uif.new DocToTerm();
     nTerms = uif.numTerms();
-    ords = new FixedBitSet(nTerms);
   }
 
 
-  FixedBitSet bits;  // bits for the current slot, only set for the callback
+  private FixedBitSet bits;  // bits for the current slot, only set for the callback
   @Override
   public void call(int termNum) {
-    ords.set(termNum);
-    if (bits != null) {
-      bits.set(termNum);
-    }
+    bits.set(termNum);
   }
 
-  public void collect(int doc) throws IOException {
-    int slotNum = slot.value;
+  @Override
+  public void collect(int doc, int slotNum) throws IOException {
     FixedBitSet bs = null;
-    if (slotNum >= 0) {
-      bs = arr[slotNum];
-      if (bs == null) {
-        bs = new FixedBitSet(nTerms);
-        arr[slotNum] = bs;
-      }
+    bs = arr[slotNum];
+    if (bs == null) {
+      bs = new FixedBitSet(nTerms);
+      arr[slotNum] = bs;
     }
-
     this.bits = bs;
-    docToTerm.getTerms(doc + currentDocBase, this);
+    docToTerm.getTerms(doc + currentDocBase, this);  // this will call back to our Callback.call(int termNum)
   }
 
   @Override

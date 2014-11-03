@@ -19,10 +19,7 @@ package org.apache.solr.search.facet;
 
 import java.io.IOException;
 
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.function.ValueSource;
-import org.apache.solr.search.mutable.MutableValueInt;
 
 public class MaxAgg extends SimpleAggValueSource {
   public MaxAgg(ValueSource vs) {
@@ -30,7 +27,7 @@ public class MaxAgg extends SimpleAggValueSource {
   }
 
   @Override
-  public SlotAcc createSlotAcc(FacetContext fcontext, MutableValueInt slot, int numDocs, int numSlots) throws IOException {
-    return new MaxSlotAcc(slot, getArg(), fcontext, numSlots);
+  public SlotAcc createSlotAcc(FacetContext fcontext, int numDocs, int numSlots) throws IOException {
+    return new MaxSlotAcc(getArg(), fcontext, numSlots);
   }
 }

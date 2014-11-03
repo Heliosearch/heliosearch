@@ -149,7 +149,7 @@ abstract class FacetFieldProcessor extends FacetProcessor<FacetField> {
       if ("count".equals(sortKey)) {
         sortAcc = countAcc;
       } else if ("index".equals(sortKey)) {
-        sortAcc = new SortSlotAcc(slot);
+        sortAcc = new SortSlotAcc(fcontext);
         // This sorting accumulator just goes by the slot number, so does not need to be collected
         // and hence does not need to find it's way into the accMap or accs array.
       }
@@ -326,19 +326,10 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
           addStats(missingBucket, 0);
         } else {
           missingDocSet = SimpleFacets.getFieldMissing(fcontext.searcher, fcontext.base, freq.field);
-          slot.value = nTerms;  // an extra slot was added to the end for this missing bucket
+          // an extra slot was added to the end for this missing bucket
           countAcc.incrementCount(nTerms, missingDocSet.size());
-          collect(missingDocSet);
+          collect(missingDocSet, nTerms);
           addStats(missingBucket, nTerms);
-
-          /**  approach of creating new accumulators
-          createAccs(missingDocSet.size(), 1);
-          prepareForCollection();
-          slot.value = 0;
-          countAcc.incrementCount(0, missingDocSet.size());
-          collect(missingDocSet);
-          addStats(missingBucket, 0);
-          **/
         }
 
         if (freq.getSubFacets().size() > 0) {
@@ -401,14 +392,6 @@ class FacetFieldProcessorFC extends FacetFieldProcessorFCBase {
   }
 
   protected void collectDocs() throws IOException {
-    final MutableValueInt slot = this.slot;
-
-    // TODO: do stats include "missing"???
-
-    // count collection array only needs to be as big as the number of terms we are
-    // going to collect counts for.
-    // final int[] counts = new int[nTerms]; // TODO
-
     final List<AtomicReaderContext> leaves = fcontext.searcher.getIndexReader().leaves();
     final Iterator<AtomicReaderContext> ctxIt = leaves.iterator();
     AtomicReaderContext ctx = null;
@@ -431,13 +414,11 @@ class FacetFieldProcessorFC extends FacetFieldProcessorFCBase {
       int term = sortedDocValues.getOrd( doc );
       int arrIdx = term - startTermIndex;
       if (arrIdx>=0 && arrIdx<nTerms) {
-        slot.value = arrIdx;
         countAcc.incrementCount(arrIdx, 1);
-        collect(doc - segBase);  // per-seg collectors
+        collect(doc - segBase, arrIdx);  // per-seg collectors
         if (allBucketsSlot >= 0 && term >= 0) {
-          slot.value = allBucketsSlot;
           countAcc.incrementCount(allBucketsSlot, 1);
-          collect(doc - segBase);  // per-seg collectors
+          collect(doc - segBase, allBucketsSlot);  // per-seg collectors
         }
       }
     }
@@ -690,7 +671,7 @@ class FacetFieldProcessorStream extends FacetFieldProcessor implements Closeable
             resetStats();
 
             if (!countOnly) {
-              collect(termSet);
+              collect(termSet, 0);
             }
 
         } else {
@@ -728,7 +709,7 @@ class FacetFieldProcessorStream extends FacetFieldProcessor implements Closeable
                 while ((docid = sub.docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
                   if (fastForRandomSet.exists(docid + base)) {
                     c++;
-                    collect(docid);
+                    collect(docid, 0);
                   }
                 }
               }
@@ -745,7 +726,7 @@ class FacetFieldProcessorStream extends FacetFieldProcessor implements Closeable
               while ((docid = docsEnum.nextDoc()) != DocIdSetIterator.NO_MORE_DOCS) {
                 if (fastForRandomSet.exists(docid)) {
                   c++;
-                  collect(docid);
+                  collect(docid, 0);
                 }
               }
             }

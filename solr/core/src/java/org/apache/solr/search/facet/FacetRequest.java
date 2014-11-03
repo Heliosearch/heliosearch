@@ -32,7 +32,6 @@ import org.apache.solr.common.params.FacetParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.util.StrUtils;
-import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.search.DocIterator;
@@ -44,7 +43,6 @@ import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SyntaxError;
 import org.apache.solr.search.mutable.MutableValueInt;
-import org.noggit.ObjectBuilder;
 
 
 public abstract class FacetRequest {
@@ -119,7 +117,6 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   LinkedHashMap<String,SlotAcc> accMap;
   protected SlotAcc[] accs;
   protected CountSlotAcc countAcc;
-  protected MutableValueInt slot;
 
   FacetProcessor(FacetContext fcontext, FacetRequestT freq) {
     this.fcontext = fcontext;
@@ -138,11 +135,10 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
 
   protected void createAccs(int docCount, int slotCount) throws IOException {
     accMap = new LinkedHashMap<String,SlotAcc>();
-    slot = new MutableValueInt();
-    countAcc = new CountSlotAcc(slot, fcontext, slotCount);
+    countAcc = new CountSlotAcc(fcontext, slotCount);
     countAcc.key = "count";
     for (Map.Entry<String,AggValueSource> entry : freq.getFacetStats().entrySet()) {
-      SlotAcc acc = entry.getValue().createSlotAcc(fcontext, slot, docCount, slotCount);
+      SlotAcc acc = entry.getValue().createSlotAcc(fcontext, docCount, slotCount);
       acc.key = entry.getKey();
       accMap.put(acc.key, acc);
     }
@@ -171,8 +167,8 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
     }
     createAccs(docCount, 1);
     prepareForCollection();
-    int collected = collect(docs);
-    countAcc.incrementCount(slot.value, collected);
+    int collected = collect(docs, 0);
+    countAcc.incrementCount(0, collected);
     assert collected == docCount;
     addStats(bucket, 0);
   }
@@ -186,13 +182,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
     }
   }
 
-
-  protected int collect(int slotNum, DocSet docs) throws IOException {
-    slot.value = slotNum;
-    return collect(docs);
-  }
-
-  protected int collect(DocSet docs) throws IOException {
+  int collect(DocSet docs, int slot) throws IOException {
     int count = 0;
     SolrIndexSearcher searcher = fcontext.searcher;
 
@@ -219,19 +209,14 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
         setNextReader(ctx);
       }
       count++;
-      collect(doc - segBase);  // per-seg collectors
+      collect(doc - segBase, slot);  // per-seg collectors
     }
     return count;
   }
 
-  void collect(int tnum, int segDoc) throws IOException {
-    slot.value = tnum;
-    collect(segDoc);
-  }
-
-  void collect(int segDoc) throws IOException {
+  void collect(int segDoc, int slot) throws IOException {
     for (SlotAcc acc : accs) {
-      acc.collect(segDoc);
+      acc.collect(segDoc, slot);
     }
   }
 
@@ -243,10 +228,9 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   }
 
   void addStats(NamedList<Object> target, int slotNum) {
-    slot.value = slotNum;
     target.add("count", countAcc.getCount(slotNum));
     for (SlotAcc acc : accs) {
-      acc.setValues(target);
+      acc.setValues(target, slotNum);
     }
   }
 
