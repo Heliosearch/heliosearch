@@ -404,6 +404,7 @@ class UniqueMultivaluedSlotAcc extends UniqueSlotAcc implements UnInvertedField.
     SolrIndexSearcher searcher = fcontext.qcontext.searcher();
     uif = UnInvertedField.getUnInvertedField(field, searcher);
     docToTerm = uif.new DocToTerm();
+    fcontext.qcontext.addCloseHook( this );  // TODO: find way to close accumulators instead of using close hook?
     nTerms = uif.numTerms();
   }
 
@@ -416,8 +417,7 @@ class UniqueMultivaluedSlotAcc extends UniqueSlotAcc implements UnInvertedField.
 
   @Override
   public void collect(int doc, int slotNum) throws IOException {
-    FixedBitSet bs = null;
-    bs = arr[slotNum];
+    FixedBitSet bs = arr[slotNum];
     if (bs == null) {
       bs = new FixedBitSet(nTerms);
       arr[slotNum] = bs;

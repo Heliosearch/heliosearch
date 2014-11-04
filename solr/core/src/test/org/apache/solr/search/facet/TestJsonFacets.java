@@ -128,10 +128,10 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
   @Test
   public void testStatsTemplated() throws Exception {
     // single valued strings
-    doStatsTemplated( params(                "rows","0", "noexist","noexist_s",  "cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b", "sparse_s","sparse_s") );
+    doStatsTemplated( params(                "rows","0", "noexist","noexist_s",  "cat_s","cat_s", "where_s","where_s", "num_d","num_d", "num_i","num_i", "super_s","super_s", "val_b","val_b", "sparse_s","sparse_s"    ,"multi_ss","multi_ss") );
 
     // multi-valued strings
-    doStatsTemplated( params("facet","true", "rows","0", "noexist","noexist_ss", "cat_s","cat_ss", "where_s","where_ss", "num_d","num_d", "num_i","num_i", "super_s","super_ss", "val_b","val_b", "sparse_s","sparse_ss") );
+    doStatsTemplated( params("facet","true", "rows","0", "noexist","noexist_ss", "cat_s","cat_ss", "where_s","where_ss", "num_d","num_d", "num_i","num_i", "super_s","super_ss", "val_b","val_b", "sparse_s","sparse_ss", "multi_ss","multi_ss") );
   }
 
 
@@ -145,15 +145,16 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
     String val_b = m("${val_b}");
     String super_s = m("${super_s}");
     String sparse_s = m("${sparse_s}");
+    String multi_ss = m("${multi_ss}");
 
     assertU(add(doc("id", "1", cat_s, "A", where_s, "NY", num_d, "4", num_i, "2",   super_s,"zodiac",   val_b, "true",  sparse_s,"one")));
-    assertU(add(doc("id", "2", cat_s, "B", where_s, "NJ", num_d, "-9", num_i, "-5", super_s,"superman", val_b, "false"                )));
+    assertU(add(doc("id", "2", cat_s, "B", where_s, "NJ", num_d, "-9", num_i, "-5", super_s,"superman", val_b, "false"                , multi_ss,"a", "multi_ss","b" )));
     assertU(add(doc("id", "3")));
     assertU(commit());
-    assertU(add(doc("id", "4", cat_s, "A", where_s, "NJ", num_d, "2", num_i, "3",   super_s,"spiderman"                               )));
-    assertU(add(doc("id", "5", cat_s, "B", where_s, "NJ", num_d, "11", num_i, "7",  super_s,"batman"                   ,sparse_s,"two")));
+    assertU(add(doc("id", "4", cat_s, "A", where_s, "NJ", num_d, "2", num_i, "3",   super_s,"spiderman"                               , multi_ss, "b")));
+    assertU(add(doc("id", "5", cat_s, "B", where_s, "NJ", num_d, "11", num_i, "7",  super_s,"batman"                   ,sparse_s,"two", multi_ss, "a")));
     assertU(commit());
-    assertU(add(doc("id", "6", cat_s, "B", where_s, "NY", num_d, "-5", num_i, "-5", super_s,"hulk"                                    )));
+    assertU(add(doc("id", "6", cat_s, "B", where_s, "NY", num_d, "-5", num_i, "-5", super_s,"hulk"                                    , multi_ss, "b", multi_ss, "a" )));
     assertU(commit());
 
     // straight query facets
@@ -406,6 +407,29 @@ public class TestJsonFacets extends SolrTestCaseJ4 {
         , "facets=={count:0, " +
             "sum1:0.0, sumsq1:0.0, avg1:0.0, min1:'NaN', max1:'NaN', numwhere:0  }"
     );
+
+    //
+    // tests on a multi-valued field with actual multiple values, just to ensure that we are
+    // using a multi-valued method for the rest of the tests when appropriate.
+    //
+
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{cat:{terms:{field:'${multi_ss}', facet:{nj:{query:'${where_s}:NJ'}}    }   }} }"
+        )
+        , "facets=={ 'count':6, " +
+            "'cat':{ 'buckets':[{ 'val':'a', 'count':3, 'nj':{ 'count':2}}, { 'val':'b', 'count':3, 'nj':{ 'count':2}}]} }"
+    );
+
+    // test unique on multi-valued field
+    assertJQ(req(p, "q", "*:*"
+            , "json.facet", "{x:'unique(${multi_ss})', y:{query:{q:'id:2', facet:{x:'unique(${multi_ss})'} }}   }"
+        )
+        , "facets=={ 'count':6, " +
+            "x:2," +
+            "y:{count:1, x:2}" +  // single document should yield 2 unique values
+            " }"
+    );
+
 
 
     // TODO:
