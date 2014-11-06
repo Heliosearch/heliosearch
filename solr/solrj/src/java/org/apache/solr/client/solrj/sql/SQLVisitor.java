@@ -33,6 +33,7 @@ import org.apache.solr.client.solrj.streaming.Bucket;
 import org.apache.solr.client.solrj.streaming.Metric;
 import org.apache.solr.client.solrj.streaming.CloudSolrStream;
 import org.apache.solr.client.solrj.streaming.MultiComp;
+import org.apache.solr.client.solrj.streaming.ParallelStream;
 import org.apache.solr.client.solrj.streaming.RollupStream;
 import org.apache.solr.client.solrj.streaming.SolrStream;
 import org.apache.solr.client.solrj.streaming.SumMetric;
@@ -45,6 +46,7 @@ import com.foundationdb.sql.parser.Visitor;
 import com.foundationdb.sql.parser.ValueNode;
 
 import java.io.Serializable;
+import java.io.IOException;
 import java.util.Properties;
 import java.util.List;
 import java.util.ArrayList;
@@ -68,10 +70,19 @@ class SQLVisitor implements Visitor, Serializable {
   private boolean asc;
   private int state = -1;
   private int ORDER_BY = 1;
-
+  private int numWorkers;
+  private String workersZkHost;
+  private String workersCollection;
+  private boolean parallel = false;
 
   public SQLVisitor(Properties props) {
     this.props = props;
+    if(props.containsKey("workers.num")) {
+      parallel = true;
+      this.numWorkers = Integer.parseInt(props.getProperty("workers.num"));
+      this.workersZkHost = props.getProperty("workers.zkhost");
+      this.workersCollection = props.getProperty("workers.collection");
+    }
   }
 
   public Visitable visit(Visitable visitable) throws StandardException{
@@ -107,8 +118,9 @@ class SQLVisitor implements Visitor, Serializable {
     return false;
   }
 
-  public TupleStream getTupleStream() {
-   TableDef tableDef = tables.get(0);
+  public TupleStream getTupleStream() throws IOException {
+
+    TableDef tableDef = tables.get(0);
 
     Map map = new HashMap();
     StringBuilder fieldBuf =  new StringBuilder();
@@ -170,6 +182,7 @@ class SQLVisitor implements Visitor, Serializable {
 
       comma = false;
       StringBuilder sortBuf = new StringBuilder();  // We must sort on the group by fields.
+      StringBuilder partBuf = new StringBuilder();
 
       for(int i=0; i<groupBy.size(); i++) {
         GroupByColumn groupByColumn = groupBy.get(i);
@@ -177,13 +190,19 @@ class SQLVisitor implements Visitor, Serializable {
         //Add sort criteria based on the groupby fields
         if(comma) {
           sortBuf.append(",");
+          partBuf.append(",");
         }
         sortBuf.append(groupByColumn.getColumnName());
+        partBuf.append(groupByColumn.getColumnName());
         sortBuf.append(" asc");
         comma = true;
       }
 
       map.put("sort", sortBuf.toString());
+
+      if(parallel) {
+        map.put("partitionKeys", partBuf.toString());
+      }
 
       if(tableDef.isCloud()) {
         map.put("q","*:*");
@@ -265,6 +284,10 @@ class SQLVisitor implements Visitor, Serializable {
         }
 
         tupleStream = new RankStream(tupleStream, 10, comp);
+        if(parallel) {
+          System.out.println("######################################:"+workersZkHost);
+          tupleStream = new ParallelStream(workersZkHost,workersCollection, tupleStream, numWorkers, comp);
+        }
       }
     }
 

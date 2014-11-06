@@ -38,7 +38,7 @@ import java.io.IOException;
 public class SQLStream extends TupleStream implements Serializable {
 
   private Properties props;
-  private TupleStream tupleStream;
+  TupleStream tupleStream;
 
   public SQLStream(String sql, Properties props) throws Exception {
     this.tupleStream = parse(sql, props);

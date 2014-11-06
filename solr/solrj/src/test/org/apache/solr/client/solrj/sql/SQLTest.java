@@ -161,6 +161,36 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     assert(metrics.get(0).equals(Double.parseDouble("102.0")));
 
 
+    //Test parallel group by
+
+    sql = "select a_s, sum(a_i) from collection1 group by a_s order by sum(a_i) asc";
+    props = new Properties();
+    props.put("collection1.baseUrl", zkHost);
+
+    //Add the parallel worker props.
+    props.put("workers.zkhost", zkHost);
+    props.put("workers.num", "2");
+    props.put("workers.collection", "collection1");
+
+
+    sqlStream = new SQLStream(sql, props);
+    tuples = getTuples(sqlStream);
+    assert(tuples.size() == 3);
+    assert(tuples.get(0).get("buckets").equals("hello1"));
+    assert(tuples.get(1).get("buckets").equals("hello3"));
+    assert(tuples.get(2).get("buckets").equals("hello0"));
+
+    assert (sqlStream.tupleStream instanceof ParallelStream);
+
+    metrics = (List<Double>)tuples.get(0).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("3.0")));
+
+    metrics = (List<Double>)tuples.get(1).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("7.0")));
+
+    metrics = (List<Double>)tuples.get(2).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("102.0")));
+
     del("*:*");
     commit();
 
