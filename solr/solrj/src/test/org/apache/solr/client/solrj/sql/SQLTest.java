@@ -104,6 +104,68 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     shardCount = 3;
   }
 
+  private void testGroupByAggregate() throws Exception {
+    indexr(id, "0", "a_s", "hello0", "a_i", "100", "a_f", "0");
+    indexr(id, "2", "a_s", "hello0", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello3", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "6", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "7", "a_s", "hello1", "a_i", "1", "a_f", "1");
+
+
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+    String sql = "select a_s, sum(a_i) from collection1 where rownum < 10 group by a_s order by sum(a_i) desc";
+    Properties props = new Properties();
+    props.put("collection1.baseUrl", zkHost);
+
+    SQLStream sqlStream = new SQLStream(sql, props);
+    List<Tuple> tuples = getTuples(sqlStream);
+    assert(tuples.size() == 3);
+    assert(tuples.get(0).get("buckets").equals("hello0"));
+    assert(tuples.get(1).get("buckets").equals("hello3"));
+    assert(tuples.get(2).get("buckets").equals("hello1"));
+
+
+    List<Double> metrics = (List<Double>)tuples.get(0).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("102.0")));
+
+    metrics = (List<Double>)tuples.get(1).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("7.0")));
+
+    metrics = (List<Double>)tuples.get(2).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("3.0")));
+
+
+    //Reverse the sort order
+    sql = "select a_s, sum(a_i) from collection1 where rownum < 10 group by a_s order by sum(a_i) asc";
+    props = new Properties();
+    props.put("collection1.baseUrl", zkHost);
+
+    sqlStream = new SQLStream(sql, props);
+    tuples = getTuples(sqlStream);
+    assert(tuples.size() == 3);
+    assert(tuples.get(0).get("buckets").equals("hello1"));
+    assert(tuples.get(1).get("buckets").equals("hello3"));
+    assert(tuples.get(2).get("buckets").equals("hello0"));
+
+    metrics = (List<Double>)tuples.get(0).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("3.0")));
+
+    metrics = (List<Double>)tuples.get(1).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("7.0")));
+
+    metrics = (List<Double>)tuples.get(2).get("metricValues");
+    assert(metrics.get(0).equals(Double.parseDouble("102.0")));
+
+
+    del("*:*");
+    commit();
+
+  }
+
 
   @Override
   public void doTest() throws Exception {
@@ -141,6 +203,8 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
 
     del("*:*");
     commit();
+
+    testGroupByAggregate();
   }
 
   protected Map mapParams(String... vals) {

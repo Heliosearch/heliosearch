@@ -18,22 +18,39 @@
 package org.apache.solr.client.solrj.sql;
 
 import com.foundationdb.sql.StandardException;
+import com.foundationdb.sql.parser.AggregateNode;
 import com.foundationdb.sql.parser.ColumnReference;
 import com.foundationdb.sql.parser.FromBaseTable;
+import com.foundationdb.sql.parser.GroupByColumn;
 import com.foundationdb.sql.parser.OrderByColumn;
 import com.foundationdb.sql.parser.ResultColumn;
 import com.foundationdb.sql.parser.TableName;
+import com.foundationdb.sql.parser.GroupByList;
 import com.foundationdb.sql.parser.Visitable;
+import org.apache.solr.client.solrj.streaming.AscMetricComp;
+import org.apache.solr.client.solrj.streaming.DescMetricComp;
+import org.apache.solr.client.solrj.streaming.Bucket;
+import org.apache.solr.client.solrj.streaming.Metric;
 import org.apache.solr.client.solrj.streaming.CloudSolrStream;
+import org.apache.solr.client.solrj.streaming.MultiComp;
+import org.apache.solr.client.solrj.streaming.RollupStream;
 import org.apache.solr.client.solrj.streaming.SolrStream;
+import org.apache.solr.client.solrj.streaming.SumMetric;
+import org.apache.solr.client.solrj.streaming.RankStream;
+
 import org.apache.solr.client.solrj.streaming.TupleStream;
+import org.apache.solr.client.solrj.streaming.Tuple;
+
 import com.foundationdb.sql.parser.Visitor;
+import com.foundationdb.sql.parser.ValueNode;
+
 import java.io.Serializable;
 import java.util.Properties;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Comparator;
 
 /**
  * The SQLVisitor visits with the abstract syntax tree created by the Foundationdb SQLParser. As it visits the nodes
@@ -45,8 +62,9 @@ class SQLVisitor implements Visitor, Serializable {
   private Properties props;
   private TupleStream tupleStream;
   private List<TableDef> tables = new ArrayList();
-  private List<SortDef>  sorts = new ArrayList();
-  private List<String> fields = new ArrayList();
+  private List<OrderByColumn>  sorts = new ArrayList();
+  private List<ResultColumn> fields = new ArrayList();
+  private List<GroupByColumn> groupBy = new ArrayList();
   private boolean asc;
   private int state = -1;
   private int ORDER_BY = 1;
@@ -65,19 +83,13 @@ class SQLVisitor implements Visitor, Serializable {
       tables.add(new TableDef(table, props));
     } else if(visitable instanceof ResultColumn) {
       ResultColumn col = (ResultColumn)visitable;
-      String cname = col.getName();
-      fields.add(cname);
+      fields.add(col);
     } else if(visitable instanceof OrderByColumn) {
       OrderByColumn orderByColumn = (OrderByColumn)visitable;
-      asc = orderByColumn.isAscending();
-      this.state = ORDER_BY;
-    } else if(visitable instanceof ColumnReference) {
-      ColumnReference cref = (ColumnReference)visitable;
-      String ocol = cref.getColumnName();
-      if(state == ORDER_BY) {
-        SortDef sortDef = new SortDef(asc,ocol);
-        sorts.add(sortDef);
-      }
+      sorts.add(orderByColumn);
+    } else if(visitable instanceof GroupByColumn) {
+      GroupByColumn groupByColumn = (GroupByColumn)visitable;
+      groupBy.add(groupByColumn);
     }
 
     return visitable;
@@ -101,40 +113,179 @@ class SQLVisitor implements Visitor, Serializable {
     Map map = new HashMap();
     StringBuilder fieldBuf =  new StringBuilder();
     boolean comma = false;
-    for(String field : fields) {
+    for(ResultColumn field : fields) {
       if(comma) {
         fieldBuf.append(",");
       }
-
-      fieldBuf.append(field);
+      ValueNode vnode = field.getExpression();
+      if(vnode instanceof AggregateNode) {
+        AggregateNode an = (AggregateNode)vnode;
+        ValueNode op = an.getOperand();
+        fieldBuf.append(op.getColumnName());
+      } else {
+        fieldBuf.append(vnode.getColumnName());
+      }
       comma = true;
     }
+
 
     map.put("fl", fieldBuf.toString());
 
-    StringBuilder sortBuf = new StringBuilder();
-    comma = false;
-    for(SortDef sortDef : sorts) {
-      if(comma) {
-        sortBuf.append(",");
+    if(groupBy.size() == 0) {
+      StringBuilder sortBuf = new StringBuilder();
+      comma = false;
+      for(OrderByColumn sortDef : sorts) {
+
+        if(comma) {
+          sortBuf.append(",");
+        }
+
+        sortBuf.append(sortDef.getExpression().getColumnName());
+
+        if(sortDef.isAscending()) {
+          sortBuf.append(" asc");
+        } else {
+          sortBuf.append(" desc");
+        }
+
+        comma = true;
+
       }
-      sortBuf.append(sortDef.toString());
-      comma = true;
-    }
-    map.put("sort",sortBuf.toString());
+      map.put("sort",sortBuf.toString());
 
-    if(tableDef.isCloud()) {
-      map.put("q","*:*");
-      map.put("qt", tableDef.getHandler());
-      tupleStream = new CloudSolrStream(tableDef.getBaseUrl(), tableDef.getTableName(), map);
-    } else {
-      map.put("q","*:*");
-      map.put("qt", tableDef.getHandler());
-      tupleStream = new SolrStream(tableDef.getBaseUrl(), map);
+      if(tableDef.isCloud()) {
+        map.put("q","*:*");
+        map.put("qt", tableDef.getHandler());
+        tupleStream = new CloudSolrStream(tableDef.getBaseUrl(), tableDef.getTableName(), map);
+      } else {
+        map.put("q","*:*");
+        map.put("qt", tableDef.getHandler());
+        tupleStream = new SolrStream(tableDef.getBaseUrl(), map);
+      }
     }
 
+    if(groupBy.size() > 0) {
+      //Create the buckets
+      Bucket[] buckets = new Bucket[groupBy.size()];
+
+      comma = false;
+      StringBuilder sortBuf = new StringBuilder();  // We must sort on the group by fields.
+
+      for(int i=0; i<groupBy.size(); i++) {
+        GroupByColumn groupByColumn = groupBy.get(i);
+        buckets[i] = new Bucket(groupByColumn.getColumnName());
+        //Add sort criteria based on the groupby fields
+        if(comma) {
+          sortBuf.append(",");
+        }
+        sortBuf.append(groupByColumn.getColumnName());
+        sortBuf.append(" asc");
+        comma = true;
+      }
+
+      map.put("sort", sortBuf.toString());
+
+      if(tableDef.isCloud()) {
+        map.put("q","*:*");
+        map.put("qt", tableDef.getHandler());
+        tupleStream = new CloudSolrStream(tableDef.getBaseUrl(), tableDef.getTableName(), map);
+      } else {
+        map.put("q","*:*");
+        map.put("qt", tableDef.getHandler());
+        tupleStream = new SolrStream(tableDef.getBaseUrl(), map);
+      }
+
+      //Create the metrics
+      List<Metric> metricList = new ArrayList();
+      for(ResultColumn resultColumn : fields) {
+        ValueNode vnode = resultColumn.getExpression();
+        if(vnode instanceof AggregateNode) {
+          AggregateNode agnode = (AggregateNode)vnode;
+          String colName = agnode.getOperand().getColumnName();
+          boolean isDouble = true;
+          if(colName.endsWith("_i") || colName.endsWith("_l")) {
+            isDouble = false;
+          }
+
+          String function = agnode.getAggregateName();
+          if(function.equalsIgnoreCase("sum")) {
+            SumMetric metric = new SumMetric(colName, isDouble);
+            metricList.add(metric);
+          }
+        }
+      }
+
+      Metric[] metrics = metricList.toArray(new Metric[metricList.size()]);
+
+      tupleStream = new RollupStream(tupleStream, buckets, metrics);
+
+      //Add the rank stream based on order by clause.
+
+      if(sorts.size() > 0) {
+        Comparator<Tuple> comp = null;
+
+        if(sorts.size() == 1) {
+
+          OrderByColumn o = sorts.get(0);
+          ValueNode vnode = o.getExpression();
+          if(vnode instanceof  AggregateNode) {
+            AggregateNode aggregateNode = (AggregateNode)vnode;
+            for(int i=0; i<metrics.length; i++) {
+              Metric m = metrics[i];
+              if(equals(m, aggregateNode)) {
+                if(o.isAscending()) {
+                  comp = new AscMetricComp(i);
+                } else {
+                  comp = new DescMetricComp(i);
+                }
+              }
+            }
+          }
+
+        } else {
+          Comparator<Tuple>[] comps = new Comparator[sorts.size()];
+          comp = new MultiComp(comps);
+          for(int b=0; b<sorts.size(); b++) {
+            OrderByColumn o = sorts.get(b);
+            ValueNode vnode = o.getExpression();
+            if(vnode instanceof  AggregateNode) {
+              AggregateNode aggregateNode = (AggregateNode)vnode;
+              for(int i=0; i<metrics.length; i++) {
+                Metric m = metrics[i];
+                if(equals(m, aggregateNode)) {
+                  if(o.isAscending()) {
+                    comps[b] = new AscMetricComp(i);
+                  } else {
+                    comps[b] = new DescMetricComp(i);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        tupleStream = new RankStream(tupleStream, 10, comp);
+      }
+    }
 
     return this.tupleStream;
+  }
+
+  private boolean equals(Metric metric, AggregateNode aggregateNode) {
+    String parts[] = metric.getName().split(":");
+    String agname = aggregateNode.getAggregateName();
+    if(parts[0].equalsIgnoreCase(agname)) {
+      if(parts.length == 1) {
+        return true;
+      } else {
+
+        if(parts[1].equalsIgnoreCase(aggregateNode.getOperand().getColumnName())) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
 
@@ -163,25 +314,6 @@ class SQLVisitor implements Visitor, Serializable {
 
     public String getHandler() {
       return handler;
-    }
-  }
-
-  private class SortDef {
-    private String dir;
-    private String field;
-
-    public SortDef(boolean asc, String field) {
-      if(asc) {
-        this.dir = "asc";
-      } else {
-        this.dir = "desc";
-      }
-
-      this.field = field;
-    }
-
-    public String toString() {
-      return field+" "+dir;
     }
   }
 }
