@@ -19,6 +19,8 @@ package org.apache.solr.client.solrj.sql;
 
 import com.foundationdb.sql.StandardException;
 import com.foundationdb.sql.parser.AggregateNode;
+import com.foundationdb.sql.parser.BinaryRelationalOperatorNode;
+import com.foundationdb.sql.parser.CharConstantNode;
 import com.foundationdb.sql.parser.ColumnReference;
 import com.foundationdb.sql.parser.FromBaseTable;
 import com.foundationdb.sql.parser.GroupByColumn;
@@ -74,6 +76,7 @@ class SQLVisitor implements Visitor, Serializable {
   private String workersZkHost;
   private String workersCollection;
   private boolean parallel = false;
+  private BinaryRelationalOperatorNode singleWhere;
 
   public SQLVisitor(Properties props) {
     this.props = props;
@@ -101,6 +104,8 @@ class SQLVisitor implements Visitor, Serializable {
     } else if(visitable instanceof GroupByColumn) {
       GroupByColumn groupByColumn = (GroupByColumn)visitable;
       groupBy.add(groupByColumn);
+    } else if(visitable instanceof BinaryRelationalOperatorNode) {
+      this.singleWhere = (BinaryRelationalOperatorNode)visitable;
     }
 
     return visitable;
@@ -205,13 +210,20 @@ class SQLVisitor implements Visitor, Serializable {
       }
 
       if(tableDef.isCloud()) {
-        map.put("q","*:*");
         map.put("qt", tableDef.getHandler());
         tupleStream = new CloudSolrStream(tableDef.getBaseUrl(), tableDef.getTableName(), map);
       } else {
-        map.put("q","*:*");
         map.put("qt", tableDef.getHandler());
         tupleStream = new SolrStream(tableDef.getBaseUrl(), map);
+      }
+
+      if(singleWhere != null) {
+        //Assume equals operator for now.
+        ValueNode field = singleWhere.getLeftOperand();
+        CharConstantNode query  = (CharConstantNode)singleWhere.getRightOperand();
+        map.put("q",field.getColumnName()+":"+query.getValue());
+      } else {
+        map.put("q", "*:*");
       }
 
       //Create the metrics

@@ -117,7 +117,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     commit();
 
     String zkHost = zkServer.getZkAddress();
-    String sql = "select a_s, sum(a_i) from collection1 where rownum < 10 group by a_s order by sum(a_i) desc";
+    String sql = "select a_s, sum(a_i) from collection1 group by a_s order by sum(a_i) desc";
     Properties props = new Properties();
     props.put("collection1.baseUrl", zkHost);
 
@@ -140,7 +140,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
 
 
     //Reverse the sort order
-    sql = "select a_s, sum(a_i) from collection1 where rownum < 10 group by a_s order by sum(a_i) asc";
+    sql = "select a_s, sum(a_i) from collection1 group by a_s order by sum(a_i) asc";
     props = new Properties();
     props.put("collection1.baseUrl", zkHost);
 
@@ -210,11 +210,11 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
 
     commit();
 
-    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0");
-    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0");
-    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
-    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4");
-    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "0", "a_s", "hello0", "a_i", "0", "a_f", "0", "a_t", "hello world");
+    indexr(id, "2", "a_s", "hello2", "a_i", "2", "a_f", "0", "a_t", "hello world");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3", "a_t", "hello world");
+    indexr(id, "4", "a_s", "hello4", "a_i", "4", "a_f", "4", "a_t", "hello world");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1", "a_t", "hello world");
 
     commit();
 
@@ -223,7 +223,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
 
     //Basic SQLStream test.
 
-    String sql = "select id, a_s, a_i from collection1 order by a_i desc";
+    String sql = "select id, a_s, a_i from collection1 where a_t = 'hello' order by a_i desc";
     Properties props = new Properties();
     props.put("collection1.baseUrl", zkHost);
 
