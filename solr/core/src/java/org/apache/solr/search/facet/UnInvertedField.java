@@ -20,6 +20,7 @@ package org.apache.solr.search.facet;
 import org.apache.lucene.index.AtomicReader;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.DocTermOrds;
+import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.SortedDocValues;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermsEnum;
@@ -226,6 +227,7 @@ public class UnInvertedField extends DocTermOrds {
   public class DocToTerm implements Closeable {
     private final DocSet[] bigTermSets;
     private final int[] bigTermNums;
+    private TermsEnum te;
 
     public DocToTerm() throws IOException {
       bigTermSets = new DocSet[bigTerms.size()];
@@ -236,6 +238,17 @@ public class UnInvertedField extends DocTermOrds {
         bigTermNums[i] = tt.termNum;
         i++;
       }
+    }
+
+    public BytesRef lookupOrd(int ord) throws IOException {
+      return getTermValue( getTermsEnum() , ord );
+    }
+
+    public TermsEnum getTermsEnum() throws IOException {
+      if (te == null) {
+        te = getOrdTermsEnum(searcher.getAtomicReader());
+      }
+      return te;
     }
 
     public void getTerms(int doc, Callback target) throws IOException {

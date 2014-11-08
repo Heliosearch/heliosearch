@@ -30,4 +30,9 @@ public class SumsqAgg extends SimpleAggValueSource {
   public SlotAcc createSlotAcc(FacetContext fcontext, int numDocs, int numSlots) throws IOException {
     return new SumsqSlotAcc(getArg(), fcontext, numSlots);
   }
+
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetDoubleMerger();
+  }
 }

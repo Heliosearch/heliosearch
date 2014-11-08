@@ -27,7 +27,7 @@ import org.apache.solr.search.mutable.MutableValueInt;
 
 import java.io.IOException;
 
-public class SimpleAggValueSource extends AggValueSource {
+public abstract class SimpleAggValueSource extends AggValueSource {
   ValueSource arg;
 
   public SimpleAggValueSource(String name, ValueSource vs) {

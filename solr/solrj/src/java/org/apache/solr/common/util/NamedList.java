@@ -63,6 +63,11 @@ public class NamedList<T> implements Cloneable, Serializable, Iterable<Map.Entry
     nvPairs = new ArrayList<>();
   }
 
+
+  public NamedList(int sz) {
+    nvPairs = new ArrayList<>(sz<<1);
+  }
+
   /**
    * Creates a NamedList instance containing the "name,value" pairs contained in the
    * Entry[].

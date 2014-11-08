@@ -29,7 +29,6 @@ import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.FacetParams;
-import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.common.util.StrUtils;
 import org.apache.solr.request.SolrQueryRequest;
@@ -42,7 +41,6 @@ import org.apache.solr.search.QParser;
 import org.apache.solr.search.QueryContext;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SyntaxError;
-import org.apache.solr.search.mutable.MutableValueInt;
 
 
 public abstract class FacetRequest {
@@ -160,7 +158,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
     }
   }
 
-  protected void processStats(NamedList<Object> bucket, DocSet docs, int docCount) throws IOException {
+  protected void processStats(SimpleOrderedMap<Object> bucket, DocSet docs, int docCount) throws IOException {
     if (freq.getFacetStats().size() == 0) {
       bucket.add("count", docCount);
       return;
@@ -174,7 +172,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   }
 
 
-  protected void fillBucketSubs(NamedList<Object> response, FacetContext subContext) throws IOException {
+  protected void fillBucketSubs(SimpleOrderedMap<Object> response, FacetContext subContext) throws IOException {
     for (Map.Entry<String,FacetRequest> sub : freq.getSubFacets().entrySet()) {
       FacetProcessor subProcessor = sub.getValue().createFacetProcessor(subContext);
       subProcessor.process();
@@ -227,7 +225,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
     }
   }
 
-  void addStats(NamedList<Object> target, int slotNum) {
+  void addStats(SimpleOrderedMap<Object> target, int slotNum) throws IOException {
     target.add("count", countAcc.getCount(slotNum));
     for (SlotAcc acc : accs) {
       acc.setValues(target, slotNum);
@@ -276,7 +274,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
 
 
 
-  protected void processSubs(NamedList<Object> bucket, DocSet result) throws IOException {
+  protected void processSubs(SimpleOrderedMap<Object> bucket, DocSet result) throws IOException {
     // TODO: process exclusions, etc
 
     FacetContext subContext = fcontext.sub();

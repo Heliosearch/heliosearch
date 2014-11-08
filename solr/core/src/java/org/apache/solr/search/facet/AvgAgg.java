@@ -18,7 +18,9 @@ package org.apache.solr.search.facet;
  */
 
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.solr.client.solrj.response.RangeFacet;
 import org.apache.solr.search.function.ValueSource;
 
 public class AvgAgg extends SimpleAggValueSource {
@@ -31,5 +33,23 @@ public class AvgAgg extends SimpleAggValueSource {
     return new AvgSlotAcc(getArg(), fcontext, numSlots);
   }
 
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetMerger() {
+      long num;
+      double sum;
 
+      @Override
+      public void merge(Object facetResult) {
+        List<Number> numberList = (List<Number>)facetResult;
+        num += numberList.get(0).longValue();
+        sum += numberList.get(1).doubleValue();
+      }
+
+      @Override
+      public Object getMergedResult() {
+        return num==0 ? 0.0d : sum/num;
+      }
+    };
+  }
 }

@@ -34,12 +34,10 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.PriorityQueue;
 import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.UnicodeUtil;
 import org.apache.solr.common.SolrException;
-import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.SchemaField;
@@ -49,7 +47,6 @@ import org.apache.solr.search.HashDocSet;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SortedIntDocSetNative;
 import org.apache.solr.search.field.FieldUtil;
-import org.apache.solr.search.mutable.MutableValueInt;
 
 public class FacetField extends FacetRequest {
   String field;
@@ -122,6 +119,11 @@ public class FacetField extends FacetRequest {
       // single valued string
       return new FacetFieldProcessorFC(fcontext, this, sf);
     }
+  }
+
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetFieldMerger(this);
   }
 }
 
@@ -242,8 +244,9 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
     };
 
     Slot bottom = null;
+    int effectiveMincount = (int)(fcontext.isShard() ? Math.min(1 , freq.mincount) : freq.mincount);
     for (int i = (startTermIndex == -1) ? 1 : 0; i < nTerms; i++) {
-      if (countAcc.getCount(i) < freq.mincount) {
+      if (countAcc.getCount(i) < effectiveMincount) {
         continue;
       }
 
@@ -623,7 +626,7 @@ class FacetFieldProcessorStream extends FacetFieldProcessor implements Closeable
   }
 
   public SimpleOrderedMap<Object> _nextBucket() throws IOException {
-    int mincount = (int)freq.mincount;
+    int effectiveMincount = (int)(fcontext.isShard() ? Math.min(1 , freq.mincount) : freq.mincount);
     DocSet termSet = null;
 
     try {
@@ -634,7 +637,7 @@ class FacetFieldProcessorStream extends FacetFieldProcessor implements Closeable
         }
 
         int df = termsEnum.docFreq();
-        if (df < mincount) {
+        if (df < effectiveMincount) {
           term = termsEnum.next();
           continue;
         }
@@ -736,7 +739,7 @@ class FacetFieldProcessorStream extends FacetFieldProcessor implements Closeable
 
 
 
-        if (c < mincount) {
+        if (c < effectiveMincount) {
           term = termsEnum.next();
           continue;
         }

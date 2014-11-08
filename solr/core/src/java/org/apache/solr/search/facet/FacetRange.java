@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.FacetParams;
-import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.schema.DateField;
 import org.apache.solr.schema.FieldType;
@@ -125,7 +124,6 @@ class FacetRangeProcessor extends FacetProcessor<FacetRange> {
     final SimpleOrderedMap<Object> res = new SimpleOrderedMap<>();
 
     List<SimpleOrderedMap<Object>> buckets = null;
-    NamedList<Integer> counts = null;
 
     buckets = new ArrayList<>();
     res.add("buckets", buckets);

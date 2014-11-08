@@ -30,4 +30,26 @@ public class MaxAgg extends SimpleAggValueSource {
   public SlotAcc createSlotAcc(FacetContext fcontext, int numDocs, int numSlots) throws IOException {
     return new MaxSlotAcc(getArg(), fcontext, numSlots);
   }
+
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetMerger() {
+      double val = Double.NaN;
+
+      @Override
+      public void merge(Object facetResult) {
+        double result = ((Number)facetResult).doubleValue();
+        if (result > val || Double.isNaN(val)) {
+          val = result;
+        }
+      }
+
+      @Override
+      public Object getMergedResult() {
+        return val;
+      }
+    };
+  }
+
+
 }

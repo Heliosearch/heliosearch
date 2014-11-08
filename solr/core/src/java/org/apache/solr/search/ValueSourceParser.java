@@ -246,10 +246,6 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
         List<ValueSource> sources = fp.parseValueSourceList();
-        if (sources.size()==1) {
-          // assume aggregation operation
-          return new SimpleAggValueSource("sum", sources.get(0));
-        }
         return new SumFloatFunction(sources.toArray(new ValueSource[sources.size()]));
       }
     });
@@ -853,14 +849,14 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
     addParser("agg_stdev", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
-        return new SimpleAggValueSource("stdev", fp.parseValueSource());
+        return null;
       }
     });
 
     addParser("agg_multistat", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
-        return new SimpleAggValueSource("multistat", fp.parseValueSource());
+        return null;
       }
     });
 

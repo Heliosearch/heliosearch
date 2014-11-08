@@ -18,10 +18,20 @@ package org.apache.solr.search.facet;
  */
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.solr.common.util.SimpleOrderedMap;
 
 public class UniqueAgg extends StrAggValueSource {
+  public static String UNIQUE = "unique";
+
+  // internal constants used for aggregating values from multiple shards
+  static String VALS = "vals";
+
   public UniqueAgg(String field) {
-    super("unique", field);
+    super(UNIQUE, field);
   }
 
   @Override
@@ -30,5 +40,43 @@ public class UniqueAgg extends StrAggValueSource {
       return new UniqueMultivaluedSlotAcc(fcontext, getArg(), numSlots);
     else
       return new UniqueSinglevaluedSlotAcc(fcontext, getArg(), numSlots);
+  }
+
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetMerger() {
+      long sumUnique;
+      Set<Object> values;
+      int shardsMissing;
+      long shardsMissingSum;
+      long shardsMissingMax;
+
+      @Override
+      public void merge(Object facetResult) {
+        SimpleOrderedMap map = (SimpleOrderedMap)facetResult;
+        long unique = ((Number)map.get("unique")).longValue();
+        sumUnique += unique;
+
+        List vals = (List)map.get("vals");
+        if (vals != null) {
+          if (values == null) {
+            values = new HashSet<>(vals.size()*4);
+          }
+          values.addAll(vals);
+        } else {
+          shardsMissing++;
+          shardsMissingSum += unique;
+          shardsMissingMax = Math.max(shardsMissingMax, unique);
+        }
+
+        // TODO: somehow get & use the count in the bucket?
+      }
+
+      @Override
+      public Object getMergedResult() {
+        long exactCount = values.size();
+        return exactCount + shardsMissingSum;
+      }
+    };
   }
 }

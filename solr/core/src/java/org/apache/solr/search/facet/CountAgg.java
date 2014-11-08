@@ -28,4 +28,9 @@ public class CountAgg extends SimpleAggValueSource {
   public SlotAcc createSlotAcc(FacetContext fcontext, int numDocs, int numSlots) throws IOException {
     return new CountSlotAcc(fcontext, numSlots);
   }
+
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetLongMerger();
+  }
 }
