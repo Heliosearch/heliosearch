@@ -29,8 +29,8 @@ import com.foundationdb.sql.parser.ResultColumn;
 import com.foundationdb.sql.parser.TableName;
 import com.foundationdb.sql.parser.GroupByList;
 import com.foundationdb.sql.parser.Visitable;
-import org.apache.solr.client.solrj.streaming.AscMetricComp;
-import org.apache.solr.client.solrj.streaming.DescMetricComp;
+import org.apache.solr.client.solrj.streaming.AscFieldComp;
+import org.apache.solr.client.solrj.streaming.DescFieldComp;
 import org.apache.solr.client.solrj.streaming.Bucket;
 import org.apache.solr.client.solrj.streaming.Metric;
 import org.apache.solr.client.solrj.streaming.CloudSolrStream;
@@ -261,18 +261,12 @@ class SQLVisitor implements Visitor, Serializable {
           ValueNode vnode = o.getExpression();
           if(vnode instanceof  AggregateNode) {
             AggregateNode aggregateNode = (AggregateNode)vnode;
-            for(int i=0; i<metrics.length; i++) {
-              Metric m = metrics[i];
-              if(equals(m, aggregateNode)) {
-                if(o.isAscending()) {
-                  comp = new AscMetricComp(i);
-                } else {
-                  comp = new DescMetricComp(i);
-                }
-              }
+            if(o.isAscending()) {
+              comp = new AscFieldComp(aggregateNode.getAggregateName().toLowerCase()+"("+aggregateNode.getOperand().getColumnName()+")");
+            } else {
+              comp = new DescFieldComp(aggregateNode.getAggregateName().toLowerCase()+"("+aggregateNode.getOperand().getColumnName()+")");
             }
           }
-
         } else {
           Comparator<Tuple>[] comps = new Comparator[sorts.size()];
           comp = new MultiComp(comps);
@@ -281,15 +275,10 @@ class SQLVisitor implements Visitor, Serializable {
             ValueNode vnode = o.getExpression();
             if(vnode instanceof  AggregateNode) {
               AggregateNode aggregateNode = (AggregateNode)vnode;
-              for(int i=0; i<metrics.length; i++) {
-                Metric m = metrics[i];
-                if(equals(m, aggregateNode)) {
-                  if(o.isAscending()) {
-                    comps[b] = new AscMetricComp(i);
-                  } else {
-                    comps[b] = new DescMetricComp(i);
-                  }
-                }
+              if(o.isAscending()) {
+                comps[b] = new AscFieldComp(aggregateNode.getAggregateName().toLowerCase()+"("+aggregateNode.getOperand().getColumnName()+")");
+              } else {
+                comps[b] = new DescFieldComp(aggregateNode.getAggregateName().toLowerCase()+"("+aggregateNode.getOperand().getColumnName()+")");
               }
             }
           }
@@ -297,7 +286,6 @@ class SQLVisitor implements Visitor, Serializable {
 
         tupleStream = new RankStream(tupleStream, 10, comp);
         if(parallel) {
-          System.out.println("######################################:"+workersZkHost);
           tupleStream = new ParallelStream(workersZkHost,workersCollection, tupleStream, numWorkers, comp);
         }
       }
@@ -305,24 +293,6 @@ class SQLVisitor implements Visitor, Serializable {
 
     return this.tupleStream;
   }
-
-  private boolean equals(Metric metric, AggregateNode aggregateNode) {
-    String parts[] = metric.getName().split(":");
-    String agname = aggregateNode.getAggregateName();
-    if(parts[0].equalsIgnoreCase(agname)) {
-      if(parts.length == 1) {
-        return true;
-      } else {
-
-        if(parts[1].equalsIgnoreCase(aggregateNode.getOperand().getColumnName())) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
 
   private class TableDef {
     private String baseUrl;

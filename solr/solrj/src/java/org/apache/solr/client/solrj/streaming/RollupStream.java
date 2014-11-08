@@ -68,19 +68,23 @@ public class RollupStream extends TupleStream {
       if(tuple.EOF) {
         if(!finished) {
           Map map = new HashMap();
-          List<Double> metricValues = new ArrayList();
-          List<String> metricNames = new ArrayList();
-          for(Metric metric : currentMetrics) {
-            metricNames.add(metric.getName());
-            metricValues.add(metric.getValue());
+          //Add the metrics
+          if(currentMetrics != null) {
+            for(Metric metric : currentMetrics) {
+              map.put(metric.getName(), metric.getValue());
+            }
+            //Add the buckets
+            Object[] parts = currentKey.getParts();
+            for(int i=0; i<buckets.length; i++) {
+              map.put(buckets[i].toString(), parts[i]);
+            }
+            Tuple t = new Tuple(map);
+            tupleStream.pushBack(tuple);
+            finished = true;
+            return t;
+          } else {
+            return tuple;
           }
-          map.put("buckets", currentKey.toString());
-          map.put("metricNames", metricNames);
-          map.put("metricValues", metricValues);
-          Tuple t = new Tuple(map);
-          tupleStream.pushBack(tuple);
-          finished = true;
-          return t;
         } else {
           return tuple;
         }
@@ -101,15 +105,16 @@ public class RollupStream extends TupleStream {
         Tuple t = null;
         if(currentMetrics != null) {
           Map map = new HashMap();
-          List<Double> metricValues = new ArrayList();
-          List<String> metricNames = new ArrayList();
+          //Add the metrics
           for(Metric metric : currentMetrics) {
-            metricNames.add(metric.getName());
-            metricValues.add(metric.getValue());
+            map.put(metric.getName(), metric.getValue());
           }
-          map.put("buckets", currentKey.toString());
-          map.put("metricNames", metricNames);
-          map.put("metricValues", metricValues);
+          //Add the buckets
+          Object[] parts = currentKey.getParts();
+          for(int i=0; i<buckets.length; i++) {
+            map.put(buckets[i].toString(), parts[i]);
+          }
+
           t = new Tuple(map);
         }
 

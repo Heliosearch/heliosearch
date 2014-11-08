@@ -35,7 +35,7 @@ public class MinMetric implements Metric, Serializable {
   }
 
   public String getName() {
-    return "min:"+column;
+    return "min("+column+")";
   }
 
   public double getValue() {

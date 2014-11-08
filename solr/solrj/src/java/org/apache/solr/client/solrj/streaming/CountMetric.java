@@ -29,7 +29,7 @@ public class CountMetric implements Metric, Serializable {
   private long count;
 
   public String getName() {
-    return "count";
+    return "count()";
   }
 
   public void update(Tuple tuple) {

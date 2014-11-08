@@ -35,7 +35,7 @@ public class MaxMetric implements Metric, Serializable {
   }
 
   public String getName() {
-    return "mix:"+column;
+    return "max("+column+")";
   }
 
   public double getValue() {

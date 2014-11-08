@@ -41,7 +41,7 @@ public class HashKey implements Serializable {
     this.parts = parts;
   }
 
-  public Object getParts() {
+  public Object[] getParts() {
     return parts;
   }
 

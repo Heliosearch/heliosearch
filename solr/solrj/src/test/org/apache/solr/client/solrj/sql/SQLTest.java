@@ -124,19 +124,12 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     SQLStream sqlStream = new SQLStream(sql, props);
     List<Tuple> tuples = getTuples(sqlStream);
     assert(tuples.size() == 3);
-    assert(tuples.get(0).get("buckets").equals("hello0"));
-    assert(tuples.get(1).get("buckets").equals("hello3"));
-    assert(tuples.get(2).get("buckets").equals("hello1"));
-
-
-    List<Double> metrics = (List<Double>)tuples.get(0).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("102.0")));
-
-    metrics = (List<Double>)tuples.get(1).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("7.0")));
-
-    metrics = (List<Double>)tuples.get(2).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("3.0")));
+    assert(tuples.get(0).get("a_s").equals("hello0"));
+    assert(tuples.get(1).get("a_s").equals("hello3"));
+    assert(tuples.get(2).get("a_s").equals("hello1"));
+    assert(tuples.get(0).getDouble("sum(a_i)").equals(Double.parseDouble("102.0")));
+    assert(tuples.get(1).getDouble("sum(a_i)").equals(Double.parseDouble("7.0")));
+    assert(tuples.get(2).getDouble("sum(a_i)").equals(Double.parseDouble("3.0")));
 
 
     //Reverse the sort order
@@ -147,19 +140,12 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     sqlStream = new SQLStream(sql, props);
     tuples = getTuples(sqlStream);
     assert(tuples.size() == 3);
-    assert(tuples.get(0).get("buckets").equals("hello1"));
-    assert(tuples.get(1).get("buckets").equals("hello3"));
-    assert(tuples.get(2).get("buckets").equals("hello0"));
-
-    metrics = (List<Double>)tuples.get(0).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("3.0")));
-
-    metrics = (List<Double>)tuples.get(1).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("7.0")));
-
-    metrics = (List<Double>)tuples.get(2).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("102.0")));
-
+    assert(tuples.get(0).get("a_s").equals("hello1"));
+    assert(tuples.get(1).get("a_s").equals("hello3"));
+    assert(tuples.get(2).get("a_s").equals("hello0"));
+    assert(tuples.get(0).getDouble("sum(a_i)").equals(Double.parseDouble("3.0")));
+    assert(tuples.get(1).getDouble("sum(a_i)").equals(Double.parseDouble("7.0")));
+    assert(tuples.get(2).getDouble("sum(a_i)").equals(Double.parseDouble("102.0")));
 
     //Test parallel group by
 
@@ -172,24 +158,16 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     props.put("workers.num", "2");
     props.put("workers.collection", "collection1");
 
-
     sqlStream = new SQLStream(sql, props);
     tuples = getTuples(sqlStream);
     assert(tuples.size() == 3);
-    assert(tuples.get(0).get("buckets").equals("hello1"));
-    assert(tuples.get(1).get("buckets").equals("hello3"));
-    assert(tuples.get(2).get("buckets").equals("hello0"));
-
+    assert(tuples.get(0).get("a_s").equals("hello1"));
+    assert(tuples.get(1).get("a_s").equals("hello3"));
+    assert(tuples.get(2).get("a_s").equals("hello0"));
     assert (sqlStream.tupleStream instanceof ParallelStream);
-
-    metrics = (List<Double>)tuples.get(0).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("3.0")));
-
-    metrics = (List<Double>)tuples.get(1).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("7.0")));
-
-    metrics = (List<Double>)tuples.get(2).get("metricValues");
-    assert(metrics.get(0).equals(Double.parseDouble("102.0")));
+    assert(tuples.get(0).getDouble("sum(a_i)").equals(Double.parseDouble("3.0")));
+    assert(tuples.get(1).getDouble("sum(a_i)").equals(Double.parseDouble("7.0")));
+    assert(tuples.get(2).getDouble("sum(a_i)").equals(Double.parseDouble("102.0")));
 
     del("*:*");
     commit();

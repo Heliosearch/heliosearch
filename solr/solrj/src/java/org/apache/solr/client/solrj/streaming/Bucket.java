@@ -40,4 +40,8 @@ public class Bucket implements Serializable {
   public String getBucketValue(Tuple tuple) {
     return tuple.get(bucketKey).toString();
   }
+
+  public String toString() {
+    return bucketKey;
+  }
 }

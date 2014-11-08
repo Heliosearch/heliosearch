@@ -38,7 +38,7 @@ public class SumMetric implements Metric, Serializable {
   }
 
   public String getName() {
-    return "sum:"+column;
+    return "sum("+column+")";
   }
 
   public void update(Tuple tuple) {

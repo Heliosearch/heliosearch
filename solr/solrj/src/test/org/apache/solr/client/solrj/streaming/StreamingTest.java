@@ -503,35 +503,32 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     RollupStream rstream = new RollupStream(stream, buckets, metrics);
     rstream.open();
     Tuple tuple = rstream.read();
-    String b = (String)tuple.get("buckets");
-    List<Double> values = (List<Double>)tuple.get("metricValues");
+    String b = (String)tuple.get("a_s");
     assert(b.equals("hello0"));
-    assert(values.get(0) == 102.0d);
-    assert(values.get(1) == 51.0d);
-    assert(values.get(2) == 2.0d);
-    assert(values.get(3) == 2.0d);
-    assert(values.get(4) == 100.0d);
+    assert(tuple.getDouble("sum(a_i)") == 102.0d);
+    assert(tuple.getDouble("avg(a_i)") == 51.0d);
+    assert(tuple.getDouble("count()") == 2.0d);
+    assert(tuple.getDouble("min(a_i)") == 2.0d);
+    assert(tuple.getDouble("max(a_i)") == 100.0d);
 
     tuple = rstream.read();
-    b = (String)tuple.get("buckets");
-    values = (List<Double>)tuple.get("metricValues");
+    b = (String)tuple.get("a_s");
     assert(b.equals("hello1"));
-    assert(values.get(0) == 3.0d);
-    assert(values.get(1) == 1.0d);
-    assert(values.get(2) == 3.0d);
-    assert(values.get(3) == 1.0d);
-    assert(values.get(4) == 1.0d);
+    assert(tuple.getDouble("sum(a_i)") == 3.0d);
+    assert(tuple.getDouble("avg(a_i)") == 1.0d);
+    assert(tuple.getDouble("count()") == 3.0d);
+    assert(tuple.getDouble("min(a_i)") == 1.0d);
+    assert(tuple.getDouble("max(a_i)") == 1.0d);
 
 
     tuple = rstream.read();
-    b = (String)tuple.get("buckets");
-    values = (List<Double>)tuple.get("metricValues");
+    b = (String)tuple.get("a_s");
     assert(b.equals("hello3"));
-    assert(values.get(0) == 7.0d);
-    assert(values.get(1) == 3.5d);
-    assert(values.get(2) == 2.0d);
-    assert(values.get(3) == 3.0d);
-    assert(values.get(4) == 4.0d);
+    assert(tuple.getDouble("sum(a_i)") == 7.0d);
+    assert(tuple.getDouble("avg(a_i)") == 3.5d);
+    assert(tuple.getDouble("count()") == 2.0d);
+    assert(tuple.getDouble("min(a_i)") == 3.0d);
+    assert(tuple.getDouble("max(a_i)") == 4.0d);
 
     tuple = rstream.read();
     assert(tuple.EOF);
@@ -564,39 +561,36 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     Map params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_s asc","partitionKeys","a_s");
     CloudSolrStream stream = new CloudSolrStream(zkHost, "collection1", params);
     RollupStream rostream = new RollupStream(stream, buckets, metrics);
-    ParallelStream rstream = new ParallelStream(zkHost,"collection1", rostream, 2, new AscFieldComp("buckets"));
+    ParallelStream rstream = new ParallelStream(zkHost,"collection1", rostream, 2, new AscFieldComp("a_s"));
 
     rstream.open();
     Tuple tuple = rstream.read();
-    String b = (String)tuple.get("buckets");
-    List<Double> values = (List<Double>)tuple.get("metricValues");
+    String b = (String)tuple.get("a_s");
     assert(b.equals("hello0"));
-    assert(values.get(0) == 102.0d);
-    assert(values.get(1) == 51.0d);
-    assert(values.get(2) == 2.0d);
-    assert(values.get(3) == 2.0d);
-    assert(values.get(4) == 100.0d);
+    assert(tuple.getDouble("sum(a_i)") == 102.0d);
+    assert(tuple.getDouble("avg(a_i)") == 51.0d);
+    assert(tuple.getDouble("count()") == 2.0d);
+    assert(tuple.getDouble("min(a_i)") == 2.0d);
+    assert(tuple.getDouble("max(a_i)") == 100.0d);
 
     tuple = rstream.read();
-    b = (String)tuple.get("buckets");
-    values = (List<Double>)tuple.get("metricValues");
+    b = (String)tuple.get("a_s");
     assert(b.equals("hello1"));
-    assert(values.get(0) == 3.0d);
-    assert(values.get(1) == 1.0d);
-    assert(values.get(2) == 3.0d);
-    assert(values.get(3) == 1.0d);
-    assert(values.get(4) == 1.0d);
+    assert(tuple.getDouble("sum(a_i)") == 3.0d);
+    assert(tuple.getDouble("avg(a_i)") == 1.0d);
+    assert(tuple.getDouble("count()") == 3.0d);
+    assert(tuple.getDouble("min(a_i)") == 1.0d);
+    assert(tuple.getDouble("max(a_i)") == 1.0d);
 
 
     tuple = rstream.read();
-    b = (String)tuple.get("buckets");
-    values = (List<Double>)tuple.get("metricValues");
+    b = (String)tuple.get("a_s");
     assert(b.equals("hello3"));
-    assert(values.get(0) == 7.0d);
-    assert(values.get(1) == 3.5d);
-    assert(values.get(2) == 2.0d);
-    assert(values.get(3) == 3.0d);
-    assert(values.get(4) == 4.0d);
+    assert(tuple.getDouble("sum(a_i)") == 7.0d);
+    assert(tuple.getDouble("avg(a_i)") == 3.5d);
+    assert(tuple.getDouble("count()") == 2.0d);
+    assert(tuple.getDouble("min(a_i)") == 3.0d);
+    assert(tuple.getDouble("max(a_i)") == 4.0d);
 
     tuple = rstream.read();
     assert(tuple.EOF);

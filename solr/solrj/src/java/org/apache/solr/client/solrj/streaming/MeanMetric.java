@@ -41,7 +41,7 @@ public class MeanMetric implements Metric, Serializable {
   }
 
   public String getName() {
-    return "mean:"+column;
+    return "avg("+column+")";
   }
 
   public void update(Tuple tuple) {

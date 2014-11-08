@@ -38,6 +38,10 @@ public class Tuple implements Cloneable {
     return this.fields.get(key);
   }
 
+  public Double getDouble(Object key) {
+    return (Double)this.fields.get(key);
+  }
+
   public void set(Object key, Object value) {
     this.fields.put(key, value);
   }
