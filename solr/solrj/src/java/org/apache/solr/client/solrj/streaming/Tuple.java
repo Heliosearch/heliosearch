@@ -42,6 +42,10 @@ public class Tuple implements Cloneable {
     return (Double)this.fields.get(key);
   }
 
+  public Long getLong(Object key) {
+    return (Long)this.fields.get(key);
+  }
+
   public String getString(Object key) {
     return (String)this.fields.get(key);
   }
