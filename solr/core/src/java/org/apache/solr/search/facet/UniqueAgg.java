@@ -74,7 +74,7 @@ public class UniqueAgg extends StrAggValueSource {
 
       @Override
       public Object getMergedResult() {
-        long exactCount = values.size();
+        long exactCount = values == null ? 0 : values.size();
         return exactCount + shardsMissingSum;
       }
     };

@@ -23,9 +23,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.solr.client.solrj.SolrResponse;
 import org.apache.solr.common.SolrException;
@@ -438,18 +440,20 @@ class FacetBucket {
 class FacetFieldMerger extends FacetBucketMerger<FacetField> {
   FacetBucket missingBucket;
   FacetBucket allBuckets;
+  FacetMerger numBuckets;
 
   LinkedHashMap<Object,FacetBucket> buckets = new LinkedHashMap<Object,FacetBucket>();
   List<FacetBucket> sortedBuckets;
 
   private static class SortVal implements Comparable<SortVal> {
-    int pos;
+    FacetBucket bucket;
     FacetSortableMerger merger;
     FacetField.SortDirection direction;
 
     @Override
     public int compareTo(SortVal o) {
-      return -merger.compareTo(o.merger, direction) * direction.getMultiplier();
+      int c = -merger.compareTo(o.merger, direction) * direction.getMultiplier();
+      return c == 0 ? bucket.bucketValue.compareTo(o.bucket.bucketValue) : c;
     }
   }
 
@@ -464,22 +468,39 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
 
   public void merge(SimpleOrderedMap facetResult) {
     if (freq.missing) {
-      if (missingBucket == null) {
-        missingBucket = newBucket(null);
+      Object o = facetResult.get("missing");
+      if (o != null) {
+        if (missingBucket == null) {
+          missingBucket = newBucket(null);
+        }
+        missingBucket.mergeBucket((SimpleOrderedMap)o);
       }
-      missingBucket.mergeBucket( (SimpleOrderedMap) facetResult.get("missing") );
     }
 
     if (freq.allBuckets) {
-      if (allBuckets == null) {
-        allBuckets = newBucket(null);
+      Object o = facetResult.get("allBuckets");
+      if (o != null) {
+        if (allBuckets == null) {
+          allBuckets = newBucket(null);
+        }
+        allBuckets.mergeBucket((SimpleOrderedMap)o);
       }
-      allBuckets.mergeBucket( (SimpleOrderedMap) facetResult.get("allBuckets") );
     }
 
     List<SimpleOrderedMap> bucketList = (List<SimpleOrderedMap>) facetResult.get("buckets");
 
     mergeBucketList(bucketList);
+
+    if (freq.numBuckets) {
+      Object nb = facetResult.get("numBuckets");
+      if (nb != null) {
+        if (numBuckets == null) {
+          numBuckets = new FacetNumBucketsMerger();
+        }
+        numBuckets.merge(nb);
+      }
+    }
+
   }
 
   public void mergeBucketList(List<SimpleOrderedMap> bucketList) {
@@ -506,7 +527,8 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
       comparator = new Comparator<FacetBucket>() {
         @Override
         public int compare(FacetBucket o1, FacetBucket o2) {
-          return -Long.compare(o1.count, o2.count) * sortMul;
+          int v = -Long.compare(o1.count, o2.count) * sortMul;
+          return v == 0 ? o1.bucketValue.compareTo(o2.bucketValue) : v;
         }
       };
       Collections.sort(sortedBuckets, comparator);
@@ -560,17 +582,24 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
         }
         if (merger != null) {
           SortVal sv = new SortVal();
+          sv.bucket = bucket;
           sv.merger = (FacetSortableMerger)merger;
           sv.direction = direction;
-          sv.pos = i;
+          // sv.pos = i;  // if we need position in the future...
           lst.add(sv);
         }
       }
       Collections.sort(lst);
+      Collections.sort(nulls, new Comparator<FacetBucket>() {
+        @Override
+        public int compare(FacetBucket o1, FacetBucket o2) {
+          return o1.bucketValue.compareTo(o2.bucketValue);
+        }
+      });
 
       ArrayList<FacetBucket> out = new ArrayList<>(buckets.size());
       for (SortVal sv : lst) {
-        out.add( sortedBuckets.get(sv.pos) );
+        out.add( sv.bucket );
       }
       out.addAll(nulls);
       sortedBuckets = out;
@@ -580,6 +609,10 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
   @Override
   public Object getMergedResult() {
     SimpleOrderedMap result = new SimpleOrderedMap();
+
+    if (numBuckets != null) {
+      result.add("numBuckets", numBuckets.getMergedResult());
+    }
 
     sortBuckets();
 
@@ -627,5 +660,39 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
     }
 
     return result;
+  }
+
+
+  private class FacetNumBucketsMerger extends FacetMerger {
+    long sumBuckets;
+    long shardsMissingSum;
+    long shardsTruncatedSum;
+    Set<Object> values;
+
+    @Override
+    public void merge(Object facetResult) {
+      SimpleOrderedMap map = (SimpleOrderedMap)facetResult;
+      long numBuckets = ((Number)map.get("numBuckets")).longValue();
+      sumBuckets += numBuckets;
+
+      List vals = (List)map.get("vals");
+      if (vals != null) {
+        if (values == null) {
+          values = new HashSet<>(vals.size()*4);
+        }
+        values.addAll(vals);
+        if (numBuckets > values.size()) {
+          shardsTruncatedSum += numBuckets - values.size();
+        }
+      } else {
+        shardsMissingSum += numBuckets;
+      }
+    }
+
+    @Override
+    public Object getMergedResult() {
+      long exactCount = values == null ? 0 : values.size();
+      return exactCount + shardsMissingSum + shardsTruncatedSum;
+    }
   }
 }

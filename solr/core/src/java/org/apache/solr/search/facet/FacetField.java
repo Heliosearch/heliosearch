@@ -34,6 +34,7 @@ import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.FixedBitSet;
 import org.apache.lucene.util.PriorityQueue;
 import org.apache.lucene.util.StringHelper;
 import org.apache.lucene.util.UnicodeUtil;
@@ -225,6 +226,10 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
     SimpleOrderedMap<Object> res = new SimpleOrderedMap<>();
 
     int numBuckets = 0;
+    List<Object> bucketVals = null;
+    if (freq.numBuckets && fcontext.isShard()) {
+      bucketVals = new ArrayList(100);
+    }
 
     int off = (int) freq.offset;
     int lim = freq.limit >= 0 ? (int) freq.limit : Integer.MAX_VALUE;
@@ -251,6 +256,13 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
       }
 
       numBuckets++;
+      if (bucketVals != null && bucketVals.size()<100) {
+        int ord = startTermIndex + i;
+        BytesRef br = lookupOrd(ord);
+        Object val = sf.getType().toObject(sf, br);
+        bucketVals.add(val);
+      }
+
 
       if (bottom != null) {
         if (sortAcc.compare(bottom.slot, i) * sortMul < 0) {
@@ -269,7 +281,14 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
     }
 
     if (freq.numBuckets) {
-      res.add("numBuckets", numBuckets);
+      if (!fcontext.isShard()) {
+        res.add("numBuckets", numBuckets);
+      } else {
+        SimpleOrderedMap map = new SimpleOrderedMap(2);
+        map.add("numBuckets", numBuckets);
+        map.add("vals", bucketVals);
+        res.add("numBuckets", map);
+      }
     }
 
     // if we are deep paging, we don't have to order the highest "offset" counts.

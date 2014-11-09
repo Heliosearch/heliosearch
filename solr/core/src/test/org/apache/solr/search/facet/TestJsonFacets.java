@@ -265,6 +265,18 @@ public class TestJsonFacets extends SolrTestCaseHS {
     );
 
 
+    // test tiebreaks when sorting by count
+    client.testJQ(params(p, "q", "id:1 id:6"
+            , "json.facet", "{f1:{terms:{field:'${cat_s}', sort:'count desc' }  }" +
+                "           , f2:{terms:{field:'${cat_s}', sort:'count asc'  }  }" +
+                "}"
+        )
+        , "facets=={ count:2 " +
+            " ,f1:{buckets:[ {val:A,count:1}, {val:B,count:1} ] }" +
+            " ,f2:{buckets:[ {val:A,count:1}, {val:B,count:1} ] }" +
+            "}"
+    );
+
     // terms facet with nested query facet
     client.testJQ(params(p, "q", "*:*"
             , "json.facet", "{cat:{terms:{field:'${cat_s}', facet:{nj:{query:'${where_s}:NJ'}}    }   }} }"
@@ -365,13 +377,15 @@ public class TestJsonFacets extends SolrTestCaseHS {
             "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
     );
 
-    // mincount should lower numBuckets
-    client.testJQ(params(p, "q", "*:*", "rows", "0", "facet", "true"
-            , "json.facet", "{f1:{terms:{field:${cat_s}, numBuckets:true, mincount:3}}}"
-        )
-        , "facets=={ 'count':6, " +
-            "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
-    );
+    if (client.local()) {
+      // mincount should lower numBuckets
+      client.testJQ(params(p, "q", "*:*", "rows", "0", "facet", "true"
+              , "json.facet", "{f1:{terms:{field:${cat_s}, numBuckets:true, mincount:3}}}"
+          )
+          , "facets=={ 'count':6, " +
+              "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
+      );
+    }
 
 
 
@@ -460,12 +474,12 @@ public class TestJsonFacets extends SolrTestCaseHS {
     // unify multiple facet commands...
   }
 
-/** TODO: Work in progress
+  /*
   @Test
   public void testDistrib() throws Exception {
     initServers();
     doStats( servers.getClient(0), params("shards", servers.getShards()) );
   }
-  ***/
+  */
 
 }
