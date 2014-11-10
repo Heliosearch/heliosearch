@@ -31,6 +31,7 @@ import java.util.Set;
 
 import org.apache.solr.client.solrj.SolrResponse;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.common.params.FacetParams;
 import org.apache.solr.common.params.ShardParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
@@ -619,6 +620,10 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
         }
       }
       result.add("numBuckets", ((Number)numBuckets.getMergedResult()).longValue() - removed);
+
+      // TODO: we can further increase this estimate.
+      // If not sorting by count, use a simple ratio to scale
+      // If sorting by count desc, then add up the highest_possible_missing_count from each shard
     }
 
     sortBuckets();
@@ -703,5 +708,114 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
       // TODO: reduce count by (at least) number of buckets that fail to hit mincount (after merging)
       // that should make things match for most of the small tests at least
     }
+  }
+}
+
+
+class FacetRangeMerger extends FacetBucketMerger<FacetRange> {
+  FacetBucket beforeBucket;
+  FacetBucket afterBucket;
+  FacetBucket betweenBucket;
+
+  LinkedHashMap<Object, FacetBucket> buckets = new LinkedHashMap<Object, FacetBucket>();
+
+
+  public FacetRangeMerger(FacetRange freq) {
+    super(freq);
+  }
+
+  @Override
+  FacetBucket newBucket(Comparable bucketVal) {
+    return super.newBucket(bucketVal);
+  }
+
+  @Override
+  FacetMerger createFacetMerger(String key, Object val) {
+    return super.createFacetMerger(key, val);
+  }
+
+  @Override
+  public void merge(Object facetResult) {
+    merge((SimpleOrderedMap) facetResult);
+  }
+
+  public void merge(SimpleOrderedMap facetResult) {
+    boolean all = freq.others.contains(FacetParams.FacetRangeOther.ALL);
+
+    if (all || freq.others.contains(FacetParams.FacetRangeOther.BEFORE)) {
+      Object o = facetResult.get("before");
+      if (o != null) {
+        if (beforeBucket == null) {
+          beforeBucket = newBucket(null);
+        }
+        beforeBucket.mergeBucket((SimpleOrderedMap)o);
+      }
+    }
+
+    if (all || freq.others.contains(FacetParams.FacetRangeOther.AFTER)) {
+      Object o = facetResult.get("after");
+      if (o != null) {
+        if (afterBucket == null) {
+          afterBucket = newBucket(null);
+        }
+        afterBucket.mergeBucket((SimpleOrderedMap)o);
+      }
+    }
+
+    if (all || freq.others.contains(FacetParams.FacetRangeOther.BETWEEN)) {
+      Object o = facetResult.get("between");
+      if (o != null) {
+        if (betweenBucket == null) {
+          betweenBucket = newBucket(null);
+        }
+        betweenBucket.mergeBucket((SimpleOrderedMap)o);
+      }
+    }
+
+    List<SimpleOrderedMap> bucketList = (List<SimpleOrderedMap>) facetResult.get("buckets");
+    mergeBucketList(bucketList);
+  }
+
+  public void mergeBucketList(List<SimpleOrderedMap> bucketList) {
+    for (SimpleOrderedMap bucketRes : bucketList) {
+      Comparable bucketVal = (Comparable)bucketRes.get("val");
+      FacetBucket bucket = buckets.get(bucketVal);
+      if (bucket == null) {
+        bucket = newBucket(bucketVal);
+        buckets.put(bucketVal, bucket);
+      }
+      bucket.mergeBucket( bucketRes );
+    }
+  }
+
+  @Override
+  public Object getMergedResult() {
+    SimpleOrderedMap result = new SimpleOrderedMap(4);
+
+    List<SimpleOrderedMap> resultBuckets = new ArrayList<>(buckets.size());
+    // TODO: if we implement mincount for ranges, we'll need to sort buckets (see FacetFieldMerger)
+
+    for (FacetBucket bucket : buckets.values()) {
+      /***
+       if (bucket.getCount() < freq.mincount) {
+       continue;
+       }
+       ***/
+      resultBuckets.add( bucket.getMergedBucket() );
+    }
+
+    result.add("buckets", resultBuckets);
+
+    if (beforeBucket != null) {
+      result.add("before", beforeBucket.getMergedBucket());
+    }
+    if (afterBucket != null) {
+      result.add("after", afterBucket.getMergedBucket());
+    }
+    if (betweenBucket != null) {
+      result.add("between", betweenBucket.getMergedBucket());
+    }
+    return result;
+
   }
 }

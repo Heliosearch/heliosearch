@@ -372,7 +372,7 @@ abstract class UniqueSlotAcc extends SlotAcc {
     if (counts != null) {
       unique = counts[slot];
     } else {
-      unique = ords.cardinality();
+      unique = ords==null ? 0 : ords.cardinality();
     }
 
     SimpleOrderedMap map = new SimpleOrderedMap();
@@ -385,13 +385,15 @@ abstract class UniqueSlotAcc extends SlotAcc {
     if (unique <= maxExplicit) {
       List lst = new ArrayList( Math.min(unique, maxExplicit) );
 
-      DocIdSetIterator iter = ords.iterator();
-      for (;;) {
-        int ord = iter.nextDoc();
-        if (ord == DocIdSetIterator.NO_MORE_DOCS) break;
-        BytesRef val = lookupOrd(ord);
-        Object o = field.getType().toObject(field, val);
-        lst.add(o);
+      if (ords != null) {
+        DocIdSetIterator iter = ords.iterator();
+        for (; ; ) {
+          int ord = iter.nextDoc();
+          if (ord == DocIdSetIterator.NO_MORE_DOCS) break;
+          BytesRef val = lookupOrd(ord);
+          Object o = field.getType().toObject(field, val);
+          lst.add(o);
+        }
       }
 
       map.add("vals", lst);
@@ -472,7 +474,7 @@ class UniqueMultivaluedSlotAcc extends UniqueSlotAcc implements UnInvertedField.
     if (counts != null) {
       unique = counts[slot];
     } else {
-      unique = ords.cardinality();
+      unique = ords == null ? 0 : ords.cardinality();
     }
 
     SimpleOrderedMap map = new SimpleOrderedMap();
@@ -485,13 +487,15 @@ class UniqueMultivaluedSlotAcc extends UniqueSlotAcc implements UnInvertedField.
     if (unique <= maxExplicit) {
       List lst = new ArrayList( Math.min(unique, maxExplicit) );
 
-      DocIdSetIterator iter = ords.iterator();
-      for (;;) {
-        int ord = iter.nextDoc();
-        if (ord == DocIdSetIterator.NO_MORE_DOCS) break;
-        BytesRef val = docToTerm.lookupOrd(ord);
-        Object o = field.getType().toObject(field, val);
-        lst.add(o);
+      if (ords != null) {
+        DocIdSetIterator iter = ords.iterator();
+        for (; ; ) {
+          int ord = iter.nextDoc();
+          if (ord == DocIdSetIterator.NO_MORE_DOCS) break;
+          BytesRef val = docToTerm.lookupOrd(ord);
+          Object o = field.getType().toObject(field, val);
+          lst.add(o);
+        }
       }
 
       map.add("vals", lst);

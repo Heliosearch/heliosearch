@@ -315,10 +315,12 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
   // Example:
   //  SolrInstance s1 = new SolrInstance(createTempDir("s1"), "solrconfig-tlog.xml", "schema_latest.xml");
   //  s1.start();
-  //  SolrServer c1 = s1.getClient();
+  //  SolrServer c1 = s1.getSolrJ();
   //  assertJQ(c1, params("q", "*:*"), "/response/numFound==3");
   //  String json = getJSON(c1, params("q","id:1"));
   //  s1.stop();
+  //
+  // To manage multiple servers, see SolrInstances
   //
   public static class SolrInstance {
     private static Logger log = SolrTestCaseJ4.log;
@@ -418,6 +420,15 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
   }
 
 
+  //  Manages a number of Solr servers and provides a Client to partition documents and randomly assign query requests.
+  //  Example:
+  //        SolrInstances servers = new SolrInstances(3, "solrconfig-tlog.xml","schema_latest.xml");
+  //        Client = servers.getClient(0);
+  //        client.add(sdoc("id", "3"), null);
+  //        client.commit();
+  //        client.testJQ(params("q", "*:*"), "/response/numFound==3")
+  //        servers.stop();
+  //
   public static class SolrInstances {
     public List<SolrInstance> slist;
     public Client client;
@@ -443,7 +454,7 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
     }
 
     public List<SolrServer> getSolrJs() {
-      List<SolrServer> solrjs = new ArrayList<SolrServer>(slist.size());
+      List<SolrServer> solrjs = new ArrayList<>(slist.size());
       for (SolrInstance instance : slist) {
         solrjs.add( instance.getSolrJ() );
       }

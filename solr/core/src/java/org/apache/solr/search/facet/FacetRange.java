@@ -50,6 +50,11 @@ public class FacetRange extends FacetRequest {
   public FacetProcessor createFacetProcessor(FacetContext fcontext) {
     return new FacetRangeProcessor(fcontext, this);
   }
+
+  @Override
+  public FacetMerger createFacetMerger(Object prototype) {
+    return new FacetRangeMerger(this);
+  }
 }
 
 

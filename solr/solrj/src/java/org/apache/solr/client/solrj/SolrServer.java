@@ -358,9 +358,13 @@ public abstract class SolrServer implements Serializable
   ///
 
   public static ModifiableSolrParams params(String... params) {
-    ModifiableSolrParams msp = new ModifiableSolrParams();
-    for (int i=0; i<params.length; i+=2) {
-      msp.add(params[i], params[i+1]);
+    return params(null, params);
+  }
+
+  public static ModifiableSolrParams params(SolrParams params, String... moreParams) {
+    ModifiableSolrParams msp = params == null ? new ModifiableSolrParams() : new ModifiableSolrParams(params);
+    for (int i=0; i<moreParams.length; i+=2) {
+      msp.add(moreParams[i], moreParams[i+1]);
     }
     return msp;
   }

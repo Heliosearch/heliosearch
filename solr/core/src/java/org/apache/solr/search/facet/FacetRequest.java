@@ -71,10 +71,7 @@ public abstract class FacetRequest {
 
   public abstract FacetProcessor createFacetProcessor(FacetContext fcontext);
 
-  public FacetMerger createFacetMerger(Object prototype) {
-    // TODO: make abstract
-    throw new UnsupportedOperationException();
-  }
+  public abstract FacetMerger createFacetMerger(Object prototype);
 }
 
 
@@ -331,7 +328,7 @@ abstract class FacetParser<FacetRequestT extends FacetRequest> {
 
         Object parsedValue = parseFacetOrStat(key, value);
 
-        // TODO: have parseFacetOrStat directly add instead of return!!! nocommit
+        // TODO: have parseFacetOrStat directly add instead of return?
         if (parsedValue instanceof FacetRequest) {
           facet.addSubFacet(key, (FacetRequest)parsedValue);
         } else if (parsedValue instanceof AggValueSource) {

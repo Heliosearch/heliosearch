@@ -460,22 +460,19 @@ public class TestJsonFacets extends SolrTestCaseHS {
 
 
     // TODO:
-    // missing bucket
     // numdocs('query') stat (don't make a bucket... just a count)
     // missing(field)
     // make missing configurable in min, max, etc
     // exclusions
     // zeroes
     // instead of json.facet make it facet?
-    // unify multiple facet commands...
   }
 
-  /*
+
   @Test
   public void testDistrib() throws Exception {
     initServers();
-    doStats( servers.getClient(0), params("shards", servers.getShards()) );
+    doStats( servers.getClient( random().nextInt() ), params("shards", servers.getShards()) );
   }
 
-*/
 }

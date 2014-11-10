@@ -231,10 +231,11 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
       bucketVals = new ArrayList(100);
     }
 
-    int off = (int) freq.offset;
-    int lim = freq.limit >= 0 ? (int) freq.limit : Integer.MAX_VALUE;
+    int off = fcontext.isShard() ? 0 : (int) freq.offset;
+    // add a modest amount of over-request if this is a shard request
+    int lim = freq.limit >= 0 ? (fcontext.isShard() ? (int)(freq.limit*1.1+4) : (int)freq.limit) : Integer.MAX_VALUE;
 
-    int maxsize = freq.limit > 0 ? (int) freq.offset + (int) freq.limit : Integer.MAX_VALUE - 1;
+    int maxsize = freq.limit > 0 ?  off + lim : Integer.MAX_VALUE - 1;
     maxsize = Math.min(maxsize, nTerms);
 
     final int sortMul = freq.sortDirection.getMultiplier();
@@ -460,12 +461,12 @@ class FacetFieldProcessorUIF extends FacetFieldProcessorFC {
   @Override
   protected void findStartAndEndOrds() throws IOException {
     uif = UnInvertedField.getUnInvertedField(freq.field, fcontext.searcher);
-    te = uif.getOrdTermsEnum( fcontext.searcher.getAtomicReader() );
+    te = uif.getOrdTermsEnum( fcontext.searcher.getAtomicReader() );    // "te" can be null
 
     startTermIndex = 0;
     endTermIndex = uif.numTerms();  // one past the end
 
-    if (prefixRef != null) {
+    if (prefixRef != null && te != null) {
       if (te.seekCeil(prefixRef) == TermsEnum.SeekStatus.END) {
         startTermIndex = uif.numTerms();
       } else {
