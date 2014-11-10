@@ -377,17 +377,13 @@ public class TestJsonFacets extends SolrTestCaseHS {
             "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
     );
 
-    if (client.local()) {
-      // mincount should lower numBuckets
-      client.testJQ(params(p, "q", "*:*", "rows", "0", "facet", "true"
-              , "json.facet", "{f1:{terms:{field:${cat_s}, numBuckets:true, mincount:3}}}"
-          )
-          , "facets=={ 'count':6, " +
-              "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
-      );
-    }
-
-
+    // mincount should lower numBuckets
+    client.testJQ(params(p, "q", "*:*", "rows", "0", "facet", "true"
+            , "json.facet", "{f1:{terms:{field:${cat_s}, numBuckets:true, mincount:3}}}"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1':{ numBuckets:1, buckets:[{val:B, count:3}]} } "
+    );
 
     // basic range facet
     client.testJQ(params(p, "q", "*:*"
@@ -480,6 +476,6 @@ public class TestJsonFacets extends SolrTestCaseHS {
     initServers();
     doStats( servers.getClient(0), params("shards", servers.getShards()) );
   }
-  */
 
+*/
 }

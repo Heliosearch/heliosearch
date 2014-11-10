@@ -444,6 +444,7 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
 
   LinkedHashMap<Object,FacetBucket> buckets = new LinkedHashMap<Object,FacetBucket>();
   List<FacetBucket> sortedBuckets;
+  int numReturnedBuckets; // the number of buckets in the bucket lists returned from all of the shards
 
   private static class SortVal implements Comparable<SortVal> {
     FacetBucket bucket;
@@ -488,7 +489,7 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
     }
 
     List<SimpleOrderedMap> bucketList = (List<SimpleOrderedMap>) facetResult.get("buckets");
-
+    numReturnedBuckets += bucketList.size();
     mergeBucketList(bucketList);
 
     if (freq.numBuckets) {
@@ -611,7 +612,13 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
     SimpleOrderedMap result = new SimpleOrderedMap();
 
     if (numBuckets != null) {
-      result.add("numBuckets", numBuckets.getMergedResult());
+      int removed = 0;
+      if (freq.mincount > 1) {
+        for (FacetBucket bucket : buckets.values()) {
+          if (bucket.count < freq.mincount) removed++;
+        }
+      }
+      result.add("numBuckets", ((Number)numBuckets.getMergedResult()).longValue() - removed);
     }
 
     sortBuckets();
@@ -693,6 +700,8 @@ class FacetFieldMerger extends FacetBucketMerger<FacetField> {
     public Object getMergedResult() {
       long exactCount = values == null ? 0 : values.size();
       return exactCount + shardsMissingSum + shardsTruncatedSum;
+      // TODO: reduce count by (at least) number of buckets that fail to hit mincount (after merging)
+      // that should make things match for most of the small tests at least
     }
   }
 }
