@@ -121,7 +121,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     Properties props = new Properties();
     props.put("collection1.baseUrl", zkHost);
 
-    SQLStream sqlStream = new SQLStream(sql, props);
+    TupleStream sqlStream = SQLParser.parse(sql, props);
     List<Tuple> tuples = getTuples(sqlStream);
     assert(tuples.size() == 3);
     assert(tuples.get(0).get("a_s").equals("hello0"));
@@ -137,7 +137,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     props = new Properties();
     props.put("collection1.baseUrl", zkHost);
 
-    sqlStream = new SQLStream(sql, props);
+    sqlStream = SQLParser.parse(sql, props);
     tuples = getTuples(sqlStream);
     assert(tuples.size() == 3);
     assert(tuples.get(0).get("a_s").equals("hello1"));
@@ -158,13 +158,13 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     props.put("workers.num", "2");
     props.put("workers.collection", "collection1");
 
-    sqlStream = new SQLStream(sql, props);
+    sqlStream = SQLParser.parse(sql, props);
     tuples = getTuples(sqlStream);
     assert(tuples.size() == 3);
     assert(tuples.get(0).get("a_s").equals("hello1"));
     assert(tuples.get(1).get("a_s").equals("hello3"));
     assert(tuples.get(2).get("a_s").equals("hello0"));
-    assert (sqlStream.tupleStream instanceof ParallelStream);
+    assert (sqlStream instanceof ParallelStream);
     assert(tuples.get(0).getDouble("sum(a_i)").equals(Double.parseDouble("3.0")));
     assert(tuples.get(1).getDouble("sum(a_i)").equals(Double.parseDouble("7.0")));
     assert(tuples.get(2).getDouble("sum(a_i)").equals(Double.parseDouble("102.0")));
@@ -205,7 +205,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     Properties props = new Properties();
     props.put("collection1.baseUrl", zkHost);
 
-    SQLStream sqlStream = new SQLStream(sql, props);
+    TupleStream sqlStream = SQLParser.parse(sql, props);
     List<Tuple> tuples = getTuples(sqlStream);
     assertOrder(tuples, 4,3,2,1,0);
 

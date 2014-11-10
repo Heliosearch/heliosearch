@@ -17,56 +17,20 @@
 
 package org.apache.solr.client.solrj.sql;
 
-import org.apache.solr.client.solrj.streaming.StreamContext;
 import org.apache.solr.client.solrj.streaming.TupleStream;
-import org.apache.solr.client.solrj.streaming.Tuple;
-
-import com.foundationdb.sql.parser.SQLParser;
 import com.foundationdb.sql.parser.StatementNode;
-import com.foundationdb.sql.parser.Visitor;
-
-import java.io.Serializable;
 import java.util.Properties;
-import java.util.List;
-import java.io.IOException;
 
 /**
  *  The SQLStream compiles a SQL statement to TupleStream. It implements the TupleStream interface so it can
  *  be treated like any other stream.
  **/
 
-public class SQLStream extends TupleStream implements Serializable {
+public class SQLParser {
 
-  private Properties props;
-  TupleStream tupleStream;
-
-  public SQLStream(String sql, Properties props) throws Exception {
-    this.tupleStream = parse(sql, props);
-  }
-
-  public List<TupleStream> children() {
-    return tupleStream.children();
-  }
-
-  public void open() throws IOException {
-    tupleStream.open();
-  }
-
-  public Tuple read() throws IOException {
-    return tupleStream.read();
-  }
-
-  public void close() throws IOException {
-    tupleStream.close();
-  }
-
-  public void setStreamContext(StreamContext context) {
-    tupleStream.setStreamContext(context);
-  }
-
-  private TupleStream parse(String sql, Properties props) throws Exception {
+  public static TupleStream parse(String sql, Properties props) throws Exception {
     SQLVisitor visitor = new SQLVisitor(props);
-    SQLParser parser = new SQLParser();
+    com.foundationdb.sql.parser.SQLParser parser = new com.foundationdb.sql.parser.SQLParser();
     StatementNode statementNode = parser.parseStatement(sql);
     statementNode.accept(visitor);
     return visitor.getTupleStream();
