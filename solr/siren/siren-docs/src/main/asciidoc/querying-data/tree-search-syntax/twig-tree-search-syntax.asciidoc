@@ -1,0 +1,124 @@
+[[twig-tree-search-syntax]]
+=== Twig
+
+A twig query enables to combine node queries with an ancestor-descendant and a parent-child relationships. This is the
+basic building block to build tree-shaped queries. A twig query object is identified by the attribute `twig` and is
+composed of a root and of one or more children or descendants.
+
+[float]
+==== Root
+
+The root query is specified with the parameter `root`. The value of this parameter must be a valid
+<<text-search-syntax, full-text search query>>. This parameter is optional. If the root query is not specified, it
+is considered as a wildcard node query, and it will try to match any node satisfying the other parameters, i.e.,
+level, range, child or descendant.
+
+The query syntax is assuming that a root query will always try to match an attribute name. Therefore, the query parser
+automatically assigns the datatype `json:field` to a root query. You can override this behavior by using the
+<<text-search-datatype, datatype operator>> in the full-text search query.
+
+IMPORTANT: If you are using the <<concise-json-indexing-model, concise indexing model>>, full-text search on attribute
+names is not possible. Therefore, the value of the root parameter is considered as a plain string instead of a
+full-text search query.
+
+[float]
+==== Level and Range
+
+As for the <<node-tree-search-syntax, node query>>, it is possible to constrain the position of the root node in the
+tree using the parameters `level` and `range`. By default, a level of 1 is assigned to a top-level twig query.
+
+[float]
+==== Descendant
+
+A list of descendant queries is specified with the parameter `descendant`. This parameter accepts an array of boolean
+clauses. A descendant boolean clause object is composed of a unary boolean operator, of a level and of a query which can be
+either a <<node-tree-search-syntax, node query>>, a <<twig-tree-search-syntax, twig query>> or a
+<<boolean-tree-search-syntax, boolean query>>.
+
+The unary boolean operator is specified with the parameter `occur`. The
+value of this parameter must be a string with one of the
+following values: `MUST`, `SHOULD`, `MUST_NOT`. This parameter is optional, and the default unary operator `MUST` will be
+used if it is not specified.
+
+The level is specified with the parameter `level`. The level parameter is mandatory for descendant clauses and defines
+the relative level of the descendant clauses with respect to the twig root level.
+
+For example, the query
+
+[source,javascript]
+----
+{
+    "twig" : {
+        "root" : "relationships",
+        "descendant" : [{
+            "level" : 2,
+            "occur" : "MUST",
+            "node" : {
+                "attribute" : "last_name",
+                "query" : "Spivack"
+            }
+        }]
+    }
+}
+----
+
+indicates that the node query must be exactly two levels below the root, and matches the document
+
+[source,javascript]
+----
+{
+    "relationships" : [
+        {
+            "title": "CEO and Founder",
+            "person": {
+                "first_name": "Nova",
+                "last_name": "Spivack"
+            }
+        }
+    ]
+}
+----
+
+IMPORTANT: In the <<extended-json-indexing-model, extended indexing model>>, a blank node is inserted for each nested
+object that must be taken into consideration when assigning the level.
+
+[float]
+==== Child
+
+A list of child queries is specified with the parameter `child`. This parameter accepts an array of boolean
+clauses. A child boolean clause object is composed of a unary boolean operator and of a query which can be
+either a <<node-tree-search-syntax, node query>>, a <<twig-tree-search-syntax, twig query>> or a
+<<boolean-tree-search-syntax, boolean query>>. The unary operator is specified with the parameter `occur`.
+
+For example, the query
+
+[source,javascript]
+----
+{
+    "twig" : {
+        "root" : "funding_rounds",
+        "child" : [{
+            "occur" : "MUST",
+            "node" : {
+                "attribute" : "round_code",
+                "query" : "a"
+            }
+        }]
+    }
+}
+----
+
+matches the document
+
+[source,javascript]
+----
+{
+    "funding_rounds" : [
+        {
+            "round_code": "a",
+            "funded_year": 2006,
+            "raised_amount": 5000000.0
+        }
+    ]
+}
+----

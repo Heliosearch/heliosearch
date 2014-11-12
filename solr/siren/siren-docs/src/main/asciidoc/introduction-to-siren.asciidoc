@@ -1,0 +1,20 @@
+[[introduction-to-siren]]
+= Introduction to SIREn
+
+[partintro]
+--
+SIREn is a highly scalable open-source full-text search engine especially suited for nested and schemaless data. It
+can be used standalone, similar to Lucene, and it comes in the form of Elasticsearch and Solr plugins. SIREn has its
+own data model which is better suited for nested documents such as JSON and XML. The next sections give an overview of
+SIREn's architecture, its model and and the model's implications on querying.
+--
+
+include::introduction-to-siren/siren-highlights.asciidoc[]
+
+include::introduction-to-siren/siren-basic-concepts.asciidoc[]
+
+include::introduction-to-siren/comparing-indexing-models.asciidoc[]
+
+include::introduction-to-siren/schemaless-indexing.asciidoc[]
+
+include::introduction-to-siren/siren-plugin-architecture.asciidoc[]

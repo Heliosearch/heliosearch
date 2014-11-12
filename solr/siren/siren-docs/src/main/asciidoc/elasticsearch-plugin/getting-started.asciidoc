@@ -1,0 +1,338 @@
+[[elasticsearch-getting-started]]
+== Getting started
+
+In this short guide, we will see how you can quickly index a collection of richly structured JSON data and query them
+using SIREn within the Elasticsearch environment.
+
+We will use the National Charge Point Registry dataset in JSON format available
+http://data.gov.uk/dataset/national-charge-point-registry[here]. It contains charge points for
+electric vehicles with information like geographical location, address connectors types, opening hours and so on.
+There are over a 1000 charge points in the dataset. We have modified the dataset to ensure that the values are correctly
+typed with native JSON types. You can see a truncated sample record below.
+
+[source,javascript]
+----
+{
+    "ChargeDeviceId": "885b2c7a6deb4fea10f319c4ce993e02",
+    "ChargeDeviceName": "All Eco Centre Car Park",
+    "ChargeDeviceRef": "CM765",
+    "Accessible24Hours": false,
+    ...
+
+    "DeviceController": {
+        "ContactName": null,
+        "OrganisationName": "Source East",
+        "TelephoneNo": "08455198676",
+        "Website": "www.sourceeast.net"
+    },
+
+    "ChargeDeviceLocation": {
+        "Latitude": 52.5744,
+        "Longitude": -0.2396,
+
+        "Address": {
+            "Street": "City Road",
+            "PostCode": "PE1 1SA",
+            "PostTown": "Peterborough",
+            "Country": "gb"
+        },
+    },
+
+    "Connector": [
+        {
+            "ConnectorId": "CM765a",
+            "ChargeMode": 1,
+            "ChargeMethod": "Single Phase AC",
+            "ChargePointStatus": "In service",
+            "ConnectorType": "Domestic plug/socket type G (BS 1363)",
+            "RatedOutputCurrent": 13
+        },
+        {
+            "ConnectorId": "CM765b",
+            "ChargeMode": "3",
+            "ChargeMethod": "Single Phase AC",
+            ...
+        }
+    ]
+}
+----
+
+[float]
+=== Downloading the SIREn/Elasticsearch Distribution
+
+If you haven't yet, http://siren.solutions/downloads/[download] the SIREn/Elasticsearch binary distribution. Next, extract
+it to a directory which we will call `${ES_HOME}` from now on. The directory should contain:
+
+----
+├── dist
+│   ├── siren-core-${version}.jar             <1>
+│   ├── siren-qparser-${version}.jar
+│   └── siren-elasticsearch-${version}.jar    <2>
+├── docs                                      <3>
+└── example                                   <4>
+----
+<1> SIREn jars: bundle them with your Java application to use SIREn in embedded mode
+<2> the SIREn/Elasticsearch plugin
+<3> the SIREn documentation
+<4> an Elasticsearch instance with the SIREn plugin pre-installed, including three demos
+
+You can start the Elasticsearch instance with the following commands:
+
+[source,bash]
+--------------------------------------------------
+$ cd $ES_HOME/example
+$ bin/elasticsearch
+--------------------------------------------------
+
+In the output, you should see a line like the following which indicates that the SIREn plugin is installed and running:
+
+[source,bash]
+--------------------------------------------------
+[2014-07-02 14:40:04,008][INFO ][plugins ] [Basilisk] loaded [siren-plugin], sites []
+--------------------------------------------------
+
+Now you can create an index, set an initial mapping, index and query documents via the Elasticsearch REST API as usual.
+You might also want to skip ahead and just <<elasticsearch-run-demos, run the provided demo scripts>>.
+
+[float]
+=== Creating an index
+
+First, create an index called ``ncpr'' with the following command:
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "localhost:9200/ncpr/"
+--------------------------------------------------
+
+The following command registers a mapping that will setup a SIREn field for the the ``chargepoint'' type under the ``ncpr''
+index:
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPUT "http://localhost:9200/ncpr/chargepoint/_mapping" -d '
+{
+    "chargepoint" : {
+        "properties" : {
+            "_siren_source" : {
+                "analyzer" : "concise",
+                "postings_format" : "Siren10AFor",
+                "store" : "no",
+                "type" : "string"
+            }
+        },
+        "_siren" : {}
+	  }
+}'
+--------------------------------------------------
+
+From now on, any document indexed into the ``ncpr'' index under the ``chargepoint'' type will be indexed by SIREn too.
+
+[float]
+=== Indexing a document
+
+The following command inserts a JSON document into the ``ncpr'' index under the ``chargepoint'' type with an identifier
+equal to 1.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPUT "http://localhost:9200/ncpr/chargepoint/1" -d '
+{
+    "ChargeDeviceName": "4c Design Limited, Glasgow (1)",
+    "Accessible24Hours": false
+}'
+--------------------------------------------------
+
+Next, you can execute a bash script to load the full NCPR dataset into the index:
+
+[source,bash]
+--------------------------------------------------
+$ bin/ncpr-index.sh
+--------------------------------------------------
+
+If all is fine, you should see the count of documents loaded into SIREn (1078).
+
+[float]
+=== Searching a document
+
+SIREn uses a JSON based query syntax. You can
+find more about the query syntax of SIREn in the chapter <<querying-data, Querying Data>>.
+We will now show you some query examples you can execute on the NCPR index. The following commands execute various search
+queries and should get back the previously indexed documents.
+
+The first search query is
+a <<node-tree-search-syntax, node query>> that matches all documents with an attribute ``ChargeDeviceName'' associated
+to a value matching the wildcard search query ``SCOT*''.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/ncpr/_search?pretty" -d '
+{
+    "query": {
+        "tree" : {
+            "node": {
+                "attribute": "ChargeDeviceName",
+                "query": "SCOT*"
+            }
+        }
+    }
+}'
+--------------------------------------------------
+
+The next query is a <<twig-tree-search-syntax, twig query>> that demonstrates how to search nested objects.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/ncpr/_search?pretty" -d '
+{
+    "query": {
+        "tree" : {
+            "twig": {
+                "root" : "DeviceOwner",
+                "child" : [{
+                    "node": {
+                        "attribute" : "Website",
+                        "query" : "uri(www.sourcelondon.net)"
+                    }
+                }]
+            }
+        }
+    }
+}'
+--------------------------------------------------
+
+The next query demonstrates how to search multiple level of nested objects.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/ncpr/_search?pretty" -d '
+{
+    "query": {
+        "tree" : {
+            "twig" : {
+                "root" : "ChargeDeviceLocation",
+                "child" : [{
+                    "twig": {
+                        "root" : "Address",
+                        "child": [{
+                            "node" : {
+                                "attribute" : "PostTown",
+                                "query" : "Norwich"
+                            }
+                        },{
+                            "node" : {
+                                "attribute" : "Country",
+                                "query" : "gb"
+                            }
+                        }]
+                    }
+                }]
+            }
+        }
+    }
+}'
+--------------------------------------------------
+
+The next query demonstrates how to search among an array of nested objects.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/ncpr/_search?pretty" -d '
+{
+    "query": {
+        "tree" : {
+            "twig": {
+                "root" : "Connector",
+                "child" : [{
+                    "node": {
+                        "attribute" : "RatedOutputCurrent",
+                        "query" : "xsd:long(13)"
+                    }
+                },{
+                    "node": {
+                        "attribute" : "RatedOutputVoltage",
+                        "query" : "xsd:long(230)"
+                    }
+                }]
+            }
+        }
+    }
+}'
+--------------------------------------------------
+
+The next query demonstrates how to perform a numerical range search.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/ncpr/_search?pretty" -d '
+{
+    "query": {
+        "tree" : {
+            "twig": {
+                "root" : "ChargeDeviceLocation",
+                "child" : [{
+                    "occur" : "MUST",
+                    "node": {
+                        "attribute" : "Latitude",
+                        "query" : "xsd:double([55.6 TO 56.0])"
+                    }
+                },{
+                    "occur" : "MUST",
+                    "node": {
+                        "attribute" : "Longitude",
+                        "query" : "xsd:double([-3.2 TO -2.8])"
+                    }
+                }]
+            }
+        }
+    }
+}'
+--------------------------------------------------
+
+[float]
+[[elasticsearch-run-demos]]
+=== Running the demos
+
+The SIREn/Elasticsearch distribution contains three demos on three different datasets: NCPR (National Charge Point Registry),
+BNB (British National Bibliography) and a small movie dataset. To execute the demos, go to the
+`$ES_HOME/example` directory:
+
+[source,bash]
+--------------------------------------------------
+$ cd $ES_HOME/example
+--------------------------------------------------
+
+To index the small movie dataset, execute the following command:
+
+[source,bash]
+--------------------------------------------------
+$ bin/movies-index.sh
+--------------------------------------------------
+
+The script creates an index called ``movies'', sets a mapping as shown earlier for the `movie` type, so that all
+documents sent to that index are indexed by SIREn too and then indexes a couple of movie documents which reside in the
+`datasets/movies/docs/` directory.
+
+You can then query the index using the following command:
+
+[source,bash]
+--------------------------------------------------
+$ bin/movies-query.sh
+--------------------------------------------------
+
+The script takes you through a couple of queries and always hints at what results are expected.
+
+There are two more demos that index and query a slightly larger number of documents -- BNB:
+
+[source,bash]
+--------------------------------------------------
+$ bin/bnb-index.sh
+$ bin/bnb-query.sh
+--------------------------------------------------
+
+And NCPR (National Charge Point Registry):
+
+[source,bash]
+--------------------------------------------------
+$ bin/ncpr-index.sh
+$ bin/ncpr-query.sh
+--------------------------------------------------

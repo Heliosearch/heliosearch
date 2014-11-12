@@ -1,0 +1,20 @@
+[[solr-plugin]]
+= Solr Plugin
+
+[partintro]
+--
+This chapter covers the setup, configuration and API of the SIREn Solr plugin. The SIREn Solr plugin
+provides all SIREn functionality to Solr users.
+--
+
+include::solr-plugin/getting-started.asciidoc[]
+
+include::solr-plugin/setup.asciidoc[]
+
+include::solr-plugin/configuration.asciidoc[]
+
+include::solr-plugin/indexing-data.asciidoc[]
+
+include::solr-plugin/querying-data.asciidoc[]
+
+include::solr-plugin/integration-with-solr.asciidoc[]

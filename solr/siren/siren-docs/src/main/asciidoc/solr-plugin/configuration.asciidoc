@@ -1,0 +1,312 @@
+[[solr-configuration]]
+== Configuration
+
+This section provides information on how to configure the SIREn plugin in a Solr installation, assuming that you have
+<<solr-setup, install SIREn>> in your Solr installation. You can find a working example of a Solr configuration for SIREn
+in `$SIREN_HOME/example/solr/collection1/conf/`.
+
+[[solr-configuration-json-field-type]]
+=== JSON Field Type
+
+SIREn is introducing a new https://cwiki.apache.org/confluence/display/solr/Solr+Field+Types[field type] that can be
+used to index and query tree-structured data. There are two field
+types available, `ExtendedJsonField` and `ConciseJsonField`, which depend on which kind of
+<<json-indexing-models, indexing model>> you want to use.
+
+To configure such a field type, you have to add the following entries to the Solr’s `schema.xml` located in
+`$SOLR_HOME/example/solr/collection1/conf/`. In this example, we will configure a field type named `concise`
+using the `ConciseJsonField` class as follows:
+
+[source,markup]
+----
+<types>
+...
+    <fieldType name="concise"
+               class="com.sindicetech.siren.solr.schema.ConciseJsonField"
+               omitNorms="true"
+               datatypeConfig="datatypes.xml"/>
+...
+</types>
+----
+
+The definition of a tree field type requires the parameter `datatypeConfig`. This setting indicates a configuration
+file, named `datatypes.xml` in this example, that must be located in `$SOLR_HOME/example/solr/collection1/conf/`.
+
+Given the nature of the field type, it is recommended to disable norms by setting the parameter `omitNorms` to `true`.
+
+[float]
+===== Concise JSON Field Type
+
+The concise tree field accepts an optional parameter `attributeWildcard` that can be used to enable or disable attribute
+wildcard queries. By default, this parameter is set to `false`.
+
+If the attribute wildcard setting is disabled, a node query will always expect an ``attribute'' property:
+
+[source,javascript]
+--------------------------------------------------
+{
+   "node" : {
+       "attribute" : "PostTown",
+       "query" : "Peterborough"
+   }
+}
+--------------------------------------------------
+
+The following query is only valid if the attribute wildcard has been enabled:
+
+[source,javascript]
+--------------------------------------------------
+{
+   "node" : {
+       "query" : "Peterborough"
+   }
+}
+--------------------------------------------------
+
+[[solr-configuration-json-field]]
+=== JSON Field
+
+Assuming that a `concise` field type has been configured as explained previously, you can define one or more fields of type
+`concise` in your `schema.xml` as follows:
+
+[source,markup]
+----
+<fields>
+...
+    <field name="json" type="concise" indexed="true" stored="false"/>
+...
+</fields>
+----
+
+This field can be used to index and query JSON data.
+
+[[solr-configuration-datatype]]
+=== Datatype
+
+It is possible to configure the analyzers used by SIREn for each <<analysis-and-datatypes, datatype>> in the
+`datatypes.xml` configuration file located in `$SOLR_HOME/example/solr/collection1/conf/`.
+
+This example shows the definition of the datatype `json:field`, and is configured to use a whitespace tokenizer
+with a lowercase filter at index and query time.
+
+[source,markup]
+----
+<datatypeConfig name="example" version="0.2.2">
+...
+    <datatype name="http://json.org/field" class="com.sindicetech.siren.solr.schema.TextDatatype">
+        <analyzer type="index">
+
+            <tokenizer class="solr.WhitespaceTokenizerFactory"/>
+            <filter class="solr.LowerCaseFilterFactory"/>
+
+        </analyzer>
+        <analyzer type="query">
+
+            <tokenizer class="solr.WhitespaceTokenizerFactory"/>
+            <filter class="solr.LowerCaseFilterFactory"/>
+
+        </analyzer>
+    </datatype>
+...
+</datatypeConfig>
+----
+
+A datatype is defined using the `datatype` element. This element requires two parameters: `name` and `class`.
+The `name` parameter specifies a unique name for the datatype, while the `class` parameter specifies the datatype
+implementation to use. In this example, we use the datatype implementation `com.sindicetech.siren.solr.schema.TextDatatype`
+which is made for configurable text analysis.
+
+The rest of the definition of the dataype is about analysis. The syntax and semantics of defining analysis for datatypes
+is exactly the same as for Solr field types. You can read more on
+https://cwiki.apache.org/confluence/display/solr/Understanding+Analyzers%2C+Tokenizers%2C+and+Filters[Understanding Analyzers, Tokenizers and Filters].
+
+Another datatype implementation is available, `com.sindicetech.siren.solr.schema.TrieDatatype`, which is made for numerical
+value analysis. The following example shows the definition of the `xsd:long` datatype.
+
+[source,markup]
+----
+<datatypeConfig name="example" version="0.2.2">
+...
+    <datatype name="http://www.w3.org/2001/XMLSchema#long"
+              class="com.sindicetech.siren.solr.schema.TrieDatatype"
+              precisionStep="8"
+              type="long"/>
+...
+</datatypeConfig>
+----
+
+This datatype implementation requires two parameters: `type` and `precisionStep`. The `type` parameter specifies the
+type of the numerical values: `integer`, `long`, `float`, `double`. The `precisionStep` specifies the precision of the
+numerical value indexing. These parameters have the same semantics than for the `TrieField` of Solr.
+
+[[solr-configuration-codec]]
+=== SIREn's Codec
+
+SIREn is using a custom postings format that needs to be registered in Solr. This is done automatically by the
+built-in `SchemaCodecFactory` of Solr. You have to ensure that this codec factory is properly registered in the
+`solrconfig.xml` by including the following setting:
+
+[source,markup]
+----
+  <codecFactory class="solr.SchemaCodecFactory"/>
+----
+
+[[solr-configuration-update-handler]]
+=== Update Request Handler
+
+Since version 1.4, SIREn includes its own
+http://siren.solutions/javadoc/current/com/sindicetech/siren/solr/handler/SirenUpdateRequestHandler.html[update request handler]
+whose goal is to simplify the indexing of JSON documents in Solr. Instead of having to define manually a schema that
+will correspond to the type of JSON documents you want to index, this update request handler will automatically map
+the JSON structure to a set of dynamically generated fields.
+
+This request handler accepts a JSON document as input, and given a set of mapping rules, it will automatically
+generate the following fields:
+
+* a field name `id` that is used to identify the JSON document;
+* a field named `_json_` that will index the content of the JSON document using a SIREn's field; and
+* a list of Solr's fields, each one is being created by flattening the JSON document into a set of paths.
+
+For example, the following document will produce three Solr's field: `ChargeDeviceRef`, `DeviceController.TelephoneNo`
+and `DeviceController.Website`. Path names are generated by concatenating the attributes with a dot.
+
+[source,javascript]
+--------------------------------------------------
+{
+   "ChargeDeviceRef" : "CM765",
+   "DeviceController": {
+       "TelephoneNo": "08455198676",
+       "Website": "www.sourceeast.net"
+   }
+}
+--------------------------------------------------
+
+[float]
+===== Id Field
+
+The request handler requires that the Solr's `schema.xml` defines the field 'id' as unique key. For example, it is
+usually enough to include the following in your schema.xml:
+
+[source,markup]
+----
+  <fields>
+    <field name="id" type="string" indexed="true" stored="true" required="true"/>
+  </fields>
+
+  <uniqueKey>id</uniqueKey>
+----
+
+If the JSON document contains an 'id' attribute, it will be automatically mapped to this field. If the JSON document
+does not contain an 'id' attribute, a UUID will be automatically generated.
+
+[float]
+===== Field Mappings
+
+The request handler takes as configuration a list of field mappings. There are four types of field mappings: `default`,
+`json`, `required` and `optional`:
+
+* The `default` field mapping must be unique and specifies the default mapping if no
+other mappings are found for a given path.
+* The `json` field mapping must be unique and specifies the mapping for the
+SIREn's field '_json_' that is used to index the full JSON document.
+* The `required` field mapping specifies one field
+mapping that must occur during the processing of the document. If the field mapping is not triggered during processing,
+the document will be rejected.
+* The 'optional' field mapping specifies one field mapping that should occur. If an
+optional field mapping is not triggered during the processing of a document, the document will not be rejected.
+
+Every field mapping must specify the parameter `fieldType`. This parameter must refer to one existing field type in the
+`schema.xml`. There is one special field type `null` that can be used to specify that a path matching this field
+mapping must be ignored, i.e., the path will not be indexed.
+
+The `required` and `optional` field mapping must specify a second parameter. This parameter indicates the type of
+mapping. There are two types of mappings: path-based and type-based:
+
+* Path-based mappings will be triggered if the path
+name matches. A path is specified with the parameter 'path' and is using the dot notation, for example
+"DeviceController.Website".
+* Type-based mapping will be triggered if the value type matches. The value type is specified with the
+parameter 'type' and one of the following value: `String`, `Boolean`, `Integer`, `Long`, `Double`, `Float`.
+
+[float]
+===== Configuration Example
+
+The following example shows how to configure the update request handler in `solrconfig.xml`. The update
+request handler is accessible at `http://localhost:8983/solr/collection1/siren/add` and is configured
+with:
+
+* a default mapping with the field type `null`. This means that
+  every path that will not trigger another mapping will be ignored and not indexed.
+* a json mapping with the field type `concise`.
+* a required mapping for the path `ChargeDeviceRef`. This means that all the documents must contain an attribute
+`ChargeDeviceRef`. This attribute will be mapped to a Solr's field `ChargeDeviceRef` with the field type `string`.
+* an optional mapping for the value type `String`. This means that all the paths with a `String` value will be mapped
+to a Solr's field with the field type `text`.
+
+[source,markup]
+----
+   <requestHandler name="/siren/add" class="com.sindicetech.siren.solr.handler.SirenUpdateRequestHandler">
+     <lst name="default">
+       <str name="fieldType">null</str>
+     </lst>
+     <lst name="json">
+       <str name="fieldType">concise</str>
+     </lst>
+     <lst name="required">
+       <str name="path">ChargeDeviceRef</str>
+       <str name="fieldType">string</str>
+     </lst>
+     <lst name="optional">
+       <str name="type">String</str>
+       <str name="fieldType">text</str>
+     </lst>
+   </requestHandler>
+----
+
+[[solr-configuration-query-parser]]
+=== Query Parser
+
+To register the tree query parser of SIREn, you need to add the following entries into the `solrconfig.xml`
+file located at `$SOLR_HOME/example/solr/collection1/conf/`.
+
+[source,markup]
+----
+<queryParser name="tree" class="com.sindicetech.siren.solr.qparser.tree.TreeQParserPlugin">   <1>
+    <str name="qnames">qnames.txt</str>                                                   <2>
+</queryParser>
+
+<requestHandler name="/tree" class="solr.SearchHandler">                                  <3>
+    <lst name="defaults">
+        <str name="defType">tree</str>                                                    <4>
+        <str name="fl">id</str>                                                           <5>
+        <str name="df">json</str>                                                         <6>
+    </lst>
+</requestHandler>
+----
+<1> Register the SIREn's tree query parser plugin under the name `tree`
+<2> Specify the path to the QName mappings file
+<3> Register the tree query handler under `/tree`
+<4> Specify the query parser plugin to use, here `tree`
+<5> Specify the default field retrieved
+<6> Specify the default search field
+
+The `TreeQParserPlugin` accepts also an additional parameter `allowLeadingWildcard`. If set to true, it will enable
+queries with leading wildcards.
+
+[[solr-configuration-qname]]
+=== QName
+
+The SIREn's query parser can be configured with a set of qname mappings. These qname mappings are useful to
+write more concise queries when using Uniform Resource Identifiers. For example, the core JSON datatypes
+are identified using URI, e.g., `http://json.org/field` or `http://www.w3.org/2001/XMLSchema#long`. A qname
+mapping `xsd : http://www.w3.org/2001/XMLSchema#` will allow you to write `xsd:long` instead of the full URI.
+
+The qname mappings are configured in the qnames.txt file located at `$SOLR_HOME/example/solr/collection1/conf/`.
+The file contains one key-value pair per line, the key being the qname and the value the namespace associated to this
+qname. The following example shows how to register two qnames:
+
+[source,plain]
+--------------------------------------------------
+json=http://json.org/
+xsd=http://www.w3.org/2001/XMLSchema#
+--------------------------------------------------

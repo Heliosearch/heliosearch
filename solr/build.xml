@@ -17,7 +17,7 @@
 -->
 <project name="solr" default="usage" xmlns:ivy="antlib:org.apache.ivy.ant">
   <description>Solr</description>
-  
+
   <target name="usage" description="Prints out instructions">
     <echo message="Welcome to the Solr project!" />
     <echo message="Use 'ant example' to create a runnable example configuration." />
@@ -34,11 +34,11 @@
   </target>
 
   <import file="common-build.xml"/>
-  
+
   <!-- ========================================================================= -->
   <!-- ============================== USER TASKS =============================== -->
   <!-- ========================================================================= -->
- 
+
   <target name="example" description="Creates a runnable example configuration."
           depends="dist-contrib,dist-war">
     <copy file="${dist}/${fullnamever}.war"
@@ -55,7 +55,7 @@
     </delete>
     <echo>See ${example}/README.txt for how to run the Solr example configuration.</echo>
   </target>
-  
+
   <target name="run-example" depends="example"
           description="Run Solr interactively, via Jetty.  -Dexample.debug=true to enable JVM debugger">
     <property name="example.solr.home" location="example/solr"/>
@@ -72,7 +72,7 @@
       <sysproperty key="jetty.port" value="${example.jetty.port}"/>
     </java>
   </target>
- 
+
   <!-- setup proxy for download tasks -->
   <condition property="proxy.specified">
     <or>
@@ -81,7 +81,7 @@
       <isset property="proxy.user"/>
     </or>
   </condition>
- 
+
   <target name="proxy.setup" if="proxy.specified">
     <setproxy proxyhost="${proxy.host}" proxyport="${proxy.port}" proxyuser="${proxy.user}" proxypassword="${proxy.password}"/>
   </target>
@@ -120,7 +120,7 @@
       </classpath>
     </java>
   </target>-->
-  
+
   <!-- ========================================================================= -->
   <!-- ========================== BUILD/TEST TASKS ============================= -->
   <!-- ========================================================================= -->
@@ -143,7 +143,7 @@
   <target name="documentation" description="Generate all documentation"
     depends="javadocs,changes-to-html,process-webpages"/>
   <target name="compile-core" depends="compile-solr-core" unless="solr.core.compiled"/>
-  
+
   <target name="process-webpages" depends="define-lucene-javadoc-url,resolve-groovy,resolve-pegdown">
     <makeurl property="process-webpages.buildfiles" separator="|">
       <fileset dir="." includes="core/build.xml,test-framework/build.xml,solrj/build.xml,contrib/**/build.xml"/>
@@ -152,7 +152,7 @@
       The XSL input file is ignored completely, but XSL expects one to be given,
       so we pass ourself (${ant.file}) here. The list of module build.xmls is given
       via string parameter, that must be splitted by the XSL at '|'.
-    --> 
+    -->
     <xslt in="${ant.file}" out="${javadoc.dir}/index.html" style="site/xsl/index.xsl" force="true">
       <outputproperty name="method" value="html"/>
       <outputproperty name="version" value="4.0"/>
@@ -162,7 +162,7 @@
       <param name="version" expression="${version}"/>
       <param name="luceneJavadocUrl" expression="${lucene.javadoc.url}"/>
     </xslt>
-    
+
     <pegdown todir="${javadoc.dir}">
       <fileset dir="." includes="SYSTEM_REQUIREMENTS.txt"/>
       <globmapper from="*.txt" to="*.html"/>
@@ -176,7 +176,7 @@
   <target name="jar" depends="jar-core,jar-solrj,jar-solr-test-framework,jar-contrib"
           description="Jar solr core, solrj, solr-test-framework, and all contribs"/>
 
-  <target name="jar-src" 
+  <target name="jar-src"
           description="Create source jars for solr core, solrj, solr-test-framework, and all contribs">
     <ant dir="core" target="jar-src" inheritAll="false"/>
     <ant dir="solrj" target="jar-src" inheritAll="false"/>
@@ -196,7 +196,7 @@
       <propertyset refid="uptodate.and.compiled.properties"/>
     </ant>
   </target>
-  
+
   <!-- Solrj targets -->
   <target name="test-solrj" description="Test java client">
     <ant dir="solrj" target="test" inheritAll="false">
@@ -225,14 +225,14 @@
   <target name="pitest-contrib" description="Run contrib PiTests.">
     <contrib-crawl target="pitest" failonerror="false"/>
   </target>
-  
+
   <!-- test-framework targets -->
   <target name="javadocs-test-framework">
     <ant dir="test-framework" target="javadocs" inheritAll="false">
       <propertyset refid="uptodate.and.compiled.properties"/>
     </ant>
   </target>
-    
+
   <!-- Validation (license/notice/api checks). -->
   <target name="validate" depends="check-example-lucene-match-version,check-licenses,rat-sources,check-forbidden-apis" description="Validate stuff." />
 
@@ -266,7 +266,7 @@
       </additional-filters>
     </license-check-macro>
   </target>
-  
+
   <target name="check-forbidden-apis" depends="-install-forbidden-apis" description="Check forbidden API calls in compiled class files.">
     <subant target="check-forbidden-apis" inheritall="false" >
       <propertyset refid="uptodate.and.compiled.properties"/>
@@ -289,7 +289,7 @@
     </subant>
     <contrib-crawl target="rat-sources" failonerror="true"/>
   </target>
-  
+
   <!-- Clean targets -->
   <target name="clean" description="Cleans compiled files and other temporary artifacts.">
     <delete dir="build" />
@@ -304,8 +304,12 @@
         <exclude name="**/.gitignore" />
       </fileset>
     </delete>
+    <!-- SIREn additions -->
+    <ant dir="siren" target="clean" inheritall="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+    </ant>
   </target>
-  
+
   <target name="clean-dest"
           description="Cleans out build/ but leaves build/docs/, dist/ and package/ alone.  This allows us to run nightly and clover together in Hudson">
     <delete includeemptydirs="true" >
@@ -318,37 +322,37 @@
   <!-- ========================================================================= -->
   <!-- ===================== DISTRIBUTION-RELATED TASKS ======================== -->
   <!-- ========================================================================= -->
- 
+
   <target name="copy-to-stage">
     <copy-to-stage-macro artifacts.dir="${package.dir}"/>
   </target>
-  
+
   <target name="dist"
           description="Creates the Solr distribution files."
-          depends="dist-solrj, dist-core, dist-test-framework, dist-contrib, dist-war" />
- 
+          depends="dist-solrj, dist-core, dist-test-framework, dist-siren, dist-contrib, dist-war" />
+
   <target name="dist-test-framework" depends="init-dist"
           description="Creates the Solr test-framework JAR.">
     <ant dir="test-framework" target="dist" inheritall="false">
       <propertyset refid="uptodate.and.compiled.properties"/>
     </ant>
   </target>
-  
+
   <target name="dist-contrib" depends="init-dist"
           description="Make the contribs ready for distribution">
     <contrib-crawl target="dist" failonerror="true" />
   </target>
-  
+
   <target name="dist-war"
           description="Creates the Solr WAR Distribution file.">
     <ant dir="webapp" target="dist" inheritall="false">
       <propertyset refid="uptodate.and.compiled.properties"/>
     </ant>
   </target>
-  
+
   <target name="prepare-release-no-sign" depends="clean, package, generate-maven-artifacts"/>
   <target name="prepare-release" depends="prepare-release-no-sign, sign-artifacts"/>
- 
+
   <!-- make a distribution -->
   <target name="package" depends="package-src-tgz,create-package,-dist-changes,-dist-keys"/>
 
@@ -361,10 +365,10 @@
 
   <!-- copy KEYS to the release folder -->
   <target name="-dist-keys">
-   <get src="http://people.apache.org/keys/group/lucene.asc" 
+   <get src="http://people.apache.org/keys/group/lucene.asc"
         dest="${package.dir}/KEYS"/>
   </target>
- 
+
   <!-- Makes a tarball from running "svn export" at the root level.    -->
   <!-- Copies NOTICE.txt and LICENSE.txt from solr/ to the root level. -->
   <target name="package-src-tgz" depends="init-dist"
@@ -399,7 +403,7 @@
     </tar>
     <make-checksums file="${source.package.file}"/>
   </target>
- 
+
   <target name="package-local-src-tgz"
           description="Packages the Solr and Lucene sources from the local working copy">
     <mkdir dir="${common-solr.dir}/build"/>
@@ -417,9 +421,9 @@
       <tarfileset dir="." prefix="${fullnamever}/solr"
                   excludes="build/** ${package.dir.rel}/** ${dist.rel}/**
                             example/webapps/*.war example/lib/**
-                            **/*.jar 
+                            **/*.jar
                             lib/README.committers.txt **/data/ **/logs/*
-                            **/*.sh **/bin/ scripts/ 
+                            **/*.sh **/bin/ scripts/
                             .idea/ **/*.iml **/pom.xml" />
       <tarfileset dir="." prefix="${fullnamever}/solr"
                   includes="core/src/test-files/solr/lib/classes/empty-file-main-lib.txt" />
@@ -446,14 +450,14 @@
       <fileset dir="${example}/solr-webapp" includes="**/*"/>
       <fileset dir="${dest}/${fullnamever}" includes="**/*"/>
     </delete>
- 
+
     <delete file="${package.dir}/${fullnamever}.tgz" failonerror="false" />
     <delete file="${package.dir}/${fullnamever}.zip" failonerror="false" />
- 
+
     <mkdir dir="${dest}/contrib-lucene-libs-to-package"/>
     <delete dir="${dest}/contrib-lucene-libs-to-package" includes="**/*"/>
     <contrib-crawl target="add-lucene-libs-to-package"/>
- 
+
     <tar destfile="${package.dir}/${fullnamever}.tgz" compression="gzip" longfile="gnu">
       <tarfileset dir="../lucene"
                   includes="CHANGES.txt"
@@ -461,11 +465,11 @@
       <tarfileset dir="."
                   prefix="${fullnamever}"
                   includes="LICENSE.txt NOTICE.txt CHANGES.txt README.txt SYSTEM_REQUIREMENTS.txt
-                            example/** contrib/**/lib/** contrib/**/README.txt 
+                            example/** contrib/**/lib/** contrib/**/README.txt
                             licenses/**"
-                  excludes="licenses/README.committers.txt **/data/ **/logs/* 
+                  excludes="licenses/README.committers.txt **/data/ **/logs/*
                             **/classes/ **/*.sh **/ivy.xml **/build.xml
-                            **/bin/ **/*.iml **/*.ipr **/*.iws **/pom.xml 
+                            **/bin/ **/*.iml **/*.ipr **/*.iws **/pom.xml
                             **/*pom.xml.template" />
       <tarfileset dir="${dest}/contrib-lucene-libs-to-package"
                   prefix="${fullnamever}"
@@ -476,7 +480,7 @@
                   includes="bin/* example/**/*.sh example/**/bin/" />
       <tarfileset dir="."
                   prefix="${fullnamever}"
-                  includes="dist/*.jar dist/*.war 
+                  includes="dist/*.jar dist/*.war
                             dist/solrj-lib/*
                             dist/test-framework/**"
                   excludes="**/*.tgz **/*.zip **/*.md5 **/*src*.jar **/*docs*.jar **/*.sha1" />
@@ -484,9 +488,9 @@
                   prefix="${fullnamever}/docs" />
     </tar>
     <make-checksums file="${package.dir}/${fullnamever}.tgz"/>
- 
+
     <untar compression="gzip" src="${package.dir}/${fullnamever}.tgz" dest="${dest}"/>
- 
+
     <!--
         This is a list of text file patterns to convert to CRLF line-ending style.
         Shell scripts and files included in shell scripts should not be converted.
@@ -506,7 +510,7 @@
                         **/*.xsl **/*.xslt **/*.yml"
              excludes="**/stopwordsWrongEncoding.txt **/gb18030-example.xml"
         />
- 
+
     <zip destfile="${package.dir}/${fullnamever}.zip">
       <zipfileset dir="${dest}/${fullnamever}"
                   prefix="${fullnamever}"
@@ -522,11 +526,11 @@
   <target name="changes-to-html" depends="define-lucene-javadoc-url">
     <build-changes changes.product="SOLR"/>
   </target>
- 
+
   <target name="sign-artifacts">
     <sign-artifacts-macro artifacts.dir="${package.dir}"/>
   </target>
- 
+
   <target name="resolve" depends="resolve-example">
      <sequential>
      <ant dir="core" target="resolve" inheritall="false">
@@ -563,7 +567,7 @@
     <!-- TODO: add missing docs for all classes and bump this to level=class -->
     <check-missing-javadocs dir="${javadoc.dir}" level="package"/>
   </target>
- 
+
   <target name="-ecj-javadoc-lint" depends="compile,compile-test,jar-test-framework,-ecj-javadoc-lint-unsupported,-ecj-resolve" if="ecj-javadoc-lint.supported">
     <subant target="-ecj-javadoc-lint" failonerror="true" inheritall="false">
       <propertyset refid="uptodate.and.compiled.properties"/>
@@ -588,7 +592,7 @@
       <contrib-crawl target="-dist-maven"/>
     </sequential>
   </target>
-  
+
   <target name="generate-maven-artifacts" depends="-unpack-solr-tgz">
     <sequential>
       <ant dir=".." target="resolve" inheritall="false"/>
@@ -598,7 +602,7 @@
       </antcall>
     </sequential>
   </target>
- 
+
   <target name="-validate-maven-dependencies" depends="compile-tools, install-maven-tasks, load-custom-tasks">
     <sequential>
       <subant target="-validate-maven-dependencies" failonerror="true" inheritall="false">
@@ -611,11 +615,11 @@
       <contrib-crawl target="-validate-maven-dependencies"/>
     </sequential>
   </target>
-	 
+
   <!-- ========================================================================= -->
   <!-- ========================= COMMITTERS' HELPERS =========================== -->
   <!-- ========================================================================= -->
-  
+
   <property name="analysis-common.res.dir"  value="../lucene/analysis/common/src/resources/org/apache/lucene/analysis"/>
   <property name="analysis-kuromoji.res.dir"  value="../lucene/analysis/kuromoji/src/resources/org/apache/lucene/analysis"/>
   <property name="analysis.conf.dest" value="${example}/solr/collection1/conf/lang"/>

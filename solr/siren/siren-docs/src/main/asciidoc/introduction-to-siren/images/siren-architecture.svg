@@ -1,0 +1,1115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg7927"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="siren-architecture.svg">
+  <defs
+     id="defs7929">
+    <marker
+       inkscape:stockid="Arrow2Lend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow2Lend"
+       style="overflow:visible;">
+      <path
+         id="path3899"
+         style="fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round;"
+         d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "
+         transform="scale(1.1) rotate(180) translate(1,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lstart"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow2Lstart"
+       style="overflow:visible">
+      <path
+         id="path3896"
+         style="fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "
+         transform="scale(1.1) translate(1,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow2Mend"
+       style="overflow:visible;">
+      <path
+         id="path3905"
+         style="fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round;"
+         d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "
+         transform="scale(0.6) rotate(180) translate(0,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mstart"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow2Mstart"
+       style="overflow:visible">
+      <path
+         id="path3902"
+         style="fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "
+         transform="scale(0.6) translate(0,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mstart"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mstart"
+       style="overflow:visible">
+      <path
+         id="path3884"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt"
+         transform="scale(0.4) translate(10,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mend"
+       style="overflow:visible;">
+      <path
+         id="path3887"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;"
+         transform="scale(0.4) rotate(180) translate(10,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Lstart"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Lstart"
+       style="overflow:visible">
+      <path
+         id="path3878"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt"
+         transform="scale(0.8) translate(12.5,0)" />
+    </marker>
+    <filter
+       id="filter8647"
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow">
+      <feFlood
+         id="feFlood8649"
+         flood-opacity="0.5"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite8651"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur8653"
+         in="composite"
+         stdDeviation="2"
+         result="blur" />
+      <feOffset
+         id="feOffset8655"
+         dx="2"
+         dy="2"
+         result="offset" />
+      <feComposite
+         id="feComposite8657"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       id="filter8659"
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow">
+      <feFlood
+         id="feFlood8661"
+         flood-opacity="0.5"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite8663"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur8665"
+         in="composite"
+         stdDeviation="2"
+         result="blur" />
+      <feOffset
+         id="feOffset8667"
+         dx="2"
+         dy="2"
+         result="offset" />
+      <feComposite
+         id="feComposite8669"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       id="filter8671"
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow">
+      <feFlood
+         id="feFlood8673"
+         flood-opacity="0.5"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite8675"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur8677"
+         in="composite"
+         stdDeviation="2"
+         result="blur" />
+      <feOffset
+         id="feOffset8679"
+         dx="2"
+         dy="2"
+         result="offset" />
+      <feComposite
+         id="feComposite8681"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       color-interpolation-filters="sRGB"
+       id="filter8647-1"
+       inkscape:label="Drop Shadow">
+      <feFlood
+         id="feFlood8649-7"
+         flood-opacity="0.5"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite8651-0"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur8653-0"
+         stdDeviation="2"
+         result="blur" />
+      <feOffset
+         id="feOffset8655-9"
+         dx="2"
+         dy="2"
+         result="offset" />
+      <feComposite
+         id="feComposite8657-9"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       color-interpolation-filters="sRGB"
+       id="filter8659-8"
+       inkscape:label="Drop Shadow">
+      <feFlood
+         id="feFlood8661-7"
+         flood-opacity="0.5"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite8663-6"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur8665-3"
+         stdDeviation="2"
+         result="blur" />
+      <feOffset
+         id="feOffset8667-4"
+         dx="2"
+         dy="2"
+         result="offset" />
+      <feComposite
+         id="feComposite8669-9"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <filter
+       color-interpolation-filters="sRGB"
+       id="filter8671-6"
+       inkscape:label="Drop Shadow">
+      <feFlood
+         id="feFlood8673-2"
+         flood-opacity="0.5"
+         flood-color="rgb(0,0,0)"
+         result="flood" />
+      <feComposite
+         id="feComposite8675-1"
+         in2="SourceGraphic"
+         in="flood"
+         operator="in"
+         result="composite1" />
+      <feGaussianBlur
+         id="feGaussianBlur8677-9"
+         stdDeviation="2"
+         result="blur" />
+      <feOffset
+         id="feOffset8679-0"
+         dx="2"
+         dy="2"
+         result="offset" />
+      <feComposite
+         id="feComposite8681-8"
+         in2="offset"
+         in="SourceGraphic"
+         operator="over"
+         result="composite2" />
+    </filter>
+    <marker
+       inkscape:stockid="Arrow2Mstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Mstart-5"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3902-0"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="scale(0.6,0.6)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Mend-5"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3905-6"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="scale(-0.6,-0.6)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Mstart-58"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3902-8"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="scale(0.6,0.6)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Mend-57"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3905-63"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="scale(-0.6,-0.6)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Mstart-2"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3902-5"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="scale(0.6,0.6)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Mend-9"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3905-4"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="scale(-0.6,-0.6)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Lstart-8"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3896-4"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(1.1,0,0,1.1,1.1,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Lend-7"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3899-9"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-1.1,0,0,-1.1,-1.1,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Lstart-9"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3896-8"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(1.1,0,0,1.1,1.1,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Lend-9"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3899-96"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-1.1,0,0,-1.1,-1.1,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lstart"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Lstart-7"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3896-6"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(1.1,0,0,1.1,1.1,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Lend-97"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3899-1"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-1.1,0,0,-1.1,-1.1,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="241.42383"
+     inkscape:cy="752.98931"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:snap-bbox="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1056"
+     inkscape:window-x="1440"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid7935" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7932">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 105,62.362183 80,0 0,25 c -15,0 -30,0 -40,5 -10,5 -25,5 -40,5 z"
+       id="path7937"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccccc" />
+    <g
+       id="g8687"
+       transform="translate(23.3,3.5500026)"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236">
+      <path
+         sodipodi:nodetypes="cccccc"
+         inkscape:connector-curvature="0"
+         id="path7937-8"
+         d="m 130.25,137.61218 80,0 0,25 c -15,0 -30,0 -40,5 -10,5 -25,5 -40,5 z"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;filter:url(#filter8647)" />
+      <path
+         sodipodi:nodetypes="cccccc"
+         inkscape:connector-curvature="0"
+         id="path7937-5"
+         d="m 125.25,142.61218 80,0 0,25 c -15,0 -30,0 -40,5 -10,5 -25,5 -40,5 z"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;filter:url(#filter8659)" />
+      <path
+         sodipodi:nodetypes="cccccc"
+         inkscape:connector-curvature="0"
+         id="path7937-4"
+         d="m 120,147.36218 80,0 0,25 c -15,0 -30,0 -40,5 -10,5 -25,5 -40,5 z"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;filter:url(#filter8671)" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text8683"
+         y="165.86609"
+         x="123.19873"
+         style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           y="165.86609"
+           x="123.19873"
+           id="tspan8685"
+           sodipodi:role="line">Document</tspan></text>
+    </g>
+    <rect
+       style="fill:#c8c8c8;fill-opacity:1;stroke:none"
+       id="rect8723"
+       width="304.75"
+       height="59.75"
+       x="120.25"
+       y="202.61218"
+       ry="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <g
+       id="g8725"
+       transform="matrix(0.65646259,0,0,1,123.84949,-100.25)"
+       style="stroke-width:0.61711344999999995;stroke-miterlimit:4;stroke-dasharray:none;fill:#a1c3a1;fill-opacity:1"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236">
+      <rect
+         ry="1.9338875"
+         y="307.86218"
+         x="230.5"
+         height="50"
+         width="220"
+         id="rect8694"
+         style="fill:#a1c3a1;fill-opacity:1;stroke:#000000;stroke-width:0.61711344999999995;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path8696"
+         d="m 290.25,357.61218 0,-20 160,0"
+         style="fill:#a1c3a1;stroke:#000000;stroke-width:0.61711344999999995;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;fill-opacity:1" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="278.62598"
+       y="222.9989"
+       id="text8698-6"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-3"
+         x="278.62598"
+         y="222.9989">Elasticsearch</tspan></text>
+    <g
+       id="g8725-7"
+       transform="matrix(0.65646259,0,0,1,-26.112071,-100.29744)"
+       style="fill:#ead6be;fill-opacity:1"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236">
+      <rect
+         ry="1.9338875"
+         y="307.86218"
+         x="230.5"
+         height="50"
+         width="220"
+         id="rect8694-3"
+         style="fill:#ead6be;fill-opacity:1;stroke:#000000;stroke-width:0.50000000000000000;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      <path
+         inkscape:connector-curvature="0"
+         id="path8696-9"
+         d="m 290.25,357.61218 0,-20 160,0"
+         style="fill:#ead6be;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;fill-opacity:1" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="128.66443"
+       y="222.95145"
+       id="text8698-6-3"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-3-3"
+         x="128.66443"
+         y="222.95145">Solr</tspan></text>
+    <rect
+       style="fill:#bfdcf5;fill-opacity:0.68493152;stroke:#000000;stroke-width:0.50000000000000000;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect8694-34"
+       width="144.42177"
+       height="50"
+       x="120.25"
+       y="309.68362"
+       ry="1.9338875"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;fill-opacity:0.68493150000000003;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 159.47364,359.43361 0,-20 105.03401,0"
+       id="path8696-7"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="123.71184"
+       y="325.07034"
+       id="text8698-6-6"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-3-7"
+         x="123.71184"
+         y="325.07034">Analysis</tspan></text>
+    <rect
+       style="fill:#bfdcf5;fill-opacity:0.6849315;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect8694-34-7"
+       width="144.42177"
+       height="50"
+       x="280.25"
+       y="277.61218"
+       ry="1.9338875"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       sodipodi:nodetypes="ccc"
+       style="fill:none;fill-opacity:0.68493150000000003;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 297,327.36218 0,-20 127.50765,0"
+       id="path8696-7-1"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="283.71185"
+       y="292.9989"
+       id="text8698-6-6-0"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-3-7-2"
+         x="283.71185"
+         y="292.9989"
+         style="font-size:13px">Flexible Query Parser</tspan></text>
+    <rect
+       style="fill:#bfdcf5;fill-opacity:0.68493152;stroke:#000000;stroke-width:0.50000000000000000;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect8694-34-7-5"
+       width="144.42177"
+       height="50"
+       x="280.25"
+       y="342.61218"
+       ry="1.9338875"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;fill-opacity:0.68493150000000003;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 319.47364,392.36218 0,-20 105.03401,0"
+       id="path8696-7-1-0"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="283.71185"
+       y="357.9989"
+       id="text8698-6-6-0-8"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-3-7-2-6"
+         x="283.71185"
+         y="357.9989"
+         style="font-size:13px">Query</tspan></text>
+    <rect
+       style="fill:#bfdcf5;fill-opacity:0.68493152;stroke:#000000;stroke-width:0.50022571999999998;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect8694-34-8"
+       width="304.22363"
+       height="49.999775"
+       x="120.52627"
+       y="407.6123"
+       ry="1.9338788"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;fill-opacity:1"
+       d="m 255,457.36218 0,-20 170,0"
+       id="path8696-7-2"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="123.71184"
+       y="422.9989"
+       id="text8698-6-6-1"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-3-7-24"
+         x="123.71184"
+         y="422.9989">Codec</tspan></text>
+    <g
+       transform="translate(186.45,3.5500026)"
+       id="g8687-9"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236">
+      <path
+         sodipodi:nodetypes="cccccc"
+         inkscape:connector-curvature="0"
+         id="path7937-8-2"
+         d="m 130.25,137.61218 80,0 0,25 c -15,0 -30,0 -40,5 -10,5 -25,5 -40,5 z"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;filter:url(#filter8647-1)" />
+      <path
+         sodipodi:nodetypes="cccccc"
+         inkscape:connector-curvature="0"
+         id="path7937-5-0"
+         d="m 125.25,142.61218 80,0 0,25 c -15,0 -30,0 -40,5 -10,5 -25,5 -40,5 z"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;filter:url(#filter8659-8)" />
+      <path
+         sodipodi:nodetypes="cccccc"
+         inkscape:connector-curvature="0"
+         id="path7937-4-7"
+         d="m 120,147.36218 80,0 0,25 c -15,0 -30,0 -40,5 -10,5 -25,5 -40,5 z"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;filter:url(#filter8671-6)" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text8683-0"
+         y="165.86609"
+         x="138.52832"
+         style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           y="165.86609"
+           x="138.52832"
+           id="tspan8685-7"
+           sodipodi:role="line">Query</tspan></text>
+    </g>
+    <path
+       style="fill:#a0a0a0;stroke:none;fill-opacity:1"
+       d="m 159.78106,349.5713 0,-9.78586 52.27539,0 52.27539,0 -5e-4,9.18608 c -5.1e-4,8.88816 -0.008,9.19918 -0.24696,9.59032 -0.13556,0.22233 -0.41663,0.49223 -0.6246,0.59978 -0.33953,0.17559 -5.64429,0.19553 -52.0284,0.19553 l -51.65032,0 0,-9.78585 z"
+       id="path9008"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#a0a0a0;stroke:none"
+       d="m 159.78106,349.5713 0,-9.78586 52.29361,0 52.2936,0 -0.0933,9.1777 c -0.0513,5.04774 -0.1422,9.30635 -0.20198,9.46358 -0.0598,0.15723 -0.26494,0.38829 -0.45592,0.51345 -0.33075,0.21677 -1.59137,0.23123 -26.55371,0.30464 -14.41356,0.0424 -37.69854,0.085 -51.7444,0.0947 l -25.53791,0.0176 0,-9.78585 z"
+       id="path9010"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#e3c386;stroke:none;fill-opacity:1"
+       d="m 159.78106,349.59109 0,-9.80565 52.29507,0 52.29508,0 -0.0908,9.16736 c -0.0499,5.04205 -0.13812,9.29176 -0.19593,9.4438 -0.14621,0.38457 -0.42476,0.58906 -0.96982,0.71199 -0.25672,0.0579 -23.6118,0.14642 -51.90017,0.19671 l -51.4334,0.0914 0,-9.80564 z"
+       id="path9012"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#e3c386;stroke:none;fill-opacity:1"
+       d="m 319.786,382.46439 0,-9.84899 52.2754,0 52.27539,0 -5e-4,9.24921 c -5.1e-4,9.05427 -0.006,9.25802 -0.2553,9.66718 -0.14016,0.22989 -0.45064,0.49979 -0.68996,0.59978 -0.37625,0.15722 -7.41059,0.18181 -52.02006,0.18181 l -51.58497,0 0,-9.84899 z"
+       id="path9018"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#a0a0a0;stroke:none"
+       d="m 255.40387,447.5101 0,-9.73214 84.46429,0 84.46428,0 -0.006,9.24107 c -0.006,9.74848 0.009,9.56822 -0.83079,10.01548 -0.29495,0.15709 -20.83405,0.20774 -84.24107,0.20774 l -83.85103,0 0,-9.73215 z"
+       id="path9020"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#e3c386;stroke:none;fill-opacity:1"
+       d="m 255.40387,447.53641 0,-9.75845 84.48762,0 84.48762,0 -0.12379,8.97322 c -0.0681,4.93526 -0.20203,9.22432 -0.29767,9.53124 -0.16207,0.52013 -0.24316,0.56516 -1.19419,0.66313 -0.56117,0.0578 -38.44664,0.16006 -84.18995,0.22721 l -83.16964,0.12209 0,-9.75844 z"
+       id="path9024"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#e3c386;stroke:none;fill-opacity:1"
+       d="m 297.36816,317.5101 0,-9.73214 63.48679,0 63.48679,0 -0.0493,9.30127 -0.0493,9.30127 -0.50103,0.43087 -0.50103,0.43088 -62.93647,0 -62.93647,0 0,-9.73215 z"
+       id="path9028"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="166.25002"
+       y="353.64795"
+       id="text8698-2"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-98"
+         x="166.25002"
+         y="353.64795"
+         style="font-size:13px">JSON Analyzer</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="272.96078"
+       y="452.20328"
+       id="text8698-2-6"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-98-1"
+         x="272.96078"
+         y="452.20328"
+         style="font-size:13px">Tree-Labelling Codec</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="333.50769"
+       y="387.19376"
+       id="text8698-2-1-0"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-98-5-2"
+         x="333.50769"
+         y="387.19376"
+         style="font-size:13px">Node Query</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="300.17856"
+       y="321.18362"
+       id="text8698-2-1"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-98-5"
+         x="300.17856"
+         y="321.18362"
+         style="font-size:13px">JSON Query Parser</tspan></text>
+    <path
+       style="fill:#bfdcf5;fill-opacity:0.68627451;stroke:none"
+       d="m 237.04775,482.56434 0,-9.47018 27.02158,0 27.02158,0 0,9.47018 0,9.47018 -27.02158,0 -27.02158,0 0,-9.47018 z"
+       id="path9036"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.55478024;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect9030"
+       width="54.695213"
+       height="19.695211"
+       x="236.87497"
+       y="472.6442"
+       ry="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="238.62598"
+       y="487.56824"
+       id="text9032"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan9034"
+         x="238.62598"
+         y="487.56824">Lucene</tspan></text>
+    <path
+       style="fill:#bfdcf5;fill-opacity:0.68627451;stroke:none"
+       d="m 302.29775,482.81431 0,-9.47018 27.02158,0 27.02158,0 0,9.47018 0,9.47018 -27.02158,0 -27.02158,0 0,-9.47018 z"
+       id="path9036-7"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.55478024;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect9030-2"
+       width="54.695213"
+       height="19.695211"
+       x="302.12497"
+       y="472.8942"
+       ry="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#e3c386;fill-opacity:1;stroke:none"
+       d="m 302.42331,482.83633 0,-9.40705 26.95844,0 26.95845,0 0,9.40705 0,9.40705 -26.95845,0 -26.95844,0 0,-9.40705 z"
+       id="path9065"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="309.27386"
+       y="487.93253"
+       id="text9032-6"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan9034-8"
+         x="309.27386"
+         y="487.93253">SIREn</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="172.26276"
+       y="487.49384"
+       id="text9067"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan9069"
+         x="172.26276"
+         y="487.49384">Legend:</tspan></text>
+    <path
+       style="fill:#e3c386;stroke:none;fill-opacity:1"
+       d="m 314.69284,247.48208 0,-9.72272 52.27539,0 52.2754,0 0,9.07493 c 0,5.28524 -0.10285,9.34545 -0.24629,9.72272 l -0.24629,0.64779 -52.0291,0 -52.02911,0 0,-9.72272 z"
+       id="path9071"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:#e3c386;stroke:none;fill-opacity:1"
+       d="m 164.68519,247.48208 0,-9.72272 52.27539,0 52.27539,0 0,9.23424 c 0,5.88246 -0.0949,9.41155 -0.26142,9.72272 -0.25716,0.48051 -1.10917,0.48848 -52.27539,0.48848 l -52.01397,0 0,-9.72272 z"
+       id="path9073"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="323.87527"
+       y="252.19754"
+       id="text8698"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700"
+         x="323.87527"
+         y="252.19754">SIREn Plugin</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="173.62274"
+       y="252.25143"
+       id="text8698-1"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan8700-9"
+         x="173.62274"
+         y="252.25143">SIREn Plugin</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow2Lstart);marker-end:url(#Arrow2Lend);stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 192.46088,185.03781 0,15"
+       id="path9075"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow2Lstart);marker-end:url(#Arrow2Lend);stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 192.46088,279.68656 0,15"
+       id="path9075-7"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.50000000000000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow2Lstart);marker-end:url(#Arrow2Lend);stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 192.42024,376.93066 0,15"
+       id="path9075-7-2"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#Arrow2Lstart);marker-end:url(#Arrow2Lend)"
+       d="m 352.46088,393.58538 0,13"
+       id="path9075-7-2-8"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#Arrow2Lstart);marker-end:url(#Arrow2Lend)"
+       d="m 352.46088,328.56193 0,13"
+       id="path9075-7-2-8-8"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#Arrow2Lstart);marker-end:url(#Arrow2Lend)"
+       d="m 352.46088,263.3542 0,13"
+       id="path9075-7-2-8-8-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#Arrow2Lstart);marker-end:url(#Arrow2Lend)"
+       d="m 352.46088,185.03781 0,15"
+       id="path9075-76"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-architecture.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+  </g>
+</svg>

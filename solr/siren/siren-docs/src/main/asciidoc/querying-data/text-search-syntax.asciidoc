@@ -1,0 +1,200 @@
+[[text-search-syntax]]
+== Text Search Syntax
+
+This section presents the query syntax for the full-text search queries in SIREn.
+A full-text search query in SIREn will always be used in conjunction within a <<tree-search-syntax, tree search query>>.
+The query syntax is an extension of the original
+https://lucene.apache.org/core/4_8_0/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#package_description[Lucene query syntax].
+A search query is a combination of ``terms''
+and operators. Compared to the Lucene query syntax, we have added some operators, for example
+the <<text-search-datatype, datatype>> or the <<text-search-proximity-boolean, proximity-based boolean>> operators. We have also disabled the field
+operator since there is no ``field'' concept in SIREn.
+
+[float]
+=== Term
+
+A term query matches all the nodes that contain the specified term. For example, the term query `california`
+matches all nodes that contain the word ``california''.
+
+[float]
+=== Phrase
+
+A phrase is defined as a sequence of two or more terms enclosed by double quotes `"..."`. A phrase query matches all the nodes
+containing the specified phrase. For example, the phrase query
+
+  "San Francisco"
+
+matches all the nodes containing the word ``San'' followed immediately by the word ``Francisco''.
+
+[float]
+=== Wildcard
+
+A wildcard query enables to specify wildcard characters within a term. There are three wildcard characters:
+
+* `+`: matches 1 or more characters,
+* `*`: matches 0 or more characters, and
+* `?`: matches exactly one character.
+
+Note that the wildcard query can be quite slow. Also note that a wildcard query should
+not start with a wildcard character, as this will result in an extremely slow query.
+Our query parser does not allow this by default, but provides a `setAllowLeadingWildcard` setting to remove that
+protection.
+
+[float]
+=== Regular Expression
+
+A regular expression query is even more general than a wildcard query, matching all nodes with terms that match a
+regular expression pattern. It is defined as a regular expression enclosed by forward slashes `/.../`. The syntax
+of the regular expression is defined by Lucene and can be found
+https://lucene.apache.org/core/4_8_0/core/org/apache/lucene/util/automaton/RegExp.html[here].
+
+[float]
+=== Fuzzy
+
+A fuzzy query matches nodes that contain terms similar to the specified term. The fuzzy operator is specified
+by using the tilde `~` symbol at the end of a term, followed by an optional integer between 0 and 2 which specifies the
+maximum number of edits allowed. For example, the query
+
+  network~
+
+searches for nodes containing terms that are similar in spelling to ``network''.
+
+[float]
+=== Range
+
+A range query matches all nodes containing a term that occurs in the inclusive or exclusive range of a
+lower term and an upper term according to the lexicographical order.
+A range query is defined by a lower bound, the keyword `TO`, and and upper bound enclosed in brackets. The square
+brackets `[...]` denotes inclusive bounds while curly brackets `{...}` denotes exclusive bounds. For example,
+the query
+
+  {0 TO 10]
+
+denotes a range between 0 excluded and 10 included. The star `*` symbol may be used for the lower
+and upper bound to specify an open-ended range query.
+
+[float]
+=== Term Boosting
+
+It is possible to modify the relevance of a term in the scoring function by using the boost operator. The boost operator
+is specified by using the caret `^` symbol at the end of a term, followed by a positive float number. The higher the
+boost factor, the more relevant the term will be. For example, the query
+
+  california^0.5
+
+reduces the impact of the term ``california'' by a factor of 0.5.
+
+[float]
+[[text-search-datatype]]
+=== Datatype
+
+By default, the query parser assigns the datatype `xsd:string` to the terms present in the query.
+It is possible to specify a datatype to a term expression in order to control its analysis.
+This is particularly important for numerical range query, as without specifying a numeric datatype, the range query will
+use the alphabetical ordering. The datatype operator is defined by the datatype name followed by the term expression
+enclosed in parenthesis, such as `xsd:long(...)`. For example, if a numerical analyzer has been assigned to the datatype
+`xsd:long`, then the query
+
+  xsd:long([24 TO 42])
+
+will perform a numerical range query.
+
+[float]
+=== Protected Term
+
+It is possible to protect a term by using single quotes `'...'`. A protected term represents a term in which all special
+characters are escaped. This is useful if the term contains special characters, such as `:` or `*`. For example, the
+URI in `'http://example.org?id=123'` is not tokenised and is kept as a single word. Also the special wildcard symbol
+`?` is not interpreted.
+
+[float]
+=== Boolean
+
+A boolean query enables the combination of term expressions and other boolean expressions with boolean operators.
+The query syntax supports binary boolean operators (`OR`, `AND` and `NOT`) and unary boolean operators (`+` and `-`).
+Parenthesis `(...)` can be used to group and nest boolean clauses.
+
+*AND*::
+  The binary operator `AND` performs a conjunction of two terms. For example, the query `san AND francisco` matches
+  all nodes containing both the term ``san'' and ``francisco''. The symbol `&&` can be used in place of the keyword
+  `AND`.
+
+*+*::
+  The unary operator `+` specifies that the term *must* occur.
+
+*OR*::
+  The binary operator `OR` performs a disjunction of two terms. For example, the query `NY OR (New York)`
+  matches nodes in which either the word ``NY'' or both the words ``New'' and ``York'' appear.
+  The symbol `||` can be used in place of the keyword `OR`.
+
+*NOT*::
+  The binary operator `NOT` performs an exclusion of the term specified on the right-hand side of the operator. For
+  example, the query `search NOT advertising` matches nodes that contain the word ``search'' but not the word
+  ``advertising''. The symbol `!` can be used in place of the keyword `NOT`.
+
+*-*::
+  The unary operator `-` specifies that the term *must not* occur.
+
+[float]
+[[text-search-proximity-boolean]]
+=== Proximity-Based Boolean
+
+A proximity-based boolean query is an extension of a boolean query that introduces term proximity and ordering
+constraints.
+
+The query syntax extends the boolean syntax for grouping to introduce proximity operators. It is possible to create
+boolean expressions that must satisfy some proximity and ordering constraints. These boolean expressions are similar to
+the phrase query in that they all restricts terms matches based on their position, but these boolean expressions are
+much more expressive. In order to activate proximity constraints on a boolean expression, you must append to the right
+parenthesis of the boolean group the symbol `~` or `#` followed by a positive integer. The integer indicates the
+maximum allowed slop, i.e., the maximum distance that is allowed among all the clauses of the boolean expressions. The
+symbol `#` indicates that the required clauses must match in order, while the symbol `~` indicates that they can match
+in any order.
+
+For example, the expression
+
+  (+a +b)~0
+
+indicates that the two required terms a and b must match next to each other
+(slop of 0) in any order. On the other hand, the expression
+
+  (a AND b)#1
+
+indicates that ``a'' and ``b'' must match in order with a maximum distance of 1 between them.
+
+The syntax supports all the boolean operators, such as required (`+`, `AND`, `&&`), optional (`OR`, `||`) or excluded
+(`-`, `!`, `NOT`). However, when the order constraint is specified, it is only applicable to the required clauses, i.e.,
+the optional and excluded clauses will match irrespective of their position. For example, with the expression
+
+  (+a +b c)#0
+
+the optional term c can appear before or after the required terms a and b.
+
+The slop constraint is applicable to the required terms, but also to the optional term if the boolean expression
+contains at least one required and one optional clause. For example, with the expression
+
+  ( +a b )#1
+
+the optional term ``b'' will be considered in the scoring if and only if it is at a maximum distance of 1 after the term
+``a''. For example, the text ``a c b'' will be scored higher than the text ``a c d b''.
+
+As with normal boolean group expressions, you can nest them arbitrarily. You can nest boolean expressions with proximity
+constraints inside normal boolean expressions, but the inverse is
+invalid. For example, the expression
+
+  ( a AND (b OR c)~0 )
+
+is valid, while the expression
+
+  ( a AND (b OR c) )~0
+
+is invalid.
+
+These boolean expressions supports wildcard, fuzzy and range queries. For example, the expression containing wildcard
+and fuzzy term query is valid:
+
+  ( +a /b*b/ cc~ )~0
+
+However, phrase queries are invalid inside a boolean expression with proximity constraints:
+
+  ( +a "b c" )~0

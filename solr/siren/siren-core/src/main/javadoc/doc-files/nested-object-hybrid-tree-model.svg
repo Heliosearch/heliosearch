@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="nested-object-hybrid-tree-model.svg"
+   inkscape:export-filename="/home/renaud/Work/Sindice/workspace/siren/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-tree-model.png"
+   inkscape:export-xdpi="117.64236"
+   inkscape:export-ydpi="117.64236">
+  <defs
+     id="defs4">
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mend"
+       style="overflow:visible;">
+      <path
+         id="path3840"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;"
+         transform="scale(0.4) rotate(180) translate(10,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-2"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3840-2"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-2-6"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3840-2-0"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-2-1"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3840-2-4"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-2-14"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3840-2-1"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-7"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3840-5"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow1Mend-2-5"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3840-2-5"
+         d="M 0,0 5,-5 -12.5,0 5,5 0,0 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="matrix(-0.4,0,0,-0.4,-4,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.959798"
+     inkscape:cx="250.33829"
+     inkscape:cy="915.96636"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1056"
+     inkscape:window-x="1440"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid2985" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.75;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="path2987"
+       sodipodi:cx="290"
+       sodipodi:cy="102.36218"
+       sodipodi:rx="20"
+       sodipodi:ry="20"
+       d="m 310,102.36218 a 20,20 0 1 1 -40,0 20,20 0 1 1 40,0 z"
+       transform="matrix(0.75,0,0,0.75,80.005076,20.590546)"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <text
+       xml:space="preserve"
+       style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="289.216"
+       y="100.11414"
+       id="text3028"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"><tspan
+         sodipodi:role="line"
+         id="tspan3030"
+         x="289.216"
+         y="100.11414">root</tspan></text>
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.75;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="path2987-5"
+       sodipodi:cx="290"
+       sodipodi:cy="102.36218"
+       sodipodi:rx="20"
+       sodipodi:ry="20"
+       d="m 310,102.36218 a 20,20 0 1 1 -40,0 20,20 0 1 1 40,0 z"
+       transform="matrix(0.75,0,0,0.75,45,60.590546)"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.75;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="path2987-6"
+       sodipodi:cx="290"
+       sodipodi:cy="102.36218"
+       sodipodi:rx="20"
+       sodipodi:ry="20"
+       d="m 310,102.36218 a 20,20 0 1 1 -40,0 20,20 0 1 1 40,0 z"
+       transform="matrix(0.75,0,0,0.75,80,60.590546)"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend)"
+       d="m 284,104.36218 -16.5,18"
+       id="path3057"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <text
+       xml:space="preserve"
+       style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="263.19922"
+       y="135.04071"
+       id="text4295"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"><tspan
+         sodipodi:role="line"
+         id="tspan4297"
+         x="263.19922"
+         y="135.04071"
+         style="text-align:center;text-anchor:middle">name:</tspan><tspan
+         sodipodi:role="line"
+         x="263.19922"
+         y="145.04071"
+         id="tspan3016"
+         style="text-align:center;text-anchor:middle">Alice</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="284.66992"
+       y="140.3446"
+       id="text4299"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"><tspan
+         sodipodi:role="line"
+         id="tspan4301"
+         x="284.66992"
+         y="140.3446">knows</tspan></text>
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.75;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="path2987-6-8-3"
+       sodipodi:cx="290"
+       sodipodi:cy="102.36218"
+       sodipodi:rx="20"
+       sodipodi:ry="20"
+       d="m 310,102.36218 a 20,20 0 1 1 -40,0 20,20 0 1 1 40,0 z"
+       transform="matrix(0.75,0,0,0.75,80.053568,100.65943)"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend-2)"
+       d="m 297.66077,152.43106 0,8.92857"
+       id="path4338-9"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="297.92075"
+       y="174.85707"
+       id="text4299-0"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"><tspan
+         sodipodi:role="line"
+         id="tspan4301-6"
+         x="297.92075"
+         y="174.85707"
+         style="text-align:center;text-anchor:middle">name:</tspan><tspan
+         sodipodi:role="line"
+         x="297.92075"
+         y="184.85707"
+         id="tspan3018"
+         style="text-align:center;text-anchor:middle">Bob</tspan></text>
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.75;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="path2987-6-8"
+       sodipodi:cx="290"
+       sodipodi:cy="102.36218"
+       sodipodi:rx="20"
+       sodipodi:ry="20"
+       d="m 310,102.36218 a 20,20 0 1 1 -40,0 20,20 0 1 1 40,0 z"
+       transform="matrix(0.75,0,0,0.75,115,60.832935)"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend)"
+       d="m 311,104.36218 16.5,18.24238"
+       id="path3057-8-8"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <text
+       xml:space="preserve"
+       style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="319.66992"
+       y="140.58701"
+       id="text4299-5"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"><tspan
+         sodipodi:role="line"
+         id="tspan4301-5"
+         x="319.66992"
+         y="140.58701">knows</tspan></text>
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.75;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="path2987-6-8-3-9"
+       sodipodi:cx="290"
+       sodipodi:cy="102.36218"
+       sodipodi:rx="20"
+       sodipodi:ry="20"
+       d="m 310,102.36218 a 20,20 0 1 1 -40,0 20,20 0 1 1 40,0 z"
+       transform="matrix(0.75,0,0,0.75,115.05357,100.90181)"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend-2)"
+       d="m 332.66077,152.67344 0,8.83929"
+       id="path4338-9-8"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-size:8px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="332.92075"
+       y="175.09947"
+       id="text4299-0-5"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"><tspan
+         sodipodi:role="line"
+         id="tspan4301-6-4"
+         x="332.92075"
+         y="175.09947"
+         style="text-align:center;text-anchor:middle">name:</tspan><tspan
+         sodipodi:role="line"
+         x="332.92075"
+         y="185.09947"
+         id="tspan3018-8"
+         style="text-align:center;text-anchor:middle">Carl</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend-2)"
+       d="m 297.4961,112.24593 0,8.92857"
+       id="path4338-9-4"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/siren.git/siren-core/src/main/javadoc/doc-files/nested-object-hybrid-tree-model.png"
+       inkscape:export-xdpi="203.50481"
+       inkscape:export-ydpi="203.50481"
+       sodipodi:nodetypes="cc" />
+  </g>
+</svg>

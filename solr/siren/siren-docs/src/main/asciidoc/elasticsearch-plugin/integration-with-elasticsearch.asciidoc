@@ -1,0 +1,154 @@
+[[integration-with-elasticsearch]]
+== Integration with ElasticSearch
+
+The SIREn Elasticsearch plugin provides all the SIREn functionality to Elasticsearch
+users. The SIREn plugin is fully integrated with Elasticsearch, and it is also possible to freely combine Elasticsearch
+features with SIREn queries. In this section, we will show you some examples of integration with Elasticsearch, e.g.,
+how to combine SIREn with the
+http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-filters.html[Filter],
+http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-sort.html[Sort],
+http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-fields.html[Fields]
+and http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-aggregations.html[Aggregation] APIs.
+SIREn is also compatible with other Elasticsearch plugins such as
+http://www.elasticsearch.org/guide/en/elasticsearch/rivers/current/[River plugin].
+
+The following examples can be tried out against the <<elasticsearch-run-demos, movie demo>>. It is required to have
+executed the following script beforehand in order to index the movie dataset.
+
+[source,bash]
+--------------------------------------------------
+$ bin/movies-index.sh
+--------------------------------------------------
+
+[float]
+=== Filter
+
+You can combine Elasticsearch filters with SIREn queries. The following example will find all movies mentioning 'usa'
+from years 2002 to 2006.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/movies/_search?pretty" -d '
+{
+   "query" : {
+      "tree" : {
+         "node" : {
+            "query" : "usa"
+         }
+      }
+   },
+   "filter" : {
+       "range" : {
+           "year" : {
+               "gte": 2002,
+               "lte": 2006
+           }
+       }
+   }
+}'
+--------------------------------------------------
+
+You can also use SIREn queries with the Elasticsearch Filter API. The following example will perform the same search
+as in the previous example, but instead the range filter will be done using a SIREn query.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/movies/_search?pretty" -d '
+{
+   "query" : {
+      "tree" : {
+         "node" : {
+            "query" : "usa"
+         }
+      }
+   },
+   "filter" : {
+       "query" : {
+           "tree" : {
+               "node" : {
+                   "attribute" : "year",
+                   "query" : "[2002 TO 2006]"
+               }
+           }
+       }
+   }
+}'
+--------------------------------------------------
+
+See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-filters.html[Elasticsearch filters].
+
+[float]
+=== Sort
+
+You can combine SIREn queries with the Sort API. The following example will find all movies mentioning ``usa'' and order
+the results by year.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/movies/_search?pretty" -d '
+{
+    "query" : {
+        "tree" : {
+            "node" : {
+                "query" : "usa"
+            }
+        }
+   },
+  "sort" : [{
+      "year" : {
+          "order" : "desc"
+      }
+  }]
+}'
+--------------------------------------------------
+
+See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-sort.html[Elasticsearch sort].
+
+[float]
+=== Fields
+
+You can retrieve specific stored fields for each documents matched by a SIREn query. The following example
+will find all drama movies and retrieve their ``tile'' and ``year'' fields.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/movies/_search?pretty" -d '
+{
+    "query" : {
+        "tree" : {
+            "node" : {
+                "attribute" : "genre",
+                "query" : "Drama"
+            }
+        }
+    },
+    "fields" : ["title", "year"]
+}'
+--------------------------------------------------
+
+[float]
+=== Aggregation
+
+You can perform aggregations on the result sets of a SIREn query. The following example will find all movies mentioning
+``usa'' and aggregate them by ``year''.
+
+[source,javascript]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/movies/_search?pretty" -d '
+{
+    "query" : {
+        "tree" : {
+            "node" : {
+                "query" : "usa"
+            }
+        }
+   },
+    "aggregations" : {
+        "years" : {
+            "terms" : {
+                "field" : "year"
+            }
+        }
+    }
+}'
+--------------------------------------------------

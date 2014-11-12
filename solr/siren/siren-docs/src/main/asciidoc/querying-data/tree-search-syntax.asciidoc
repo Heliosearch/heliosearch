@@ -1,0 +1,20 @@
+[[tree-search-syntax]]
+== Tree Search Syntax
+
+This section presents the query syntax for the tree search queries in SIREn. This query syntax maps to the internal
+tree model of SIREn.
+A tree query enables the search of nodes or combination of nodes through different relationships.
+The atomic element in a tree search query is a node. Nodes can then be combined using parent-child or
+ancestor-descendant relationships, boolean and proximity operators.
+The full query syntax is based on JSON. Each query operator is a JSON object, and these objects can be combined
+and nested to form complex queries.
+
+SIREn provides a
+http://siren.solutions/javadoc/current/com/sindicetech/siren/qparser/tree/dsl/package-summary.html[query builder] in Java for
+composing a tree search query and generating the corresponding JSON syntax.
+
+include::tree-search-syntax/node-tree-search-syntax.asciidoc[]
+
+include::tree-search-syntax/twig-tree-search-syntax.asciidoc[]
+
+include::tree-search-syntax/boolean-tree-search-syntax.asciidoc[]

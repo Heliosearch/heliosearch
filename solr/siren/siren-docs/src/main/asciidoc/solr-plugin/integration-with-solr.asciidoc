@@ -1,0 +1,137 @@
+[[integration-with-Solr]]
+== Integration with Solr
+
+The SIREn Solr plugin provides all the SIREn functionality to Solr
+users. The SIREn plugin is fully integrated with Solr, and it is also possible to freely combine Solr
+features with SIREn queries.
+
+[float]
+=== Mixing SIREn and Solr Fields
+
+If you have a nested data structure to index, you can theoretically always put it in a single JSON typed field and have
+it indexed by SIREn. However, this might not be the most optimal choice in all scenarios.
+
+While SIREn does offer advanced indexing and querying capabilities, there are a range of features that SIREn does not
+yet fully support. This currently includes sorting of fields, storage and retrieval of field values, comprehensive
+faceting support.
+
+By adding some of these fields to Solr by "flattening" the nested data structure, something that the SIREn's
+<<solr-configuration-update-handler, update request handler>> can do for you, you can benefit from the additional
+Solr functionality, such as storing and retrieval, faceting, sorting, etc. To illustrate, we can use some of the fields
+in the sample data shown in the <<solr-getting-started, Getting Started>>. Candidate fields include:
+
+* Primitive fields attached to the root of the json object, e.g., `ChargeDeviceRef`
+* Nested fields with a 1..1 relationship to the root of the json object, e.g., `DeviceController : TelephoneNo`. You
+  need to encode the path in the field name, such as `DeviceController.TelephoneNo`.
+* Nested fields with 1..* relationships, e.g., `Connector : ChargeMode`. These will be stored as multi-valued fields in
+  Solr. However, note that in this case, if you turn sibling properties like `ChargeMode` and `ChargeMethod` into Solr
+  multi-valued fields, Solr will return incorrect results if you query for both simultaneously.
+
+[float]
+=== Query
+
+You can combine Solr queries with SIREn queries using the `nested` parameter. More than one `nested` parameter can
+be specified in your request. The following request example intersects
+a SIREn's node query with a Lucene's query for the field `DeviceOwner.Website`:
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST 'http://localhost:8983/solr/collection1/tree?indent=true' -d '
+nested="ChargeDeviceLocation.Address.PostTown:Peterborough"
+&q={
+    "node" : {
+        "attribute" : "ChargeDeviceRef",
+        "query" : "CM765"
+    }
+}'
+--------------------------------------------------
+
+[float]
+=== Filter
+
+You can combine Solr filter queries with SIREn queries using the `fq` parameter. More than one `fq` parameter can
+be specified in your request. The following request example intersects
+a SIREn's node query with a Solr's filter query:
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST 'http://localhost:8983/solr/collection1/tree?indent=true&fq=ChargeDeviceLocation.Address.PostTown:Peterborough' -d 'q=
+{
+    "node" : {
+        "attribute" : "ChargeDeviceRef",
+        "query" : "CM765"
+    }
+}'
+--------------------------------------------------
+
+[float]
+=== Stored Fields
+
+You can retrieve specific stored fields for each documents matched by a SIREn query. The following request example
+retrieve the values of the field `ChargeDeviceLocation.Address.PostTown` from the documents matched by a SIREn query.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST 'http://localhost:8983/solr/collection1/tree?indent=true&fl=ChargeDeviceLocation.Address.PostTown' -d 'q=
+{
+    "node" : {
+        "attribute" : "ChargeDeviceRef",
+        "query" : "CM765"
+    }
+}'
+--------------------------------------------------
+
+[float]
+=== Facet Query
+
+You can perform aggregations on the result sets of a SIREn query. The following request example
+aggregates the facet `ChargeDeviceLocation.Address.PostTown` from the documents matched by a SIREn query.
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST 'http://localhost:8983/solr/collection1/tree?indent=true&&facet=true&facet.mincount=1&facet.field=ChargeDeviceLocation.Address.PostTown' -d 'q=
+{
+    "node" : {
+        "attribute" : "OrganisationName",
+        "query" : "Source East"
+    }
+}'
+--------------------------------------------------
+
+[float]
+=== Delete by SIREn Query
+
+To delete a set of the documents from the index using a SIREn query, one has to use
+link:https://cwiki.apache.org/confluence/display/solr/Local+Parameters+in+Queries[LocalParams]
+in the query to indicate the Solr's Update Processor to use the SIREn query parser.
+
+Below is a XML formatted delete command with an example query:
+
+[source,xml]
+--------------------------------------------------
+<delete>
+  <query>
+  {!json qf=json v='{
+    "node":
+      {
+        "query":"SOMEVALUE",
+        "attribute":"SOMEATTRIBUTE"
+      }
+    }'
+  }
+  </query>
+</delete>
+--------------------------------------------------
+
+And here is how to send it using curl (mind how single quotes where wrapped to make it work in bash)
+
+[source,bash]
+--------------------------------------------------
+$ curl http://localhost:8983/solr/collection1/update -H "Content-Type: application/xml" -d '
+<delete>
+  <query>
+    {!json qf=json v='"'"'{"node":{"query":"SOMEVALUE","attribute":"SOMEATTRIBUTE"}}'"'"'}
+  </query>
+</delete>'
+--------------------------------------------------
+

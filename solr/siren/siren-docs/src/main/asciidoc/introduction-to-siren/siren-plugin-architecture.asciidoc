@@ -1,0 +1,22 @@
+[[siren-plugin-architecture]]
+== SIREn Plugin Architecture
+
+SIREn extends the Lucene framework on multiple levels as shown in the figure below.
+
+SIREn provides a JSON analyzer to interpret incoming JSON data and maps it to our generic tree data model.
+This tree data representation of the JSON object is sent to the Lucene's Codec API.
+The <<comparing-indexing-models, tree indexing model>> is implemented on top of the Lucene's Codec API by adding
+our own posting format that is optimised for encoding tree-structured data. This component is in charge of of
+encoding and decoding the tree data model to/from the file system.
+
+When a query comes in, the query is interpreted by our JSON-based query parser. The query is converted into
+a Node Query object, which is an extension of the Lucene's Query API. Given that the underlying data model in SIREn
+is quite different than the one found in Lucene, we had to implement a new query processing framework that is
+compatible with our data model. Finally the node query is executed against our Codec API to compute the result set.
+
+On a top-level, SIREn provides two plugins, one for Solr and one for Elasticsearch, that integrates these
+functionality into their respective API.
+
+[[siren-architecture]]
+.An overview of the SIREn Plugin Architecture
+image::images/siren-architecture.png["An overview of the SIREn Plugin Architecture", align="center"]

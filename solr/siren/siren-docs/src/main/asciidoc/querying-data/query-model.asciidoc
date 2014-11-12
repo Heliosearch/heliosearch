@@ -1,0 +1,72 @@
+[[query-model]]
+== Query Model
+
+This section presents an overview of the query model in SIREn. Compared to traditional search system where the query
+model is based on the concept of field and value, the query model
+of SIREn is centered around the concept of ``node''. In SIREn, you are searching for nodes in a tree that match
+a full-text search query. The query model also provides the ability to query the relationships between nodes or the
+position of the node in the tree.
+
+SIREn provides two types of query operators: the first one is a set of query
+operators over the content of the tree, the second one is a set of query
+operators over the structure of the tree. The search syntax for the content operators can be found in the section
+<<text-search-syntax>>, and the search syntax for the structure operators can be found in the section
+<<tree-search-syntax>>.
+
+You can learn more about the implementation of the query model and internals of the query API in the
+http://siren.solutions/javadoc/current/com/sindicetech/siren/search/node/package-summary.html[node query] and
+http://siren.solutions/javadoc/current/com/sindicetech/siren/search/spans/package-summary.html[spans query] package descriptions.
+
+[float]
+=== Content Operators
+
+The content operators are the only ones that access the content of a node
+and are orthogonal to the structure operators. In fact, the content operators
+are a one to one mapping to the original Lucene query operators.
+
+The atomic search element is a keyword. Multiple keywords can be combined
+with traditional keyword search operations. Such operations include boolean
+operators (intersection, union, difference), proximity operators,
+fuzzy or wildcard operators, range operators, etc. These operators give the
+ability to express complex keyword queries.
+
+In contrast to Lucene where a keyword query is meant to retrieve a
+particular set of documents, a keyword query in SIREn is used to retrieve a
+particular set of nodes.
+Also, the content operators allow to restrict keyword search to a particular
+set of nodes using *node constraints*. A node constraint is either
+a constraint on the level (in the tree) of the node or an interval constraint
+on the node label. An interval constraint on the node label matches all
+node labels that occurs in the inclusive interval.
+
+[float]
+=== Structure Operators
+
+The structure operators are accessing the structure of the data tree. The
+atomic search element is a node. Multiple nodes can be combined using tree
+and set operators. The tree operators, i.e. the Ancestor-Descendant and
+Parent-Child operators, allow to query node relationships and to retrieve
+paths of nodes matching a given pattern. The combination of paths are possible
+using set operators.
+
+*Ancestor-Descendant*::
+  A node A is the ancestor of a node D if there
+  exists a path between A and D. The operator checks the node labels and
+  retains only relations where the label of A is a prefix of the label of D.
+
+*Parent-Child*::
+  A node P is the parent of a node C if P is an
+  ancestor of C and C is exactly one level above P. The operator checks the
+  node labels and retains only relations where the label of P is the longest
+  prefix matching the label of C.
+
+*Set manipulation operators*::
+  These operators enable the
+  manipulation of nodes as sets, implementing union, difference and
+  intersection.
+
+*Positional operators*::
+  These operators enable the manipulation of
+  nodes based on their position, e.g., by specifying proximity and order constraints
+  on the nodes.
+

@@ -1,0 +1,74 @@
+[[schemaless-indexing]]
+== Schemaless Indexing
+
+SIREn's schemaless indexing approach allows you to index a wide variety of JSON data without the need for any upfront
+configuration.
+
+Lets take a look at a truncated sample record of the NCPR dataset that is used in the Getting Started guides.
+
+[source,javascript]
+----
+{
+    "ChargeDeviceId": "4d61996cb5a40f214058d84fc7aba126",
+    "ChargeDeviceName": "4c Design Limited, Glasgow (1)",
+    "ChargeDeviceRef": "SCOT1",
+    "Accessible24Hours": false,
+    ...
+
+    "DeviceController": {
+        "ContactName": null,
+        "OrganisationName": "Part of the Charge Your Car network",
+        "TelephoneNo": "0191 26 50 500",
+        "Website": "http://chargeyourcar.org.uk/ev-driver/"
+    },
+
+    "ChargeDeviceLocation": {
+        "LocationShortDescription": "4c Design Limited, Glasgow",
+        "Latitude": 55.875192,
+        "Longitude": -4.249105,
+
+        "Address": {
+            "BuildingNumber": "100",
+            "Street": "Borron Street",
+            "PostCode": "G4 9XG",
+            "PostTown": "Glasgow",
+            "Country": "gb"
+        },
+    },
+
+    "Connector": [
+        {
+            "ConnectorId": "1",
+            "ChargeMode": 3,
+            "ChargeMethod": "Single Phase AC",
+            "ChargePointStatus": "In service",
+            "ConnectorType": "IEC 62196-2 type 2",
+            "RatedOutputCurrent": 32
+        },
+        {
+            "ConnectorId": "2",
+            "ChargeMode": "1",
+            "ChargeMethod": "Single Phase AC",
+            ...
+        }
+    ]
+}
+----
+
+You do not have to write a single line of configuration to index this complex object. Schemaless indexing allows SIREn
+to automatically infer and index:
+
+* A diverse set of native JSON datatypes - string, int, float and boolean
+* Simple flat attributes like `ChargeDeviceRef`
+* Nested objects like `DeviceController`
+* Multiple levels of nesting like `ChargeDeviceLocation : Address`
+* Array of objects like the `Connector` attribute
+
+What’s more, this schemaless approach also applies to documents that are further added with a different schema. SIREn
+will transparently handle any changes when you add documents with:
+
+* Additional fields
+* Additional nested objects
+* Fields with varying types
+* Objects with varying nesting structure
+* An array of heterogeneous objects

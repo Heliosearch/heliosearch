@@ -1,0 +1,79 @@
+[[json-indexing-models]]
+== JSON Indexing Models
+
+As discussed in <<comparing-indexing-models>>, SIREn encodes a JSON object into an internal tree model. However,
+there can be multiple ways to map a JSON object to a tree, each one with its pros and cons.
+This section presents the different models that are currently available in SIREn. Understanding the mapping model is
+important to write meaningful queries.
+
+[float]
+[[extended-json-indexing-model]]
+=== Extended Model
+
+The extended indexing model provides the greatest flexibility amongst the models.
+In this model, there is no difference between an attribute name and an attribute value. Both are textual content that
+can be analyzed and searched. It becomes possible to use full-text search on the attribute name (something that is not
+possible in a Lucene-based system).
+This is particularly useful when dealing with data with complex attribute names. For example in RDF or JSON-LD datasets,
+attribute names are URIs, e.g., `http://schema.org/givenName`, which are not very friendly to query by end-users. It is
+generally preferable to analyze such attribute names and index multiple variations of them, e.g., the full URI, the local name:
+`givenName`, a tokenized version of the local name: `given name`, etc., so that users have the choice of using
+full-text search on attribute names.
+
+[source,javascript]
+----
+{
+    "name": "Radar Networks",
+    "location": {
+        "city": "San Francisco",
+        "state": "California"
+    },
+    "fundings": [
+        {
+            "round": "a",
+            "investors": "NY Angels"
+        },
+        {
+            "round": "b",
+            "investors": "Sequoia"
+        }
+    ]
+}
+----
+
+The extended indexing model maps the above JSON object to the tree model shown in <<extended-indexing-model>>.
+Every single attribute, primitive value, nested object and nested array is mapped to one node in the tree.
+For example, the attributes `name`, `location` and `fundings` is mapped to their own respective node. The primitive
+value of the attribute `name` is represented by a single child node of the corresponding attribute node. A nested
+object, for example the one from the `location` attribute, is represented by an intermediate "blank" node.
+An attribute associated to an array is represented as a node with multiple child
+nodes, one child node per value in the array. In the case of nested arrays, one nested array is represented by a blank
+node with one or more child nodes. For example, each of the
+nested objects from the attribute `fundings` will be mapped to an intermediate blank node, children of the
+corresponding attribute node.
+
+[[extended-indexing-model]]
+.Extended indexing model of the JSON object
+image::images/extended-indexing-model.png["Extended indexing model of the JSON object", align="center"]
+
+[float]
+[[concise-json-indexing-model]]
+=== Concise Model
+
+The concise indexing model gives up some flexibility for an increase in performance. This model is combining the
+<<field-based-indexing-model, field-based indexing>> approach of Lucene with the tree model of SIREn.
+This provides a boost of performance for attribute or path-based queries, in exchange of the ability to perform
+full-text search on the attribute name.
+
+The concise indexing model maps the previous JSON object to the tree model shown in <<concise-indexing-model>>.
+In this model, each attribute-value and attribute-object pair is mapped to a single node. In the case of an
+attribute-value pair, the attribute name is concatenated with the primitive value associated to it. For example, the
+attribute `name` is concatenated to the value `Radar Network` within a single node `name : Radar Network`.
+In the case of an attribute-object pair, the blank node representing the object as in the extended model is merged
+with the attribute node into a single intermediate attribute node. To be able to distinguish between multiple objects
+in an array, it duplicates the intermediate attribute node for each attribute-object pair. For example, each of the
+nested object of the `fundings` attribute is mapped to an intermediate attribute node `fundings`.
+
+[[concise-indexing-model]]
+.Concise indexing model of the JSON object
+image::images/concise-indexing-model.png["Concise indexing model of the JSON object", align="center"]

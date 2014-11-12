@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ Copyright (c) 2014, Sindice Limited. All Rights Reserved.
+
+ This file is part of the SIREn project.
+
+ SIREn is not an open-source software. It is owned by Sindice Limited. SIREn
+ is licensed for evaluation purposes only under the terms and conditions of
+ the Sindice Limited Development License Agreement. Any form of modification
+ or reverse-engineering of SIREn is forbidden. SIREn is distributed without
+ any warranty.
+-->
+
+<!--
+ This is the SIREn/Solr schema file. This file should be named "schema.xml" and
+ should be in the conf directory under the solr home
+ (i.e. ./solr/conf/schema.xml by default)
+ or located where the classloader for the Solr webapp can find it.
+
+ For more information, on how to customize this file, please see
+ http://wiki.apache.org/solr/SchemaXml
+-->
+
+<schema name="example" version="1.5">
+
+  <fields>
+
+   <!-- _version_ and update log are required for SolrCloud -->
+   <field name="_version_" type="long" indexed="true" stored="true"/>
+
+    <!-- The ID -->
+    <field name="id" type="string" indexed="true" stored="true"/>
+
+  </fields>
+
+  <!-- Field to use to determine and enforce document uniqueness. -->
+  <uniqueKey>id</uniqueKey>
+
+  <!-- Similarity is the scoring routine for each document vs. a query.
+       A custom similarity is specified here  -->
+  <similarity class="com.sindicetech.siren.similarity.SirenSimilarity"/>
+
+  <types>
+
+    <!-- The StrField type is not analyzed, but indexed/stored verbatim. -->
+    <fieldType name="string" class="solr.StrField" sortMissingLast="true" omitNorms="true"/>
+
+    <!-- Long field type (used for field _version_) -->
+    <fieldType name="long" class="solr.TrieLongField" precisionStep="0" positionIncrementGap="0"/>
+
+    <!-- A multi-valued string type for faceting -->
+    <fieldType name="facet" class="solr.StrField" sortMissingLast="true" indexed="true" stored="true" omitNorms="true" omitTermFreqAndPositions="true" multiValued="true"/>
+
+    <!-- A multi-valued long field type that is stored -->
+    <fieldType name="mv-long" class="solr.TrieLongField" precisionStep="0" positionIncrementGap="0" stored="true" multiValued="true"/>
+
+    <!--
+      An example of SIREn field type.
+
+      An index analyzer has to be defined and should consist in a tokenizer.
+      The definition of the query analyzer is not required.
+      Analysis of values at index and query time is configured through the
+      datatype analyzers that are defined in the datatype analyzer configuration
+      file (datatypes.xml).
+
+      Norms must be deactivated with a ConciseJsonField.
+
+      The ConciseTreeField is the default SIREn field type. It provides the best
+      performance. If your scenario involves tokenising and searching attribute names,
+      you have to switch to the com.sindicetech.siren.solr.schema.ExtendedJsonField and the
+      com.sindicetech.siren.solr.analysis.ExtendedJsonTokenizerFactoryFactory.
+
+      The default behavior of the ConciseJsonField is to generate tokens by prepending
+      the path of the value to the value's terms. For example, processing the JSON document
+      { "country" : "gb" } will generate the token 'country:gb'. This behavior can be
+      modified with the parameter 'attributeWildcard'. If set to true, the token of a value
+      will be indexed without its path prefix, in addition to the token produced by default.
+      For example, processing the same document will produce two tokens: 'country:gb' and
+      ':gb'. This is necessary if your scenario involves searching a keyword across all
+      paths, e.g., lookup the keyword 'gb' in any nodes: { "node" : { "query" : "gb" } }.
+    -->
+    <fieldType name="concise" class="com.sindicetech.siren.solr.schema.ConciseJsonField" omitNorms="true" stored="false"
+               attributeWildcard="true"
+               datatypeConfig="datatypes.xml"/>
+
+    <!-- A general text field that is stored -->
+    <fieldType name="text" class="solr.TextField" stored="true" multiValued="true">
+      <analyzer type="index">
+        <tokenizer class="solr.StandardTokenizerFactory"/>
+        <filter class="solr.LowerCaseFilterFactory"/>
+      </analyzer>
+      <analyzer type="query">
+        <tokenizer class="solr.StandardTokenizerFactory"/>
+        <filter class="solr.LowerCaseFilterFactory"/>
+      </analyzer>
+    </fieldType>
+
+  </types>
+
+</schema>

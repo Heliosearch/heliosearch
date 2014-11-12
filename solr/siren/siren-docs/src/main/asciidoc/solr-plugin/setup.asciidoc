@@ -1,0 +1,102 @@
+[[solr-setup]]
+== Setup
+
+This section provides information on how to setup the SIREn plugin in a Solr installation.
+If you haven't yet, http://siren.solutions/downloads/[download the SIREn plugin] and follow the instructions below.
+
+SIREn is designed as a plugin for Solr. You could easily update your existing Solr installation with SIREn while
+retaining any indexes that you have already created. You could than even start adding documents with nested data to
+these preexisting indexes.
+
+[float]
+=== Requirements
+
+* Java JVM >= 1.7.
+* Solr 4.8.1.
+
+[float]
+=== How to install the plugin
+
+Let's assume:
+* that you have installed Solr in the directory `$SOLR_HOME`;
+* that `$SIREN_HOME` is the root of the extracted SIREn/Solr binary distribution;
+* that you use a single core, named ``collection1'', in your Solr installation, located in the subdirectory
+`$SOLR_HOME/example/solr/collection1`.
+
+[start=1]
+. Go to the Solr directory:
+
+[source,bash]
+--------------------------------------------------
+$ cd $SOLR_HOME
+--------------------------------------------------
+
+[start=2]
+. Copy the SIREn (`siren-core.jar`, `siren-qparser.jar` and `siren-solr.jar`) and Jackson (`jackson-core.jar` and
+`jackson-mapper.jar`) libraries into the Solr core `lib` directory:
+
+[source,bash]
+----
+$ cp $SIREN_HOME/example/solr/collection1/lib/*.jar $SOLR_HOME/example/solr/collection1/lib/
+----
+
+[start=3]
+. Copy the default SIREn's configuration files `datatype.xml` and `qnames.txt` into your Solr core configuration
+directory as shown below:
+
+[source,bash]
+----
+$ cp $SIREN_HOME/example/solr/collection1/conf/datatypes.xml $SOLR_HOME/example/solr/collection1/conf/
+$ cp $SIREN_HOME/example/solr/collection1/conf/qnames.txt $SOLR_HOME/example/solr/collection1/conf/
+----
+
+[start=4]
+. Configure the `solrconfig.xml` and `schema.xml` of your Solr core configuration directory as explained in the section
+<<solr-configuration, configuration>>.
+
+[start=5]
+. Start Solr:
+
+[source,bash]
+--------------------------------------------------
+$ java -jar start.jar
+--------------------------------------------------
+
+If the SIREn plugin is correctly installed, you should see a line like the following
+in the Solr log:
+
+[source,bash]
+--------------------------------------------------
+1814 [main] INFO  org.apache.solr.core.SolrResourceLoader  – Adding '$SOLR_HOME/example/solr/lib/siren-core-1.3-SNAPSHOT.jar' to classloader
+1815 [main] INFO  org.apache.solr.core.SolrResourceLoader  – Adding '$SOLR_HOME/example/solr/lib/siren-qparser-1.3-SNAPSHOT.jar' to classloader
+1816 [main] INFO  org.apache.solr.core.SolrResourceLoader  – Adding '$SOLR_HOME/example/solr/lib/siren-solr-1.3-SNAPSHOT.jar' to classloader
+--------------------------------------------------
+
+[float]
+=== How to upgrade the plugin
+
+[start=1]
+. Go to the Solr directory:
+
+[source,bash]
+--------------------------------------------------
+$ cd $SOLR_HOME
+--------------------------------------------------
+
+[start=2]
+. Stop Solr.
+
+[start=3]
+. Remove the plugin:
+
+[source,bash]
+--------------------------------------------------
+$ rm SOLR_HOME/example/solr/collection1/lib/siren-*.jar
+$ rm SOLR_HOME/example/solr/collection1/lib/jackson-*.jar
+--------------------------------------------------
+
+[start=4]
+. Install a new version of the plugin as above.
+
+[start=5]
+. Start Solr.

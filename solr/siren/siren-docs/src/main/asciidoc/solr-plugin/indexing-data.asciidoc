@@ -1,0 +1,70 @@
+[[solr-indexing-data]]
+== Indexing Data
+
+SIREn is fully integrated with the Solr's REST API. You can interact with this API directly to JSON data into the
+system, assuming that you have <<solr-setup, installed>> and <<solr-configuration, configured>> SIREn in a Solr instance.
+
+There are two different methods to index JSON data using the SIREn API, the default one and the advanced one. The
+default method relies on the SIREn's <<solr-configuration-update-handler, update request handler>> and will take care
+for you of the management of the Solr's schema. If on the contrary, you want to manage the Solr's schema by yourself,
+then the advanced method is more appropriate for your scenario.
+
+[[solr-indexing-data-default]]
+=== Default
+
+The default method to index a JSON document into SIREn is by using the SIREn's
+<<solr-configuration-update-handler, update request handler>>. Let's assume that we have the update request handler
+accessible at `http://localhost:8983/solr/collection1/siren/add`. You can directly post JSON documents to this URL
+for indexing:
+
+[source,bash]
+----
+$ curl http://localhost:8983/solr/collection1/siren/add -H "Content-Type: application/json" --data-binary '
+{
+    "ChargeDeviceName": "All Eco Centre Car Park",
+    "Accessible24Hours": false
+}'
+----
+
+The SIREn's update request handler is restricted to 'add' operation, and does not for example perform a commit
+operation. In order for your newly indexed document to be searchable, you need to trigger a commit using the original
+Solr's update request handler with the following command:
+
+[source,bash]
+----
+$ curl http://localhost:8983/solr/collection1/update?commit=true
+----
+
+[[solr-indexing-data-advanced]]
+=== Advanced
+
+For a document to be indexed by SIREn, it needs to have a <<solr-configuration-json-field-type, JSON field type>> in the schema.
+Let's assume that we have the following simple Solr schema with two fields, an `id` field that will host the unique
+identifier of the JSON document, and a `json` field provided by SIREn to index the JSON data.
+
+[source,markup]
+----
+<fields>
+    <field name="id" type="string" indexed="true" stored="true" required="true" />
+    <field name="json" type="json" indexed="true" stored="false"/>
+</fields>
+----
+
+The JSON data itself needs to be serialized into a string and put as a value for the `json` field. The following command
+inserts a JSON document with an identifier of 1 using the Solr XML API:
+
+[source,bash]
+----
+$ curl http://localhost:8983/solr/collection1/update?commit=true -H "Content-Type: text/xml" --data-binary '
+<add>
+    <doc>
+        <field name="id">1</field>
+        <field name="json">
+          {
+              "All Eco Centre Car Park",
+              "Accessible24Hours": false
+          }
+        </field>
+    </doc>
+</add>'
+----

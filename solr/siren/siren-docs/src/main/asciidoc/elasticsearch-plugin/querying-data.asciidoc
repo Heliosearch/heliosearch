@@ -1,0 +1,22 @@
+[[elasticsearch-querying-data]]
+== Querying Data
+
+SIREn provides a query parser for the <<tree-search-syntax, tree search syntax>>. The tree query parser is accessed
+by using the parameter `tree` in the search request body of Elasticsearch. Here is an example of a tree query usage:
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST "http://localhost:9200/ncpr/_search?pretty" -d '
+{
+    "query": {                            <1>
+        "tree" : {                        <2>
+            "node" : {
+                "attribute" : "PostTown",
+                "query" : "Peterborough"
+            }
+        }
+    }
+}'
+--------------------------------------------------
+<1> `query` parameter of the http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl.html[Elasticsearch Query DSL]
+<2> `tree` parameter for the tree query parser of SIREn

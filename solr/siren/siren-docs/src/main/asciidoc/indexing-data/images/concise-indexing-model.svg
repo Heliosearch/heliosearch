@@ -1,0 +1,748 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg8151"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="concise-indexing-model.svg">
+  <defs
+     id="defs8153">
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path6254"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8173"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8175"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8177"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8179"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8181"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8183"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8185"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8187"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8189"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8191"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-2"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path6254-7"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8195"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8197"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8199"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8201"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8203"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8205"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8207"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8209"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8211"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8213"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8215"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8217"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8219"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8221"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8223"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8225"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8227"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8229"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8231"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8233"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8235"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8237"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker8239"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path8241"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-5"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path6254-1"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker9208"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path9210"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="marker9212"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path9214"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.959798"
+     inkscape:cx="293.02531"
+     inkscape:cy="823.78469"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:snap-global="true"
+     inkscape:snap-bbox="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1056"
+     inkscape:window-x="1440"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid8159" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata8156">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       id="rect3086-3-8"
+       width="24.820286"
+       height="20.013054"
+       x="215.25"
+       y="127.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.9385396"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       id="rect3086-3-5-9"
+       width="147.4812"
+       height="19.514797"
+       x="225.25"
+       y="152.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.8902766"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       id="rect3086-3-5-0-3-6"
+       width="49.84877"
+       height="19.867161"
+       x="225.25"
+       y="177.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.924408"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="234.43213"
+       y="165.9783"
+       id="text6107-3"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-5"
+         x="234.43213"
+         y="165.9783"
+         style="font-size:11px">name : Radar Networks</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="228.54794"
+       y="191.89395"
+       id="text6107-2-01"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-0"
+         x="228.54794"
+         y="191.89395"
+         style="font-size:11px">location</tspan></text>
+    <g
+       id="g9177"
+       transform="translate(-35.521271,0)"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236">
+      <rect
+         inkscape:export-ydpi="117.64236"
+         inkscape:export-xdpi="117.64236"
+         inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-document.png"
+         ry="1.8984437"
+         style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+         y="177.61218"
+         x="320.77127"
+         height="19.59911"
+         width="119.23195"
+         id="rect3086-3-5-0-3-7-2-9" />
+      <text
+         inkscape:export-ydpi="117.64236"
+         inkscape:export-xdpi="117.64236"
+         inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/introduction-to-siren/images/siren-document.png"
+         sodipodi:linespacing="125%"
+         id="text6107-2-0-0"
+         y="190.44641"
+         x="327.22952"
+         style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           style="font-size:11px"
+           y="190.44641"
+           x="327.22952"
+           id="tspan6109-6-3-6"
+           sodipodi:role="line">city : San Francisco</tspan></text>
+    </g>
+    <rect
+       id="rect3086-3-5-0-3-7-2-7-6"
+       width="104.28082"
+       height="19.647984"
+       x="285.25"
+       y="202.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.9031776"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="292.1658"
+       y="216.537"
+       id="text6107-2-0-1-2"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-3-0-46"
+         x="292.1658"
+         y="216.537"
+         style="font-size:11px">state : California</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 220.00001,147.36218 0,15 4,0"
+       id="path6215-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 220.00001,162.36218 0,25 4,0"
+       id="path6215-3-2"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 275.00001,187.36218 5,0 4,0"
+       id="path6215-5-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 280.00001,187.36218 0,25 4,0"
+       id="path6215-3-3-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       id="rect3086-3-5-0-3-3-8"
+       width="49.84877"
+       height="19.867161"
+       x="225.25"
+       y="227.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.924408"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       id="rect3086-3-5-0-3-7-2-1-7"
+       width="64.68248"
+       height="19.503723"
+       x="285.24814"
+       y="227.61032"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.889204"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="226.53619"
+       y="240.58041"
+       id="text6107-2-3-5"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-1-5"
+         x="226.53619"
+         y="240.58041"
+         style="font-size:11px">fundings</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="290.00613"
+       y="241.46301"
+       id="text6107-2-0-5-2"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-3-2-8"
+         x="290.00613"
+         y="241.46301"
+         style="font-size:11px">rounds : a</tspan></text>
+    <rect
+       id="rect3086-3-5-0-3-7-2-7-0-5"
+       width="119.47845"
+       height="19.598333"
+       x="285.25"
+       y="252.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.8983682"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="286.81186"
+       y="266.02649"
+       id="text6107-2-0-1-8-8"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-3-0-3-4"
+         x="286.81186"
+         y="266.02649"
+         style="font-size:11px">investors : NY Angels</tspan></text>
+    <rect
+       id="rect3086-3-5-0-3-7-2-1-4-0"
+       width="64.925056"
+       height="19.797539"
+       x="285.25"
+       y="277.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.9176642"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="289.80969"
+       y="291.61179"
+       id="text6107-2-0-5-1-2"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-3-2-7-1"
+         x="289.80969"
+         y="291.61179"
+         style="font-size:11px">rounds : b</tspan></text>
+    <rect
+       id="rect3086-3-5-0-3-7-2-7-0-9-5"
+       width="99.790833"
+       height="19.663361"
+       x="285.25"
+       y="302.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.9046671"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="286.56451"
+       y="315.77914"
+       id="text6107-2-0-1-8-0-6"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-3-0-3-3-3"
+         x="286.56451"
+         y="315.77914"
+         style="font-size:10px">investors : Sequoia</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 275,237.36218 5,0 4,0"
+       id="path6215-5-1-9"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 280,237.36218 0,25 4,0"
+       id="path6215-3-3-1-1"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 220.00001,187.36218 0,49.99999 4,0"
+       id="path6215-3-2-6"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot9182"
+       style="fill:black;stroke:none;stroke-opacity:1;stroke-width:1px;stroke-linejoin:miter;stroke-linecap:butt;fill-opacity:1;font-family:Sans;font-style:normal;font-weight:normal;font-size:14px;line-height:125%;letter-spacing:0px;word-spacing:0px"><flowRegion
+         id="flowRegion9184"><rect
+           id="rect9186"
+           width="69.464287"
+           height="28.035715"
+           x="376.69644"
+           y="198.96933" /></flowRegion><flowPara
+         id="flowPara9188"></flowPara></flowRoot>    <rect
+       id="rect3086-3-5-0-3-3-8-9"
+       width="49.84877"
+       height="19.867161"
+       x="225.25"
+       y="277.61218"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       ry="1.924408"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="226.53619"
+       y="290.58041"
+       id="text6107-2-3-5-9"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan6109-6-1-5-4"
+         x="226.53619"
+         y="290.58041"
+         style="font-size:11px">fundings</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 275,287.36218 5,0 4,0"
+       id="path6215-5-1-9-9"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 280,287.36218 0,25 4,0"
+       id="path6215-3-3-1-1-6"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Send)"
+       d="m 220.00001,237.36218 0,49.99999 4,0"
+       id="path6215-3-2-6-2"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/concise-indexing-model.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+  </g>
+</svg>

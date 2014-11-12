@@ -1,0 +1,154 @@
+[[elasticsearch-configuration]]
+== Configuration
+
+SIREn can be configured in many ways. To use SIREn, a respective mapping configuration has to exist.
+One can also specify analyzers that should be used by SIREn for individual <<analysis-and-datatypes, datatypes>>.
+
+[[elasticsearch-configuration-mapping]]
+=== Mapping
+
+The following minimal mapping has to be specified for a type ``myDocumentType'' in an index in order to have the
+documents processed and indexed by SIREn too.
+
+[source,javascript]
+--------------------------------------------------
+{
+    "myDocumentType" : {
+        "properties" : {
+            "_siren_source" : {
+                "analyzer" : "concise",
+                "postings_format" : "Siren10AFor",
+                "store" : "no",
+                "type" : "string"
+            }
+        },
+        "_siren" : {}
+	  }
+}
+--------------------------------------------------
+
+The `_siren_source` field is a field that is a copy of the special Elasticsearch `_source` field.
+It is the contents of the `_siren_source` field that is indexed by SIREn.
+
+The presence of the `_siren` property makes the SIREn plugin copy the special `_source` field to
+the `_siren_source` field.
+
+Analyzer can be set to `concise` or `extended` depending on which kind of <<json-indexing-models, indexing model>> you
+want to use. Most users will want to use the `concise` model.
+
+The `postings_format`, the `store` and the `type` parameters should not be modified.
+
+[[elasticsearch-configuration-json-analyzer]]
+=== JSON Analyzer
+
+The `concise` analyzer can be configured to enable or disable attribute wildcard queries using the
+setting `siren.analysis.concise.attribute_wildcard.enabled`.
+
+[source,yaml]
+--------------------------------------------------
+siren:
+    analysis:
+        concise.attribute_wildcard.enabled: true
+--------------------------------------------------
+
+If the attribute wildcard setting is disabled, a node query will always expect an ``attribute'' property:
+
+[source,javascript]
+--------------------------------------------------
+{
+    "query" : {
+        "tree" : {
+            "node" : {
+                "attribute" : "PostTown",
+                "query" : "Peterborough"
+            }
+        }
+    }
+}
+--------------------------------------------------
+
+The following query is only valid if the attribute wildcard has been enabled:
+
+[source,javascript]
+--------------------------------------------------
+{
+    "query" : {
+        "tree" : {
+            "node" : {
+                "query" : "Peterborough"
+            }
+        }
+    }
+}
+--------------------------------------------------
+
+[[elasticsearch-configuration-datatype]]
+=== Datatype
+
+It is possible to configure the analyzers used by SIREn for each datatype in the `config/elasticsearch.yml`
+configuration file.
+
+[source,yaml]
+--------------------------------------------------
+siren:
+    analysis:
+        datatype:
+            http://www.w3.org/2001/XMLSchema#string:
+                index_analyzer: standard
+                search_analyzer: lowerWhitespace         <1>
+
+            http://www.w3.org/2001/XMLSchema#long:
+                index_analyzer: long                     <2>
+--------------------------------------------------
+<1> here we refer to a custom analyzer that is defined below
+<2> if only the `index_analyzer` is specified, the analyzer will be used both for index and search.
+
+This configuration registers a single string datatype analyzer with the name `http://www.w3.org/2001/XMLSchema#string`.
+At index time the standard Elasticsearch analyzer should be used while at query time a custom analyzer called
+`lowerWhitespace`. This is to show that you can refer to and use your custom analyzers defined in `elasticsearch.yml`.
+
+In the first group of the settings, prefixed by siren.analysis.datatype, we configure the mapping between the
+datatype name and the analyzer name. For example, the datatype `http://www.w3.org/2001/XMLSchema#string` will be
+configured with the `standard` analyzer at indexing time, and the `lowerWhitespace` analyzer at search time.
+While the `standard` analyzer is an analyzer that is pre-registered by Elasticsearch, the `lowerWhitespace` analyzer
+is a custom one that is defined in the same Elasticsearch configuration file. The custom `lowerWhitespace` can be
+declared as normal in Elasticsearch, for example as follows:
+
+[source,yaml]
+--------------------------------------------------
+index:
+    analysis:
+        analyzer:
+            lowerWhitespace:
+                type: custom
+                tokenizer: whitespace
+                filter: [lowercase]
+--------------------------------------------------
+
+With respect to numeric datatypes, e.g., `http://www.w3.org/2001/XMLSchema#long` or
+`http://www.w3.org/2001/XMLSchema#double`, the SIREn plugin provides two pre-registered analyzers, named
+respectively `long` and `double`. These numeric analyzers use specific tokenisation strategies in order to
+support numeric range queries.
+
+[[elasticsearch-configuration-qname]]
+=== QName
+
+The SIREn's query parser can be configured with a set of qname mappings. These qname mappings are useful to
+write more concise queries when using Uniform Resource Identifiers. For example, the core JSON datatypes
+are identified using URI, e.g., `http://json.org/field` or `http://www.w3.org/2001/XMLSchema#long`. A qname
+mapping `xsd : http://www.w3.org/2001/XMLSchema#` will allow you to write `xsd:long` instead of the full URI.
+
+The qname mappings are configured in the elasticsearch.yml file using the `siren.analysis.qname` setting.
+The following example shows how to register two qnames:
+
+[source,yaml]
+--------------------------------------------------
+siren:
+    analysis:
+        qname:
+            xsd : http://www.w3.org/2001/XMLSchema#
+            json: http://json.org/
+--------------------------------------------------
+
+
+

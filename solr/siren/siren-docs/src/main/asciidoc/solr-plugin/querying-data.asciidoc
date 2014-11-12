@@ -1,0 +1,17 @@
+[[solr-querying-data]]
+== Querying Data
+
+SIREn provides a query parser for the <<tree-search-syntax, tree search syntax>>. The tree query parser is accessed
+by using the request handler `tree` as <<solr-configuration-query-parser, configured previously>>. Here is an example of
+a tree query usage:
+
+[source,bash]
+--------------------------------------------------
+$ curl -XPOST http://localhost:8983/solr/collection1/tree?indent=true -d 'q=
+{
+    "node" : {
+        "attribute" : "ChargeDeviceRef",
+        "query" : "CM765"
+    }
+}'
+--------------------------------------------------

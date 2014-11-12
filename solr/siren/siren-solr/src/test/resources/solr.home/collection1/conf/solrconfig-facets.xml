@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ Copyright (c) 2014, Sindice Limited. All Rights Reserved.
+
+ This file is part of the SIREn project.
+
+ SIREn is not an open-source software. It is owned by Sindice Limited. SIREn
+ is licensed for evaluation purposes only under the terms and conditions of
+ the Sindice Limited Development License Agreement. Any form of modification
+ or reverse-engineering of SIREn is forbidden. SIREn is distributed without
+ any warranty.
+-->
+
+<!--
+     For more details about configurations options that may appear in this
+     file, see http://wiki.apache.org/solr/SolrConfigXml.
+-->
+<config>
+
+  <luceneMatchVersion>LUCENE_40</luceneMatchVersion>
+
+  <directoryFactory name="DirectoryFactory" class="${solr.directoryFactory:solr.RAMDirectoryFactory}"/>
+
+	<requestHandler name="/update" class="solr.UpdateRequestHandler" />
+
+  <!-- Register SIREn's Tree query parser. -->
+  <queryParser name="tree" class="com.sindicetech.siren.solr.qparser.tree.TreeQParserPlugin">
+    <str name="qnames">qnames.txt</str>
+  </queryParser>
+
+  <requestHandler name="tree" class="solr.SearchHandler">
+    <!-- default values for query parameters -->
+    <lst name="defaults">
+      <str name="defType">tree</str>
+      <str name="echoParams">explicit</str>
+      <str name="df">json</str>
+		 <str name="fl">url</str>
+    </lst>
+  </requestHandler>
+
+  <!-- Register SIREn's Keyword query parser. -->
+  <queryParser name="keyword" class="com.sindicetech.siren.solr.qparser.keyword.KeywordQParserPlugin">
+    <str name="qnames">qnames.txt</str>
+  </queryParser>
+
+  <requestHandler name="keyword" class="solr.SearchHandler">
+    <!-- default values for query parameters -->
+    <lst name="defaults">
+      <str name="defType">keyword</str>
+      <str name="echoParams">explicit</str>
+      <str name="df">json</str>
+      <str name="fl">url</str>
+    </lst>
+  </requestHandler>
+
+  <codecFactory class="solr.SchemaCodecFactory"/>
+
+  <!-- Generate facet fields -->
+ <updateRequestProcessorChain name="generate-facets">
+    <processor class="com.sindicetech.siren.solr.facet.SirenFacetProcessorFactory">
+       <lst name="typeMapping">
+         <str name="valueClass">http://www.w3.org/2001/XMLSchema#long</str>
+         <str name="fieldType">tlong</str>
+       </lst>
+       <lst name="typeMapping">
+         <str name="valueClass">http://www.w3.org/2001/XMLSchema#double</str>
+         <str name="fieldType">tdouble</str>
+       </lst>
+       <lst name="typeMapping">
+         <str name="valueClass">http://www.w3.org/2001/XMLSchema#boolean</str>
+         <str name="valueClass">http://www.w3.org/2001/XMLSchema#string</str>
+         <str name="fieldType">string</str>
+       </lst>
+    </processor>
+    <processor class="solr.RunUpdateProcessorFactory" />
+  </updateRequestProcessorChain>
+</config>

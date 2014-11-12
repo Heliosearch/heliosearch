@@ -1,0 +1,21 @@
+[[elasticsearch-plugin]]
+= Elasticsearch Plugin
+
+[partintro]
+--
+This chapter covers the setup, configuration and API of the SIREn Elasticsearch plugin. The SIREn Elasticsearch plugin
+provides all SIREn functionality to Elasticsearch users. Documents are indexed independently both by SIREn and
+Elasticsearch so the standard Elasticsearch functionality is not modified.
+--
+
+include::elasticsearch-plugin/getting-started.asciidoc[]
+
+include::elasticsearch-plugin/setup.asciidoc[]
+
+include::elasticsearch-plugin/configuration.asciidoc[]
+
+include::elasticsearch-plugin/querying-data.asciidoc[]
+
+include::elasticsearch-plugin/integration-with-elasticsearch.asciidoc[]
+
+

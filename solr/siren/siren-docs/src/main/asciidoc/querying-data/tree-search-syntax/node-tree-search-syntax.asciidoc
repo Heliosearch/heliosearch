@@ -1,0 +1,89 @@
+[[node-tree-search-syntax]]
+=== Node
+
+A node query matches a single node in the tree. A node query object is identified by the attribute `node` and is
+composed of an attribute `query` which must contain a valid <<text-search-syntax, full-text search query>>.
+For example, the query
+
+[source,javascript]
+----
+{
+    "node" : {
+        "query" : "Radar Networks",
+    }
+}
+----
+
+matches all the nodes containing both the words ``Radar'' and ``Networks''.
+In the case of a phrase query, it is necessary to escape the double quotes to ensure that you have a valid JSON object:
+
+[source,javascript]
+----
+{
+    "node" : {
+        "query" : "\"Radar Networks\"",
+    }
+}
+----
+
+IMPORTANT: If you are using the <<concise-json-indexing-model, concise indexing model>>, you can use the parameter
+`attribute` to indicate the
+attribute in which you want to restrict the search. The provided attribute name string is not analysed and used as is.
+For example, the following query matches only nodes in which both the words ``Radar'' and ``Networks'' appear in the
+attribute ``name''.
+
+[source,javascript]
+----
+{
+    "node" : {
+        "query" : "Radar Networks",
+        "attribute" : "name"
+    }
+}
+----
+
+The node query also supports parameters to constrain the position of the node in the tree. The parameter `level`
+enables to constrain a node to a certain level in the tree. The value of the parameter must be a positive integer,
+equal or superior to 1. For example, the following query matches only nodes that are located on the level 2 of the tree.
+
+[source,javascript]
+----
+{
+    "node" : {
+        "query" : "Radar Networks",
+        "level" : 2
+    }
+}
+----
+
+The parameter `range` enables to constrain a node based on its position, the position of a node being relative to the
+other child nodes of its parent node. The value of the parameter must be an
+array of two positive integers, representing the lower and upper bound of the position range. The position index starts at 0.
+For example, given the following two JSON objects:
+
+[source,javascript]
+----
+{
+    "tags" : ["search", "semantic", "advertising"]
+}
+
+{
+    "tags" : ["web", "portal", "search"]
+}
+----
+
+the following query matches only the first and second nodes of a list, and therefore matches only the first object as
+in the second object, the tag ``search'' occurs at the third position of the list.
+
+[source,javascript]
+----
+{
+    "node" : {
+        "query" : "search",
+        "range" : [1, 2]
+    }
+}
+----
+
+The `level` and `range` parameters are optional. If there are not defined, the query will try to match any node in the
+tree.

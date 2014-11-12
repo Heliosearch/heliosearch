@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ Copyright (c) 2014, Sindice Limited. All Rights Reserved.
+
+ This file is part of the SIREn project.
+
+ SIREn is not an open-source software. It is owned by Sindice Limited. SIREn
+ is licensed for evaluation purposes only under the terms and conditions of
+ the Sindice Limited Development License Agreement. Any form of modification
+ or reverse-engineering of SIREn is forbidden. SIREn is distributed without
+ any warranty.
+-->
+
+<!--
+     For more details about configurations options that may appear in this
+     file, see http://wiki.apache.org/solr/SolrConfigXml.
+-->
+<config>
+
+  <luceneMatchVersion>${tests.luceneMatchVersion:LUCENE_CURRENT}</luceneMatchVersion>
+
+  <directoryFactory name="DirectoryFactory" class="${solr.directoryFactory:solr.RAMDirectoryFactory}"/>
+
+  <schemaFactory class="ManagedIndexSchemaFactory">
+    <bool name="mutable">true</bool>
+    <str name="managedSchemaResourceName">managed-schema</str>
+  </schemaFactory>
+
+	<requestHandler name="/update" class="solr.UpdateRequestHandler" />
+
+  <requestHandler name="/siren/add" class="com.sindicetech.siren.solr.handler.SirenUpdateRequestHandler" >
+
+    <lst name="default">
+      <str name="fieldType">null</str>
+    </lst>
+
+    <lst name="json">
+      <str name="fieldType">concise</str>
+    </lst>
+
+    <lst name="required">
+      <str name="path">aaa</str>
+      <str name="fieldType">mv-string</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="type">String</str>
+      <str name="fieldType">mv-string</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="type">Double</str>
+      <str name="fieldType">mv-string</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="type">Boolean</str>
+      <str name="fieldType">mv-string</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="path">aaa.bbb</str>
+      <str name="fieldType">null</str>
+    </lst>
+
+  </requestHandler>
+
+  <!-- Register SIREn's Tree query parser. -->
+  <queryParser name="tree" class="com.sindicetech.siren.solr.qparser.tree.TreeQParserPlugin">
+    <str name="qnames">qnames.txt</str>
+  </queryParser>
+
+  <requestHandler name="tree" class="solr.SearchHandler">
+    <!-- default values for query parameters -->
+    <lst name="defaults">
+      <str name="defType">tree</str>
+      <str name="df">_json_</str>
+      <str name="echoParams">explicit</str>
+		  <str name="fl">id</str>
+    </lst>
+  </requestHandler>
+
+  <codecFactory class="solr.SchemaCodecFactory"/>
+
+</config>

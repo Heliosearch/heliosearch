@@ -22,14 +22,14 @@
   </description>
 
   <dirname file="${ant.file.common-solr}" property="common-solr.dir"/>
-  
+
   <property name="Name" value="Solr" />
-  
+
   <!-- solr uses 1.7 -->
   <property name="javac.source" value="1.7"/>
   <property name="javac.target" value="1.7"/>
   <property name="javac.args" value=""/>
-  
+
   <property name="dest" location="${common-solr.dir}/build" />
   <property name="build.dir" location="${dest}/${ant.project.name}"/>
   <property name="dist" location="${common-solr.dir}/dist"/>
@@ -71,17 +71,17 @@
   	<fileset dir="${common-solr.dir}/core/lib" excludes="${common.classpath.excludes}"/>
   	<fileset dir="${common-solr.dir}/solrj/lib" excludes="${common.classpath.excludes}"/>
   	<fileset dir="${common-solr.dir}/example/lib" excludes="${common.classpath.excludes}"/>
-  	<fileset dir="${common-solr.dir}/example/example-DIH/solr/db/lib" excludes="${common.classpath.excludes}"/>  	
+  	<fileset dir="${common-solr.dir}/example/example-DIH/solr/db/lib" excludes="${common.classpath.excludes}"/>
   	<fileset dir="lib" excludes="${common.classpath.excludes}" erroronmissingdir="false"/>
   </path>
 
   <path id="solr.lucene.libs">
     <!-- List of jars that will be used as the foundation for both
-         the base classpath, as well as copied into the lucene-libs dir 
+         the base classpath, as well as copied into the lucene-libs dir
 	 in the release.
     -->
-    <!-- NOTE: lucene-core is explicitly not included because of the 
-	 base.classpath (compilation & tests are done directly against   
+    <!-- NOTE: lucene-core is explicitly not included because of the
+	 base.classpath (compilation & tests are done directly against
 	 the class files w/o needing to build the jar)
     -->
     <pathelement location="${analyzers-common.jar}"/>
@@ -121,7 +121,7 @@
   	<pathelement path="src/test-files"/>
   	<path refid="test.base.classpath"/>
   </path>
- 
+
   <path id="test.classpath" refid="solr.test.base.classpath"/>
 
   <macrodef name="solr-contrib-uptodate">
@@ -155,15 +155,15 @@
     <mkdir dir="${maven.dist.dir}"/>
   </target>
 
-  <target name="prep-lucene-jars" 
+  <target name="prep-lucene-jars"
   	      depends="jar-lucene-core, jar-analyzers-phonetic, jar-analyzers-kuromoji, jar-codecs,jar-expressions, jar-suggest, jar-highlighter, jar-memory,
   	               jar-misc, jar-spatial, jar-grouping, jar-queries, jar-queryparser, jar-join">
   	  <property name="solr.deps.compiled" value="true"/>
   </target>
-	
-  <target name="lucene-jars-to-solr" 
+
+  <target name="lucene-jars-to-solr"
           depends="-lucene-jars-to-solr-not-for-package,-lucene-jars-to-solr-package"/>
-  
+
   <target name="-lucene-jars-to-solr-not-for-package" unless="called.from.create-package">
     <sequential>
       <antcall target="prep-lucene-jars" inheritall="true"/>
@@ -175,7 +175,7 @@
       </copy>
     </sequential>
   </target>
-  
+
   <target name="-lucene-jars-to-solr-package" if="called.from.create-package">
     <sequential>
       <antcall target="-unpack-lucene-tgz" inheritall="true"/>
@@ -192,7 +192,7 @@
   </target>
 
   <!-- Shared core/solrj/test-framework/contrib targets -->
-  
+
   <macrodef name="solr-jarify" description="Builds a Solr JAR file">
     <attribute name="basedir" default="${build.dir}/classes/java"/>
     <attribute name="destfile" default="${build.dir}/${final.name}.jar"/>
@@ -405,6 +405,17 @@
     </ant>
   </target>
 
+  <!-- SIREn targets -->
+  <target name="dist-siren" depends="init-dist"
+          description="Creates the SIRen JAR Distribution file.">
+    <ant dir="${common-solr.dir}/siren" target="prep-dependencies-jars" inheritall="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+    </ant>
+    <ant dir="${common-solr.dir}/siren" target="dist" inheritall="false">
+      <propertyset refid="uptodate.and.compiled.properties"/>
+    </ant>
+  </target>
+
   <!-- Solr test-framework targets -->
   <target name="compile-solr-test-framework" description="Compile the Solr test-framework" unless="solr.test.framework.compiled">
     <ant dir="${common-solr.dir}/test-framework" target="compile-core" inheritAll="false">
@@ -452,7 +463,7 @@
   <target name="compile-contrib" description="Compile contrib modules">
   	<contrib-crawl target="compile-core"/>
   </target>
-  
+
   <target name="compile-test-contrib" description="Compile contrib modules' tests">
   	<contrib-crawl target="compile-test"/>
   </target>
@@ -470,7 +481,7 @@
     <delete dir="${dest}/web" includes="**/*" failonerror="false"/>
     <contrib-crawl target="add-to-war"/>
   </target>
-  
+
   <!-- Forbidden API Task, customizations for Solr -->
   <target name="-check-forbidden-all" depends="-init-forbidden-apis,compile-core,compile-test">
     <property file="${common.dir}/ivy-versions.properties"/> <!-- for commons-io version -->
@@ -486,7 +497,7 @@
       <fileset dir="${build.dir}/classes/test" excludes="${forbidden-tests-excludes}" erroronmissingdir="false"/>
     </forbidden-apis>
   </target>
-  
+
   <target name="-check-forbidden-sysout"/>
 
   <!-- hack for now to disable *all* Solr tests on Jenkins when "tests.disable-solr" property is set -->

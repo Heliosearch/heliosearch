@@ -1,0 +1,30 @@
+[[siren-basic-concepts]]
+== Basic Concepts
+
+SIREn has a slightly different concept of Document than Solr and Elasticsearch. The difference allows
+for richer indexing and querying of nested data. This section introduces few concepts that are core to SIREn and that
+are commonly used throughout this manual.
+
+[float]
+=== Document
+
+As for Solr and Elasticsearch, a document is the basic unit of information that can be indexed. In SIREn, a
+document is expected to be a serialisation of a nested data object expressed in JSON.
+
+[float]
+=== Nested Data
+
+Nested data follows a tree-like structure, in which you arbitrarily can nest objects within objects.
+The nested data model is quite popular with data format such as JSON, XML, Avro, Protocol Buffer.
+These formats allow deeply nested and large structure, and do not enforce strict schemas. Each document can have a
+separate schema.
+
+[float]
+=== Tree Model
+
+SIREn adopts an ordered tree data model to encode nested data. Nested data such as JSON is mapped to a tree model
+prior to indexing. A tree is composed of nodes, where each node can have one or more child nodes. The child nodes
+of a given node form an ordered sequence, i.e., there is an ordering relationships between them. A root node
+represents the beginning of the tree. A node of the tree can contain arbitrary data such as text or numeric values.
+This generic tree data model enables SIREn to be compatible with a wide numbers of nested data models such as JSON and
+XML, while offering advanced search operations on the tree content and structure.

@@ -1,0 +1,13 @@
+[[querying-data]]
+= Querying Data
+
+[partintro]
+--
+This part provides an overview of the query model and syntax of SIREn.
+--
+
+include::querying-data/query-model.asciidoc[]
+
+include::querying-data/text-search-syntax.asciidoc[]
+
+include::querying-data/tree-search-syntax.asciidoc[]

@@ -1,0 +1,12 @@
+[[indexing-data]]
+= Indexing Data
+
+[partintro]
+--
+This part provides an overview of how data is indexed by SIREn. This covers the different indexing models available
+in SIREn, how a JSON document is analyzed, and how to configure the analysis of a JSON document with the Datatype API.
+--
+
+include::indexing-data/json-indexing-models.asciidoc[]
+
+include::indexing-data/analysis-and-datatypes.asciidoc[]

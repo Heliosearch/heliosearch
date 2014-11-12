@@ -1,0 +1,250 @@
+[[solr-getting-started]]
+== Getting Started
+
+In this short guide, we will see how you can quickly index a collection of richly structured JSON data and query them
+using SIREn within the Solr environment.
+
+We will use the National Charge Point Registry dataset in JSON format available
+http://data.gov.uk/dataset/national-charge-point-registry[here]. It contains charge points for
+electric vehicles with information like geographical location, address connectors types, opening hours and so on.
+There are over a 1000 charge points in the dataset. We have modified the dataset to ensure that the values are correctly
+typed with native JSON types. You can see a truncated sample record below.
+
+[source,javascript]
+----
+{
+    "ChargeDeviceId": "885b2c7a6deb4fea10f319c4ce993e02",
+    "ChargeDeviceName": "All Eco Centre Car Park",
+    "ChargeDeviceRef": "CM765",
+    "Accessible24Hours": false,
+    ...
+
+    "DeviceController": {
+        "ContactName": null,
+        "OrganisationName": "Source East",
+        "TelephoneNo": "08455198676",
+        "Website": "www.sourceeast.net"
+    },
+
+    "ChargeDeviceLocation": {
+        "Latitude": 52.5744,
+        "Longitude": -0.2396,
+
+        "Address": {
+            "Street": "City Road",
+            "PostCode": "PE1 1SA",
+            "PostTown": "Peterborough",
+            "Country": "gb"
+        },
+    },
+
+    "Connector": [
+        {
+            "ConnectorId": "CM765a",
+            "ChargeMode": 1,
+            "ChargeMethod": "Single Phase AC",
+            "ChargePointStatus": "In service",
+            "ConnectorType": "Domestic plug/socket type G (BS 1363)",
+            "RatedOutputCurrent": 13
+        },
+        {
+            "ConnectorId": "CM765b",
+            "ChargeMode": "3",
+            "ChargeMethod": "Single Phase AC",
+            ...
+        }
+    ]
+}
+----
+
+[float]
+=== Downloading the SIREn/Solr Distribution
+
+If you haven't yet, http://siren.solutions/downloads/[download] the SIREn/Solr binary distribution. Next, extract
+it to a directory which we will call `${SOLR_HOME}` from now on. The directory should contain:
+
+----
+├── dist
+│   ├── siren-core-${version}.jar             <1>
+│   ├── siren-qparser-${version}.jar
+│   └── siren-solr-${version}.jar             <2>
+├── docs                                      <3>
+└── example                                   <4>
+----
+<1> SIREn jars required by the SIREn/Solr plugin
+<2> the SIREn/Solr plugin
+<3> the SIREn documentation
+<4> a Solr instance with the SIREn plugin pre-installed, including one demo
+
+You can start the Solr instance with the following commands:
+
+[source,bash]
+--------------------------------------------------
+$ cd $SOLR_HOME/example
+$ java -jar start.jar
+--------------------------------------------------
+
+In the output, you should see a line like the following which indicates that the SIREn plugin is installed and running:
+
+[source,bash]
+--------------------------------------------------
+1814 [main] INFO  org.apache.solr.core.SolrResourceLoader  – Adding '$SOLR_HOME/example/solr/lib/siren-core-${version}.jar' to classloader
+1815 [main] INFO  org.apache.solr.core.SolrResourceLoader  – Adding '$SOLR_HOME/example/solr/lib/siren-qparser-${version}.jar' to classloader
+1816 [main] INFO  org.apache.solr.core.SolrResourceLoader  – Adding '$SOLR_HOME/example/solr/lib/siren-solr-${version}.jar' to classloader
+--------------------------------------------------
+
+[float]
+=== Indexing a document
+
+To index the NCPR dataset, just open a new terminal window, navigate to the example folder within the SIREn installation
+and use the `post.jar` to load the data:
+
+[source,bash]
+--------------------------------------------------
+$ bin/load.sh -f datasets/ncpr/ncpr-with-datatypes.json -u http://localhost:8983/solr/collection1/ -i ChargeDeviceId
+--------------------------------------------------
+
+If all is fine, you should see the count of documents loaded into SIREn (1078). You can also go to the
+http://localhost:8983/solr/#/collection1[Solr Admin UI] and
+see the count of docs in stats page for the default collection ("collection1").
+
+[float]
+=== Searching a document
+
+SIREn uses a JSON based query syntax. You can
+find more about the query syntax of SIREn in the chapter <<querying-data, Querying Data>>.
+We will now show you some query examples you can execute on the NCPR index. You can use either the Solr Admin UI or the
+command line to query SIREn. You could copy/paste and execute the queries
+from the http://localhost:8983/solr/#/collection1/query[Solr Admin UI].
+
+The first search query is
+a <<node-tree-search-syntax, node query>> that matches all documents with an attribute ``ChargeDeviceName'' associated
+to a value matching the wildcard search query ``SCOT*''.
+
+[source,javascript]
+--------------------------------------------------
+{
+    "node": {
+        "attribute": "ChargeDeviceName",
+        "query": "SCOT*"
+    }
+}
+--------------------------------------------------
+
+The next query is a <<twig-tree-search-syntax, twig query>> that demonstrates how to search nested objects.
+
+[source,javascript]
+--------------------------------------------------
+{
+    "twig": {
+        "root" : "DeviceOwner",
+        "child" : [{
+            "node": {
+                "attribute" : "Website",
+                "query" : "uri(www.sourcelondon.net)"
+            }
+        }]
+    }
+}
+--------------------------------------------------
+
+The next query demonstrates how to search multiple level of nested objects.
+
+[source,javascript]
+--------------------------------------------------
+{
+    "twig" : {
+        "root" : "ChargeDeviceLocation",
+        "child" : [{
+            "twig": {
+                "root" : "Address",
+                "child": [{
+                    "node" : {
+                        "attribute" : "PostTown",
+                        "query" : "Norwich"
+                    }
+                },{
+                    "node" : {
+                        "attribute" : "Country",
+                        "query" : "gb"
+                    }
+                }]
+            }
+        }]
+    }
+}
+--------------------------------------------------
+
+The next query demonstrates how to search among an array of nested objects.
+
+[source,bash]
+--------------------------------------------------
+{
+    "twig": {
+        "root" : "Connector",
+        "child" : [{
+            "node": {
+                "attribute" : "RatedOutputCurrent",
+                "query" : "xsd:long(13)"
+            }
+        },{
+            "node": {
+                "attribute" : "RatedOutputVoltage",
+                "query" : "xsd:long(230)"
+            }
+        }]
+    }
+}
+--------------------------------------------------
+
+The next query demonstrates how to perform a numerical range search.
+
+[source,bash]
+--------------------------------------------------
+{
+    "twig": {
+        "root" : "ChargeDeviceLocation",
+        "child" : [{
+            "occur" : "MUST",
+            "node": {
+                "attribute" : "Latitude",
+                "query" : "xsd:double([55.6 TO 56.0])"
+            }
+        },{
+            "occur" : "MUST",
+            "node": {
+                "attribute" : "Longitude",
+                "query" : "xsd:double([-3.2 TO -2.8])"
+            }
+        }]
+    }
+}
+--------------------------------------------------
+
+[float]
+[[solr-run-demos]]
+=== Running the demo
+
+The SIREn/Solr distribution contains a demo based on the NCPR (National Charge Point Registry)
+dataset. To execute the demo, go to the `$SOLR_HOME/example` directory:
+
+[source,bash]
+--------------------------------------------------
+$ cd $SOLR_HOME/example
+--------------------------------------------------
+
+To index the NCPR dataset, execute the following command:
+
+[source,bash]
+--------------------------------------------------
+$ bin/load-ncpr.sh
+--------------------------------------------------
+
+You can then query the index using the following command:
+
+[source,bash]
+--------------------------------------------------
+$ bin/query-ncpr.sh
+--------------------------------------------------
+
+The script executes a list of queries. It will display each of the query and the response header returned by Solr.

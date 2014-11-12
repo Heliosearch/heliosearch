@@ -1,0 +1,29 @@
+[[siren-highlights]]
+== SIREn Highlights
+
+SIREn is a plugin for Solr and Elasticsearch for searching nested and schemaless data at scale. Based on
+state-of-the-art Information Retrieval techniques, SIREn has been designed from the ground up to scale to
+billions of documents and to cope with nested and schemaless data while retaining low latency queries and
+low memory footprint.
+
+SIREn offers the following features:
+
+* *Nested Data*: search and analyze nested data at scale
+* *Schemaless*: search and analyze data without significant modelling effort upfront
+* *High Scalability*: scale-out through partitioning and replication
+* *Low Latency*: search your data in sub-second response time
+* *Low Memory Footprint*: complex nested data models do not impact memory consumption
+* *Advanced Search Operators*: augment standard search operators, e.g., term, phrase, boolean, etc., with nested data
+search operators including parent-child and ancestor-descendant relationships and nested object proximity.
+* *Plug & Play*: integrated with Solr and Elasticsearch's REST API.
+
+SIREn is based on a generic data model that is compatible with a broad variety of nested data models: JSON, XML, Avro,
+etc. The data model has been carefully designed for scalability and high performance.
+
+SIREn is schema-agnostic. It does not require any schema definition to index and search data. The schema definition can
+even change across records. You do not have to invest significant modelling effort to clean, transform and flatten
+the data prior to indexing.
+
+SIREn offers a Plug & Play integration with major open-source search systems such as Apache Solr and Elasticsearch.
+You can install the plugin in existing Solr or Elasticsearch deployment and start searching nested data alongside Solr
+and Elasticsearch features.

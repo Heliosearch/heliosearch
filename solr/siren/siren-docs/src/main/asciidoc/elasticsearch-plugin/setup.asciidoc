@@ -1,0 +1,77 @@
+[[elasticsearch-setup]]
+== Setup
+
+This section provides information on how to setup the SIREn plugin in an Elasticsearch installation.
+If you haven't yet, http://siren.solutions/downloads/[download the SIREn plugin] and follow the instructions below.
+
+[float]
+=== Requirements
+
+* Java JVM >= 1.7.
+* Elasticsearch 1.2.2.
+
+[float]
+=== How to install the plugin
+
+Let's assume you installed Elasticsearch in the directory `$ES_HOME`
+and that `$SIREN_HOME` is the root of the extracted SIREn/Elasticsearch binary distribution.
+
+[start=1]
+. Go to the Elasticsearch directory:
+
+[source,bash]
+--------------------------------------------------
+$ cd $ES_HOME
+--------------------------------------------------
+
+[start=2]
+. Install the plugin
+
+[source,bash]
+--------------------------------------------------
+$ bin/plugin --url file:///${SIREN_HOME}/dist/siren-elasticsearch-${version}-plugin.zip --install siren-plugin
+--------------------------------------------------
+
+[start=3]
+. Start Elasticsearch (or stop and run again if it was running already):
+
+[source,bash]
+--------------------------------------------------
+$ bin/elasticsearch
+--------------------------------------------------
+
+If the SIREn plugin is correctly installed, you should see a line like the following
+in the Elasticsearch log:
+
+[source,bash]
+--------------------------------------------------
+[2014-07-02 14:40:04,008][INFO ][plugins ] [Basilisk] loaded [siren-plugin], sites []
+--------------------------------------------------
+
+[float]
+=== How to upgrade the plugin
+
+[start=1]
+. Go to the Elasticsearch directory:
+
+[source,bash]
+--------------------------------------------------
+$ cd $ES_HOME
+--------------------------------------------------
+
+[start=2]
+. Stop Elasticsearch.
+
+[start=3]
+. Remove the plugin:
+
+[source,bash]
+--------------------------------------------------
+$ bin/plugin --remove siren-plugin
+--------------------------------------------------
+
+[start=4]
+. Install a new version of the plugin as above.
+
+[start=5]
+. Start Elasticsearch.

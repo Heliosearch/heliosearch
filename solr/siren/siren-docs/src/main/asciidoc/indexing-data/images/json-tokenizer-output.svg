@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.4 r9939"
+   sodipodi:docname="json-tokenizer-output.svg">
+  <defs
+     id="defs4">
+    <marker
+       inkscape:stockid="DiamondM"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="DiamondM"
+       style="overflow:visible">
+      <path
+         id="path3960"
+         d="M 0,-7.0710768 L -7.0710894,0 L 0,7.0710589 L 7.0710462,0 L 0,-7.0710768 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt"
+         transform="scale(0.4)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow2Mend"
+       style="overflow:visible;">
+      <path
+         id="path3905"
+         style="fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round;"
+         d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "
+         transform="scale(0.6) rotate(180) translate(0,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mend"
+       style="overflow:visible;">
+      <path
+         id="path3887"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;"
+         transform="scale(0.4) rotate(180) translate(10,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow2Send"
+       style="overflow:visible;">
+      <path
+         id="path3911"
+         style="fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round;"
+         d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "
+         transform="scale(0.3) rotate(180) translate(-2.3,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-6"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3911-3"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-67"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3911-6"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-5"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3911-8"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-2"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3911-9"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-3"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3911-69"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Send"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="Arrow2Send-24"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3911-86"
+         style="fill-rule:evenodd;stroke-width:0.625;stroke-linejoin:round"
+         d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
+         transform="matrix(-0.3,0,0,-0.3,0.69,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="DiamondM"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="DiamondM-4"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3960-1"
+         d="M 0,-7.0710768 -7.0710894,0 0,7.0710589 7.0710462,0 0,-7.0710768 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="scale(0.4,0.4)" />
+    </marker>
+    <marker
+       inkscape:stockid="DiamondM"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="DiamondM-7"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3960-8"
+         d="M 0,-7.0710768 -7.0710894,0 0,7.0710589 7.0710462,0 0,-7.0710768 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="scale(0.4,0.4)" />
+    </marker>
+    <marker
+       inkscape:stockid="DiamondM"
+       orient="auto"
+       refY="0"
+       refX="0"
+       id="DiamondM-9"
+       style="overflow:visible">
+      <path
+         inkscape:connector-curvature="0"
+         id="path3960-2"
+         d="M 0,-7.0710768 -7.0710894,0 0,7.0710589 7.0710462,0 0,-7.0710768 z"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt"
+         transform="scale(0.4,0.4)" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.4"
+     inkscape:cx="382.75685"
+     inkscape:cy="860.03626"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:window-width="1440"
+     inkscape:window-height="876"
+     inkscape:window-x="0"
+     inkscape:window-y="24"
+     inkscape:window-maximized="1"
+     inkscape:snap-bbox="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid2985" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path3006"
+       sodipodi:cx="105"
+       sodipodi:cy="117.36218"
+       sodipodi:rx="15"
+       sodipodi:ry="15"
+       d="m 120,117.36218 a 15,15 0 1 1 -30,0 15,15 0 1 1 30,0 z"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3008"
+       width="70"
+       height="30"
+       x="140"
+       y="102.36218"
+       ry="1.9386585"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       transform="translate(140.25,0.25)"
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path3006-0"
+       sodipodi:cx="105"
+       sodipodi:cy="117.36218"
+       sodipodi:rx="15"
+       sodipodi:ry="15"
+       d="m 120,117.36218 a 15,15 0 1 1 -30,0 15,15 0 1 1 30,0 z"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       transform="translate(280.25,0.25)"
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path3006-0-6"
+       sodipodi:cx="105"
+       sodipodi:cy="117.36218"
+       sodipodi:rx="15"
+       sodipodi:ry="15"
+       d="m 120,117.36218 a 15,15 0 1 1 -30,0 15,15 0 1 1 30,0 z"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3008-4-1"
+       width="70"
+       height="30"
+       x="420.25"
+       y="102.61218"
+       ry="1.9386585"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       transform="translate(420.25,0.25)"
+       sodipodi:type="arc"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="path3006-0-6-6"
+       sodipodi:cx="105"
+       sodipodi:cy="117.36218"
+       sodipodi:rx="15"
+       sodipodi:ry="15"
+       d="m 120,117.36218 a 15,15 0 1 1 -30,0 15,15 0 1 1 30,0 z"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3073"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><flowRegion
+         id="flowRegion3075"><rect
+           id="rect3077"
+           width="48.992397"
+           height="15.404826"
+           x="150.26019"
+           y="110.39494" /></flowRegion><flowPara
+         id="flowPara3079">name</flowPara></flowRoot>    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="157.74707"
+       y="120.63757"
+       id="text3081"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan3083"
+         x="157.74707"
+         y="120.63757"
+         style="font-size:12px">name</tspan></text>
+    <g
+       id="g4364"
+       transform="translate(-0.57623291,-0.64447784)"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236">
+      <rect
+         ry="1.9386585"
+         y="103.25666"
+         x="280.82623"
+         height="30"
+         width="70"
+         id="rect3008-4"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3085"
+         y="115.23029"
+         x="315.53326"
+         style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           style="font-size:12px;font-weight:normal;text-align:center;text-anchor:middle;-inkscape-font-specification:Sans"
+           y="115.23029"
+           x="315.53326"
+           id="tspan3087"
+           sodipodi:role="line">Radar</tspan><tspan
+           style="font-size:12px;font-weight:normal;text-align:center;text-anchor:middle;-inkscape-font-specification:Sans"
+           id="tspan3089"
+           y="130.23029"
+           x="315.53326"
+           sodipodi:role="line">Networks</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="420.24023"
+       y="120.23181"
+       id="text3091"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan3093"
+         x="420.24023"
+         y="120.23181"
+         style="font-size:10px">money_raised</tspan></text>
+    <g
+       id="g3099"
+       transform="translate(-0.98254395,1.5258789e-5)"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236">
+      <rect
+         ry="1.9386585"
+         y="102.61217"
+         x="561.23254"
+         height="30"
+         width="70"
+         id="rect3008-4-1-6"
+         style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text3095"
+         y="121.98033"
+         x="565.63196"
+         style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+         xml:space="preserve"><tspan
+           style="font-size:12px"
+           y="121.98033"
+           x="565.63196"
+           id="tspan3097"
+           sodipodi:role="line">24000000</tspan></text>
+    </g>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999000000002;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)"
+       d="m 120,117.36218 19,0"
+       id="path3104"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999000000002;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)"
+       d="m 210.17144,117.38783 19,0"
+       id="path3104-7"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999000000002;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)"
+       d="m 260.48392,117.38783 19,0"
+       id="path3104-3"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999000000002;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)"
+       d="M 350.4878,117.39548 369,117.36218"
+       id="path3104-2"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999000000002;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)"
+       d="m 400,117.36218 19,0"
+       id="path3104-2-4"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999000000002;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)"
+       d="m 490,117.36218 19,0"
+       id="path3104-2-4-6"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999000000002;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow2Mend)"
+       d="m 540,117.36218 19,0"
+       id="path3104-2-4-6-0"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.7;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#DiamondM)"
+       d="m 145,132.36218 0,10 5,0"
+       id="path5432"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="154.1626"
+       y="144.20007"
+       id="text5636"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan5638"
+         x="154.1626"
+         y="144.20007"
+         style="font-size:9px">json:field</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#DiamondM)"
+       d="m 425.35,132.71218 0,10 5,0"
+       id="path5432-9"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="434.5126"
+       y="144.55008"
+       id="text5636-4"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan5638-8"
+         x="434.5126"
+         y="144.55008"
+         style="font-size:9px">json:field</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#DiamondM)"
+       d="m 285.35,132.71218 0,10 5,0"
+       id="path5432-9-4"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="294.5126"
+       y="144.55008"
+       id="text5636-4-3"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan5638-8-4"
+         x="294.5126"
+         y="144.55008"
+         style="font-size:9px">xsd:string</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.69999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#DiamondM)"
+       d="m 565.35,132.71218 0,10 5,0"
+       id="path5432-9-3"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="574.51263"
+       y="144.55008"
+       id="text5636-4-7"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/renaud/Work/sirendb/siren-docs/src/main/asciidoc/indexing-data/images/json-tokenizer-output.png"
+       inkscape:export-xdpi="117.64236"
+       inkscape:export-ydpi="117.64236"><tspan
+         sodipodi:role="line"
+         id="tspan5638-8-8"
+         x="574.51263"
+         y="144.55008"
+         style="font-size:9px">xsd:long</tspan></text>
+  </g>
+</svg>

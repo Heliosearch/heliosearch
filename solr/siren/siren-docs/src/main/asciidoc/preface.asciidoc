@@ -1,0 +1,28 @@
+[[preface]]
+= Preface
+
+This is the reference manual for SIREn version 1.4.0.
+
+The following is a quick overview of the main parts of the manual:
+
+* <<introduction-to-siren,Introduction>>: An introduction to SIREn and its data indexing model.
+* <<indexing-data,Indexing Data>>: All about indexing JSON documents using SIREn.
+* <<querying-data,Querying Data>>: All about querying JSON documents using SIREn. Includes details on the SIREn query language.
+* <<solr-plugin,Solr Plugin>>: All about the Solr plugin, including a 5 minutes tutorial to get started.
+* <<elasticsearch-plugin,Elasticsearch Plugin>>: All about the Elasticsearch plugin, including a 5 minutes tutorial to get started.
+
+SIREn is very simple to setup and get started with. In this section you will find all the documentation you need to
+install the system and explore its capabilities.
+
+SIREn is a plugin of Solr and Elasticsearch. As such, the documentation here should be considered to be complementary to
+that of Solr and Elasticsearch.
+While you can try out SIREn without knowing much about Solr or Elasticsearch, you will definitely need to dive into
+their documentation to make the most of the system.
+
+You can find out more about:
+
+* Solr in the
+https://cwiki.apache.org/confluence/display/solr/Apache+Solr+Reference+Guide[Apache Solr Reference Guide].
+* Elasticsearch in the http://www.elasticsearch.org/guide/[Elasticsearch Guide].
+
+SIREn 1.4.0 is compatible with Solr 4.9.1 and Elasticsearch 1.3.4.

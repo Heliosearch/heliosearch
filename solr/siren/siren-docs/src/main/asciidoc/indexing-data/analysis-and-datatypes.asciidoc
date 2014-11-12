@@ -1,0 +1,97 @@
+[[analysis-and-datatypes]]
+== Analysis and Datatypes
+
+In the previous section, we have seen how SIREn maps a JSON object to a tree model. This conversion is performed
+by an analyzer that is described in this section. There are two analyzers: one for the
+<<extended-indexing-model, extended indexing model>> and one for the <<concise-indexing-model, concise indexing model>>.
+Each one relies on a JSON tokenizer and a set of token filters that are specific to SIREn. Examples of such analyzers
+can be found in the code source of the siren-core module. The analyzer for the extended indexing model is called
+http://siren.solutions/javadoc/current/com/sindicetech/siren/analysis/ExtendedJsonAnalyzer.html[ExtendedJsonAnalyzer], and the analyzer for the
+concise indexing model is called
+http://siren.solutions/javadoc/current/com/sindicetech/siren/analysis/ConciseJsonAnalyzer.html[ConciseJsonAnalyzer]. You can also
+learn more about the internal analysis process of SIREn in the
+http://siren.solutions/javadoc/current/com/sindicetech/siren/analysis/package-summary.html[analysis package description].
+
+[float]
+=== JSON Analysis
+
+A JSON analyzer relies on a JSON tokenizer to traverse and convert the JSON object. During the traversal of the JSON
+object, the tokenizer outputs a token for every node of the tree. The tokenizer attaches a "datatype metadata" to every
+token generated. A datatype specifies the type of the data a node contains and it is identified by a unique name.
+By default, the tokenizer recognises five core datatypes in the http://json.org/[JSON syntax]:
+
+* `http://www.w3.org/2001/XMLSchema#string` for every string values
+* `http://www.w3.org/2001/XMLSchema#long` for every integer and long values
+* `http://www.w3.org/2001/XMLSchema#double` for every float and double values
+* `http://www.w3.org/2001/XMLSchema#boolean` for every boolean values
+* `http://json.org/field` for every attribute name.
+
+For example, given the JSON object below, the tokenizer will output four tokens with their associated datatypes as shown
+in <<json-tokenizer-output>>.
+The datatype metadata is used to further configure how each attribute or value will be analysed, as we will see
+in the next section.
+
+[source,javascript]
+----
+{
+    "name": "Radar Networks",
+    "money_raised" : 24000000
+}
+----
+
+[[json-tokenizer-output]]
+.Output of the JSON tokenizer with datatype metadata
+image::images/json-tokenizer-output.png["Output of the JSON tokenizer with datatype metadata", align="center"]
+
+[float]
+=== Datatype Analysis
+
+The datatype metadata is used to perform a deeper analysis of the content of a node. Such analysis is performed by the
+http://siren.solutions/javadoc/current/com/sindicetech/siren/analysis/filter/DatatypeAnalyzerFilter.html[DatatypeAnalyzerFilter].
+The analysis of each datatype can be configured freely by the user.
+For example, one can set a word delimiter analyzer for the `json:field` datatype, a standard analyzer for the
+`xsd:string` datatype and a keyword analyzer for the `xsd:long` datatype. This additional analysis will output the
+sequence of tokens shown in <<datatype-filter-output>>.
+
+[[datatype-filter-output]]
+.Output of the datatype analysis
+image::images/datatype-filter-output.png["Output of the datatype analysis", align="center"]
+
+Using this analysis strategy, SIREn achieves a more flexible schemaless indexing. Compared to Solr or Elasticsearch, an attribute
+is not tied to one specific analyzer. Restricting the analysis to one single type of attribute makes the indexing of
+heterogeneous datasets very difficult. For example, if an attribute contains mixed value types within a document
+or across documents, for example an attribute with two values: one being a string and the other one being a numeric
+value, the analysis will likely fail. Instead of using the attribute concept, SIREn relies on the
+concept of datatypes to configure analysis. Since the values of an attribute will be annotated with different
+datatypes, it becomes possible to handle attributes with mixed value types.
+
+[float]
+=== Custom Datatypes
+
+Custom datatypes can also be used thanks to a specific annotation in the JSON object.
+The datatype annotation follows the schema below, with `<LABEL>` being a string which represents the name of the
+datatype to be assigned to the value, and `<VALUE>` is a string representing the value.
+
+[source,javascript]
+----
+{
+    "_datatype_" : <LABEL>,
+    "_value_" : <VALUE>
+}
+----
+
+For example, the following JSON object will produce the sequence of tokens shown in <<custom-datatype-output>>.
+
+[source,javascript]
+----
+{
+    "homepage_url" : {
+        "_datatype_" : "uri",
+        "_value_" : "http://www.radarnetworks.com/"
+    }
+}
+----
+
+[[custom-datatype-output]]
+.Output of a custom datatype analysis
+image::images/custom-datatype-output.png["Output of a custom datatype analysis", align="center"]

@@ -1,0 +1,77 @@
+.breadcrumbs {
+  margin-bottom: 10px;
+}
+
+.navheader {
+  width: 100%;
+  border-bottom: 1px solid #CCC;
+  display: inline-block;
+  padding-bottom: 5px;
+}
+
+.navfooter {
+  width: 100%;
+  border-top: 1px solid #CCC;
+  display: inline-block;
+  padding-top: 5px;
+}
+
+.toc {
+  position: absolute;
+  left: 85%;
+  top: 50px;
+  min-width: 15%;
+}
+
+.toc dt {
+  border-bottom: 1px solid #E9E9E9;
+}
+
+.toc dt a {
+  display: block;
+  font-size: 14px;
+  padding: 10px;
+  color: #888;
+  border-right: 4px solid #FFF;
+}
+
+.toc dt a:hover {
+  color: #888;
+  background: none repeat scroll 0% 0% rgba(239, 182, 52, 0.5);
+  border-right-color: #EFB634;
+}
+
+.prev {
+  float: left;
+  width: 50%;
+  font-weight: bold;
+  display: inline-block;
+}
+
+.next {
+  float: right;
+  width: 50%;
+  font-weight: bold;
+  display: inline-block;
+  text-align: right;
+}
+
+.manual {
+  min-height: 50em;
+}
+
+.figure .title {
+  text-align: center;
+}
+
+/* Fixed spacing for callout list */
+.calloutlist td p {
+  padding: 0px;
+  margin: 0px;
+}
+
+/* limit number of lines in code snippet */
+pre {
+  max-height: 30em;
+  overflow: auto;
+}

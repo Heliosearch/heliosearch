@@ -1,0 +1,14 @@
+[[siren-manual]]
+= SIREn Manual
+
+include::preface.asciidoc[]
+
+include::introduction-to-siren.asciidoc[]
+
+include::indexing-data.asciidoc[]
+
+include::querying-data.asciidoc[]
+
+include::elasticsearch-plugin.asciidoc[]
+
+include::solr-plugin.asciidoc[]

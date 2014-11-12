@@ -1,0 +1,97 @@
+[[boolean-tree-search-syntax]]
+=== Boolean
+
+A boolean query matches a boolean combination of nodes.
+A boolean query object is identified by the attribute `boolean` and is composed of a list of boolean clauses.
+
+[float]
+==== Boolean Clause
+
+A list of boolean clauses is specified with the parameter `clause`. This parameter accepts an array of boolean
+clauses. A boolean clause object is composed of a unary boolean operator, and of a query which can be
+either a <<node-tree-search-syntax, node query>>, a <<twig-tree-search-syntax, twig query>> or a
+<<boolean-tree-search-syntax, boolean query>>.
+
+The unary boolean operator is specified with the parameter `occur`. The
+value of this parameter must be a string with one of the
+following values: `MUST`, `SHOULD`, `MUST_NOT`. This parameter is optional, and the default unary operator `MUST` will be
+used if it is not specified.
+
+For example, the following query performs an intersection between a node query and a twig query.
+
+[source,javascript]
+----
+{
+    "boolean" : {
+        "clause" : [
+            {
+                "node" : {
+                    "query" : "Radar Networks",
+                }
+            },
+            {
+                "twig" : {
+                    "root" : "funding_rounds",
+                    "child" : {
+                        "node" : {
+                            "attribute" : "round_code",
+                            "query" : "a"
+                    }
+                }
+            }
+        ]
+    }
+}
+----
+
+[float]
+==== Proximity-Aware Boolean
+
+It is possible to create boolean expressions that must satisfy some proximity constraints, i.e., that will restrict node
+matches based on their position. As with normal boolean expressions, you can nest them arbitrarily. To specify some
+proximity constraints, you can use the parameter `slop` and `inOrder`.
+
+The `slop` parameter can be used to specify the slop, or maximum distance allowed between nodes. The value of this
+parameter must be an integer equal or greater than 0. The slop constraint is
+applicable to the required clauses, but also to the optional clauses if the boolean expression contains at least one
+required and one optional clause.
+
+The `inOrder` parameter can be used to indicate that the nodes should appear in order. The value of this
+parameter must be a boolean. When an order constraint
+is specified, it is only applicable to the required clauses, i.e., the optional and excluded clauses will match
+irrespective of their position.
+
+For example, the following query matches documents containing a funding round with code ``a'' immediately followed
+by a funding round with code ``b''.
+
+[source,javascript]
+----
+{
+    "boolean" : {
+        "inOrder" : true,
+        "slop" : 0,
+        "clause" : [
+            {
+                "twig" : {
+                    "root" : "funding_rounds",
+                    "child" : {
+                        "node" : {
+                            "attribute" : "round_code",
+                            "query" : "a"
+                    }
+                }
+            },
+            {
+                "twig" : {
+                    "root" : "funding_rounds",
+                    "child" : {
+                        "node" : {
+                            "attribute" : "round_code",
+                            "query" : "b"
+                    }
+                }
+            }
+        ]
+    }
+}
+----

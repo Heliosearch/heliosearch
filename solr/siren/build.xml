@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="solr-siren" default="default" xmlns:ivy="antlib:org.apache.ivy.ant">
+
+	<description>SIREn</description>
+
+	<property name="maven.executable" value="mvn" />
+
+	<target name="prep-dependencies-jars">
+		<exec executable="${maven.executable}">
+			<arg value="org.apache.maven.plugins:maven-dependency-plugin:2.8:copy" />
+			<arg value="-Dartifact=org.codehaus.jackson:jackson-core-asl:1.9.7" />
+		</exec>
+		<exec executable="${maven.executable}">
+			<arg value="org.apache.maven.plugins:maven-dependency-plugin:2.8:copy" />
+			<arg value="-Dartifact=org.codehaus.jackson:jackson-mapper-asl:1.9.7" />
+		</exec>
+	</target>
+
+	<target name="test">
+		<exec executable="${maven.executable}">
+			<arg value="test" />
+		</exec>
+	</target>
+
+	<target name="dist">
+		<exec executable="${maven.executable}">
+			<arg value="package" />
+			<arg value="-Dmaven.test.skip=true" />
+		</exec>
+	</target>
+
+	<target name="clean">
+		<exec executable="${maven.executable}">
+			<arg value="clean" />
+		</exec>
+	</target>
+
+</project>

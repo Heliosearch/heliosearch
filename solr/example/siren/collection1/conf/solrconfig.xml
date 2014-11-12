@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ Copyright (c) 2014, Sindice Limited. All Rights Reserved.
+
+ This file is part of the SIREn project.
+
+ SIREn is not an open-source software. It is owned by Sindice Limited. SIREn
+ is licensed for evaluation purposes only under the terms and conditions of
+ the Sindice Limited Development License Agreement. Any form of modification
+ or reverse-engineering of SIREn is forbidden. SIREn is distributed without
+ any warranty.
+-->
+
+<!--
+     For more details about configurations options, see
+     http://wiki.apache.org/solr/SolrConfigXml.
+-->
+<config>
+
+  <luceneMatchVersion>4.6</luceneMatchVersion>
+
+  <!-- Data Directory -->
+  <dataDir>${solr.data.dir:}</dataDir>
+
+  <!-- The DirectoryFactory to use for indexes -->
+  <directoryFactory name="DirectoryFactory"
+                    class="${solr.directoryFactory:solr.NRTCachingDirectoryFactory}"/>
+
+  <!-- The default high-performance update handler -->
+  <updateHandler class="solr.DirectUpdateHandler2">
+
+    <!-- Enables a transaction log -->
+    <updateLog>
+      <str name="dir">${solr.ulog.dir:}</str>
+    </updateLog>
+
+    <!-- AutoCommit -->
+     <autoCommit>
+       <maxTime>${solr.autoCommit.maxTime:15000}</maxTime>
+       <openSearcher>false</openSearcher>
+     </autoCommit>
+
+    <!-- softAutoCommit -->
+
+     <autoSoftCommit>
+       <maxTime>${solr.autoSoftCommit.maxTime:-1}</maxTime>
+     </autoSoftCommit>
+
+  </updateHandler>
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       Query section - these settings control query time things like caches
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <query>
+    <!-- Max Boolean Clauses -->
+    <maxBooleanClauses>1024</maxBooleanClauses>
+
+
+    <!-- Solr Internal Query Caches -->
+
+    <!-- Filter Cache -->
+    <filterCache class="solr.FastLRUCache"
+                 size="512"
+                 initialSize="512"
+                 autowarmCount="0"/>
+
+    <!-- Query Result Cache -->
+    <queryResultCache class="solr.LRUCache"
+                     size="512"
+                     initialSize="512"
+                     autowarmCount="0"/>
+
+    <!-- Document Cache -->
+    <documentCache class="solr.LRUCache"
+                   size="512"
+                   initialSize="512"
+                   autowarmCount="0"/>
+
+    <!-- Lazy Field Loading -->
+    <enableLazyFieldLoading>true</enableLazyFieldLoading>
+
+   <!-- Result Window Size -->
+   <queryResultWindowSize>20</queryResultWindowSize>
+
+   <!-- Maximum number of documents to cache for any entry in the
+        queryResultCache.
+     -->
+   <queryResultMaxDocsCached>200</queryResultMaxDocsCached>
+
+    <!-- Use Cold Searcher -->
+    <useColdSearcher>false</useColdSearcher>
+
+    <!-- Max Warming Searchers -->
+    <maxWarmingSearchers>2</maxWarmingSearchers>
+
+  </query>
+
+  <!-- Update Request Handler -->
+  <requestHandler name="/update" class="solr.UpdateRequestHandler" />
+
+  <!-- Admin Handlers -->
+  <requestHandler name="/admin/"
+                  class="solr.admin.AdminHandlers" />
+
+  <!-- ping/healthcheck -->
+  <requestHandler name="/admin/ping" class="solr.PingRequestHandler">
+    <lst name="invariants">
+      <str name="q">solrpingquery</str>
+    </lst>
+    <lst name="defaults">
+      <str name="echoParams">all</str>
+    </lst>
+  </requestHandler>
+
+  <!-- Echo the request contents back to the client -->
+  <requestHandler name="/debug/dump" class="solr.DumpRequestHandler" >
+    <lst name="defaults">
+     <str name="echoParams">explicit</str>
+     <str name="echoHandler">true</str>
+    </lst>
+  </requestHandler>
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       SIREn section - Extension of solrconfig.xml to integrate SIREn
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+
+  <!-- Codec factories allow the use of the custom SIREn codec -->
+  <codecFactory class="solr.SchemaCodecFactory"/>
+
+  <!-- Manged index schema allows the use of the SIREn update request handler -->
+  <schemaFactory class="ManagedIndexSchemaFactory">
+    <bool name="mutable">true</bool>
+    <str name="managedSchemaResourceName">managed-schema</str>
+  </schemaFactory>
+
+  <!-- The SIREn's Update Request Handler -->
+  <requestHandler name="/siren/add" class="com.sindicetech.siren.solr.handler.SirenUpdateRequestHandler" >
+
+    <lst name="default">
+      <str name="fieldType">text</str>
+    </lst>
+
+    <lst name="json">
+      <str name="fieldType">concise</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="type">String</str>
+      <str name="fieldType">text</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="type">Long</str>
+      <str name="fieldType">mv-long</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="type">Integer</str>
+      <str name="fieldType">mv-long</str>
+    </lst>
+
+    <lst name="optional">
+      <str name="path">DeviceController.OrganisationName</str>
+      <str name="fieldType">facet</str>
+    </lst>
+
+  </requestHandler>
+
+  <!-- Register the SIREn's Tree query parser. -->
+  <queryParser name="tree" class="com.sindicetech.siren.solr.qparser.tree.TreeQParserPlugin">
+    <str name="qnames">qnames.txt</str>
+  </queryParser>
+
+  <!-- Register the json query handler, and set it as the default one -->
+  <requestHandler name="/tree" default="true" class="solr.SearchHandler">
+    <!-- default values for query parameters -->
+    <lst name="defaults">
+      <str name="defType">tree</str>
+      <str name="echoParams">explicit</str>
+      <str name="df">_json_</str>
+      <str name="fl">id</str>
+    </lst>
+  </requestHandler>
+
+  <!-- Legacy config for the admin interface -->
+  <admin>
+    <defaultQuery>*:*</defaultQuery>
+  </admin>
+
+</config>
