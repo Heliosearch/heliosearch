@@ -45,7 +45,7 @@ public class MetricStream extends TupleStream {
   private String outKey;
   private Map<HashKey, Metric[]> bucketMap;
   private BucketMetrics[] bucketMetrics;
-  private static final HashKey metricsKey = new HashKey("metrics");
+  static final HashKey metricsKey = new HashKey("metrics");
   private int topN;
   private Comparator<BucketMetrics> comp;
   private Comparator<BucketMetrics> rcomp;
@@ -114,7 +114,17 @@ public class MetricStream extends TupleStream {
       }
     }
 
+
+
     Iterator<Map.Entry<HashKey,Metric[]>> it = bucketAccumulator.entrySet().iterator();
+
+    if(rcomp == null) {
+      Map.Entry<HashKey, Metric[]> noBucket = it.next();
+      BucketMetrics bms = new BucketMetrics(noBucket.getKey(), noBucket.getValue());
+      BucketMetrics[] bucketMetrics = new BucketMetrics[1];
+      bucketMetrics[0] = bms;
+      return bucketMetrics;
+    }
 
     PriorityQueue<BucketMetrics> priorityQueue = new PriorityQueue(topN, rcomp);
 
@@ -184,16 +194,19 @@ public class MetricStream extends TupleStream {
         BucketMetrics bms = new BucketMetrics(noBucket.getKey(), noBucket.getValue());
         this.bucketMetrics = new BucketMetrics[1];
         this.bucketMetrics[0] = bms;
-        List<Map<String, Double>> outMetrics = new ArrayList();
-        List<String> outKeys = new ArrayList();
+        List<List<Map<String, Double>>> outMetrics = new ArrayList();
+        Map outMap = new HashMap();
+        List<Map<String, Double>> innerList = new ArrayList();
+        List<String> outBuckets = new ArrayList();
+        outBuckets.add(noBucket.getKey().toString());
         for(Metric metric : bms.getMetrics()) {
           Map<String, Double> outMetricValues = metric.metricValues();
-          String outKey = metric.getName();
-          outMetrics.add(outMetricValues);
-          outKeys.add(outKey);
+          innerList.add(outMetricValues);
+          System.out.println("################################# outKey:"+outKey);
+          tuple.set(metric.getName(),metric.getValue());
         }
-        Map outMap = new HashMap();
-        outMap.put("buckets",outKeys);
+        outMetrics.add(innerList);
+        outMap.put("buckets",outBuckets);
         outMap.put("metrics",outMetrics);
         tuple.set(this.outKey, outMap);
         return tuple;
@@ -242,6 +255,9 @@ public class MetricStream extends TupleStream {
       outMap.put("buckets",outBuckets);
       outMap.put("metrics",outMetrics);
       tuple.set(this.outKey, outMap);
+
+
+
       return tuple;
     }
 

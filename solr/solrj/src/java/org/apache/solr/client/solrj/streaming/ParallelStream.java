@@ -98,6 +98,29 @@ public class ParallelStream extends CloudSolrStream {
       this.merge(metricStreams);
       Map m = new HashMap();
       m.put("EOF", true);
+
+
+      //If there is a single MetricStream with a single BucketMetrics
+      //Add the metrics to the EOF.
+      //This is to Support SQL select statements with aggregate columns.
+
+      if(metricStreams.size() == 1) {
+        System.out.println("#################################:SPOT1");
+        MetricStream metricStream = metricStreams.get(0);
+        BucketMetrics[] bucketMetrics = metricStream.getBucketMetrics();
+        if(bucketMetrics.length == 1) {
+          System.out.println("#################################:SPOT2");
+
+          if(bucketMetrics[0].getKey().equals(MetricStream.metricsKey)) {
+            System.out.println("#################################:SPOT3");
+            Metric[] metrics = bucketMetrics[0].getMetrics();
+            for(Metric metric : metrics) {
+              m.put(metric.getName(), metric.getValue());
+            }
+          }
+        }
+      }
+
       return new Tuple(m);
     }
 

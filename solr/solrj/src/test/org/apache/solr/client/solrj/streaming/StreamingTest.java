@@ -703,6 +703,22 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     assert(bucketMetrics[0].getKey().toString().equals("metrics"));
     assertMetric(bucketMetrics[0].getMetrics()[0], 1112.0d); //Test the first Metric of the first BucketMetrics
 
+
+    //Test with MetricTupleStream
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    mstream = new MetricStream(stream, metrics, "metric1");
+    MetricTupleStream mtStream = new MetricTupleStream(mstream);
+    List<Tuple> tuples = getTuples(mtStream);
+    assert(tuples.size() == 1);
+    Tuple t = tuples.get(0);
+    assert(t.getDouble("sum(a_i)").equals(Double.parseDouble("1112.0")));
+    assert(t.getDouble("max(a_i)").equals(Double.parseDouble("1000.0")));
+    assert(t.getDouble("min(a_i)").equals(Double.parseDouble("1.0")));
+
+
+
+
     del("*:*");
     commit();
   }
@@ -755,10 +771,12 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     assertMetric(bucketMetrics[2].getMetrics()[0], 3.0d);
 
 
-    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc", "partitionKeys", "a_i");
     stream = new CloudSolrStream(zkHost, "collection1", params);
     mstream = new MetricStream(stream, buckets, metrics, "metric1", new AscBucketComp(0),5);
-    getTuples(mstream);
+    pstream = new ParallelStream(zkHost,"collection1",mstream,2, new AscFieldComp("a_i"));
+
+    getTuples(pstream);
 
     bucketMetrics = mstream.getBucketMetrics();
 
@@ -775,10 +793,12 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     commit();
 
     //Test desc comp with more buckets then priority queue can hold.
-    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc","partitionKeys", "a_i");
     stream = new CloudSolrStream(zkHost, "collection1", params);
     mstream = new MetricStream(stream, buckets, metrics, "metric1", new DescBucketComp(0),3);
-    getTuples(mstream);
+    pstream = new ParallelStream(zkHost,"collection1",mstream,2, new AscFieldComp("a_i"));
+
+    getTuples(pstream);
 
     bucketMetrics = mstream.getBucketMetrics();
     assert(bucketMetrics.length == 3);
@@ -787,10 +807,12 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     assert(bucketMetrics[2].getKey().toString().equals("hello3"));
 
     //Test asc comp with more buckets then priority queue can hold.
-    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc", "partitionKeys", "a_i");
     stream = new CloudSolrStream(zkHost, "collection1", params);
     mstream = new MetricStream(stream, buckets, metrics, "metric1", new AscBucketComp(0),3);
-    getTuples(mstream);
+    pstream = new ParallelStream(zkHost,"collection1",mstream,2, new AscFieldComp("a_i"));
+
+    getTuples(pstream);
 
     bucketMetrics = mstream.getBucketMetrics();
     assert(bucketMetrics.length == 3);
@@ -800,15 +822,30 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
 
 
     //Test with no buckets
-    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc");
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc","partitionKeys", "a_i");
     stream = new CloudSolrStream(zkHost, "collection1", params);
     mstream = new MetricStream(stream, metrics, "metric1");
-    getTuples(mstream);
+    pstream = new ParallelStream(zkHost,"collection1",mstream,2, new AscFieldComp("a_i"));
+
+    getTuples(pstream);
 
     bucketMetrics = mstream.getBucketMetrics();
     assert(bucketMetrics.length == 1);
     assert(bucketMetrics[0].getKey().toString().equals("metrics"));
     assertMetric(bucketMetrics[0].getMetrics()[0], 1112.0d); //Test the first Metric of the first BucketMetrics
+
+    //Test with MetricTupleStream
+    params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc","partitionKeys", "a_i");
+    stream = new CloudSolrStream(zkHost, "collection1", params);
+    mstream = new MetricStream(stream, metrics, "metric1");
+    pstream = new ParallelStream(zkHost,"collection1",mstream,2, new AscFieldComp("a_i"));
+    MetricTupleStream mtStream = new MetricTupleStream(pstream);
+    List<Tuple> tuples = getTuples(mtStream);
+    assert(tuples.size() == 1);
+    Tuple t = tuples.get(0);
+    assert(t.getDouble("sum(a_i)").equals(Double.parseDouble("1112.0")));
+    assert(t.getDouble("max(a_i)").equals(Double.parseDouble("1000.0")));
+    assert(t.getDouble("min(a_i)").equals(Double.parseDouble("1.0")));
 
     del("*:*");
     commit();
