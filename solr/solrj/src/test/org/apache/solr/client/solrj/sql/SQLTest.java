@@ -104,7 +104,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     shardCount = 3;
   }
 
-  private void testGroupByAggregate() throws Exception {
+  private void testAggregates() throws Exception {
     indexr(id, "0", "a_s", "hello0", "a_i", "100", "a_f", "0");
     indexr(id, "2", "a_s", "hello0", "a_i", "2", "a_f", "0");
     indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
@@ -113,6 +113,26 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     indexr(id, "6", "a_s", "hello1", "a_i", "1", "a_f", "1");
     indexr(id, "7", "a_s", "hello1", "a_i", "1", "a_f", "1");
 
+    commit();
+
+    String zkHost = zkServer.getZkAddress();
+    String sql = "select sum(a_i) from collection1";
+    Properties props = new Properties();
+    props.put("collection1.baseUrl", zkHost);
+    TupleStream tupleStream = SQLParser.parse(sql, props);
+    List<Tuple> tuples = getTuples(tupleStream);
+    assert(tuples.size() == 0);
+    assert(tuples.get(0).getDouble("sum(a_i)").equals(Double.parseDouble("112.0")));
+  }
+
+  private void testGroupByAggregate() throws Exception {
+    indexr(id, "0", "a_s", "hello0", "a_i", "100", "a_f", "0");
+    indexr(id, "2", "a_s", "hello0", "a_i", "2", "a_f", "0");
+    indexr(id, "3", "a_s", "hello3", "a_i", "3", "a_f", "3");
+    indexr(id, "4", "a_s", "hello3", "a_i", "4", "a_f", "4");
+    indexr(id, "1", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "6", "a_s", "hello1", "a_i", "1", "a_f", "1");
+    indexr(id, "7", "a_s", "hello1", "a_i", "1", "a_f", "1");
 
     commit();
 
@@ -171,7 +191,6 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
 
     del("*:*");
     commit();
-
   }
 
 
@@ -213,6 +232,7 @@ public class SQLTest extends AbstractFullDistribZkTestBase {
     commit();
 
     testGroupByAggregate();
+    testAggregates();
   }
 
   protected Map mapParams(String... vals) {

@@ -34,13 +34,16 @@ import org.apache.solr.client.solrj.streaming.DescFieldComp;
 import org.apache.solr.client.solrj.streaming.Bucket;
 import org.apache.solr.client.solrj.streaming.Metric;
 import org.apache.solr.client.solrj.streaming.CloudSolrStream;
+import org.apache.solr.client.solrj.streaming.MetricStream;
+import org.apache.solr.client.solrj.streaming.MetricTupleStream;
 import org.apache.solr.client.solrj.streaming.MultiComp;
 import org.apache.solr.client.solrj.streaming.ParallelStream;
+import org.apache.solr.client.solrj.streaming.RandomComp;
 import org.apache.solr.client.solrj.streaming.RollupStream;
 import org.apache.solr.client.solrj.streaming.SolrStream;
 import org.apache.solr.client.solrj.streaming.SumMetric;
 import org.apache.solr.client.solrj.streaming.RankStream;
-
+import org.apache.solr.client.solrj.streaming.EOFStream;
 import org.apache.solr.client.solrj.streaming.TupleStream;
 import org.apache.solr.client.solrj.streaming.Tuple;
 
@@ -178,6 +181,30 @@ class SQLVisitor implements Visitor, Serializable {
         map.put("q","*:*");
         map.put("qt", tableDef.getHandler());
         tupleStream = new SolrStream(tableDef.getBaseUrl(), map);
+      }
+
+      List<Metric> metricList = new ArrayList();
+
+      for(ResultColumn field : fields) {
+        ValueNode vnode = field.getExpression();
+        if(vnode instanceof AggregateNode) {
+          AggregateNode an = (AggregateNode)vnode;
+          ValueNode op = an.getOperand();
+          String agName = an.getAggregateName();
+          if(agName.equalsIgnoreCase("sum")) {
+            metricList.add(new SumMetric(op.getColumnName(), !op.getColumnName().endsWith("_i") && !op.getColumnName().endsWith("_l")));
+          }
+        }
+      }
+
+      if(metricList.size() > 0) {
+        Metric[] metrics = metricList.toArray(new Metric[metricList.size()]);
+        tupleStream = new MetricStream(tupleStream, metrics, "metrics1");
+        if(parallel) {
+          tupleStream = new MetricTupleStream(new ParallelStream(workersZkHost, workersCollection, new EOFStream(tupleStream), numWorkers, new RandomComp()));
+        } else {
+          tupleStream = new MetricTupleStream(tupleStream);
+        }
       }
     }
 
