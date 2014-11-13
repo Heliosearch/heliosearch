@@ -834,11 +834,11 @@ public class StreamingTest extends AbstractFullDistribZkTestBase {
     assert(bucketMetrics[0].getKey().toString().equals("metrics"));
     assertMetric(bucketMetrics[0].getMetrics()[0], 1112.0d); //Test the first Metric of the first BucketMetrics
 
-    //Test with MetricTupleStream
+    //Test with MetricTupleStream and EOFStream
     params = mapParams("q","*:*","fl","id,a_s,a_i","sort", "a_i asc","partitionKeys", "a_i");
     stream = new CloudSolrStream(zkHost, "collection1", params);
     mstream = new MetricStream(stream, metrics, "metric1");
-    pstream = new ParallelStream(zkHost,"collection1",mstream,2, new AscFieldComp("a_i"));
+    pstream = new ParallelStream(zkHost,"collection1", new EOFStream(mstream), 2, new AscFieldComp("a_i"));
     MetricTupleStream mtStream = new MetricTupleStream(pstream);
     List<Tuple> tuples = getTuples(mtStream);
     assert(tuples.size() == 1);
