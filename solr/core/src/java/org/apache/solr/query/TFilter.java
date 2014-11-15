@@ -366,6 +366,8 @@ public class TFilter extends Filter implements DocSetProducer {
         out.add( tq.getTerm().bytes() );
       } else if (sub instanceof BooleanQuery) {
         return getTerms((BooleanQuery) sub, field, out);
+      } else {
+        return null;
       }
     }
 
