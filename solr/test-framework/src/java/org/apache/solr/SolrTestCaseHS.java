@@ -68,6 +68,11 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
     return s;
   }
 
+  public static <T> T rand(T... vals) {
+    return vals[ random().nextInt(vals.length) ];
+  }
+
+
   public static ModifiableSolrParams params(SolrParams params, String... moreParams) {
     ModifiableSolrParams msp = new ModifiableSolrParams(params);
     for (int i=0; i<moreParams.length; i+=2) {
@@ -266,6 +271,16 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
       }
     }
 
+    public void deleteByQuery(String query, ModifiableSolrParams params) throws IOException, SolrServerException {
+      if (local()) {
+        assertU(delQ(query));  // todo - handle extra params
+        return;
+      }
+
+      for (SolrServer client : provider.all()) {
+        client.deleteByQuery(query); // todo - handle extra params
+      }
+    }
 
   }
 

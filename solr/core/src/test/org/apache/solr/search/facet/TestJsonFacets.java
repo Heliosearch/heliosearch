@@ -17,6 +17,13 @@ package org.apache.solr.search.facet;
  * limitations under the License.
  */
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Random;
+
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.solr.JSONTestUtil;
 import org.apache.solr.SolrTestCaseHS;
@@ -55,7 +62,108 @@ public class TestJsonFacets extends SolrTestCaseHS {
     }
   }
 
+  // attempt to reproduce https://github.com/Heliosearch/heliosearch/issues/33
+  @Test
+  public void testComplex() throws Exception {
+    Random r = random();
+
+    Client client = Client.localClient;
+    ModifiableSolrParams p = params("make_s","make_s", "model_s","model_s");
+
+    MacroExpander m = new MacroExpander( p.getMap() );
+
+    String make_s = m.expand("${make_s}");
+    String model_s = m.expand("${model_s}");
+
+    client.deleteByQuery("*:*", null);
+
+    client.add(sdoc("id", "1", make_s, "honda"), null);  //  missing model
+    client.add(sdoc("id", "1", make_s, "honda"), null);  //  dup to get delete
+    client.add(sdoc("id", "2", make_s, "honda", model_s, "accord"), null);
+    client.add(sdoc("id", "2", make_s, "honda", model_s, "accord"), null);  // dup to get delete
+    client.add(sdoc("id", "3"                 , model_s, "accord"), null);  // missing make
+    client.add(sdoc("id", "3"                 , model_s, "accord"), null);  // dup to get delete
+    client.add(sdoc("id", "4", make_s, "honda", model_s, "accord"), null);
+
+    int nDocs = 99;
+    String[] makes = {"honda", "toyota", "ford", null};
+    String[] honda_models = {"accord", "civic", "fit", "pilot", null};  // make sure this is alphabetized to match tiebreaks in index
+    String[] other_models = {"a", "b", "c", "x", "y", "z", null};
+
+    int nHonda = 0;
+    final int[] honda_model_counts = new int[honda_models.length];
+
+    for (int i=0; i<nDocs; i++) {
+      SolrInputDocument doc = sdoc("id", Integer.toString(i));
+      String make = rand(makes);
+      if (make != null) {
+        doc.addField(make_s, make);
+        if ("honda".equals(make)) {
+          nHonda++;
+        }
+      }
+
+      if ("honda".equals(make)) {
+        int modelNum = r.nextInt(honda_models.length);
+        String model = honda_models[modelNum];
+        if (model != null) {
+          doc.addField(model_s, model);
+          // only count when doc has the make set correctly
+          honda_model_counts[modelNum]++;
+        }
+      } else if (make == null) {
+        doc.addField(model_s, rand(honda_models));  // add some docs w/ model but w/o make
+      } else {
+        // other makes
+        doc.addField(model_s, rand(other_models));  // add some docs w/ model but w/o make
+      }
+
+      doc.addField("cost_f", "30000.0");
+
+      client.add(doc, null);
+      if (r.nextInt(10) == 0) {
+        client.add(doc, null);  // dup, causing a delete
+      }
+      if (r.nextInt(20) == 0) {
+        client.commit();  // force new seg
+      }
+    }
+
+    client.commit();
+
+    // now figure out top counts
+    List<Integer> idx = new ArrayList<>();
+    for (int i=0; i<honda_model_counts.length; i++) {
+      idx.add(i);
+    }
+    Collections.sort(idx, new Comparator<Integer>() {
+      @Override
+      public int compare(Integer o1, Integer o2) {
+        int cmp = honda_model_counts[o2] - honda_model_counts[o1];
+        return cmp == 0 ? o1 - o2 : cmp;
+      }
+    });
+
+
+
+    // straight query facets
+    client.testJQ(params(p, "q", "*:*", "rows","0", "fq","+${make_s}:honda +cost_f:[0 TO 100000]"
+            , "json.facet", "{makes:{terms:{field:${make_s}, limit:20, facet:{avg:'avg(cost_f)', models:{terms:{field:${model_s}, mincount:2, limit:2, facet:{avg:'avg(cost_f)'}    }} } }} }"
+            , "facet","true", "facet.pivot","make_s,model_s"
+        )
+        , "facets=={count:" + nHonda + ", makes:{buckets:[{val:honda, count:" + nHonda + ", avg:30000.0, models:{buckets:["
+           + "{val:" + honda_models[idx.get(0)] + ", count:" + honda_model_counts[idx.get(0)] + ", avg:30000.0},"
+           + "{val:" + honda_models[idx.get(1)] + ", count:" + honda_model_counts[idx.get(1)] + ", avg:30000.0}]}"
+           + "}]}}"
+    );
+
+
+  }
+
+
+
   public void testStatsSimple() throws Exception {
+    assertU(delQ("*:*"));
     assertU(add(doc("id", "1", "cat_s", "A", "where_s", "NY", "num_d", "4", "num_i", "2", "val_b", "true",      "sparse_s","one")));
     assertU(add(doc("id", "2", "cat_s", "B", "where_s", "NJ", "num_d", "-9", "num_i", "-5", "val_b", "false")));
     assertU(add(doc("id", "3")));
@@ -162,6 +270,8 @@ public class TestJsonFacets extends SolrTestCaseHS {
     String super_s = m.expand("${super_s}");
     String sparse_s = m.expand("${sparse_s}");
     String multi_ss = m.expand("${multi_ss}");
+
+    client.deleteByQuery("*:*", null);
 
     client.add(sdoc("id", "1", cat_s, "A", where_s, "NY", num_d, "4", num_i, "2", super_s, "zodiac", val_b, "true", sparse_s, "one"), null);
     client.add(sdoc("id", "2", cat_s, "B", where_s, "NJ", num_d, "-9", num_i, "-5", super_s,"superman", val_b, "false"                , multi_ss,"a", "multi_ss","b" ), null);
