@@ -47,6 +47,7 @@ public abstract class FacetRequest {
   protected Map<String,AggValueSource> facetStats;  // per-bucket statistics
   protected Map<String,FacetRequest> subFacets;     // list of facets
   protected List<String> excludeFilters;
+  protected boolean processEmpty;
 
   public FacetRequest() {
     facetStats = new LinkedHashMap<>();
@@ -156,7 +157,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   }
 
   protected void processStats(SimpleOrderedMap<Object> bucket, DocSet docs, int docCount) throws IOException {
-    if (freq.getFacetStats().size() == 0) {
+    if (docCount == 0 && !freq.processEmpty || freq.getFacetStats().size() == 0) {
       bucket.add("count", docCount);
       return;
     }
@@ -223,9 +224,12 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
   }
 
   void addStats(SimpleOrderedMap<Object> target, int slotNum) throws IOException {
-    target.add("count", countAcc.getCount(slotNum));
-    for (SlotAcc acc : accs) {
-      acc.setValues(target, slotNum);
+    int count = countAcc.getCount(slotNum);
+    target.add("count", count);
+    if (count > 0 || freq.processEmpty) {
+      for (SlotAcc acc : accs) {
+        acc.setValues(target, slotNum);
+      }
     }
   }
 
@@ -258,7 +262,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
     }
 
     try {
-      processStats(bucket, result, (int)count);
+      processStats(bucket, result, (int) count);
       processSubs(bucket, result);
     } finally {
       if (result != null) {
@@ -273,6 +277,10 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
 
   protected void processSubs(SimpleOrderedMap<Object> bucket, DocSet result) throws IOException {
     // TODO: process exclusions, etc
+
+    if (result == null || result.size() == 0 && !freq.processEmpty) {
+      return;
+    }
 
     FacetContext subContext = fcontext.sub();
     subContext.base = result;
@@ -322,6 +330,11 @@ abstract class FacetParser<FacetRequestT extends FacetRequest> {
       for (Map.Entry<String,Object> entry : m.entrySet()) {
         String key = entry.getKey();
         Object value = entry.getValue();
+
+        if ("processEmpty".equals(key)) {
+          facet.processEmpty = getBoolean(m, "processEmpty", false);
+          continue;
+        }
 
         // "my_prices" : { "range" : { "field":...
         // key="my_prices", value={"range":..

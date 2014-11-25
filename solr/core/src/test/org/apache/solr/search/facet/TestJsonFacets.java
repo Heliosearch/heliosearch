@@ -151,7 +151,7 @@ public class TestJsonFacets extends SolrTestCaseHS {
 
     // straight query facets
     client.testJQ(params(p, "q", "*:*", "rows","0", "fq","+${make_s}:honda +cost_f:[${price_low} TO ${price_high}]"
-            , "json.facet", "{makes:{terms:{field:${make_s}, facet:{models:{terms:{field:${model_s}, limit:2}}}}}}}"
+            , "json.facet", "{makes:{terms:{field:${make_s}, facet:{models:{terms:{field:${model_s}, limit:2, mincount:0}}}}}}}"
             , "facet","true", "facet.pivot","make_s,model_s", "facet.limit", "2"
         )
         , "facets=={count:" + nHonda + ", makes:{buckets:[{val:honda, count:" + nHonda + ", models:{buckets:["
@@ -342,20 +342,20 @@ public class TestJsonFacets extends SolrTestCaseHS {
             "'f1':{  'buckets':[{ 'val':'A', 'count':1}]} } "
     );
 
-    // test  mincount of 0
+    // test  mincount of 0 - need processEmpty for distrib to match up
     client.testJQ(params(p, "q", "id:1"
-            , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:0}}}"
+            , "json.facet", "{processEmpty:true, f1:{terms:{field:'${cat_s}', mincount:0}}}"
         )
         , "facets=={ 'count':1, " +
             "'f1':{  'buckets':[{ 'val':'A', 'count':1}, { 'val':'B', 'count':0}]} } "
     );
 
-    // test  mincount of 0 with stats
+    // test  mincount of 0 with stats, need processEmpty for distrib to match up
     client.testJQ(params(p, "q", "id:1"
-            , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:0, allBuckets:true, facet:{n1:'sum(${num_d})'}  }}}"
+            , "json.facet", "{processEmpty:true, f1:{terms:{field:'${cat_s}', mincount:0, allBuckets:true, facet:{n1:'sum(${num_d})'}  }}}"
         )
         , "facets=={ 'count':1, " +
-            "'f1':{ allBuckets:{ 'count':1, n1:4.0}, 'buckets':[{ 'val':'A', 'count':1, n1:4.0}, { 'val':'B', 'count':0, n1:0.0}]} } "
+            "'f1':{ allBuckets:{ 'count':1, n1:4.0}, 'buckets':[{ 'val':'A', 'count':1, n1:4.0}, { 'val':'B', 'count':0 /*, n1:0.0 */ }]} } "
     );
 
     // test sorting by stat
@@ -531,14 +531,14 @@ public class TestJsonFacets extends SolrTestCaseHS {
     client.testJQ(params(p, "q", "*:*"
             , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
         )
-        , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0,x:0.0,ny:{count:0}} ] } }"
+        , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0 /* ,x:0.0,ny:{count:0} */ } ] } }"
     );
 
     // range facet with sub facets and stats, with "other:all"
     client.testJQ(params(p, "q", "*:*"
             , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5, other:all,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
         )
-        , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0,x:0.0,ny:{count:0}} ]" +
+        , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0 /* ,x:0.0,ny:{count:0} */} ]" +
             ",before: {count:1,x:-5.0,ny:{count:0}}" +
             ",after:  {count:1,x:7.0, ny:{count:0}}" +
             ",between:{count:3,x:0.0, ny:{count:2}}" +
@@ -550,9 +550,9 @@ public class TestJsonFacets extends SolrTestCaseHS {
     client.testJQ(params(p, "q", "id:(3 4 6)"
             , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5, other:all,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
         )
-        , "facets=={count:3, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:1,x:3.0,ny:{count:0}}, {val:5.0,count:0,x:0.0,ny:{count:0}} ]" +
-            ",before: {count:0,x:0.0,ny:{count:0}}" +
-            ",after:  {count:0,x:0.0, ny:{count:0}}" +
+        , "facets=={count:3, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:1,x:3.0,ny:{count:0}}, {val:5.0,count:0 /* ,x:0.0,ny:{count:0} */} ]" +
+            ",before: {count:0 /* ,x:0.0,ny:{count:0} */ }" +
+            ",after:  {count:0 /* ,x:0.0,ny:{count:0} */}" +
             ",between:{count:2,x:-2.0, ny:{count:1}}" +
             " } }"
     );
@@ -566,12 +566,11 @@ public class TestJsonFacets extends SolrTestCaseHS {
     );
 
     // stats at top level, no matches
-    // todo: should we just leave stats with no matches out by default?
     client.testJQ(params(p, "q", "id:DOESNOTEXIST"
             , "json.facet", "{ sum1:'sum(${num_d})', sumsq1:'sumsq(${num_d})', avg1:'avg(${num_d})', min1:'min(${num_d})', max1:'max(${num_d})', numwhere:'unique(${where_s})' }"
         )
-        , "facets=={count:0, " +
-            "sum1:0.0, sumsq1:0.0, avg1:0.0, min1:'NaN', max1:'NaN', numwhere:0  }"
+        , "facets=={count:0 " +
+            "/* ,sum1:0.0, sumsq1:0.0, avg1:0.0, min1:'NaN', max1:'NaN', numwhere:0 */ }"
     );
 
     //
