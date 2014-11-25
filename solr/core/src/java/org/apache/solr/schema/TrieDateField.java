@@ -66,6 +66,7 @@ public class TrieDateField extends DateField implements DateValueFieldType {
 
   @Override
   protected void init(IndexSchema schema, Map<String, String> args) {
+    super.init(schema, args);
     wrappedField.init(schema, args);
   }
 

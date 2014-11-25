@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -531,8 +532,7 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
       LookupResult result;
 
       if (doHighlight) {
-        Object highlightKey = highlight(text, matchedTokens, prefixToken);
-        result = new LookupResult(highlightKey.toString(), highlightKey, score, payload, contexts);
+        result = new LookupResult(text, highlight(text, matchedTokens, prefixToken), score, payload, contexts);
       } else {
         result = new LookupResult(text, score, payload, contexts);
       }
@@ -626,12 +626,14 @@ public class AnalyzingInfixSuggester extends Lookup implements Closeable {
   protected void addPrefixMatch(StringBuilder sb, String surface, String analyzed, String prefixToken) {
     // TODO: apps can try to invert their analysis logic
     // here, e.g. downcase the two before checking prefix:
+    if (prefixToken.length() >= surface.length()) {
+      addWholeMatch(sb, surface, analyzed);
+      return;
+    }
     sb.append("<b>");
     sb.append(surface.substring(0, prefixToken.length()));
     sb.append("</b>");
-    if (prefixToken.length() < surface.length()) {
-      sb.append(surface.substring(prefixToken.length()));
-    }
+    sb.append(surface.substring(prefixToken.length()));
   }
 
   @Override

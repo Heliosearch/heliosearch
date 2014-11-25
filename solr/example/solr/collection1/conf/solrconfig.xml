@@ -35,7 +35,7 @@
        that you fully re-index after changing this setting as it can
        affect both how text is indexed and queried.
   -->
-  <luceneMatchVersion>4.10.2</luceneMatchVersion>
+  <luceneMatchVersion>4.10.3</luceneMatchVersion>
 
   <!-- <lib/> directives can be used to instruct Solr to load any Jars
        identified and use them to resolve any "plugins" specified in
@@ -72,17 +72,17 @@
        The examples below can be used to load some solr-contribs along 
        with their external dependencies.
     -->
-  <lib dir="../../../contrib/extraction/lib" regex=".*\.jar" />
-  <lib dir="../../../dist/" regex="solr-cell-\d.*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/contrib/extraction/lib" regex=".*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/dist/" regex="solr-cell-\d.*\.jar" />
 
-  <lib dir="../../../contrib/clustering/lib/" regex=".*\.jar" />
-  <lib dir="../../../dist/" regex="solr-clustering-\d.*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/contrib/clustering/lib/" regex=".*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/dist/" regex="solr-clustering-\d.*\.jar" />
 
-  <lib dir="../../../contrib/langid/lib/" regex=".*\.jar" />
-  <lib dir="../../../dist/" regex="solr-langid-\d.*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/contrib/langid/lib/" regex=".*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/dist/" regex="solr-langid-\d.*\.jar" />
 
-  <lib dir="../../../contrib/velocity/lib" regex=".*\.jar" />
-  <lib dir="../../../dist/" regex="solr-velocity-\d.*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/contrib/velocity/lib" regex=".*\.jar" />
+  <lib dir="${solr.install.dir:../../..}/dist/" regex="solr-velocity-\d.*\.jar" />
 
   <!-- an exact 'path' can be used instead of a 'dir' to specify a 
        specific jar file.  This will cause a serious error to be logged 
@@ -273,6 +273,11 @@
     <!--
     <unlockOnStartup>false</unlockOnStartup>
       -->
+    
+    <!-- Expert: Controls how often Lucene loads terms into memory
+         Default is 128 and is likely good for most everyone.
+      -->
+    <!-- <termIndexInterval>128</termIndexInterval> -->
 
     <!-- If true, IndexReaders will be opened/reopened from the IndexWriter
          instead of from the Directory. Hosts in a master/slave setup
@@ -1418,9 +1423,9 @@
     </arr>
   </requestHandler>
 
-  <!-- This buggy configuration forces a long build at startup 
+  <!-- This causes long startup times on big indexes, even when never used.  See SOLR-6679
   <searchComponent name="suggest" class="solr.SuggestComponent">
-  	<lst name="suggester">
+    <lst name="suggester">
       <str name="name">mySuggester</str>
       <str name="lookupImpl">FuzzyLookupFactory</str>
       <str name="dictionaryImpl">DocumentDictionaryFactory</str>
@@ -1439,7 +1444,7 @@
       <str>suggest</str>
     </arr>
   </requestHandler>
-  --> 
+  -->
 
   <!-- Term Vector Component
 

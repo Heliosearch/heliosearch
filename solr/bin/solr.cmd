@@ -230,6 +230,10 @@ goto parse_args
 :set_server_dir
 
 set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Directory name is required!
+  goto invalid_cmd_line
+)
 set firstChar=%arg:~0,1%
 IF "%firstChar%"=="-" (
   set SCRIPT_ERROR=Expected directory but found %2 instead!
@@ -249,6 +253,10 @@ goto parse_args
 :set_solr_home_dir
 
 set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Directory name is required!
+  goto invalid_cmd_line
+)
 set firstChar=%arg:~0,1%
 IF "%firstChar%"=="-" (
   set SCRIPT_ERROR=Expected directory but found %2 instead!
@@ -262,6 +270,10 @@ goto parse_args
 :set_example
 
 set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Example name is required!
+  goto invalid_cmd_line
+)
 set firstChar=%arg:~0,1%
 IF "%firstChar%"=="-" (
   set SCRIPT_ERROR=Expected example name but found %2 instead!
@@ -276,6 +288,10 @@ goto parse_args
 :set_memory
 
 set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Memory setting is required!
+  goto invalid_cmd_line
+)
 set firstChar=%arg:~0,1%
 IF "%firstChar%"=="-" (
   set SCRIPT_ERROR=Expected memory setting but found %2 instead!
@@ -289,6 +305,10 @@ goto parse_args
 
 :set_host
 set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Hostname is required!
+  goto invalid_cmd_line
+)
 set firstChar=%arg:~0,1%
 IF "%firstChar%"=="-" (
   set SCRIPT_ERROR=Expected hostname but found %2 instead!
@@ -302,6 +322,10 @@ goto parse_args
 
 :set_port
 set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Port is required!
+  goto invalid_cmd_line
+)
 set firstChar=%arg:~0,1%
 IF "%firstChar%"=="-" (
   set SCRIPT_ERROR=Expected port but found %2 instead!
@@ -315,12 +339,15 @@ goto parse_args
 
 :set_stop_key
 set "arg=%~2"
-set firstChar=%arg:~0,1%
-IF "%firstChar%"=="-" (
-  set SCRIPT_ERROR=Expected port but found %2 instead!
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Stop key is required!
   goto invalid_cmd_line
 )
-
+set firstChar=%arg:~0,1%
+IF "%firstChar%"=="-" (
+  set SCRIPT_ERROR=Expected stop key but found %2 instead!
+  goto invalid_cmd_line
+)
 set STOP_KEY=%~2
 SHIFT
 SHIFT
@@ -329,6 +356,10 @@ goto parse_args
 :set_zookeeper
 
 set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=ZooKeeper connection string is required!
+  goto invalid_cmd_line
+)
 set firstChar=%arg:~0,1%
 IF "%firstChar%"=="-" (
   set SCRIPT_ERROR=Expected ZooKeeper connection string but found %2 instead!
@@ -493,6 +524,32 @@ IF NOT "%SOLR_HEAP%"=="" set SOLR_JAVA_MEM=-Xms%SOLR_HEAP% -Xmx%SOLR_HEAP%
 IF "%SOLR_JAVA_MEM%"=="" set SOLR_JAVA_MEM=-Xms512m -Xmx512m
 IF "%SOLR_TIMEZONE%"=="" set SOLR_TIMEZONE=UTC
 
+@REM Add Java version specific flags if needed
+set JAVAVER=
+set JAVA_MAJOR=
+set JAVA_BUILD=0
+
+"%JAVA%" -version 2>&1 | findstr /i "version" > javavers
+set /p JAVAVEROUT=<javavers
+del javavers
+for /f "tokens=3" %%g in ("!JAVAVEROUT!") do (
+  set JAVAVER=%%g
+  set JAVAVER=!JAVAVER:"=!
+  for /f "delims=_ tokens=1-3" %%v in ("!JAVAVER!") do (
+    set JAVA_MAJOR=!JAVAVER:~0,3!
+    set /a JAVA_BUILD=%%w
+  )
+)
+IF "!JAVA_MAJOR!"=="1.7" (
+  set "GC_TUNE=%GC_TUNE% -XX:CMSFullGCsBeforeCompaction=1 -XX:CMSTriggerPermRatio=80"
+  IF !JAVA_BUILD! GEQ 40 (
+    IF !JAVA_BUILD! LEQ 51 (
+      set "GC_TUNE=!GC_TUNE! -XX:-UseSuperWord"
+      @echo WARNING: Java version !JAVAVER! has known bugs with Lucene and requires the -XX:-UseSuperWord flag. Please consider upgrading your JVM.
+    )
+  )
+)
+
 IF "%verbose%"=="1" (
     @echo Starting Solr using the following settings:
     @echo     JAVA            = %JAVA%
@@ -500,7 +557,7 @@ IF "%verbose%"=="1" (
     @echo     SOLR_HOME       = %SOLR_HOME%
     @echo     SOLR_HOST       = %SOLR_HOST%
     @echo     SOLR_PORT       = %SOLR_PORT%
-    @echo     GC_TUNE         = %GC_TUNE%
+    @echo     GC_TUNE         = !GC_TUNE!
     @echo     GC_LOG_OPTS     = %GC_LOG_OPTS%
     @echo     SOLR_JAVA_MEM   = %SOLR_JAVA_MEM%
     @echo     REMOTE_JMX_OPTS = %REMOTE_JMX_OPTS%
@@ -508,8 +565,8 @@ IF "%verbose%"=="1" (
     @echo     SOLR_TIMEZONE   = %SOLR_TIMEZONE%
 )
 
-set START_OPTS=-Duser.timezone=%SOLR_TIMEZONE% -Djava.net.preferIPv4Stack=true -Dsolr.autoSoftCommit.maxTime=3000
-set START_OPTS=%START_OPTS% %GC_TUNE% %GC_LOG_OPTS%
+set START_OPTS=-Duser.timezone=%SOLR_TIMEZONE% -Djava.net.preferIPv4Stack=true
+set START_OPTS=%START_OPTS% !GC_TUNE! %GC_LOG_OPTS%
 IF NOT "!CLOUD_MODE_OPTS!"=="" set START_OPTS=%START_OPTS% !CLOUD_MODE_OPTS!
 IF NOT "%REMOTE_JMX_OPTS%"=="" set START_OPTS=%START_OPTS% %REMOTE_JMX_OPTS%
 IF NOT "%SOLR_ADDL_ARGS%"=="" set START_OPTS=%START_OPTS% %SOLR_ADDL_ARGS%
@@ -522,10 +579,10 @@ cd "%SOLR_SERVER_DIR%"
 IF "%FG%"=="1" (
   REM run solr in the foreground
   "%JAVA%" -server -Xss256k %SOLR_JAVA_MEM% %START_OPTS% -DSTOP.PORT=%STOP_PORT% -DSTOP.KEY=%STOP_KEY% ^
-    -Djetty.port=%SOLR_PORT% -Dsolr.solr.home="%SOLR_HOME%" -jar start.jar
+    -Djetty.port=%SOLR_PORT% -Dsolr.solr.home="%SOLR_HOME%" -Dsolr.install.dir="%SOLR_TIP%" -jar start.jar
 ) ELSE (
   START "" "%JAVA%" -server -Xss256k %SOLR_JAVA_MEM% %START_OPTS% -DSTOP.PORT=%STOP_PORT% -DSTOP.KEY=%STOP_KEY% ^
-    -Djetty.port=%SOLR_PORT% -Dsolr.solr.home="%SOLR_HOME%" -jar start.jar > "%SOLR_SERVER_DIR%\logs\solr-%SOLR_PORT%-console.log"
+    -Djetty.port=%SOLR_PORT% -Dsolr.solr.home="%SOLR_HOME%" -Dsolr.install.dir="%SOLR_TIP%" -jar start.jar > "%SOLR_SERVER_DIR%\logs\solr-%SOLR_PORT%-console.log"
 )
 
 goto done
