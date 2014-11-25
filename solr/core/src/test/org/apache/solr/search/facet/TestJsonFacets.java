@@ -68,7 +68,12 @@ public class TestJsonFacets extends SolrTestCaseHS {
     Random r = random();
 
     Client client = Client.localClient;
-    ModifiableSolrParams p = params("make_s","make_s", "model_s","model_s");
+
+    double price_low = 11000;
+    double price_high = 100000;
+
+    ModifiableSolrParams p = params("make_s","make_s", "model_s","model_s", "price_low",Double.toString(price_low), "price_high",Double.toString(price_high));
+
 
     MacroExpander m = new MacroExpander( p.getMap() );
 
@@ -77,16 +82,10 @@ public class TestJsonFacets extends SolrTestCaseHS {
 
     client.deleteByQuery("*:*", null);
 
-    client.add(sdoc("id", "1", make_s, "honda"), null);  //  missing model
-    client.add(sdoc("id", "1", make_s, "honda"), null);  //  dup to get delete
-    client.add(sdoc("id", "2", make_s, "honda", model_s, "accord"), null);
-    client.add(sdoc("id", "2", make_s, "honda", model_s, "accord"), null);  // dup to get delete
-    client.add(sdoc("id", "3"                 , model_s, "accord"), null);  // missing make
-    client.add(sdoc("id", "3"                 , model_s, "accord"), null);  // dup to get delete
-    client.add(sdoc("id", "4", make_s, "honda", model_s, "accord"), null);
 
     int nDocs = 99;
     String[] makes = {"honda", "toyota", "ford", null};
+    Double[] prices = {10000.0, 30000.0, 50000.0, 0.0, null};
     String[] honda_models = {"accord", "civic", "fit", "pilot", null};  // make sure this is alphabetized to match tiebreaks in index
     String[] other_models = {"a", "b", "c", "x", "y", "z", null};
 
@@ -95,12 +94,16 @@ public class TestJsonFacets extends SolrTestCaseHS {
 
     for (int i=0; i<nDocs; i++) {
       SolrInputDocument doc = sdoc("id", Integer.toString(i));
+
+      Double price = rand(prices);
+      if (price != null) {
+        doc.addField("cost_f", price);
+      }
+      boolean matches_price = price!=null && price >= price_low && price <= price_high;
+
       String make = rand(makes);
       if (make != null) {
         doc.addField(make_s, make);
-        if ("honda".equals(make)) {
-          nHonda++;
-        }
       }
 
       if ("honda".equals(make)) {
@@ -108,7 +111,9 @@ public class TestJsonFacets extends SolrTestCaseHS {
         String model = honda_models[modelNum];
         if (model != null) {
           doc.addField(model_s, model);
-          // only count when doc has the make set correctly
+        }
+        if (matches_price) {
+          nHonda++;
           honda_model_counts[modelNum]++;
         }
       } else if (make == null) {
@@ -117,8 +122,6 @@ public class TestJsonFacets extends SolrTestCaseHS {
         // other makes
         doc.addField(model_s, rand(other_models));  // add some docs w/ model but w/o make
       }
-
-      doc.addField("cost_f", "30000.0");
 
       client.add(doc, null);
       if (r.nextInt(10) == 0) {
@@ -133,7 +136,7 @@ public class TestJsonFacets extends SolrTestCaseHS {
 
     // now figure out top counts
     List<Integer> idx = new ArrayList<>();
-    for (int i=0; i<honda_model_counts.length; i++) {
+    for (int i=0; i<honda_model_counts.length-1; i++) {
       idx.add(i);
     }
     Collections.sort(idx, new Comparator<Integer>() {
@@ -147,13 +150,13 @@ public class TestJsonFacets extends SolrTestCaseHS {
 
 
     // straight query facets
-    client.testJQ(params(p, "q", "*:*", "rows","0", "fq","+${make_s}:honda +cost_f:[0 TO 100000]"
-            , "json.facet", "{makes:{terms:{field:${make_s}, limit:20, facet:{avg:'avg(cost_f)', models:{terms:{field:${model_s}, mincount:2, limit:2, facet:{avg:'avg(cost_f)'}    }} } }} }"
-            , "facet","true", "facet.pivot","make_s,model_s"
+    client.testJQ(params(p, "q", "*:*", "rows","0", "fq","+${make_s}:honda +cost_f:[${price_low} TO ${price_high}]"
+            , "json.facet", "{makes:{terms:{field:${make_s}, facet:{models:{terms:{field:${model_s}, limit:2}}}}}}}"
+            , "facet","true", "facet.pivot","make_s,model_s", "facet.limit", "2"
         )
-        , "facets=={count:" + nHonda + ", makes:{buckets:[{val:honda, count:" + nHonda + ", avg:30000.0, models:{buckets:["
-           + "{val:" + honda_models[idx.get(0)] + ", count:" + honda_model_counts[idx.get(0)] + ", avg:30000.0},"
-           + "{val:" + honda_models[idx.get(1)] + ", count:" + honda_model_counts[idx.get(1)] + ", avg:30000.0}]}"
+        , "facets=={count:" + nHonda + ", makes:{buckets:[{val:honda, count:" + nHonda + ", models:{buckets:["
+           + "{val:" + honda_models[idx.get(0)] + ", count:" + honda_model_counts[idx.get(0)] + "},"
+           + "{val:" + honda_models[idx.get(1)] + ", count:" + honda_model_counts[idx.get(1)] + "}]}"
            + "}]}}"
     );
 
@@ -298,6 +301,13 @@ public class TestJsonFacets extends SolrTestCaseHS {
         , "facets=={ 'count':6, 'catB':{'count':3, 'nj':{'count':2}, 'ny':{'count':1}}}"
     );
 
+    // nested query facets on subset
+    client.testJQ(params(p, "q", "id:(2 3)"
+            , "json.facet", "{ catB:{query:{q:'${cat_s}:B', facet:{nj:{query:'${where_s}:NJ'}, ny:{query:'${where_s}:NY'}} }}}"
+        )
+        , "facets=={ 'count':2, 'catB':{'count':1, 'nj':{'count':1}, 'ny':{'count':0}}}"
+    );
+
     // nested query facets with stats
     client.testJQ(params(p, "q", "*:*"
             , "json.facet", "{ catB:{query:{q:'${cat_s}:B', facet:{nj:{query:{q:'${where_s}:NJ'}}, ny:{query:'${where_s}:NY'}} }}}"
@@ -393,6 +403,14 @@ public class TestJsonFacets extends SolrTestCaseHS {
         )
         , "facets=={ 'count':6, " +
             "'cat':{ 'buckets':[{ 'val':'B', 'count':3, 'nj':{ 'count':2}}, { 'val':'A', 'count':2, 'nj':{ 'count':1}}]} }"
+    );
+
+    // terms facet with nested query facet on subset
+    client.testJQ(params(p, "q", "id:(2 5 4)"
+            , "json.facet", "{cat:{terms:{field:'${cat_s}', facet:{nj:{query:'${where_s}:NJ'}}    }   }} }"
+        )
+        , "facets=={ 'count':3, " +
+            "'cat':{ 'buckets':[{ 'val':'B', 'count':2, 'nj':{ 'count':2}}, { 'val':'A', 'count':1, 'nj':{ 'count':1}}]} }"
     );
 
     // test prefix
@@ -527,6 +545,17 @@ public class TestJsonFacets extends SolrTestCaseHS {
             " } }"
     );
 
+
+    // range facet with sub facets and stats, with "other:all", on subset
+    client.testJQ(params(p, "q", "id:(3 4 6)"
+            , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5, other:all,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
+        )
+        , "facets=={count:3, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:1,x:3.0,ny:{count:0}}, {val:5.0,count:0,x:0.0,ny:{count:0}} ]" +
+            ",before: {count:0,x:0.0,ny:{count:0}}" +
+            ",after:  {count:0,x:0.0, ny:{count:0}}" +
+            ",between:{count:2,x:-2.0, ny:{count:1}}" +
+            " } }"
+    );
 
     // stats at top level
     client.testJQ(params(p, "q", "*:*"

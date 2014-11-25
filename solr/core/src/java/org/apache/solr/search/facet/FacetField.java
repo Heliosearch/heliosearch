@@ -329,7 +329,7 @@ abstract class FacetFieldProcessorFCBase extends FacetFieldProcessor {
       // handle sub-facets for this bucket
       if (freq.getSubFacets().size() > 0) {
         FacetContext subContext = fcontext.sub();
-        subContext.base = fcontext.searcher.getDocSet(new TermQuery(new Term(sf.getName(), br.clone())));
+        subContext.base = fcontext.searcher.getDocSet(new TermQuery(new Term(sf.getName(), br.clone())), fcontext.base);
         try {
           fillBucketSubs(bucket, subContext);
         } finally {

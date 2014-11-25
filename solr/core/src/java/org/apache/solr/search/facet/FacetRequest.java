@@ -246,7 +246,7 @@ class FacetProcessor<FacetRequestT extends FacetRequest>  {
         result = fcontext.base;
         result.incref();
       } else {
-        result = fcontext.searcher.getDocSet(q);
+        result = fcontext.searcher.getDocSet(q, fcontext.base);
       }
       count = result.size();
     } else {
