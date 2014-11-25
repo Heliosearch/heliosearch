@@ -944,8 +944,8 @@ public class QueryEqualityTest extends SolrTestCaseJ4 {
     assertFuncEquals("agg_count()", "agg_count()");
     assertFuncEquals("agg_unique(foo_i)", "agg_unique(foo_i)");
     assertFuncEquals("agg_sumsq(foo_i)", "agg_sumsq(foo_i)");
-    assertFuncEquals("agg_stdev(foo_i)", "agg_stdev(foo_i)");
-    assertFuncEquals("agg_multistat(foo_i)", "agg_multistat(foo_i)");
+    // assertFuncEquals("agg_stdev(foo_i)", "agg_stdev(foo_i)");
+    // assertFuncEquals("agg_multistat(foo_i)", "agg_multistat(foo_i)");
 
     assertQueryEquals("terms", "{!terms f=foo_i}10,20,30,-10,-20,-30", "{!terms f=foo_i}10,20,30,-10,-20,-30");
   }

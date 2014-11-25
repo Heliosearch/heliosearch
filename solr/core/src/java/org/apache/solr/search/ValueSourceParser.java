@@ -846,6 +846,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
       }
     });
 
+    /***
     addParser("agg_stdev", new ValueSourceParser() {
       @Override
       public ValueSource parse(FunctionQParser fp) throws SyntaxError {
@@ -859,6 +860,7 @@ public abstract class ValueSourceParser implements NamedListInitializedPlugin {
         return null;
       }
     });
+    ***/
 
     addParser("agg_min", new ValueSourceParser() {
       @Override
