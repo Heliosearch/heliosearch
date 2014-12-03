@@ -36,6 +36,7 @@ import org.apache.solr.common.params.ShardParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
+import org.apache.solr.core.HS;
 import org.apache.solr.handler.component.ResponseBuilder;
 import org.apache.solr.handler.component.SearchComponent;
 import org.apache.solr.handler.component.ShardRequest;
@@ -87,10 +88,12 @@ public class FacetModule extends SearchComponent {
 
   @Override
   public void prepare(ResponseBuilder rb) throws IOException {
-    SolrParams params = rb.req.getParams();
+    Map<String,Object> json = rb.req.getJSON();
+    if (json == null) return;
+    Map<String,Object> jsonFacet = (Map<String, Object>) json.get("facet");
+    if (jsonFacet == null) return;
 
-    String[] jsonFacets = rb.req.getParams().getParams("json.facet");
-    if (jsonFacets == null) return;
+    SolrParams params = rb.req.getParams();
 
     boolean isShard = params.getBool(ShardParams.IS_SHARD, false);
     if (isShard) {
@@ -104,28 +107,11 @@ public class FacetModule extends SearchComponent {
     // At this point, we know we need to do something.  Create and save the state.
     rb.setNeedDocSet(true);
 
-
-    Map<String, Object> all = null;
-    for (String jsonFacet : jsonFacets) {
-      Map<String, Object> facetArgs = null;
-      try {
-        facetArgs = (Map<String, Object>) ObjectBuilder.fromJSON(jsonFacet);
-      } catch (IOException e) {
-        // impossible
-      }
-
-      if (all == null) {
-        all = facetArgs;
-      } else {
-        all.putAll(facetArgs);
-      }
-    }
-
     // Parse the facet in the prepare phase?
     FacetParser parser = new FacetTopParser(rb.req);
     FacetRequest facetRequest = null;
     try {
-      facetRequest = parser.parse(all);
+      facetRequest = parser.parse(jsonFacet);
     } catch (SyntaxError syntaxError) {
       throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, syntaxError);
     }
@@ -133,7 +119,7 @@ public class FacetModule extends SearchComponent {
     FacetComponentState fcState = new FacetComponentState();
     fcState.rb = rb;
     fcState.isShard = isShard;
-    fcState.facetCommands = all;
+    fcState.facetCommands = jsonFacet;
     fcState.facetRequest = facetRequest;
 
     rb.componentInfo.put(FacetComponentState.class, fcState);

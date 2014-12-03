@@ -130,7 +130,7 @@ public abstract class RequestHandlerBase implements SolrRequestHandler, SolrInfo
     numRequests.incrementAndGet();
     TimerContext timer = requestTimes.time();
     try {
-      SolrPluginUtils.setDefaults(req,defaults,appends,invariants);
+      SolrPluginUtils.setDefaults(this, req,defaults,appends,invariants);
       rsp.setHttpCaching(httpCaching);
       handleRequestBody( req, rsp );
       // count timeouts

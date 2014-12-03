@@ -47,6 +47,7 @@ public abstract class SolrQueryRequestBase implements SolrQueryRequest {
   protected SolrParams params;
   protected Map<Object,Object> context;
   protected Iterable<ContentStream> streams;
+  protected Map<String,Object> json;
 
   public SolrQueryRequestBase(SolrCore core, SolrParams params) {
     this.core = core;
@@ -150,4 +151,13 @@ public abstract class SolrQueryRequestBase implements SolrQueryRequest {
     return this.getClass().getSimpleName() + '{' + params + '}';
   }
 
+  @Override
+  public Map<String, Object> getJSON() {
+    return json;
+  }
+
+  @Override
+  public void setJSON(Map<String, Object> json) {
+    this.json = json;
+  }
 }

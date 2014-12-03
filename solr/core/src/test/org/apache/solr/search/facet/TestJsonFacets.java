@@ -27,12 +27,9 @@ import java.util.Random;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.solr.JSONTestUtil;
 import org.apache.solr.SolrTestCaseHS;
-import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.ModifiableSolrParams;
-import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.request.macro.MacroExpander;
-import org.apache.solr.util.TestUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -610,7 +607,9 @@ public class TestJsonFacets extends SolrTestCaseHS {
   @Test
   public void testDistrib() throws Exception {
     initServers();
-    doStats( servers.getClient( random().nextInt() ), params("shards", servers.getShards()) );
+    Client client = servers.getClient( random().nextInt() );
+    client.queryDefaults().set( "shards", servers.getShards() );
+    doStats( client, params() );
   }
 
 }

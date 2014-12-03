@@ -19,6 +19,7 @@ package org.apache.solr.common.params;
 
 import org.apache.solr.common.util.StrUtils;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.io.IOException;
@@ -31,15 +32,29 @@ public class MultiMapSolrParams extends SolrParams {
 
   public static void addParam(String name, String val, Map<String,String[]> map) {
       String[] arr = map.get(name);
-      if (arr ==null) {
-        arr =new String[]{val};
+      if (arr == null) {
+        arr = new String[]{val};
       } else {
         String[] newarr = new String[arr.length+1];
-        System.arraycopy(arr,0,newarr,0,arr.length);
-        newarr[arr.length]=val;
-        arr =newarr;
+        System.arraycopy(arr, 0, newarr, 0, arr.length);
+        newarr[arr.length] = val;
+        arr = newarr;
       }
       map.put(name, arr);
+  }
+
+  public static void addParam(String name, String[] vals, Map<String,String[]> map) {
+    String[] arr = map.put(name, vals);
+    if (arr == null) {
+      return;
+    }
+
+    String[] newarr = new String[arr.length+vals.length];
+    System.arraycopy(arr, 0, newarr, 0, arr.length);
+    System.arraycopy(vals, 0, newarr, arr.length, vals.length);
+    arr = newarr;
+
+    map.put(name, arr);
   }
 
   public MultiMapSolrParams(Map<String,String[]> map) {
@@ -89,4 +104,33 @@ public class MultiMapSolrParams extends SolrParams {
       }
     }
   }
+
+  public static Map<String,String[]> asMultiMap(SolrParams params) {
+    return asMultiMap(params, false);
+  }
+
+  public static Map<String,String[]> asMultiMap(SolrParams params, boolean newCopy) {
+    if (params instanceof MultiMapSolrParams) {
+      Map<String,String[]> map = ((MultiMapSolrParams)params).getMap();
+      if (newCopy) {
+        return new HashMap<>(map);
+      }
+      return map;
+    } else if (params instanceof ModifiableSolrParams) {
+      Map<String,String[]> map = ((ModifiableSolrParams)params).getMap();
+      if (newCopy) {
+        return new HashMap<>(map);
+      }
+      return map;
+    } else {
+      Map<String,String[]> map = new HashMap<>();
+      Iterator<String> iterator = params.getParameterNamesIterator();
+      while (iterator.hasNext()) {
+        String name = iterator.next();
+        map.put(name, params.getParams(name));
+      }
+      return map;
+    }
+  }
+
 }

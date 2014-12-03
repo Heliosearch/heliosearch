@@ -31,11 +31,13 @@ import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.params.ModifiableSolrParams;
+import org.apache.solr.common.params.MultiMapSolrParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
+import org.apache.solr.servlet.DirectSolrConnection;
 import org.noggit.JSONUtil;
 import org.noggit.ObjectBuilder;
 import org.slf4j.Logger;
@@ -80,7 +82,6 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
     }
     return msp;
   }
-
 
   public static Map<String,Object> toObject(Doc doc, IndexSchema schema, Collection<String> fieldNames) {
     Map<String,Object> result = new HashMap<>();
@@ -133,12 +134,8 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
 
   /** Pass "null" for the client to query the local server */
   public static void assertJQ(SolrServer client, SolrParams args, String... tests) throws Exception {
-    if (client == null) {
-      assertJQ( req(args) , tests);
-      return;
-    }
-
-    String resp = getJSON(client, args);
+    String resp;
+    resp = getJSON(client, args);
     matchJSON(resp, tests);
   }
 
@@ -184,6 +181,9 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
 
 
   public static String getQueryResponse(SolrServer client, String wt, SolrParams params) throws Exception {
+    if (client == null) {
+      return getQueryResponse(wt, params);
+    }
     ModifiableSolrParams p = new ModifiableSolrParams(params);
     p.set("wt", wt);
     String path = p.get("qt");
@@ -202,6 +202,19 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
 
     return raw;
   }
+
+  public static String getQueryResponse(String wt, SolrParams params) throws Exception {
+    ModifiableSolrParams p = new ModifiableSolrParams(params);
+    p.set("wt", wt);
+    String path = p.get("qt");
+    p.remove("qt");
+    p.set("indent","true");
+
+    DirectSolrConnection connection = new DirectSolrConnection(h.getCore());
+    String raw = connection.request(path, p, null);
+    return raw;
+  }
+
 
   public static String getJSON(SolrServer client, SolrParams params) throws Exception {
     return getQueryResponse(client, "json", params);
@@ -229,8 +242,12 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
 
   public static class Client {
     ClientProvider provider;
+    ModifiableSolrParams queryDefaults;
 
-    public static Client localClient = new Client(null, 0);
+    public static Client localClient = new Client(null, 1);
+    public static Client localClient() {
+      return new Client(null, 1);
+    }
 
     public Client(List<SolrServer> clients, int seed) {
       if (clients != null) {
@@ -246,11 +263,23 @@ public class SolrTestCaseHS extends SolrTestCaseJ4 {
       return x;
     }
 
+    public ModifiableSolrParams queryDefaults() {
+      if (queryDefaults == null) {
+        queryDefaults = new ModifiableSolrParams();
+      }
+      return queryDefaults;
+    }
+
     public boolean local() {
       return provider == null;
     }
 
     public void testJQ(SolrParams args, String... tests) throws Exception {
+      if (queryDefaults != null) {
+        ModifiableSolrParams newParams = params(queryDefaults);
+        newParams.add(args);
+        args = newParams;
+      }
       SolrServer client = provider==null ? null : provider.client(null, args);
       SolrTestCaseHS.assertJQ(client, args, tests);
     }

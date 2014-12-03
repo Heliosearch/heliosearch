@@ -56,7 +56,8 @@ import org.apache.solr.handler.component.ShardRequest;
 import org.apache.solr.highlight.SolrHighlighter;
 import org.apache.solr.parser.QueryParser;
 import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.request.macro.RequestUtil;
+import org.apache.solr.request.SolrRequestHandler;
+import org.apache.solr.request.json.RequestUtil;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
@@ -124,10 +125,10 @@ public class SolrPluginUtils {
    * @param appends values to be appended to those from the request (or defaults) when dealing with multi-val params, or treated as another layer of defaults for singl-val params.
    * @param invariants values which will be used instead of any request, or default values, regardless of context.
    */
-  public static void setDefaults(SolrQueryRequest req, SolrParams defaults,
+  public static void setDefaults(SolrRequestHandler handler, SolrQueryRequest req, SolrParams defaults,
                                  SolrParams appends, SolrParams invariants) {
 
-    RequestUtil.processParams(req, defaults, appends, invariants);
+    RequestUtil.processParams(handler, req, defaults, appends, invariants);
 /*      SolrParams p = req.getParams();
       p = SolrParams.wrapDefaults(p, defaults);
       p = SolrParams.wrapAppended(p, appends);
@@ -136,6 +137,11 @@ public class SolrPluginUtils {
       req.setParams(p); */
   }
 
+  public static void setDefaults(SolrQueryRequest req, SolrParams defaults,
+                                 SolrParams appends, SolrParams invariants)
+  {
+    setDefaults(null, req, defaults, appends, invariants);
+  }
 
 
   /**

@@ -82,6 +82,10 @@ public interface SolrQueryRequest {
    * Suitable for logging.
    */
   public String getParamString();
+
+  public Map<String,Object> getJSON();
+
+  public void setJSON(Map<String,Object> json);
 }
 
 
