@@ -593,6 +593,64 @@ public class TestJsonFacets extends SolrTestCaseHS {
     );
 
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // test converting legacy facets
+
+    // test mincount
+    client.testJQ(params(p, "q", "*:*"
+            // , "json.facet", "{f1:{terms:{field:'${cat_s}', mincount:3}}}"
+            , "facet","true", "facet.version", "2", "facet.field","{!key=f1}${cat_s}", "facet.mincount","3"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1':{  'buckets':[{ 'val':'B', 'count':3}]} } "
+    );
+
+    // test prefix
+    client.testJQ(params(p, "q", "*:*"
+            // , "json.facet", "{f1:{terms:{field:${super_s}, prefix:s, mincount:0 }}}"  // even with mincount=0, we should only see buckets with the prefix
+            , "facet","true", "facet.version", "2", "facet.field","{!key=f1}${super_s}", "facet.prefix","s", "facet.mincount","0"
+        )
+        , "facets=={ 'count':6, " +
+            "'f1':{ 'buckets':[{val:spiderman, count:1}, {val:superman, count:1}]} } "
+    );
+
+    // range facet with sub facets and stats
+    client.testJQ(params(p, "q", "*:*"
+            // , "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
+            , "facet","true", "facet.version", "2", "facet.range","{!key=f}${num_d}", "facet.range.start","-5", "facet.range.end","10", "facet.range.gap","5"
+            , "f.f.facet.stat","x:sum(${num_i})", "subfacet.f.query","{!key=ny}${where_s}:NY"
+
+        )
+        , "facets=={count:6, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:2,x:5.0,ny:{count:1}}, {val:5.0,count:0 /* ,x:0.0,ny:{count:0} */ } ] } }"
+    );
+
+    // test sorting by stat
+    client.testJQ(params(p, "q", "*:*"
+            // , "json.facet", "{f1:{terms:{field:'${cat_s}', sort:'n1 desc', facet:{n1:'sum(${num_d})'}  }}" +
+            //    " , f2:{terms:{field:'${cat_s}', sort:'n1 asc', facet:{n1:'sum(${num_d})'}  }} }"
+            , "facet","true", "facet.version", "2", "facet.field","{!key=f1}${cat_s}", "f.f1.facet.sort","n1 desc", "facet.stat","n1:sum(num_d)"
+            , "facet.field","{!key=f2}${cat_s}", "f.f1.facet.sort","n1 asc"
+        )
+        , "facets=={ 'count':6, " +
+            "  f1:{  'buckets':[{ val:'A', count:2, n1:6.0 }, { val:'B', count:3, n1:-3.0}]}" +
+            ", f2:{  'buckets':[{ val:'B', count:3, n1:-3.0}, { val:'A', count:2, n1:6.0 }]} }"
+    );
+
+    // range facet with sub facets and stats, with "other:all", on subset
+    client.testJQ(params(p, "q", "id:(3 4 6)"
+            //, "json.facet", "{f:{range:{field:${num_d}, start:-5, end:10, gap:5, other:all,   facet:{ x:'sum(${num_i})', ny:{query:'${where_s}:NY'}}   }}}"
+            , "facet","true", "facet.version", "2", "facet.range","{!key=f}${num_d}", "facet.range.start","-5", "facet.range.end","10", "facet.range.gap","5"
+            , "f.f.facet.stat","x:sum(${num_i})", "subfacet.f.query","{!key=ny}${where_s}:NY", "facet.range.other","all"
+        )
+        , "facets=={count:3, f:{buckets:[ {val:-5.0,count:1,x:-5.0,ny:{count:1}}, {val:0.0,count:1,x:3.0,ny:{count:0}}, {val:5.0,count:0 /* ,x:0.0,ny:{count:0} */} ]" +
+            ",before: {count:0 /* ,x:0.0,ny:{count:0} */ }" +
+            ",after:  {count:0 /* ,x:0.0,ny:{count:0} */}" +
+            ",between:{count:2,x:-2.0, ny:{count:1}}" +
+            " } }"
+    );
+
+
+
 
     // TODO:
     // numdocs('query') stat (don't make a bucket... just a count)

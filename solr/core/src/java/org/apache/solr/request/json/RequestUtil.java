@@ -33,8 +33,6 @@ import org.noggit.JSONParser;
 import org.noggit.ObjectBuilder;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -158,9 +156,17 @@ public class RequestUtil {
     }
 
     Map<String, Object> json = null;
+    // Handle JSON body first, so query params will always overlay on that
+    jsonS = newMap.get("json");
+    if (jsonS != null) {
+      if (json == null) {
+        json = new LinkedHashMap<>();
+      }
+      mergeJSON(json, "json", jsonS, new ObjectUtil.ConflictHandler());
+    }
     for (String key : newMap.keySet()) {
       // json.nl, json.wrf are existing query parameters
-      if ("json".equals(key) || (key.startsWith("json.") && !("json.nl".equals(key) || "json.wrf".equals(key)))) {
+      if (key.startsWith("json.") && !("json.nl".equals(key) || "json.wrf".equals(key))) {
         if (json == null) {
           json = new LinkedHashMap<>();
         }

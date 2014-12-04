@@ -76,8 +76,10 @@ public class FacetComponent extends SearchComponent {
   @Override
   public void prepare(ResponseBuilder rb) throws IOException {
     if (rb.req.getParams().getBool(FacetParams.FACET, false)) {
-      rb.setNeedDocSet(true);
-      rb.doFacets = true;
+      if (rb.req.getParams().getInt("facet.version", 1) <= 1) {  // let HS handle version>1
+        rb.setNeedDocSet(true);
+        rb.doFacets = true;
+      }
     }
   }
   

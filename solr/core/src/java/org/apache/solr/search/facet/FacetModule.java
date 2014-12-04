@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,8 @@ import org.apache.solr.handler.component.SearchComponent;
 import org.apache.solr.handler.component.ShardRequest;
 import org.apache.solr.handler.component.ShardResponse;
 import org.apache.solr.search.QueryContext;
+import org.apache.solr.search.QueryParsing;
+import org.apache.solr.search.SolrReturnFields;
 import org.apache.solr.search.SyntaxError;
 import org.apache.solr.util.PrimUtils;
 import org.noggit.ObjectBuilder;
@@ -89,8 +92,16 @@ public class FacetModule extends SearchComponent {
   @Override
   public void prepare(ResponseBuilder rb) throws IOException {
     Map<String,Object> json = rb.req.getJSON();
-    if (json == null) return;
-    Map<String,Object> jsonFacet = (Map<String, Object>) json.get("facet");
+    Map<String,Object> jsonFacet = null;
+    if (json == null) {
+      int version = rb.req.getParams().getInt("facet.version",1);
+      if (version <= 1) return;
+      boolean facetsEnabled = rb.req.getParams().getBool(FacetParams.FACET, false);
+      if (!facetsEnabled) return;
+      jsonFacet = new LegacyFacet(rb.req.getParams()).getLegacy();
+    } else {
+      jsonFacet = (Map<String, Object>) json.get("facet");
+    }
     if (jsonFacet == null) return;
 
     SolrParams params = rb.req.getParams();
@@ -203,6 +214,12 @@ class FacetComponentState {
   //
   FacetMerger merger;
 }
+
+//
+// The FacetMerger code is in the prototype stage, and this is the reason that
+// many implementations are all in this file.  They can be moved to separate
+// files after the interfaces are locked down more.
+//
 
 class FacetMerger {
   public void merge(Object facetResult) {
