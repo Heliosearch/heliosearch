@@ -17,9 +17,7 @@ package org.apache.lucene.store;
  * limitations under the License.
  */
 
-import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -35,7 +33,6 @@ public final class TestRateLimiter extends LuceneTestCase {
 
   public void testPause() {
     SimpleRateLimiter limiter = new SimpleRateLimiter(10); // 10 MB / Sec
-    limiter.pause(2);//init
     long pause = 0;
     for (int i = 0; i < 3; i++) {
       pause += limiter.pause(4 * 1024 * 1024); // fire up 3 * 4 MB 
@@ -43,6 +40,24 @@ public final class TestRateLimiter extends LuceneTestCase {
     final long convert = TimeUnit.MILLISECONDS.convert(pause, TimeUnit.NANOSECONDS);
     assertTrue("we should sleep less than 2 seconds but did: " + convert + " millis", convert < 2000l); 
     assertTrue("we should sleep at least 1 second but did only: " + convert + " millis", convert > 1000l); 
+  }
+
+  // LUCENE-6075
+  public void testOverflowInt() throws Exception {
+    Thread t = new Thread() {
+        @Override
+        public void run() {
+          try {
+            new SimpleRateLimiter(1).pause((long) (1.5*Integer.MAX_VALUE*1024*1024/1000));
+            fail("should have been interrupted");
+          } catch (ThreadInterruptedException tie) {
+            // expected
+          }
+        }
+      };
+    t.start();
+    Thread.sleep(10);
+    t.interrupt();
   }
 
   public void testThreads() throws Exception {
