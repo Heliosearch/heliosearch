@@ -154,6 +154,11 @@ public class RequestUtil {
     if (doMacros) {
       newMap = MacroExpander.expand(newMap);
     }
+    // Set these params as soon as possible so if there is an error processing later, things like
+    // "wt=json" will take effect from the defaults.
+    SolrParams newParams = new MultiMapSolrParams(newMap);  // newMap may still change below, but that should be OK
+    req.setParams(newParams);
+
 
     Map<String, Object> json = null;
     // Handle JSON body first, so query params will always overlay on that
@@ -229,11 +234,6 @@ public class RequestUtil {
 
 
     }
-
-
-
-    SolrParams newParams = new MultiMapSolrParams(newMap);
-    req.setParams(newParams);
 
     if (json != null) {
       req.setJSON(json);
