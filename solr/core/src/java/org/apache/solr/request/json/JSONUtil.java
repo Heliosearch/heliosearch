@@ -35,7 +35,7 @@ public class JSONUtil {
       int event = parser.nextEvent();
       switch (event) {
         case JSONParser.STRING:
-          if (key != null) {
+          if (key != null && parser.wasKey()) {
             String val = parser.getString();
             if (key.equals(val)) {
               return true;

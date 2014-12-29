@@ -781,6 +781,8 @@ public class SolrRequestParsers
       uploadLimitKB = limit;
     }
 
+    private static final long WS_MASK=(1L<<' ')|(1L<<'\t')|(1L<<'\r')|(1L<<'\n')|(1L<<'#')|(1L<<'/')|(0x01); // set 1 bit so 0xA0 will be flagged as whitespace
+
     @Override
     public SolrParams parseParamsAndFillStreams(final HttpServletRequest req, ArrayList<ContentStream> streams) throws Exception {
       final Map<String, String[]> map = new HashMap<>();
@@ -800,7 +802,7 @@ public class SolrRequestParsers
 
       for (int i = 0; i < len - 1; i++) {
         int ch = arr[i];
-        if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') continue;
+        if (((WS_MASK >> ch) & 0x01) != 0  && (ch<=' ' || ch==0xa0)) continue;  // 0xa0 is nbsp (non-breaking space) often encountered in web pages
         // first non-whitespace chars
         if (ch == '#'                         // single line comment
             || (ch == '/' && (arr[i + 1] == '/' || arr[i + 1] == '*'))  // single line or multi-line comment
